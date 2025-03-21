@@ -27,12 +27,16 @@ model User {
   bankAccounts  BankAccount[]
   transactions  Transaction[]
   categories    Category[]
+  // Lunch Money integration
+  lunchMoneyApiKey String?    // Lunch Money API key
+  classifyApiKey   String?    // API key for the transaction classification service
+  trainingJobs     TrainingJob[]
+  classificationJobs ClassificationJob[]
 }
 
 // NextAuth.js models
 model Account {
   id                String  @id @default(cuid())
-  userId            String
   type              String
   provider          String
   providerAccountId String
@@ -43,6 +47,7 @@ model Account {
   scope             String?
   id_token          String? @db.Text
   session_state     String?
+  userId            String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -112,4 +117,40 @@ model Transaction {
   bankAccount   BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
   category      Category?   @relation(fields: [categoryId], references: [id])
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Lunch Money specific fields
+  lunchMoneyId  String?     // ID in Lunch Money system
+  lunchMoneyCategory String? // Original category from Lunch Money
+  // Classification related fields
+  trainingJob   TrainingJob?    @relation(fields: [trainingJobId], references: [id])
+  trainingJobId String?
+  classificationJob ClassificationJob? @relation(fields: [classificationJobId], references: [id])
+  classificationJobId String?
+  isTrainingData Boolean @default(false) // Used for training data
+  predictedCategory String? // Category predicted by the model
+  similarityScore Float?   // Confidence score of prediction
+}
+
+// Models for transaction classification
+model TrainingJob {
+  id              String        @id @default(cuid())
+  userId          String
+  status          String        // "pending", "processing", "completed", "failed"
+  predictionId    String?       // ID from the classification service
+  createdAt       DateTime      @default(now())
+  completedAt     DateTime?
+  error           String?
+  transactions    Transaction[] // Transactions used for training
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ClassificationJob {
+  id              String        @id @default(cuid())
+  userId          String
+  status          String        // "pending", "processing", "completed", "failed"
+  predictionId    String?       // ID from the classification service
+  createdAt       DateTime      @default(now())
+  completedAt     DateTime?     
+  error           String?
+  transactions    Transaction[] // Transactions that were classified
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

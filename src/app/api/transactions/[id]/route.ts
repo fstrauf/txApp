@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { NextRequest } from 'next/server';
 
 // Helper function to get transaction details by ID
 async function getTransactionWithAuth(
@@ -41,101 +42,58 @@ async function getTransactionWithAuth(
 }
 
 export async function PATCH(
-  request: Request,
-  context: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    // Extract id from params
-    const id = context.params.id;
-    
     const session = await getServerSession(authConfig);
-    const result = await getTransactionWithAuth(
-      id,
-      session?.user?.email
-    );
-
-    if ("error" in result) {
-      return NextResponse.json(
-        { message: result.error },
-        { status: result.status }
-      );
-    }
-
-    const { transaction, user } = result;
-    const body = await request.json();
-    const { description, amount, date, categoryId, type } = body;
-
-    if (type && !['income', 'expense'].includes(type)) {
-      return NextResponse.json(
-        { message: "Invalid transaction type" },
-        { status: 400 }
-      );
-    }
-
-    // Calculate financial impact on account
-    let financialImpact = 0;
     
-    // For existing transaction, reverse its previous effect on balance
-    if (transaction.type === 'income') {
-      financialImpact -= transaction.amount; // Remove previous income amount
-    } else {
-      financialImpact += transaction.amount; // Add back previous expense amount
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     
-    // Add the new effect on balance
-    const newType = type || transaction.type;
-    if (newType === 'income') {
-      financialImpact += amount; // Add new income amount
-    } else {
-      financialImpact -= amount; // Subtract new expense amount
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email! },
+    });
+    
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-
-    // Update the transaction
+    
+    const { id } = params;
+    const { categoryId } = await request.json();
+    
+    // Check if transaction exists and belongs to user
+    const transaction = await prisma.transaction.findFirst({
+      where: {
+        id,
+        userId: user.id
+      }
+    });
+    
+    if (!transaction) {
+      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
+    }
+    
+    // Update the transaction's category
     const updatedTransaction = await prisma.transaction.update({
       where: { id },
-      data: {
-        description,
-        amount,
-        type: type || undefined, // Only update if provided
-        date: new Date(date),
-        categoryId,
-      },
+      data: { categoryId },
       include: {
         category: {
-          select: {
-            id: true,
-            name: true,
-          }
-        },
-        bankAccount: {
-          select: {
-            id: true,
-            name: true,
-          }
-        },
-      },
+          select: { id: true, name: true }
+        }
+      }
     });
-
-    // Update bank account balance if there's a financial impact
-    if (financialImpact !== 0) {
-      await prisma.bankAccount.update({
-        where: { id: transaction.bankAccountId },
-        data: {
-          balance: {
-            increment: financialImpact,
-          },
-        },
-      });
-    }
-
-    return NextResponse.json(updatedTransaction);
+    
+    return NextResponse.json({ 
+      success: true, 
+      transaction: updatedTransaction 
+    });
   } catch (error) {
-    console.error("[TRANSACTION_UPDATE]", error);
+    console.error('Error updating transaction:', error);
     return NextResponse.json(
-      {
-        message: "Error updating transaction",
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
+      { error: error instanceof Error ? error.message : 'Failed to update transaction' },
       { status: 500 }
     );
   }
