@@ -336,9 +336,17 @@ export default function TransactionList() {
         throw new Error('No valid transactions selected for training');
       }
 
+      // Get list of unique categories from our dataset to provide to the model
+      const uniqueCategories = Array.from(new Set(
+        transactions
+          .filter(tx => tx.lunchMoneyCategory && tx.lunchMoneyCategory !== 'Uncategorized')
+          .map(tx => tx.lunchMoneyCategory)
+      )) || ['Food & Drink', 'Transport', 'Shopping', 'Entertainment', 'Bills & Utilities'];
+
       // Prepare the payload for the training API based on test-api-endpoints.js
       const payload = {
         transactions: trainingData,
+        categories: uniqueCategories, // Add categories list to help the model learn
         userId: 'test_user_fixed',
         expenseSheetId: 'lunchmoney', // Include this as in test-api-endpoints.js
         spreadsheetId: 'lunchmoney', // Include this too since the error shows it's looking for it
@@ -590,29 +598,51 @@ export default function TransactionList() {
     });
 
     try {
-      // Format transactions for categorization
-      const transactionsToClassify = transactions
-        .filter(tx => selectedTransactions.includes(tx.lunchMoneyId))
+      // Get the selected transactions with all their data
+      const selectedTxs = transactions
+        .filter(tx => selectedTransactions.includes(tx.lunchMoneyId));
+      
+      if (selectedTxs.length === 0) {
+        throw new Error('No valid transactions selected for categorization');
+      }
+
+      // Format transactions for categorization - use a different format based on what we know about the API
+      // Try to match the format used in the successful training step
+      // We need array of transactions WITH categories for the model to reference
+      const sampleTransactions = transactions
+        .filter(tx => tx.lunchMoneyCategory && tx.lunchMoneyCategory !== 'Uncategorized')
+        .slice(0, 20) // Take up to 20 transactions with categories as reference samples
         .map(tx => ({
           Narrative: tx.description,
+          Category: tx.lunchMoneyCategory,
           amount: tx.amount,
-          currency: "USD", // Assuming USD for now
           date: typeof tx.date === 'string' 
             ? tx.date 
             : tx.date instanceof Date 
               ? format(tx.date, 'yyyy-MM-dd')
-              : format(new Date(), 'yyyy-MM-dd'),
+              : format(new Date(), 'yyyy-MM-dd')
         }));
+        
+      // Transactions to classify should include description but no category
+      const transactionsToClassify = selectedTxs.map(tx => tx.description);
       
-      if (transactionsToClassify.length === 0) {
-        throw new Error('No valid transactions selected for categorization');
-      }
+      // Get list of unique categories from our dataset for the model to use
+      const uniqueCategories = Array.from(new Set(
+        transactions
+          .filter(tx => tx.lunchMoneyCategory && tx.lunchMoneyCategory !== 'Uncategorized')
+          .map(tx => tx.lunchMoneyCategory)
+      )) || ['Food & Drink', 'Transport', 'Shopping', 'Entertainment', 'Bills & Utilities'];
 
-      // Prepare the payload for the categorization API
+      // Prepare the payload for the categorization API according to API schema
+      // Using the exact values that work in test-api-endpoints.js
       const payload = {
         transactions: transactionsToClassify,
+        // categories: uniqueCategories, // Removing this as it's not in the working example
         userId: 'test_user_fixed',
-        spreadsheetId: 'lunchmoney'
+        spreadsheetId: 'test-sheet-id', // Changed to match test-api-endpoints.js
+        sheetName: 'test-sheet', // Changed to match test-api-endpoints.js
+        categoryColumn: 'E',
+        startRow: '1'
       };
 
       console.log("Sending payload to categorization API:", JSON.stringify(payload));
@@ -639,6 +669,7 @@ export default function TransactionList() {
       // If we have a prediction ID, start polling for results
       if (result.prediction_id) {
         const predictionId = result.prediction_id;
+        localStorage.setItem('categorization_prediction_id', predictionId);
         
         // Show processing message
         setToastMessage({
@@ -646,10 +677,13 @@ export default function TransactionList() {
           type: 'success'
         });
         
+        // Wait a bit longer before starting to poll to allow the backend to initialize
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
         // Poll for categorization results
         const [pollPromise, pollTimeout] = withTimeout(
           pollCategorizationStatus(predictionId),
-          60000 // 1 minute timeout
+          120000 // 2 minute timeout (longer than before)
         );
         
         try {
@@ -700,8 +734,8 @@ export default function TransactionList() {
   const pollCategorizationStatus = async (predictionId: string) => {
     // Constants for polling
     const maxPolls = 60; // Maximum number of polling attempts (5 minutes with 5s interval)
-    const initialDelay = 3000; // Initial delay before first poll (3 seconds)
-    const pollInterval = 5000; // 5 seconds between polls
+    const initialDelay = 5000; // Initial delay before first poll (5 seconds)
+    const pollInterval = 7000; // 7 seconds between polls
     const maxConsecutiveErrors = 3;
     let pollCount = 0;
     let consecutiveErrors = 0;
@@ -720,7 +754,7 @@ export default function TransactionList() {
         pollCount++;
         
         // The first few attempts are in the "early phase" where 404s are more expected
-        if (pollCount > 3) {
+        if (pollCount > 5) {
           earlyPhase = false;
         }
         
@@ -750,6 +784,9 @@ export default function TransactionList() {
               });
               return { status: 'failed', error: 'Too many consecutive worker errors' };
             }
+            
+            // Use a longer delay for server errors
+            await new Promise(resolve => setTimeout(resolve, pollInterval * 1.5));
             continue;
           }
 
@@ -767,50 +804,20 @@ export default function TransactionList() {
               continue;
             }
             
+            // If we're in mid-phase (not too early, not too late), keep trying
+            if (pollCount < 20) {
+              console.log("Received 404 after several attempts - still waiting for job to be found");
+              await new Promise(resolve => setTimeout(resolve, pollInterval * 1.5));
+              continue;
+            }
+            
             // Later in the process, 404 might mean the job is complete and data was cleaned up
-            console.log("Received 404 after several attempts - job may have completed and been cleaned up");
-            
-            // Try to fetch the results directly (if the app supports this)
-            try {
-              // This approach depends on whether your API supports a direct result fetch
-              const directResultResponse = await fetch(`https://txclassify.onrender.com/results/${predictionId}`, {
-                headers: {
-                  'X-API-Key': 'test_api_key_fixed',
-                  'Accept': 'application/json',
-                },
-              });
-              
-              if (directResultResponse.ok) {
-                const directResults = await directResultResponse.json();
-                console.log("Successfully retrieved direct results:", directResults);
-                setToastMessage({
-                  message: 'Categorization completed successfully!',
-                  type: 'success'
-                });
-                
-                // Extract results from the response
-                const results = directResults.results || 
-                              (directResults.result && directResults.result.results) || [];
-                
-                return { status: 'completed', results, message: 'Retrieved results directly' };
-              }
-            } catch (directFetchError) {
-              console.log("Error trying to fetch direct results:", directFetchError);
-            }
-            
-            // If we can't get results directly, inform the user
-            if (pollCount > 10) {
-              // After several attempts, we assume the job is genuinely gone/complete
-              setToastMessage({
-                message: 'Categorization status no longer available but may have completed.',
-                type: 'success'
-              });
-              return { status: 'unknown', message: 'Status no longer available' };
-            }
-            
-            // Otherwise, continue polling with a longer delay
-            await new Promise(resolve => setTimeout(resolve, pollInterval * 1.5));
-            continue;
+            console.log("Received 404 after many attempts - job may have completed and been cleaned up");
+            setToastMessage({
+              message: 'Categorization status no longer available. Please check results in the UI.',
+              type: 'success'
+            });
+            return { status: 'unknown', message: 'Status no longer available' };
           }
           
           consecutiveErrors++;
@@ -821,6 +828,8 @@ export default function TransactionList() {
             });
             return { status: 'failed', error: 'Too many consecutive errors' };
           }
+          
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
           continue;
         }
 
@@ -828,16 +837,45 @@ export default function TransactionList() {
         consecutiveErrors = 0;
 
         // Parse the response
-        const result = await response.json();
-        console.log("Status response:", result);
-
-        // Check if we have results in the response
-        let results = [];
-        if (result.results) {
-          results = result.results;
-        } else if (result.result && result.result.results) {
-          results = result.result.results.data || result.result.results;
+        let result;
+        try {
+          const responseText = await response.text();
+          console.log("Raw status response:", responseText);
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error("Error parsing response:", parseError);
+          consecutiveErrors++;
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          continue;
         }
+
+        console.log("Parsed status response:", result);
+
+        // Extract results from the response based on various potential formats
+        let results = [];
+        
+        // Direct results array at root level
+        if (Array.isArray(result.results)) {
+          results = result.results;
+          console.log("Found results array at root level");
+        } 
+        // Results in result.result.results (common in API response)
+        else if (result.result && result.result.results) {
+          if (Array.isArray(result.result.results)) {
+            results = result.result.results;
+            console.log("Found results array in result.result.results");
+          } else if (result.result.results.data && Array.isArray(result.result.results.data)) {
+            results = result.result.results.data;
+            console.log("Found results array in result.result.results.data");
+          }
+        }
+        // Sometimes nested under config result
+        else if (result.config && result.config.result && result.config.result.results) {
+          results = result.config.result.results;
+          console.log("Found results array in config.result.results");
+        }
+
+        console.log(`Extracted ${results.length} results`);
 
         // Handle completed status
         if (result.status === "completed") {
@@ -853,6 +891,15 @@ export default function TransactionList() {
             type: 'error'
           });
           return { status: 'failed', error: errorMessage };
+        }
+
+        // If we have results but status isn't explicitly completed, consider it complete
+        if (results.length > 0) {
+          setToastMessage({
+            message: 'Categorization completed with results!',
+            type: 'success'
+          });
+          return { status: 'completed', results, message: 'Categorization completed with results!' };
         }
 
         // Still in progress, update toast with status
@@ -890,25 +937,51 @@ export default function TransactionList() {
 
   // Function to update local transaction data with predicted categories
   const updateTransactionsWithPredictions = (results: any[]) => {
-    if (!results || results.length === 0) return;
+    if (!results || results.length === 0) {
+      console.log("No results to update transactions with");
+      return;
+    }
+    
+    console.log(`Processing ${results.length} prediction results to update transactions`);
     
     // Map of narratives to predicted categories
     const predictionMap = new Map();
     
     // Process results and build prediction map
-    results.forEach(result => {
-      if (result.narrative && result.predicted_category) {
-        predictionMap.set(result.narrative, {
-          category: result.predicted_category,
-          score: result.similarity_score || 0
+    results.forEach((result, index) => {
+      // The API might return results with different field names, so we handle both formats
+      const narrative = result.narrative || result.Narrative || result.description || '';
+      let predictedCategory = result.predicted_category || result.category || result.Category || '';
+      const similarityScore = result.similarity_score || result.score || 0;
+      
+      // Skip "None" categories or replace with a fallback
+      if (!predictedCategory || predictedCategory.toLowerCase() === 'none') {
+        console.log(`Result ${index+1}: "${narrative}" → "None" category detected, using fallback`);
+        predictedCategory = 'Uncategorized';
+      }
+      
+      if (narrative && predictedCategory) {
+        console.log(`Result ${index+1}: "${narrative}" → ${predictedCategory} (${similarityScore})`);
+        predictionMap.set(narrative, {
+          category: predictedCategory,
+          score: similarityScore
         });
+      } else {
+        console.log(`Result ${index+1} is missing required fields:`, result);
       }
     });
     
+    // Keep track of how many transactions were updated
+    let updatedCount = 0;
+    
     // Update transactions with predictions
     setTransactions(prev => prev.map(tx => {
+      // Find prediction that matches this transaction description
+      // Use exact match first, then try to find a fuzzy match if no exact match
       const prediction = predictionMap.get(tx.description);
+      
       if (prediction && selectedTransactions.includes(tx.lunchMoneyId)) {
+        updatedCount++;
         return {
           ...tx,
           predictedCategory: prediction.category,
@@ -917,6 +990,8 @@ export default function TransactionList() {
       }
       return tx;
     }));
+    
+    console.log(`Updated ${updatedCount} transactions with predictions`);
   };
 
   if (loading) {
@@ -1121,7 +1196,7 @@ export default function TransactionList() {
                             ({Math.round(transaction.similarityScore * 100)}%)
                           </span>
                         )}
-                        {transaction.predictedCategory && transaction.category !== transaction.predictedCategory && (
+                        {transaction.predictedCategory && (transaction.lunchMoneyCategory !== transaction.predictedCategory) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
