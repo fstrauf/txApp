@@ -45,4 +45,44 @@ export type ToastMessage = {
 export type ImportStatus = 'idle' | 'importing' | 'success' | 'error';
 
 // Operation type for progress indication
-export type OperationType = 'none' | 'training' | 'categorizing'; 
+export type OperationType = 'none' | 'training' | 'categorizing';
+
+// API-related types
+
+// HTTP method types
+export type ApiMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+
+// Base API call properties
+export type ApiCallProps = {
+  endpoint: string;
+  method?: ApiMethod;
+  data?: any;
+  params?: Record<string, string>;
+  timeout?: number;
+  signal?: AbortSignal;
+};
+
+// External API call properties (extends base with API key)
+export type ExternalApiCallProps = Omit<ApiCallProps, 'endpoint'> & {
+  endpoint: string;
+  apiKey?: string;
+};
+
+// API response wrapper with loading and error states
+export type ApiResponse<T = any> = {
+  data: T | null;
+  isLoading: boolean;
+  error: string | null;
+  isError: boolean;
+  isSuccess: boolean;
+};
+
+// ML API responses
+export type PredictionResponse = {
+  prediction_id?: string;
+  predictionId?: string;
+  error?: string;
+};
+
+// API operation status
+export type ApiStatus = 'idle' | 'loading' | 'success' | 'error'; 
