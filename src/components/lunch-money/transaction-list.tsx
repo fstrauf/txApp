@@ -18,7 +18,7 @@ type Transaction = {
   predictedCategory?: string;
   similarityScore?: number;
   originalData?: any;
-  tags?: string[];
+  tags?: Array<string | { name: string; id: string }>;
 };
 
 type Category = {
@@ -62,6 +62,7 @@ export default function TransactionList() {
   
   // New state variables for the categorization workflow
   const [showOnlyCategorized, setShowOnlyCategorized] = useState<boolean>(false);
+  const [showOnlyUncategorized, setShowOnlyUncategorized] = useState<boolean>(false);
   const [categorizedTransactions, setCategorizedTransactions] = useState<Map<string, {category: string, score: number}>>(new Map());
   const [pendingCategoryUpdates, setPendingCategoryUpdates] = useState<Record<string, {categoryId: string, score: number}>>({});
   const [applyingAll, setApplyingAll] = useState<boolean>(false);
@@ -233,6 +234,21 @@ export default function TransactionList() {
     console.log(`Updating transaction ${transactionId} with category: "${categoryValue}"`);
     
     try {
+      // Check if transaction has a "Trained" tag that needs to be removed
+      const txTags = transaction.tags || [];
+      let hasTrainedTag = false;
+      const filteredTags = txTags.filter(tag => {
+        const tagName = typeof tag === 'string' ? tag : tag.name;
+        const isTrainedTag = tagName && tagName.toLowerCase() === 'trained';
+        if (isTrainedTag) hasTrainedTag = true;
+        return !isTrainedTag;
+      });
+      
+      // Prepare tag names for API request
+      const tagNames = hasTrainedTag 
+        ? filteredTags.map(tag => typeof tag === 'string' ? tag : tag.name) 
+        : undefined;
+      
       // Send update to the API
       const response = await fetch('/api/lunch-money/transactions', {
         method: 'PATCH',
@@ -241,7 +257,9 @@ export default function TransactionList() {
         },
         body: JSON.stringify({
           transactionId: transaction.lunchMoneyId,
-          categoryId: categoryValue === "none" ? null : categoryValue
+          categoryId: categoryValue === "none" ? null : categoryValue,
+          // Remove the "Trained" tag if it exists
+          tags: tagNames
         })
       });
       
@@ -272,7 +290,9 @@ export default function TransactionList() {
                 ...tx.originalData,
                 category_id: categoryValue === "none" ? null : categoryValue,
                 category_name: categoryValue === "none" ? null : categoryName
-              }
+              },
+              // Remove the "Trained" tag if it exists
+              tags: hasTrainedTag ? filteredTags : tx.tags
             };
           }
           return tx;
@@ -295,7 +315,9 @@ export default function TransactionList() {
       
       // Show success toast
       setToastMessage({
-        message: 'Category updated in Lunch Money',
+        message: hasTrainedTag 
+          ? 'Category updated and "Trained" tag removed' 
+          : 'Category updated in Lunch Money',
         type: 'success'
       });
       
@@ -330,24 +352,36 @@ export default function TransactionList() {
   };
 
   const handleSelectAll = () => {
-    if (transactions.length === 0) return;
+    if (filteredTransactions.length === 0) return;
     
-    console.log('Current transactions count:', transactions.length);
+    console.log('Current filtered transactions count:', filteredTransactions.length);
     console.log('Current selections count:', selectedTransactions.length);
     
-    // If all or some transactions are selected, deselect all
-    if (selectedTransactions.length > 0) {
-      console.log('Deselecting all transactions');
-      setSelectedTransactions([]);
+    // Check if all filtered transactions are already selected
+    const filteredIds = filteredTransactions
+      .map(tx => tx.lunchMoneyId)
+      .filter((id): id is string => id !== undefined && id !== null);
+    
+    const allFilteredSelected = filteredIds.every(id => selectedTransactions.includes(id));
+    
+    // If all filtered transactions are selected, deselect them
+    if (allFilteredSelected && selectedTransactions.length > 0) {
+      console.log('Deselecting all filtered transactions');
+      setSelectedTransactions(prev => 
+        prev.filter(id => !filteredIds.includes(id))
+      );
     } else {
-      // Otherwise, select all transactions with valid IDs
-      console.log(transactions)
-      const validIds = transactions
-        .map(tx => tx.lunchMoneyId)
-        .filter((id): id is string => id !== undefined && id !== null);
-      
-      console.log('Selecting all transactions:', validIds);
-      setSelectedTransactions(validIds);
+      // Otherwise, add all filtered transactions to selection
+      console.log('Selecting all filtered transactions');
+      setSelectedTransactions(prev => {
+        const newSelection = [...prev];
+        filteredIds.forEach(id => {
+          if (!newSelection.includes(id)) {
+            newSelection.push(id);
+          }
+        });
+        return newSelection;
+      });
     }
   };
 
@@ -409,13 +443,41 @@ export default function TransactionList() {
     if (!transactionIds.length) return;
     
     try {
+      // Filter out transactions that already have the "Trained" tag
+      const transactionsToTag = transactionIds.filter(txId => {
+        const tx = transactions.find(t => t.lunchMoneyId === txId);
+        if (!tx) return false;
+        
+        // Check if transaction already has the "Trained" tag
+        const txTags = tx.tags || [];
+        const hasTrainedTag = txTags.some(tag => 
+          (typeof tag === 'string' && tag.toLowerCase() === 'trained') || 
+          (typeof tag === 'object' && tag.name && tag.name.toLowerCase() === 'trained')
+        );
+        
+        return !hasTrainedTag;
+      });
+      
+      if (transactionsToTag.length === 0) {
+        console.log("No transactions to tag - all already have 'Trained' tag");
+        return;
+      }
+      
       setToastMessage({
-        message: 'Applying "Trained" tag to selected transactions...',
+        message: `Applying "Trained" tag to ${transactionsToTag.length} transactions...`,
         type: 'success'
       });
       
-      const promises = transactionIds.map(async (transactionId) => {
+      const promises = transactionsToTag.map(async (transactionId) => {
         try {
+          const tx = transactions.find(t => t.lunchMoneyId === transactionId);
+          if (!tx) return false;
+          
+          // Get current tags and add "Trained" tag
+          const currentTags = Array.isArray(tx.tags) ? 
+            tx.tags.map(tag => typeof tag === 'string' ? tag : tag.name) : 
+            [];
+          
           const response = await fetch('/api/lunch-money/transactions', {
             method: 'PATCH',
             headers: {
@@ -423,7 +485,7 @@ export default function TransactionList() {
             },
             body: JSON.stringify({
               transactionId,
-              tags: ['Trained']  // Add the "Trained" tag
+              tags: [...currentTags, 'Trained']
             }),
             signal: AbortSignal.timeout(10000)
           });
@@ -451,11 +513,22 @@ export default function TransactionList() {
         
         // Update local state to reflect the tagging
         setTransactions(prev => prev.map(tx => {
-          if (transactionIds.includes(tx.lunchMoneyId)) {
-            return {
-              ...tx,
-              tags: tx.tags ? [...tx.tags, 'Trained'] : ['Trained']
-            };
+          if (transactionsToTag.includes(tx.lunchMoneyId)) {
+            // Get current tags array or empty array if none
+            const currentTags = Array.isArray(tx.tags) ? [...tx.tags] : [];
+            
+            // Only add "Trained" tag if it doesn't already exist
+            const hasTrainedTag = currentTags.some(tag => 
+              (typeof tag === 'string' && tag.toLowerCase() === 'trained') || 
+              (typeof tag === 'object' && tag.name && tag.name.toLowerCase() === 'trained')
+            );
+            
+            if (!hasTrainedTag) {
+              return {
+                ...tx,
+                tags: [...currentTags, { name: 'Trained', id: `tag-trained-${Date.now()}` }]
+              };
+            }
           }
           return tx;
         }));
@@ -1159,6 +1232,14 @@ export default function TransactionList() {
         Object.keys(pendingCategoryUpdates).includes(tx.lunchMoneyId)
       );
     }
+    
+    if (showOnlyUncategorized) {
+      return transactions.filter(tx => 
+        !tx.originalData?.category_id && 
+        !tx.lunchMoneyCategory
+      );
+    }
+    
     return transactions;
   };
 
@@ -1185,7 +1266,7 @@ export default function TransactionList() {
   const filteredTransactions = getFilteredTransactions();
 
   return (
-    <div className="text-gray-900 dark:text-gray-100 text-sm bg-white dark:bg-slate-900 min-h-screen">
+    <div className="text-gray-900 dark:text-gray-100 text-sm bg-white dark:bg-slate-900 min-h-screen p-4">
       {/* Toast notification */}
       {toastMessage && (
         <div className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow-lg z-50 ${
@@ -1218,332 +1299,334 @@ export default function TransactionList() {
         </div>
       )}
 
-      {/* Header with title and action buttons */}
-      <div className="flex justify-between items-center py-4 px-6 border-b border-gray-200 dark:border-slate-700 mb-6">
-        <h1 className="text-2xl font-bold">Lunch Money Transactions</h1>
-        
-        <div className="flex gap-2">
+      {/* Date filters and action buttons */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-4">
+          <div>
+            <label htmlFor="startDate" className="block text-sm font-medium mb-1">Start Date:</label>
+            <input
+              type="date"
+              id="startDate"
+              name="startDate"
+              value={pendingDateRange.startDate}
+              onChange={handleDateRangeChange}
+              className="p-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-800 rounded text-sm"
+              disabled={operationInProgress}
+            />
+          </div>
+          <div>
+            <label htmlFor="endDate" className="block text-sm font-medium mb-1">End Date:</label>
+            <input
+              type="date"
+              id="endDate"
+              name="endDate"
+              value={pendingDateRange.endDate}
+              onChange={handleDateRangeChange}
+              className="p-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-800 rounded text-sm"
+              disabled={operationInProgress}
+            />
+          </div>
           <button
-            className="px-4 py-2 bg-gray-200 text-gray-800 dark:bg-slate-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-slate-600"
+            onClick={applyDateFilter}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed mt-4 md:mt-5"
+            disabled={operationInProgress}
           >
-            Settings
+            Apply Date Filter
           </button>
-          <button 
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handleImportTransactions}
+            disabled={loading || transactions.length === 0 || importStatus === 'importing' || operationInProgress}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed"
+          >
+            {importStatus === 'importing' ? 'Importing...' : 'Import All to Database'}
+          </button>
+          <button
+            onClick={handleTrainSelected}
+            disabled={selectedTransactions.length === 0 || operationInProgress}
+            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed"
+          >
+            Train with Selected ({selectedTransactions.length})
+          </button>
+          <button
             onClick={handleCategorizeSelected}
             disabled={selectedTransactions.length === 0 || operationInProgress}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed"
           >
-            Classify Transactions
-          </button>
-          <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Debug API
+            Categorize Selected ({selectedTransactions.length})
           </button>
         </div>
       </div>
 
-      <div className="px-6">
-        {/* Date filters and action buttons */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div className="flex flex-wrap items-center gap-4">
+      {importStatus !== 'idle' && (
+        <div className={`mb-4 p-4 rounded ${
+          importStatus === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-100' : 
+          importStatus === 'error' ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-100' : 
+          'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-100'
+        }`}>
+          {importMessage}
+        </div>
+      )}
+
+      {/* Categorization Controls - Styled banner */}
+      {Object.keys(pendingCategoryUpdates).length > 0 && (
+        <div className="mb-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-3">
             <div>
-              <label htmlFor="startDate" className="block text-sm font-medium mb-1">Start Date:</label>
-              <input
-                type="date"
-                id="startDate"
-                name="startDate"
-                value={pendingDateRange.startDate}
-                onChange={handleDateRangeChange}
-                className="p-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-800 rounded text-sm"
-                disabled={operationInProgress}
-              />
+              <span className="font-medium text-amber-800 dark:text-amber-300">Categorization Results:</span>
+              <span className="ml-2 text-amber-800 dark:text-amber-300">{Object.keys(pendingCategoryUpdates).length} transactions categorized</span>
             </div>
-            <div>
-              <label htmlFor="endDate" className="block text-sm font-medium mb-1">End Date:</label>
-              <input
-                type="date"
-                id="endDate"
-                name="endDate"
-                value={pendingDateRange.endDate}
-                onChange={handleDateRangeChange}
-                className="p-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-800 rounded text-sm"
-                disabled={operationInProgress}
-              />
-            </div>
+            
             <button
-              onClick={applyDateFilter}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed mt-4 md:mt-5"
-              disabled={operationInProgress}
+              onClick={applyAllPredictedCategories}
+              disabled={applyingAll || Object.keys(pendingCategoryUpdates).length === 0}
+              className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed"
             >
-              Apply Date Filter
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={handleImportTransactions}
-              disabled={loading || transactions.length === 0 || importStatus === 'importing' || operationInProgress}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed"
-            >
-              {importStatus === 'importing' ? 'Importing...' : 'Import All to Database'}
-            </button>
-            <button
-              onClick={handleTrainSelected}
-              disabled={selectedTransactions.length === 0 || operationInProgress}
-              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed"
-            >
-              Train with Selected ({selectedTransactions.length})
-            </button>
-            <button
-              onClick={handleCategorizeSelected}
-              disabled={selectedTransactions.length === 0 || operationInProgress}
-              className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed"
-            >
-              Categorize Selected ({selectedTransactions.length})
+              {applyingAll ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Applying...
+                </span>
+              ) : (
+                `Apply All Categories (${Object.keys(pendingCategoryUpdates).length})`
+              )}
             </button>
           </div>
         </div>
+      )}
 
-        {importStatus !== 'idle' && (
-          <div className={`mb-4 p-4 rounded ${
-            importStatus === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-100' : 
-            importStatus === 'error' ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-100' : 
-            'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-100'
-          }`}>
-            {importMessage}
-          </div>
-        )}
+      {/* Filter Controls */}
+      <div className="mb-4 flex flex-wrap items-center gap-4">
+        <div className="text-sm font-medium">Filters:</div>
+        <label className="inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-blue-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
+            checked={showOnlyUncategorized}
+            onChange={() => {
+              setShowOnlyUncategorized(!showOnlyUncategorized);
+              if (!showOnlyUncategorized) {
+                setShowOnlyCategorized(false);
+              }
+            }}
+          />
+          <span className="ml-2 text-gray-700 dark:text-gray-300">Show only uncategorized transactions</span>
+        </label>
 
-        {/* Categorization Controls - Styled banner */}
         {Object.keys(pendingCategoryUpdates).length > 0 && (
-          <div className="mb-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-3">
-              <div className="flex items-center gap-3">
-                <span className="font-medium text-amber-800 dark:text-amber-300">Categorization Results:</span>
-                <span className="text-amber-800 dark:text-amber-300">{Object.keys(pendingCategoryUpdates).length} transactions categorized</span>
-                
-                <label className="inline-flex items-center ml-4 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-amber-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
-                    checked={showOnlyCategorized}
-                    onChange={() => setShowOnlyCategorized(!showOnlyCategorized)}
-                  />
-                  <span className="ml-2 text-amber-800 dark:text-amber-300">Show only categorized transactions</span>
-                </label>
-              </div>
-              
-              <button
-                onClick={applyAllPredictedCategories}
-                disabled={applyingAll || Object.keys(pendingCategoryUpdates).length === 0}
-                className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed"
-              >
-                {applyingAll ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Applying...
-                  </span>
-                ) : (
-                  `Apply All Categories (${Object.keys(pendingCategoryUpdates).length})`
-                )}
-              </button>
-            </div>
-          </div>
+          <label className="inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-amber-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
+              checked={showOnlyCategorized}
+              onChange={() => {
+                setShowOnlyCategorized(!showOnlyCategorized);
+                if (!showOnlyCategorized) {
+                  setShowOnlyUncategorized(false);
+                }
+              }}
+            />
+            <span className="ml-2 text-amber-800 dark:text-amber-300">Show only categorized predictions</span>
+          </label>
         )}
+      </div>
 
-        {filteredTransactions.length === 0 ? (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
-            No transactions found for the selected criteria.
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-700">
-            <table className="min-w-full bg-white dark:bg-slate-800 text-sm">
-              <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
-                <tr>
-                  <th className="px-4 py-3 text-left">
-                    <label className="inline-flex items-center">
+      {filteredTransactions.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
+          No transactions found for the selected criteria.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-700">
+          <table className="min-w-full bg-white dark:bg-slate-800 text-sm">
+            <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+              <tr>
+                <th className="px-4 py-3 text-left">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={
+                        filteredTransactions.length > 0 && 
+                        filteredTransactions.every(tx => selectedTransactions.includes(tx.lunchMoneyId))
+                      }
+                      onChange={handleSelectAll}
+                      className="h-4 w-4 accent-blue-600 border-gray-300 rounded dark:border-gray-600 dark:bg-slate-600"
+                    />
+                    <span className="ml-2 font-medium">Select</span>
+                  </label>
+                </th>
+                <th className="px-4 py-3 text-left font-medium">Date</th>
+                <th className="px-4 py-3 text-left font-medium">Description</th>
+                <th className="px-4 py-3 text-left font-medium">Amount</th>
+                <th className="px-4 py-3 text-left font-medium">Category</th>
+                <th className="px-4 py-3 text-left font-medium">Predicted Category</th>
+                {Object.keys(pendingCategoryUpdates).length > 0 && (
+                  <th className="px-4 py-3 text-left font-medium">Actions</th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
+              {filteredTransactions.map((transaction) => {
+                const pendingUpdate = pendingCategoryUpdates[transaction.lunchMoneyId];
+                const hasPendingUpdate = !!pendingUpdate;
+                
+                return (
+                  <tr key={transaction.lunchMoneyId} className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 ${
+                    hasPendingUpdate ? 'bg-amber-50 dark:bg-amber-900/10' : 'bg-white dark:bg-slate-800'
+                  }`}>
+                    <td className="px-4 py-3 align-top">
                       <input
                         type="checkbox"
-                        checked={selectedTransactions.length > 0}
-                        onChange={handleSelectAll}
+                        checked={selectedTransactions.includes(transaction.lunchMoneyId)}
+                        onChange={() => handleSelectTransaction(transaction.lunchMoneyId)}
                         className="h-4 w-4 accent-blue-600 border-gray-300 rounded dark:border-gray-600 dark:bg-slate-600"
                       />
-                      <span className="ml-2 font-medium">Select</span>
-                    </label>
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium">Date</th>
-                  <th className="px-4 py-3 text-left font-medium">Description</th>
-                  <th className="px-4 py-3 text-left font-medium">Amount</th>
-                  <th className="px-4 py-3 text-left font-medium">Category</th>
-                  <th className="px-4 py-3 text-left font-medium">Predicted Category</th>
-                  {Object.keys(pendingCategoryUpdates).length > 0 && (
-                    <th className="px-4 py-3 text-left font-medium">Actions</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
-                {filteredTransactions.map((transaction) => {
-                  const pendingUpdate = pendingCategoryUpdates[transaction.lunchMoneyId];
-                  const hasPendingUpdate = !!pendingUpdate;
-                  
-                  return (
-                    <tr key={transaction.lunchMoneyId} className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 ${
-                      hasPendingUpdate ? 'bg-amber-50 dark:bg-amber-900/10' : 'bg-white dark:bg-slate-800'
-                    }`}>
-                      <td className="px-4 py-3 align-top">
-                        <input
-                          type="checkbox"
-                          checked={selectedTransactions.includes(transaction.lunchMoneyId)}
-                          onChange={() => handleSelectTransaction(transaction.lunchMoneyId)}
-                          className="h-4 w-4 accent-blue-600 border-gray-300 rounded dark:border-gray-600 dark:bg-slate-600"
-                        />
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        {typeof transaction.date === 'string' 
-                          ? transaction.date 
-                          : transaction.date instanceof Date 
-                            ? format(transaction.date, 'yyyy-MM-dd')
-                            : 'Invalid date'
-                        }
-                        {transaction.tags && Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {transaction.tags?.map((tag: any, idx: number) => (
-                              <span 
-                                key={`${typeof tag === 'string' ? tag : tag.name || tag.id || idx}-${idx}`}
-                                className="text-xs bg-blue-600 text-white rounded-full px-2 py-0.5">
-                                {typeof tag === 'string' ? tag : tag.name || 'Tag'}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        {typeof transaction.description === 'object' 
-                          ? JSON.stringify(transaction.description) 
-                          : transaction.description}
-                      </td>
-                      <td className={`px-4 py-3 align-top font-medium ${transaction.is_income ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'}`}>
-                        {transaction.is_income ? '+' : '-'}
-                        {typeof transaction.amount === 'number' 
-                          ? Math.abs(transaction.amount).toFixed(2) 
-                          : Math.abs(parseFloat(String(transaction.amount))).toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        <div className="relative">
-                          <select
-                            value={transaction.originalData?.category_id || "none"}
-                            onChange={(e) => handleCategoryChange(transaction.lunchMoneyId, e.target.value)}
-                            disabled={updatingCategory === transaction.lunchMoneyId}
-                            className={`w-full py-1.5 px-2 pr-8 appearance-none rounded border ${
-                              successfulUpdates[transaction.lunchMoneyId] 
-                                ? 'border-green-500 dark:border-green-500 bg-green-50 dark:bg-green-950/20' 
-                                : hasPendingUpdate
-                                  ? 'border-amber-500 dark:border-amber-500 bg-amber-50 dark:bg-amber-950/20'
-                                  : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800'
-                            } text-gray-800 dark:text-gray-200`}
-                          >
-                            <option value="none">-- Uncategorized --</option>
-                            {categories.map(category => {
-                              const categoryId = typeof category === 'string' ? category : category.id;
-                              const categoryName = typeof category === 'string' ? category : category.name;
-                              
-                              return (
-                                <option key={categoryId} value={categoryId}>
-                                  {categoryName}
-                                </option>
-                              );
-                            })}
-                          </select>
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500 dark:text-gray-400">
-                            <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {typeof transaction.date === 'string' 
+                        ? transaction.date 
+                        : transaction.date instanceof Date 
+                          ? format(transaction.date, 'yyyy-MM-dd')
+                          : 'Invalid date'
+                      }
+                      {transaction.tags && Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {transaction.tags?.map((tag: any, idx: number) => (
+                            <span 
+                              key={`${typeof tag === 'string' ? tag : tag.name || tag.id || idx}-${idx}`}
+                              className="text-xs bg-blue-600 text-white rounded-full px-2 py-0.5">
+                              {typeof tag === 'string' ? tag : tag.name || 'Tag'}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {typeof transaction.description === 'object' 
+                        ? JSON.stringify(transaction.description) 
+                        : transaction.description}
+                    </td>
+                    <td className={`px-4 py-3 align-top font-medium ${transaction.is_income ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'}`}>
+                      {transaction.is_income ? '+' : '-'}
+                      {typeof transaction.amount === 'number' 
+                        ? Math.abs(transaction.amount).toFixed(2) 
+                        : Math.abs(parseFloat(String(transaction.amount))).toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <div className="relative">
+                        <select
+                          value={transaction.originalData?.category_id || "none"}
+                          onChange={(e) => handleCategoryChange(transaction.lunchMoneyId, e.target.value)}
+                          disabled={updatingCategory === transaction.lunchMoneyId}
+                          className={`w-full py-1.5 px-2 pr-8 appearance-none rounded border ${
+                            successfulUpdates[transaction.lunchMoneyId] 
+                              ? 'border-green-500 dark:border-green-500 bg-green-50 dark:bg-green-950/20' 
+                              : hasPendingUpdate
+                                ? 'border-amber-500 dark:border-amber-500 bg-amber-50 dark:bg-amber-950/20'
+                                : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800'
+                          } text-gray-800 dark:text-gray-200`}
+                        >
+                          <option value="none">-- Uncategorized --</option>
+                          {categories.map(category => {
+                            const categoryId = typeof category === 'string' ? category : category.id;
+                            const categoryName = typeof category === 'string' ? category : category.name;
+                            
+                            return (
+                              <option key={categoryId} value={categoryId}>
+                                {categoryName}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500 dark:text-gray-400">
+                          <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        
+                        {/* Loading spinner */}
+                        {updatingCategory === transaction.lunchMoneyId && (
+                          <div className="absolute right-0 top-0 h-full flex items-center pr-8">
+                            <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                           </div>
-                          
-                          {/* Loading spinner */}
-                          {updatingCategory === transaction.lunchMoneyId && (
-                            <div className="absolute right-0 top-0 h-full flex items-center pr-8">
-                              <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                            </div>
-                          )}
-                          
-                          {/* Success checkmark */}
-                          {successfulUpdates[transaction.lunchMoneyId] && (
-                            <div className="absolute right-0 top-0 h-full flex items-center pr-8">
-                              <svg className="h-4 w-4 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </div>
+                        )}
+                        
+                        {/* Success checkmark */}
+                        {successfulUpdates[transaction.lunchMoneyId] && (
+                          <div className="absolute right-0 top-0 h-full flex items-center pr-8">
+                            <svg className="h-4 w-4 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {hasPendingUpdate ? (
+                        <div className="flex items-center">
+                          <span className="font-medium text-amber-600 dark:text-amber-400">
+                            {pendingUpdate.categoryId === "none" ? "Uncategorized" : 
+                              getCategoryNameById(pendingUpdate.categoryId) || pendingUpdate.categoryId}
+                          </span>
+                          {pendingUpdate.score > 0 && (
+                            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                              ({Math.round(pendingUpdate.score * 100)}% match)
+                            </span>
                           )}
                         </div>
-                      </td>
+                      ) : (
+                        transaction.predictedCategory || "Not predicted"
+                      )}
+                    </td>
+                    
+                    {/* Actions column for Apply button */}
+                    {Object.keys(pendingCategoryUpdates).length > 0 && (
                       <td className="px-4 py-3 align-top">
-                        {hasPendingUpdate ? (
-                          <div className="flex items-center">
-                            <span className="font-medium text-amber-600 dark:text-amber-400">
-                              {pendingUpdate.categoryId === "none" ? "Uncategorized" : 
-                                getCategoryNameById(pendingUpdate.categoryId) || pendingUpdate.categoryId}
-                            </span>
-                            {pendingUpdate.score > 0 && (
-                              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                ({Math.round(pendingUpdate.score * 100)}% match)
+                        {hasPendingUpdate && (
+                          <button
+                            onClick={() => applyPredictedCategory(transaction.lunchMoneyId)}
+                            disabled={applyingIndividual === transaction.lunchMoneyId || successfulUpdates[transaction.lunchMoneyId]}
+                            className={`px-3 py-1 rounded text-sm font-medium ${
+                              successfulUpdates[transaction.lunchMoneyId]
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                : 'bg-amber-600 text-white hover:bg-amber-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed'
+                            }`}
+                          >
+                            {applyingIndividual === transaction.lunchMoneyId ? (
+                              <span className="flex items-center">
+                                <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Applying
                               </span>
+                            ) : successfulUpdates[transaction.lunchMoneyId] ? (
+                              <span className="flex items-center">
+                                <svg className="h-3 w-3 mr-1 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                                Applied
+                              </span>
+                            ) : (
+                              "Apply"
                             )}
-                          </div>
-                        ) : (
-                          transaction.predictedCategory || "Not predicted"
+                          </button>
                         )}
                       </td>
-                      
-                      {/* Actions column for Apply button */}
-                      {Object.keys(pendingCategoryUpdates).length > 0 && (
-                        <td className="px-4 py-3 align-top">
-                          {hasPendingUpdate && (
-                            <button
-                              onClick={() => applyPredictedCategory(transaction.lunchMoneyId)}
-                              disabled={applyingIndividual === transaction.lunchMoneyId || successfulUpdates[transaction.lunchMoneyId]}
-                              className={`px-3 py-1 rounded text-sm font-medium ${
-                                successfulUpdates[transaction.lunchMoneyId]
-                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                                  : 'bg-amber-600 text-white hover:bg-amber-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed'
-                              }`}
-                            >
-                              {applyingIndividual === transaction.lunchMoneyId ? (
-                                <span className="flex items-center">
-                                  <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                  </svg>
-                                  Applying
-                                </span>
-                              ) : successfulUpdates[transaction.lunchMoneyId] ? (
-                                <span className="flex items-center">
-                                  <svg className="h-3 w-3 mr-1 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                  Applied
-                                </span>
-                              ) : (
-                                "Apply"
-                              )}
-                            </button>
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
