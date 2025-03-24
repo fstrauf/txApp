@@ -47,6 +47,7 @@ function formatTransactions(transactions: any[]) {
       type: Number(tx.amount) < 0 ? 'expense' : 'income',
       lunchMoneyCategory: lunchMoneyCategory,
       notes: tx.notes || '',
+      tags: tx.tags || [],  // Include tags from Lunch Money
       originalData: tx
     };
   });
@@ -257,24 +258,33 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Lunch Money API key not found' }, { status: 400 });
     }
     
-    const { transactionId, categoryId } = await request.json();
+    const { transactionId, categoryId, tags } = await request.json();
     
     if (!transactionId) {
       return NextResponse.json({ error: 'Transaction ID is required' }, { status: 400 });
     }
     
-    // Convert categoryId to number or null for Lunch Money API
-    const lunchMoneyCategoryId = categoryId === "none" ? null : Number(categoryId);
-    
     // Update the transaction directly using the official Lunch Money API
     const url = `https://dev.lunchmoney.app/v1/transactions/${transactionId}`;
     
+    // Build the update object based on what was provided
+    const updateObject: any = {};
+    
+    // Add category_id if provided
+    if (categoryId !== undefined) {
+      // Convert categoryId to number or null for Lunch Money API
+      const lunchMoneyCategoryId = categoryId === "none" ? null : Number(categoryId);
+      updateObject.category_id = lunchMoneyCategoryId;
+    }
+    
+    // Add tags if provided
+    if (tags) {
+      updateObject.tags = tags;
+    }
+    
     // Format the request body according to the API documentation
-    // The key change: wrapping category_id in a transaction object
     const updateBody = {
-      transaction: {
-        category_id: lunchMoneyCategoryId
-      }
+      transaction: updateObject
     };
     
     console.log('Making request to Lunch Money:', {
@@ -300,7 +310,7 @@ export async function PATCH(request: NextRequest) {
     if (!response.ok || responseData.error) {
       const errorMessage = responseData.error ? 
         (Array.isArray(responseData.error) ? responseData.error.join(', ') : responseData.error) : 
-        'Failed to update transaction category in Lunch Money';
+        'Failed to update transaction in Lunch Money';
       
       console.error('Lunch Money API error:', responseData);
       return NextResponse.json({ error: errorMessage }, { status: response.status || 500 });

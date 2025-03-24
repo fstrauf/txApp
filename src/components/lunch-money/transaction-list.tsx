@@ -18,6 +18,7 @@ type Transaction = {
   predictedCategory?: string;
   similarityScore?: number;
   originalData?: any;
+  tags?: string[];
 };
 
 type Category = {
@@ -91,7 +92,28 @@ export default function TransactionList() {
       }
       
       const data = await response.json();
-      setCategories(data.categories || []);
+      let categoriesList = data.categories || [];
+      
+      // If we don't have any categories from the API, extract from transactions
+      if ((!categoriesList || categoriesList.length === 0) && transactions.length > 0) {
+        console.log("Extracting categories from transactions");
+        const uniqueCategories = new Map();
+        
+        transactions.forEach(tx => {
+          // Extract from originalData which contains all the LunchMoney API data
+          if (tx.originalData?.category_id && tx.originalData?.category_name) {
+            uniqueCategories.set(tx.originalData.category_id.toString(), {
+              id: tx.originalData.category_id.toString(),
+              name: tx.originalData.category_name
+            });
+          }
+        });
+        
+        categoriesList = Array.from(uniqueCategories.values());
+        console.log("Extracted categories:", categoriesList);
+      }
+      
+      setCategories(categoriesList);
     } catch (error) {
       console.error('Error fetching Lunch Money categories:', error);
       setToastMessage({
@@ -126,12 +148,34 @@ export default function TransactionList() {
         console.error('Invalid response format:', data);
         throw new Error('Received invalid data format from server');
       }
+
+      console.log("data.transactions", data.transactions);
       
-      // Ensure all transaction amounts are numbers
-      let formattedTransactions = data.transactions.map((tx: any) => ({
-        ...tx,
-        amount: typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount))
-      }));
+      // Ensure all transaction amounts are numbers and sanitize object values
+      let formattedTransactions = data.transactions.map((tx: any) => {
+        // Create a sanitized transaction object to prevent rendering issues
+        const sanitized = {
+          ...tx,
+          id: tx.id || '',
+          lunchMoneyId: tx.lunchMoneyId || '',
+          date: tx.date || new Date().toISOString(),
+          description: typeof tx.description === 'object' ? JSON.stringify(tx.description) : (tx.description || ''),
+          amount: typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount || 0)),
+          type: tx.type || 'expense',
+          // Ensure we use category_name from originalData for consistency
+          lunchMoneyCategory: tx.originalData?.category_name || tx.lunchMoneyCategory || null,
+          // Ensure predictedCategory is a string
+          predictedCategory: typeof tx.predictedCategory === 'object' ? 
+            tx.predictedCategory?.name || null : (tx.predictedCategory || null),
+          // Ensure tags is an array of objects with name/id properties
+          tags: Array.isArray(tx.tags) ? tx.tags.map((tag: any) => 
+            typeof tag === 'object' ? tag : { name: tag, id: `tag-${Date.now()}-${Math.random()}` }
+          ) : []
+        };
+        return sanitized;
+      });
+
+      console.log("formattedTransactions", formattedTransactions);
       
       // Sort transactions by date in descending order (newest first)
       formattedTransactions = formattedTransactions.sort((a: Transaction, b: Transaction) => {
@@ -144,6 +188,9 @@ export default function TransactionList() {
       
       // Clear any previous selections when new transactions are loaded
       setSelectedTransactions([]);
+      
+      // After loading transactions, refresh categories from them
+      await fetchCategories();
     } catch (error) {
       console.error('Error fetching transactions:', error);
       setError(error instanceof Error ? error.message : 'An error occurred while fetching transactions');
@@ -171,6 +218,7 @@ export default function TransactionList() {
     }
     
     console.log(`Updating transaction ${transactionId} with category: "${categoryValue}"`);
+    console.log("transactions", transactions)
     
     const maxRetries = 3;
     let retryCount = 0;
@@ -380,10 +428,84 @@ export default function TransactionList() {
     }
   };
 
+  // Add a new function to tag transactions as trained
+  const tagTransactionsAsTrained = async (transactionIds: string[]) => {
+    if (!transactionIds.length) return;
+    
+    try {
+      setToastMessage({
+        message: 'Applying "Trained" tag to selected transactions...',
+        type: 'success'
+      });
+      
+      const promises = transactionIds.map(async (transactionId) => {
+        try {
+          const response = await fetch('/api/lunch-money/transactions', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              transactionId,
+              tags: ['Trained']  // Add the "Trained" tag
+            }),
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            console.error(`Failed to tag transaction ${transactionId}`);
+            return false;
+          }
+          
+          return true;
+        } catch (error) {
+          console.error(`Error tagging transaction ${transactionId}:`, error);
+          return false;
+        }
+      });
+      
+      const results = await Promise.all(promises);
+      const successCount = results.filter(Boolean).length;
+      
+      if (successCount > 0) {
+        setToastMessage({
+          message: `Tagged ${successCount} transactions as "Trained"`,
+          type: 'success'
+        });
+        
+        // Update local state to reflect the tagging
+        setTransactions(prev => prev.map(tx => {
+          if (transactionIds.includes(tx.lunchMoneyId)) {
+            return {
+              ...tx,
+              tags: tx.tags ? [...tx.tags, 'Trained'] : ['Trained']
+            };
+          }
+          return tx;
+        }));
+      }
+    } catch (error) {
+      console.error('Error applying "Trained" tag:', error);
+      setToastMessage({
+        message: 'Failed to apply "Trained" tag to transactions',
+        type: 'error'
+      });
+    }
+  };
+
+  // Modify the handleTrainSelected function to call tagTransactionsAsTrained after successful training
   const handleTrainSelected = async () => {
     if (selectedTransactions.length === 0) {
       setToastMessage({
         message: "Please select at least one transaction for training",
+        type: "error"
+      });
+      return;
+    }
+
+    if (selectedTransactions.length < 10) {
+      setToastMessage({
+        message: "Please select at least 10 transactions for training (API requirement)",
         type: "error"
       });
       return;
@@ -396,39 +518,39 @@ export default function TransactionList() {
     });
 
     try {
-      // Format transactions for training to match the CSV format
+      // Format transactions for training to match the API schema requirements
       const trainingData = transactions
         .filter(tx => selectedTransactions.includes(tx.lunchMoneyId))
         .map(tx => ({
-          Narrative: tx.description, // This is required - matches the CSV format
-          Category: tx.lunchMoneyCategory || 'Uncategorized', // This is required - matches the CSV format
-          amount: tx.amount,
-          date: typeof tx.date === 'string' 
-            ? tx.date 
-            : tx.date instanceof Date 
-              ? format(tx.date, 'yyyy-MM-dd')
-              : format(new Date(), 'yyyy-MM-dd'),
-          id: tx.lunchMoneyId
+          description: tx.description, // Required by API schema
+          Category: tx.lunchMoneyCategory || 'Uncategorized' // Required by API schema with capital C
+          // Remove other fields that are not required and may be causing issues
         }));
       
       if (trainingData.length === 0) {
         throw new Error('No valid transactions selected for training');
       }
 
-      // Get list of unique categories from our dataset to provide to the model
-      const uniqueCategories = Array.from(new Set(
-        transactions
-          .filter(tx => tx.lunchMoneyCategory && tx.lunchMoneyCategory !== 'Uncategorized')
-          .map(tx => tx.lunchMoneyCategory)
-      )) || ['Food & Drink', 'Transport', 'Shopping', 'Entertainment', 'Bills & Utilities'];
+      // Debug: Log each transaction to verify format
+      console.log("Transactions for training:");
+      trainingData.forEach((tx, index) => {
+        console.log(`Transaction ${index + 1}:`, tx);
+        // Verify required fields are present and not undefined/null
+        if (!tx.description) {
+          console.error(`Missing description in transaction ${index + 1}`);
+        }
+        if (!tx.Category) {
+          console.error(`Missing Category in transaction ${index + 1}`);
+        }
+      });
 
-      // Prepare the payload for the training API based on test-api-endpoints.js
+      // Prepare the payload based on the API schema
       const payload = {
         transactions: trainingData,
-        categories: uniqueCategories, // Add categories list to help the model learn
-        userId: 'test_user_fixed',
-        expenseSheetId: 'lunchmoney', // Include this as in test-api-endpoints.js
-        spreadsheetId: 'lunchmoney', // Include this too since the error shows it's looking for it
+        userId: 'test_user_fixed', // Optional
+        expenseSheetId: 'lunchmoney', // Required
+        spreadsheetId: 'lunchmoney', // Required for classification
+        // Include column configuration if needed
         columnOrderCategorisation: {
           descriptionColumn: "B",
           categoryColumn: "C",
@@ -450,9 +572,23 @@ export default function TransactionList() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => response.text());
+        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
         console.error("Training API error:", errorData);
-        throw new Error(typeof errorData === 'object' ? JSON.stringify(errorData) : errorData || 'Training request failed');
+        
+        // Handle validation errors specifically
+        if (errorData.code === 400 && errorData.details && Array.isArray(errorData.details)) {
+          const validationErrors = errorData.details.map((detail: { location: string, message: string }) => 
+            `${detail.location}: ${detail.message}`
+          ).join(', ');
+          
+          throw new Error(`Validation error: ${validationErrors}`);
+        }
+        
+        throw new Error(
+          errorData.error || 
+          (typeof errorData === 'object' ? JSON.stringify(errorData) : errorData) || 
+          'Training request failed'
+        );
       }
 
       const result = await response.json();
@@ -480,6 +616,9 @@ export default function TransactionList() {
           console.log("Polling completed:", pollResult);
           
           if (pollResult.status === 'completed') {
+            // Apply "Trained" tag to the selected transactions
+            await tagTransactionsAsTrained(selectedTransactions);
+            
             // On success, redirect to status page to view results
             router.push(`/lunch-money/training-status?prediction_id=${predictionId}`);
           } else if (pollResult.status === 'failed') {
@@ -489,6 +628,9 @@ export default function TransactionList() {
               type: 'error'
             });
           } else {
+            // Apply "Trained" tag anyway since we might not know for sure if it failed
+            await tagTransactionsAsTrained(selectedTransactions);
+            
             // On unknown/timeout, redirect to status page for manual checking
             setToastMessage({
               message: 'Redirecting to status page for detailed progress...',
@@ -1211,7 +1353,7 @@ export default function TransactionList() {
   }
 
   return (
-    <div>
+    <div className="text-gray-900 dark:text-gray-100">
       {/* Toast notification */}
       {toastMessage && (
         <div className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow-lg z-50 ${
@@ -1224,25 +1366,25 @@ export default function TransactionList() {
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
           <div>
-            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">Start Date:</label>
+            <label htmlFor="startDate" className="block text-sm font-medium">Start Date:</label>
             <input
               type="date"
               id="startDate"
               name="startDate"
               value={pendingDateRange.startDate}
               onChange={handleDateRangeChange}
-              className="p-2 border border-gray-300 rounded"
+              className="p-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded"
             />
           </div>
           <div>
-            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">End Date:</label>
+            <label htmlFor="endDate" className="block text-sm font-medium">End Date:</label>
             <input
               type="date"
               id="endDate"
               name="endDate"
               value={pendingDateRange.endDate}
               onChange={handleDateRangeChange}
-              className="p-2 border border-gray-300 rounded"
+              className="p-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded"
             />
           </div>
           <button
@@ -1256,21 +1398,21 @@ export default function TransactionList() {
           <button
             onClick={handleImportTransactions}
             disabled={loading || transactions.length === 0 || importStatus === 'importing'}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300"
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-500"
           >
             {importStatus === 'importing' ? 'Importing...' : 'Import All to Database'}
           </button>
           <button
             onClick={handleTrainSelected}
             disabled={selectedTransactions.length === 0 || categorizing}
-            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-300"
+            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-300 disabled:text-gray-500"
           >
             Train with Selected ({selectedTransactions.length})
           </button>
           <button
             onClick={handleCategorizeSelected}
             disabled={selectedTransactions.length === 0 || categorizing}
-            className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:bg-gray-300"
+            className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:bg-gray-300 disabled:text-gray-500"
           >
             {categorizing ? 'Categorizing...' : 'Categorize Selected'} ({selectedTransactions.length})
           </button>
@@ -1279,22 +1421,22 @@ export default function TransactionList() {
 
       {importStatus !== 'idle' && (
         <div className={`mb-4 p-4 rounded ${
-          importStatus === 'success' ? 'bg-green-50 text-green-700' : 
-          importStatus === 'error' ? 'bg-red-50 text-red-700' : 
-          'bg-blue-50 text-blue-700'
+          importStatus === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-100' : 
+          importStatus === 'error' ? 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-100' : 
+          'bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-100'
         }`}>
           {importMessage}
         </div>
       )}
 
       {transactions.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
           No transactions found for the selected date range.
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-white">
-            <thead className="bg-gray-100">
+          <table className="min-w-full bg-white border border-gray-200 dark:border-slate-700">
+            <thead className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-white">
               <tr>
                 <th className="px-4 py-2 text-left">
                   <label className="inline-flex items-center">
@@ -1302,7 +1444,7 @@ export default function TransactionList() {
                       type="checkbox"
                       checked={selectedTransactions.length > 0}
                       onChange={handleSelectAll}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
                     />
                     <span className="ml-2">Select</span>
                   </label>
@@ -1311,109 +1453,95 @@ export default function TransactionList() {
                 <th className="px-4 py-2 text-left">Description</th>
                 <th className="px-4 py-2 text-left">Amount</th>
                 <th className="px-4 py-2 text-left">Category</th>
-                <th className="px-4 py-2 text-left">Lunch Money Category</th>
                 <th className="px-4 py-2 text-left">Predicted Category</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
               {transactions.map((transaction) => (
-                <tr key={transaction.lunchMoneyId} className="border-t hover:bg-gray-50">
+                <tr key={transaction.lunchMoneyId} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 bg-white dark:bg-slate-800">
                   <td className="px-4 py-2">
                     <input
                       type="checkbox"
                       checked={selectedTransactions.includes(transaction.lunchMoneyId)}
                       onChange={() => handleSelectTransaction(transaction.lunchMoneyId)}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
                     />
                   </td>
                   <td className="px-4 py-2">
-                    {typeof transaction.date === 'string' 
-                      ? transaction.date 
-                      : transaction.date instanceof Date 
-                        ? format(transaction.date, 'yyyy-MM-dd')
-                        : 'Invalid date'
-                    }
+                    <div>
+                      {typeof transaction.date === 'string' 
+                        ? transaction.date 
+                        : transaction.date instanceof Date 
+                          ? format(transaction.date, 'yyyy-MM-dd')
+                          : 'Invalid date'
+                      }
+                    </div>
+                    {transaction.tags && Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {transaction.tags?.map((tag: any, idx: number) => (
+                          <span 
+                            key={`${typeof tag === 'string' ? tag : tag.name || tag.id || idx}-${idx}`}
+                            className="text-xs bg-blue-600 text-white rounded-full px-2 py-0.5">
+                            {typeof tag === 'string' ? tag : tag.name || 'Tag'}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
-                  <td className="px-4 py-2">{transaction.description}</td>
-                  <td className={`px-4 py-2 ${transaction.type === 'expense' ? 'text-red-600' : 'text-green-600'}`}>
-                    {transaction.type === 'expense' ? '-' : '+'}
-                    {typeof transaction.amount === 'number' 
+                  <td className="px-4 py-2">
+                    {typeof transaction.description === 'object' 
+                      ? JSON.stringify(transaction.description) 
+                      : transaction.description}
+                  </td>
+                  <td className="px-4 py-2 text-green-500">
+                    +{typeof transaction.amount === 'number' 
                       ? transaction.amount.toFixed(2) 
                       : parseFloat(String(transaction.amount)).toFixed(2)}
                   </td>
                   <td 
-                    className="px-4 py-2 cursor-pointer hover:bg-gray-200 relative"
+                    className="px-4 py-2 cursor-pointer relative"
                     onClick={() => {
                       if (!transaction.lunchMoneyId) return;
                       startEditing(transaction.lunchMoneyId);
                     }}
-                  >
-                    {editingTransaction === transaction.lunchMoneyId ? (
-                      <div className="relative">
-                        <select
-                          ref={categoryInputRef}
-                          className="w-full p-1 border border-gray-300 rounded"
-                          value={transaction.category || "none"}
-                          onChange={(e) => {
-                            handleCategoryChange(transaction.lunchMoneyId, e.target.value);
-                          }}
-                          onBlur={() => setEditingTransaction(null)}
-                        >
-                          <option value="none">-- Uncategorized --</option>
-                          {categories.map(category => 
-                            typeof category === 'string' ? (
-                              <option key={category} value={category}>
-                                {category}
-                              </option>
-                            ) : (
-                              <option key={category.id} value={category.name}>
-                                {category.name}
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between group">
-                        <span className={updatingCategory === transaction.lunchMoneyId ? 'opacity-50' : ''}>
-                          {transaction.category ? transaction.category : 
-                          transaction.lunchMoneyCategory ? transaction.lunchMoneyCategory : 'Uncategorized'}
-                        </span>
-                        {updatingCategory === transaction.lunchMoneyId ? (
-                          <span className="ml-2 inline-block w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
-                        ) : (
-                          <span className="text-blue-500 opacity-0 group-hover:opacity-100">✏️</span>
+                  >                    
+                    <div className="relative">
+                      <select
+                        ref={categoryInputRef}
+                        className="w-full p-1 border border-gray-300 dark:border-slate-600 bg-transparent dark:bg-transparent text-gray-900 dark:text-white rounded appearance-none pr-8"
+                        style={{
+                          backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e")',
+                          backgroundPosition: 'right 0.5rem center',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: '1.5em 1.5em'
+                        }}
+                        value={
+                          // Simple and direct approach to get the category ID
+                          transaction.originalData?.category_id || 
+                          (transaction.lunchMoneyCategory ? transaction.lunchMoneyCategory : "none")
+                        }
+                        onChange={(e) => {
+                          handleCategoryChange(transaction.lunchMoneyId, e.target.value);
+                        }}
+                        onBlur={() => setEditingTransaction(null)}
+                      >
+                        <option value="none">-- Uncategorized --</option>
+                        {categories.map(category => 
+                          typeof category === 'string' ? (
+                            <option key={category} value={category}>
+                              {category}
+                            </option>
+                          ) : (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          )
                         )}
-                      </div>
-                    )}
+                      </select>
+                    </div>
                   </td>
                   <td className="px-4 py-2">
-                    {transaction.lunchMoneyCategory || 'Uncategorized'}
-                  </td>
-                  <td className="px-4 py-2">
-                    {transaction.predictedCategory ? (
-                      <div className="flex items-center">
-                        <span>{transaction.predictedCategory}</span>
-                        {transaction.similarityScore && (
-                          <span className="ml-2 text-xs text-gray-500">
-                            ({Math.round(transaction.similarityScore * 100)}%)
-                          </span>
-                        )}
-                        {transaction.predictedCategory && (transaction.lunchMoneyCategory !== transaction.predictedCategory) && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCategoryChange(transaction.lunchMoneyId, transaction.predictedCategory || '');
-                            }}
-                            className="ml-2 text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
-                          >
-                            Apply
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      'Not predicted'
-                    )}
+                    {transaction.predictedCategory || "Not predicted"}
                   </td>
                 </tr>
               ))}
@@ -1423,4 +1551,4 @@ export default function TransactionList() {
       )}
     </div>
   );
-} 
+}

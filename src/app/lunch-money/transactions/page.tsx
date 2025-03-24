@@ -29,7 +29,7 @@ export default function LunchMoneyTransactionsPage() {
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="shadow rounded-lg p-6">
         <Suspense fallback={<div>Loading transactions...</div>}>
           <TransactionList />
         </Suspense>
