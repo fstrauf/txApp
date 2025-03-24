@@ -20,6 +20,16 @@ type Transaction = {
   originalData?: any;
 };
 
+type Category = {
+  id: string;
+  name: string;
+  description: string;
+  isLunchMoneyCategory: boolean;
+  excludeFromBudget: boolean;
+  excludeFromTotals: boolean;
+  isIncome: boolean;
+};
+
 export default function TransactionList() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -36,7 +46,7 @@ export default function TransactionList() {
   const [dateRange, setDateRange] = useState(pendingDateRange);
   const [importStatus, setImportStatus] = useState<'idle' | 'importing' | 'success' | 'error'>('idle');
   const [importMessage, setImportMessage] = useState('');
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<(string | Category)[]>([]);
   const [editingTransaction, setEditingTransaction] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const categoryInputRef = useRef<HTMLSelectElement>(null);
@@ -150,7 +160,7 @@ export default function TransactionList() {
     setEditingTransaction(id);
   };
 
-  const handleCategoryChange = async (transactionId: string, categoryId: string) => {
+  const handleCategoryChange = async (transactionId: string, categoryValue: string) => {
     setEditingTransaction(null);
     setUpdatingCategory(transactionId);
     
@@ -160,53 +170,122 @@ export default function TransactionList() {
       return;
     }
     
-    try {
-      // Use the Lunch Money API to update the category
-      const response = await fetch('/api/lunch-money/categories', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          transactionId: transaction.lunchMoneyId,
-          categoryId: categoryId === "none" ? null : categoryId
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update category in Lunch Money');
-      }
-
-      // Update local state to reflect the change
-      setTransactions(prev => 
-        prev.map(tx => {
-          if (tx.lunchMoneyId === transactionId) {
-            const selectedCategory = categoryId === "none" ? null : categoryId;
-            
-            return {
-              ...tx,
-              category: selectedCategory,
-              lunchMoneyCategory: selectedCategory
-            };
+    console.log(`Updating transaction ${transactionId} with category: "${categoryValue}"`);
+    
+    const maxRetries = 3;
+    let retryCount = 0;
+    
+    while (retryCount < maxRetries) {
+      try {
+        // Find category ID that matches the name (especially for predicted categories which come as names)
+        let categoryId = categoryValue;
+        
+        // If it's a name (like from prediction) and not already a numeric ID, try to find the ID
+        if (categoryValue && isNaN(Number(categoryValue))) {
+          console.log(`Looking for category ID matching name: "${categoryValue}"`);
+          
+          // Need to fetch categories to get their IDs
+          const catResponse = await fetch('/api/lunch-money/categories', {
+            signal: AbortSignal.timeout(5000) // 5 second timeout for category fetch
+          });
+          
+          if (!catResponse.ok) {
+            throw new Error('Failed to fetch categories while updating');
           }
-          return tx;
-        })
-      );
+          
+          const catData = await catResponse.json();
+          const matchingCategory = catData.categories.find(
+            (cat: Category | string) => {
+              if (typeof cat === 'string') {
+                return cat.toLowerCase() === categoryValue.toLowerCase();
+              }
+              return cat.name.toLowerCase() === categoryValue.toLowerCase();
+            }
+          );
+          
+          if (matchingCategory) {
+            categoryId = typeof matchingCategory === 'string' ? matchingCategory : matchingCategory.id;
+            console.log(`Found matching category ID: ${categoryId} for "${categoryValue}"`);
+          } else {
+            console.warn(`No matching category found for "${categoryValue}"`);
+          }
+        }
+        
+        console.log('Sending update to API:', {
+          transactionId: transaction.lunchMoneyId,
+          categoryId: categoryValue === "none" ? null : categoryId
+        });
+        
+        // Use the Lunch Money API to update the category with a 10 second timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        try {
+          const response = await fetch('/api/lunch-money/transactions', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              transactionId: transaction.lunchMoneyId,
+              categoryId: categoryValue === "none" ? null : categoryId
+            }),
+            signal: controller.signal
+          });
 
-      // Show success message
-      setToastMessage({
-        message: 'Category updated in Lunch Money',
-        type: 'success'
-      });
-    } catch (error) {
-      console.error('Error updating category in Lunch Money:', error);
-      setToastMessage({
-        message: error instanceof Error ? error.message : 'Failed to update category in Lunch Money',
-        type: 'error'
-      });
-    } finally {
-      setUpdatingCategory(null);
+          clearTimeout(timeoutId);
+          
+          const responseData = await response.json();
+          console.log("Update category response:", responseData);
+
+          if (!response.ok) {
+            throw new Error(responseData.error || 'Failed to update category in Lunch Money');
+          }
+
+          // Update local state to reflect the change
+          setTransactions(prev => 
+            prev.map(tx => {
+              if (tx.lunchMoneyId === transactionId) {
+                return {
+                  ...tx,
+                  category: categoryValue === "none" ? null : categoryValue,
+                  lunchMoneyCategory: categoryValue === "none" ? null : categoryValue
+                };
+              }
+              return tx;
+            })
+          );
+
+          // Show success message
+          setToastMessage({
+            message: 'Category updated in Lunch Money',
+            type: 'success'
+          });
+          
+          // If we get here, the update was successful
+          break;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      } catch (error) {
+        console.error(`Error updating category (attempt ${retryCount + 1}/${maxRetries}):`, error);
+        
+        // If this was our last retry, show the error
+        if (retryCount === maxRetries - 1) {
+          setToastMessage({
+            message: error instanceof Error ? error.message : 'Failed to update category in Lunch Money',
+            type: 'error'
+          });
+        } else {
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+          retryCount++;
+          continue;
+        }
+      }
     }
+    
+    setUpdatingCategory(null);
   };
 
   const handleSelectTransaction = (txId: string) => {
@@ -605,34 +684,10 @@ export default function TransactionList() {
       if (selectedTxs.length === 0) {
         throw new Error('No valid transactions selected for categorization');
       }
-
-      // Format transactions for categorization - use a different format based on what we know about the API
-      // Try to match the format used in the successful training step
-      // We need array of transactions WITH categories for the model to reference
-      const sampleTransactions = transactions
-        .filter(tx => tx.lunchMoneyCategory && tx.lunchMoneyCategory !== 'Uncategorized')
-        .slice(0, 20) // Take up to 20 transactions with categories as reference samples
-        .map(tx => ({
-          Narrative: tx.description,
-          Category: tx.lunchMoneyCategory,
-          amount: tx.amount,
-          date: typeof tx.date === 'string' 
-            ? tx.date 
-            : tx.date instanceof Date 
-              ? format(tx.date, 'yyyy-MM-dd')
-              : format(new Date(), 'yyyy-MM-dd')
-        }));
         
       // Transactions to classify should include description but no category
       const transactionsToClassify = selectedTxs.map(tx => tx.description);
       
-      // Get list of unique categories from our dataset for the model to use
-      const uniqueCategories = Array.from(new Set(
-        transactions
-          .filter(tx => tx.lunchMoneyCategory && tx.lunchMoneyCategory !== 'Uncategorized')
-          .map(tx => tx.lunchMoneyCategory)
-      )) || ['Food & Drink', 'Transport', 'Shopping', 'Entertainment', 'Bills & Utilities'];
-
       // Prepare the payload for the categorization API according to API schema
       // Using the exact values that work in test-api-endpoints.js
       const payload = {
@@ -690,12 +745,76 @@ export default function TransactionList() {
           const pollResult = await pollPromise;
           console.log("Polling completed:", pollResult);
           
-          if (pollResult.status === 'completed' && pollResult.results) {
-            // Update transactions with predicted categories
+          // Direct handler for the format in the error message
+          if (pollResult && 
+              pollResult.status === 'completed' && 
+              pollResult.results && 
+              Array.isArray(pollResult.results)) {
+            console.log("Using the standard results array format");
             updateTransactionsWithPredictions(pollResult.results);
-            
             setToastMessage({
               message: `Successfully categorized ${pollResult.results.length} transactions!`,
+              type: 'success'
+            });
+            return;
+          }
+          
+          // Handle the exact format from the error message
+          if (pollResult && 
+              pollResult.status === 'completed' && 
+              pollResult.config && 
+              pollResult.results && 
+              Array.isArray(pollResult.results)) {
+            console.log("Using the format from the error message with config and results");
+            updateTransactionsWithPredictions(pollResult.results);
+            setToastMessage({
+              message: `Successfully categorized ${pollResult.results.length} transactions!`,
+              type: 'success'
+            });
+            return;
+          }
+          
+          // Extract results based on the response format
+          let resultsToUse = [];
+          
+          if (pollResult.results && Array.isArray(pollResult.results)) {
+            // Direct results array
+            resultsToUse = pollResult.results;
+            console.log("Using direct results array from polling response");
+          } 
+          else if (pollResult.config && pollResult.config.results && Array.isArray(pollResult.config.results)) {
+            // Results in config.results format
+            resultsToUse = pollResult.config.results;
+            console.log("Using results from config.results in polling response");
+          }
+          // For the format in your example, where results are directly in the config property
+          else if (pollResult.config && Array.isArray(pollResult.config.results)) {
+            resultsToUse = pollResult.config.results;
+            console.log("Using results array from config.results");
+          }
+          else if (pollResult.config && Array.isArray(pollResult.config)) {
+            resultsToUse = pollResult.config;
+            console.log("Using config array as results");
+          }
+          
+          // Check if we might need to extract from your specific format
+          if (resultsToUse.length === 0 && pollResult.config) {
+            console.log("Checking for results in specific API format");
+            // Try to get results directly from the root of the response
+            if (pollResult.config.results) {
+              resultsToUse = Array.isArray(pollResult.config.results) 
+                ? pollResult.config.results 
+                : [pollResult.config.results];
+              console.log("Found results in config.results");
+            }
+          }
+          
+          if (resultsToUse.length > 0) {
+            // Update transactions with predicted categories
+            updateTransactionsWithPredictions(resultsToUse);
+            
+            setToastMessage({
+              message: `Successfully categorized ${resultsToUse.length} transactions!`,
               type: 'success'
             });
           } else if (pollResult.status === 'failed') {
@@ -704,8 +823,21 @@ export default function TransactionList() {
               type: 'error'
             });
           } else {
+            // Last resort - try to use the results array from the example format
+            if (typeof pollResult === 'object' && pollResult && 'config' in pollResult) {
+              const apiResponse = pollResult as any;
+              if (apiResponse.results && Array.isArray(apiResponse.results)) {
+                updateTransactionsWithPredictions(apiResponse.results);
+                setToastMessage({
+                  message: `Successfully categorized ${apiResponse.results.length} transactions!`,
+                  type: 'success'
+                });
+                return;
+              }
+            }
+            
             setToastMessage({
-              message: 'Categorization status unknown. Please try again.',
+              message: 'No categorization results were found. Please check the console for details.',
               type: 'error'
             });
           }
@@ -874,8 +1006,26 @@ export default function TransactionList() {
           results = result.config.result.results;
           console.log("Found results array in config.result.results");
         }
+        // Direct in config.results as seen in the API response you shared
+        else if (result.config && result.results) {
+          results = result.results;
+          console.log("Found results array in root with config present");
+        }
+        // Special case to match the exact format you shared in the error
+        else if (result.status === "completed" && result.config && Array.isArray(result.results)) {
+          results = result.results;
+          console.log("Found results array in root level matching the example format");
+        }
 
         console.log(`Extracted ${results.length} results`);
+
+        // If we still don't have results, check for the format in the example you provided
+        if (results.length === 0 && result.status === "completed") {
+          if (Array.isArray(result.results)) {
+            results = result.results;
+            console.log("Using results array from completed response");
+          }
+        }
 
         // Handle completed status
         if (result.status === "completed") {
@@ -883,7 +1033,12 @@ export default function TransactionList() {
             message: 'Categorization completed successfully!',
             type: 'success'
           });
-          return { status: 'completed', results, message: 'Categorization completed successfully!' };
+          return { 
+            status: 'completed', 
+            results, 
+            config: result.config, // Include the config when available
+            message: 'Categorization completed successfully!' 
+          };
         } else if (result.status === "failed") {
           const errorMessage = result.error || result.message || 'Unknown error';
           setToastMessage({
@@ -899,7 +1054,12 @@ export default function TransactionList() {
             message: 'Categorization completed with results!',
             type: 'success'
           });
-          return { status: 'completed', results, message: 'Categorization completed with results!' };
+          return { 
+            status: 'completed', 
+            results, 
+            config: result.config, // Include the config when available
+            message: 'Categorization completed with results!' 
+          };
         }
 
         // Still in progress, update toast with status
@@ -943,6 +1103,17 @@ export default function TransactionList() {
     }
     
     console.log(`Processing ${results.length} prediction results to update transactions`);
+    console.log("Raw results:", JSON.stringify(results, null, 2));
+    
+    // Special case for the format shared in your error message
+    // If we're getting a format like the example with narrative/predicted_category/similarity_score
+    const hasCorrectFormat = results.length > 0 && 
+      results[0] && 
+      (results[0].narrative !== undefined && results[0].predicted_category !== undefined);
+    
+    if (hasCorrectFormat) {
+      console.log("Results appear to be in the correct format already!");
+    }
     
     // Map of narratives to predicted categories
     const predictionMap = new Map();
@@ -961,7 +1132,7 @@ export default function TransactionList() {
       }
       
       if (narrative && predictedCategory) {
-        console.log(`Result ${index+1}: "${narrative}" → ${predictedCategory} (${similarityScore})`);
+        console.log(`Result ${index+1}: "${narrative}" → "${predictedCategory}" (${similarityScore})`);
         predictionMap.set(narrative, {
           category: predictedCategory,
           score: similarityScore
@@ -971,27 +1142,53 @@ export default function TransactionList() {
       }
     });
     
+    console.log("Built prediction map with", predictionMap.size, "entries");
+    console.log("Selected transaction IDs:", selectedTransactions);
+    
     // Keep track of how many transactions were updated
     let updatedCount = 0;
     
     // Update transactions with predictions
-    setTransactions(prev => prev.map(tx => {
-      // Find prediction that matches this transaction description
-      // Use exact match first, then try to find a fuzzy match if no exact match
-      const prediction = predictionMap.get(tx.description);
+    setTransactions(prev => {
+      const updated = prev.map(tx => {
+        // Check if this transaction is selected
+        if (!selectedTransactions.includes(tx.lunchMoneyId)) {
+          return tx;
+        }
+        
+        // Find prediction that matches this transaction description
+        const prediction = predictionMap.get(tx.description);
+        
+        if (prediction) {
+          console.log(`Matched transaction "${tx.description}" with prediction:`, prediction);
+          updatedCount++;
+          return {
+            ...tx,
+            predictedCategory: prediction.category,
+            similarityScore: prediction.score
+          };
+        }
+        
+        // If no exact match, try to find by substring
+        for (const [narrative, pred] of predictionMap.entries()) {
+          if (tx.description.includes(narrative) || narrative.includes(tx.description)) {
+            console.log(`Fuzzy matched "${tx.description}" with "${narrative}"`);
+            updatedCount++;
+            return {
+              ...tx,
+              predictedCategory: pred.category,
+              similarityScore: pred.score
+            };
+          }
+        }
+        
+        console.log(`No match found for transaction: "${tx.description}"`);
+        return tx;
+      });
       
-      if (prediction && selectedTransactions.includes(tx.lunchMoneyId)) {
-        updatedCount++;
-        return {
-          ...tx,
-          predictedCategory: prediction.category,
-          similarityScore: prediction.score
-        };
-      }
-      return tx;
-    }));
-    
-    console.log(`Updated ${updatedCount} transactions with predictions`);
+      console.log(`Updated ${updatedCount} transactions with predictions`);
+      return updated;
+    });
   };
 
   if (loading) {
@@ -1163,11 +1360,17 @@ export default function TransactionList() {
                           onBlur={() => setEditingTransaction(null)}
                         >
                           <option value="none">-- Uncategorized --</option>
-                          {categories.map(category => (
-                            <option key={category} value={category}>
-                              {category}
-                            </option>
-                          ))}
+                          {categories.map(category => 
+                            typeof category === 'string' ? (
+                              <option key={category} value={category}>
+                                {category}
+                              </option>
+                            ) : (
+                              <option key={category.id} value={category.name}>
+                                {category.name}
+                              </option>
+                            )
+                          )}
                         </select>
                       </div>
                     ) : (

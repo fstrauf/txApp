@@ -238,4 +238,83 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// PATCH endpoint to update a transaction's category
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession(authConfig);
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email! },
+    });
+    
+    if (!user?.lunchMoneyApiKey) {
+      return NextResponse.json({ error: 'Lunch Money API key not found' }, { status: 400 });
+    }
+    
+    const { transactionId, categoryId } = await request.json();
+    
+    if (!transactionId) {
+      return NextResponse.json({ error: 'Transaction ID is required' }, { status: 400 });
+    }
+    
+    // Convert categoryId to number or null for Lunch Money API
+    const lunchMoneyCategoryId = categoryId === "none" ? null : Number(categoryId);
+    
+    // Update the transaction directly using the official Lunch Money API
+    const url = `https://dev.lunchmoney.app/v1/transactions/${transactionId}`;
+    
+    // Format the request body according to the API documentation
+    // The key change: wrapping category_id in a transaction object
+    const updateBody = {
+      transaction: {
+        category_id: lunchMoneyCategoryId
+      }
+    };
+    
+    console.log('Making request to Lunch Money:', {
+      url,
+      method: 'PUT',
+      body: updateBody
+    });
+    
+    // Make the API call to Lunch Money
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${user.lunchMoneyApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updateBody)
+    });
+
+    // Get the response data
+    const responseData = await response.json();
+    
+    // Check for errors
+    if (!response.ok || responseData.error) {
+      const errorMessage = responseData.error ? 
+        (Array.isArray(responseData.error) ? responseData.error.join(', ') : responseData.error) : 
+        'Failed to update transaction category in Lunch Money';
+      
+      console.error('Lunch Money API error:', responseData);
+      return NextResponse.json({ error: errorMessage }, { status: response.status || 500 });
+    }
+    
+    return NextResponse.json({ 
+      success: true, 
+      transaction: responseData
+    });
+  } catch (error) {
+    console.error('Error in PATCH /api/lunch-money/transactions:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'An error occurred while updating transaction' },
+      { status: 500 }
+    );
+  }
 } 

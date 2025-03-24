@@ -6,11 +6,18 @@ import { prisma } from '@/lib/prisma';
 // Fetch categories from Lunch Money API
 async function fetchLunchMoneyCategories(apiKey: string) {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
     const response = await fetch('https://dev.lunchmoney.app/v1/categories', {
       headers: {
-        Authorization: `Bearer ${apiKey}`
-      }
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -21,6 +28,9 @@ async function fetchLunchMoneyCategories(apiKey: string) {
     return data.categories || [];
   } catch (error) {
     console.error('Error fetching categories from Lunch Money:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timed out while fetching categories from Lunch Money');
+    }
     throw error;
   }
 }
