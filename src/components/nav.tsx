@@ -39,7 +39,7 @@ export function Nav() {
               <Link
                 href="/dashboard"
                 className={`text-sm font-medium transition-colors hover:text-primary ${
-                  pathname === "/dashboard" ? "text-primary" : ""
+                  pathname === "/dashboard" ? "text-primary" : "text-muted-foreground"
                 }`}
               >
                 Dashboard
@@ -47,10 +47,18 @@ export function Nav() {
               <Link
                 href="/transactions"
                 className={`text-sm font-medium transition-colors hover:text-primary ${
-                  pathname === "/transactions" ? "text-primary" : ""
+                  pathname === "/transactions" ? "text-primary" : "text-muted-foreground"
                 }`}
               >
                 Transactions
+              </Link>
+              <Link
+                href="/lunch-money/transactions"
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  pathname.startsWith("/lunch-money") ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                Lunch Money
               </Link>
               <Link
                 href="/settings"

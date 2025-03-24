@@ -1,33 +1,27 @@
+"use client";
+
 import { Suspense } from 'react';
-import TransactionList from '@/components/lunch-money/transaction-list';
 import Link from 'next/link';
+import TransactionList from '@/components/lunch-money/transaction-list';
 
 export default function LunchMoneyTransactionsPage() {
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container py-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Lunch Money Transactions</h1>
-        <div className="space-x-4">
-          <Link 
-            href="/lunch-money/settings" 
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+        <div className="flex space-x-2">
+          <Link
+            href="/lunch-money/settings"
+            className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             Settings
-          </Link>
-          <Link 
-            href="/lunch-money/debug-raw" 
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Debug API
           </Link>
         </div>
       </div>
 
-      <div className="shadow rounded-lg p-6">
-        <Suspense fallback={<div>Loading transactions...</div>}>
-          <TransactionList />
-        </Suspense>
-      </div>
+      <Suspense fallback={<div>Loading transactions...</div>}>
+        <TransactionList />
+      </Suspense>
     </div>
   );
 } 

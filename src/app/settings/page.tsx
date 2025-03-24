@@ -1,7 +1,6 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 
 export default function SettingsPage() {
@@ -12,43 +11,63 @@ export default function SettingsPage() {
   }
 
   if (!session) {
-    redirect("/auth/signin");
+    return (
+      <div>
+        Please <Link href="/auth/signin">sign in</Link> to view this page.
+      </div>
+    );
   }
 
   return (
-    <div className="container py-6 max-w-4xl">
-      <h1 className="text-2xl font-bold mb-6">Settings</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Link 
-          href="/settings/categories" 
-          className="border rounded-lg p-4 hover:bg-secondary/20 transition-colors"
-        >
-          <h2 className="text-xl font-semibold mb-2">Categories</h2>
-          <p className="text-muted-foreground">
-            Manage your transaction categories. Create new categories, rename existing ones, or delete unused categories.
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="mb-6 text-2xl font-bold">Settings</h1>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-lg border p-4 shadow-sm">
+          <h2 className="mb-2 text-xl font-semibold">Categories</h2>
+          <p className="mb-4 text-gray-600">Manage your transaction categories and set budgets.</p>
+          <Link 
+            href="/settings/categories" 
+            className="inline-flex items-center text-blue-600 hover:underline"
+          >
+            Manage Categories
+          </Link>
+        </div>
+        <div className="rounded-lg border p-4 shadow-sm">
+          <h2 className="mb-2 text-xl font-semibold">Bank Accounts</h2>
+          <p className="mb-4 text-gray-600">
+            Connect and manage your bank accounts for automatic transaction import.
           </p>
-        </Link>
-        
-        <Link 
-          href="/settings/accounts" 
-          className="border rounded-lg p-4 hover:bg-secondary/20 transition-colors"
-        >
-          <h2 className="text-xl font-semibold mb-2">Bank Accounts</h2>
-          <p className="text-muted-foreground">
-            Manage your bank accounts. Add new accounts, update balances, or remove unused accounts.
+          <Link 
+            href="/settings/accounts" 
+            className="inline-flex items-center text-blue-600 hover:underline"
+          >
+            Manage Accounts
+          </Link>
+        </div>
+        <div className="rounded-lg border p-4 shadow-sm">
+          <h2 className="mb-2 text-xl font-semibold">Lunch Money</h2>
+          <p className="mb-4 text-gray-600">
+            Connect your Lunch Money account to import and categorize transactions.
           </p>
-        </Link>
-        
-        <Link 
-          href="/settings/profile" 
-          className="border rounded-lg p-4 hover:bg-secondary/20 transition-colors"
-        >
-          <h2 className="text-xl font-semibold mb-2">Profile</h2>
-          <p className="text-muted-foreground">
-            Update your profile information and preferences.
+          <Link 
+            href="/lunch-money/settings" 
+            className="inline-flex items-center text-blue-600 hover:underline"
+          >
+            Lunch Money Settings
+          </Link>
+        </div>
+        <div className="rounded-lg border p-4 shadow-sm">
+          <h2 className="mb-2 text-xl font-semibold">Profile</h2>
+          <p className="mb-4 text-gray-600">
+            Manage your profile settings and account preferences.
           </p>
-        </Link>
+          <Link 
+            href="/settings/profile" 
+            className="inline-flex items-center text-blue-600 hover:underline"
+          >
+            Edit Profile
+          </Link>
+        </div>
       </div>
     </div>
   );

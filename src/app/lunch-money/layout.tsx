@@ -7,8 +7,8 @@ export default function LunchMoneyLayout({
 }) {
   return (
     <ToastProvider>
-      <div className="container mx-auto px-4 py-8">
-        {children}
+      <div className="min-h-screen bg-background">
+        <main className="flex-1">{children}</main>
       </div>
     </ToastProvider>
   );
