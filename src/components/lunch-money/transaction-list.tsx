@@ -9,7 +9,7 @@ type Transaction = {
   date: string | Date;
   description: string;
   amount: number;
-  type: string;
+  is_income: boolean;
   lunchMoneyId: string;
   lunchMoneyCategory?: string | null;
   notes?: string;
@@ -53,6 +53,8 @@ export default function TransactionList() {
   const categoryInputRef = useRef<HTMLSelectElement>(null);
   const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
   const [categorizing, setCategorizing] = useState(false);
+  const [successfulUpdates, setSuccessfulUpdates] = useState<Record<string, boolean>>({});
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   // Fetch transactions when component mounts
   useEffect(() => {
@@ -161,7 +163,7 @@ export default function TransactionList() {
           date: tx.date || new Date().toISOString(),
           description: typeof tx.description === 'object' ? JSON.stringify(tx.description) : (tx.description || ''),
           amount: typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount || 0)),
-          type: tx.type || 'expense',
+          is_income: tx.is_income,
           // Ensure we use category_name from originalData for consistency
           lunchMoneyCategory: tx.originalData?.category_name || tx.lunchMoneyCategory || null,
           // Ensure predictedCategory is a string
@@ -208,7 +210,7 @@ export default function TransactionList() {
   };
 
   const handleCategoryChange = async (transactionId: string, categoryValue: string) => {
-    setEditingTransaction(null);
+    // Don't close the dropdown immediately
     setUpdatingCategory(transactionId);
     
     const transaction = transactions.find(tx => tx.lunchMoneyId === transactionId);
@@ -218,122 +220,85 @@ export default function TransactionList() {
     }
     
     console.log(`Updating transaction ${transactionId} with category: "${categoryValue}"`);
-    console.log("transactions", transactions)
     
-    const maxRetries = 3;
-    let retryCount = 0;
-    
-    while (retryCount < maxRetries) {
-      try {
-        // Find category ID that matches the name (especially for predicted categories which come as names)
-        let categoryId = categoryValue;
-        
-        // If it's a name (like from prediction) and not already a numeric ID, try to find the ID
-        if (categoryValue && isNaN(Number(categoryValue))) {
-          console.log(`Looking for category ID matching name: "${categoryValue}"`);
-          
-          // Need to fetch categories to get their IDs
-          const catResponse = await fetch('/api/lunch-money/categories', {
-            signal: AbortSignal.timeout(5000) // 5 second timeout for category fetch
-          });
-          
-          if (!catResponse.ok) {
-            throw new Error('Failed to fetch categories while updating');
-          }
-          
-          const catData = await catResponse.json();
-          const matchingCategory = catData.categories.find(
-            (cat: Category | string) => {
-              if (typeof cat === 'string') {
-                return cat.toLowerCase() === categoryValue.toLowerCase();
-              }
-              return cat.name.toLowerCase() === categoryValue.toLowerCase();
-            }
-          );
-          
-          if (matchingCategory) {
-            categoryId = typeof matchingCategory === 'string' ? matchingCategory : matchingCategory.id;
-            console.log(`Found matching category ID: ${categoryId} for "${categoryValue}"`);
-          } else {
-            console.warn(`No matching category found for "${categoryValue}"`);
-          }
-        }
-        
-        console.log('Sending update to API:', {
+    try {
+      // Send update to the API
+      const response = await fetch('/api/lunch-money/transactions', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           transactionId: transaction.lunchMoneyId,
-          categoryId: categoryValue === "none" ? null : categoryId
-        });
-        
-        // Use the Lunch Money API to update the category with a 10 second timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        
-        try {
-          const response = await fetch('/api/lunch-money/transactions', {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              transactionId: transaction.lunchMoneyId,
-              categoryId: categoryValue === "none" ? null : categoryId
-            }),
-            signal: controller.signal
-          });
-
-          clearTimeout(timeoutId);
-          
-          const responseData = await response.json();
-          console.log("Update category response:", responseData);
-
-          if (!response.ok) {
-            throw new Error(responseData.error || 'Failed to update category in Lunch Money');
-          }
-
-          // Update local state to reflect the change
-          setTransactions(prev => 
-            prev.map(tx => {
-              if (tx.lunchMoneyId === transactionId) {
-                return {
-                  ...tx,
-                  category: categoryValue === "none" ? null : categoryValue,
-                  lunchMoneyCategory: categoryValue === "none" ? null : categoryValue
-                };
-              }
-              return tx;
-            })
-          );
-
-          // Show success message
-          setToastMessage({
-            message: 'Category updated in Lunch Money',
-            type: 'success'
-          });
-          
-          // If we get here, the update was successful
-          break;
-        } finally {
-          clearTimeout(timeoutId);
-        }
-      } catch (error) {
-        console.error(`Error updating category (attempt ${retryCount + 1}/${maxRetries}):`, error);
-        
-        // If this was our last retry, show the error
-        if (retryCount === maxRetries - 1) {
-          setToastMessage({
-            message: error instanceof Error ? error.message : 'Failed to update category in Lunch Money',
-            type: 'error'
-          });
-        } else {
-          // Wait before retrying (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
-          retryCount++;
-          continue;
-        }
+          categoryId: categoryValue === "none" ? null : categoryValue
+        })
+      });
+      
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Failed to update category');
       }
+      
+      // Find category name for display
+      let categoryName = categoryValue;
+      const selectedCategory = categories.find(cat => 
+        typeof cat !== 'string' && cat.id === categoryValue
+      );
+      if (selectedCategory && typeof selectedCategory !== 'string') {
+        categoryName = selectedCategory.name;
+      }
+      
+      // Update local state
+      setTransactions(prev => 
+        prev.map(tx => {
+          if (tx.lunchMoneyId === transactionId) {
+            return {
+              ...tx,
+              category: categoryValue === "none" ? null : categoryValue,
+              lunchMoneyCategory: categoryValue === "none" ? null : categoryName,
+              originalData: {
+                ...tx.originalData,
+                category_id: categoryValue === "none" ? null : categoryValue,
+                category_name: categoryValue === "none" ? null : categoryName
+              }
+            };
+          }
+          return tx;
+        })
+      );
+      
+      // Show success indicator
+      setSuccessfulUpdates(prev => ({
+        ...prev,
+        [transactionId]: true
+      }));
+      
+      // Clear success indicator after 3 seconds
+      setTimeout(() => {
+        setSuccessfulUpdates(prev => ({
+          ...prev,
+          [transactionId]: false
+        }));
+      }, 3000);
+      
+      // Show success toast
+      setToastMessage({
+        message: 'Category updated in Lunch Money',
+        type: 'success'
+      });
+      
+      // Close the dropdown after successful update
+      setOpenDropdown(null);
+    } catch (error) {
+      console.error('Error updating category:', error);
+      setToastMessage({
+        message: error instanceof Error ? error.message : 'Failed to update category',
+        type: 'error'
+      });
+    } finally {
+      setUpdatingCategory(null);
     }
-    
-    setUpdatingCategory(null);
   };
 
   const handleSelectTransaction = (txId: string) => {
@@ -1333,6 +1298,22 @@ export default function TransactionList() {
     });
   };
 
+  // Add a helper function to get category name from id
+  const getCategoryNameById = (categoryId: string | null) => {
+    if (!categoryId) return null;
+    
+    const category = categories.find(cat => 
+      typeof cat !== 'string' && cat.id === categoryId
+    );
+    
+    if (category && typeof category !== 'string') {
+      return category.name;
+    }
+    
+    // If not found in categories, check if the transaction has the category name
+    return categoryId;
+  };
+
   if (loading) {
     return <div>Loading transactions...</div>;
   }
@@ -1353,7 +1334,7 @@ export default function TransactionList() {
   }
 
   return (
-    <div className="text-gray-900 dark:text-gray-100">
+    <div className="text-gray-900 dark:text-gray-100 text-sm">
       {/* Toast notification */}
       {toastMessage && (
         <div className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow-lg z-50 ${
@@ -1435,10 +1416,10 @@ export default function TransactionList() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 dark:border-slate-700">
+          <table className="min-w-full bg-white border border-gray-200 dark:border-slate-700 text-sm">
             <thead className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-white">
               <tr>
-                <th className="px-4 py-2 text-left">
+                <th className="px-3 py-2 text-left">
                   <label className="inline-flex items-center">
                     <input
                       type="checkbox"
@@ -1449,17 +1430,17 @@ export default function TransactionList() {
                     <span className="ml-2">Select</span>
                   </label>
                 </th>
-                <th className="px-4 py-2 text-left">Date</th>
-                <th className="px-4 py-2 text-left">Description</th>
-                <th className="px-4 py-2 text-left">Amount</th>
-                <th className="px-4 py-2 text-left">Category</th>
-                <th className="px-4 py-2 text-left">Predicted Category</th>
+                <th className="px-3 py-2 text-left">Date</th>
+                <th className="px-3 py-2 text-left">Description</th>
+                <th className="px-3 py-2 text-left">Amount</th>
+                <th className="px-3 py-2 text-left">Category</th>
+                <th className="px-3 py-2 text-left">Predicted Category</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
               {transactions.map((transaction) => (
                 <tr key={transaction.lunchMoneyId} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 bg-white dark:bg-slate-800">
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2">
                     <input
                       type="checkbox"
                       checked={selectedTransactions.includes(transaction.lunchMoneyId)}
@@ -1467,7 +1448,7 @@ export default function TransactionList() {
                       className="h-4 w-4 text-blue-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
                     />
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2">
                     <div>
                       {typeof transaction.date === 'string' 
                         ? transaction.date 
@@ -1488,59 +1469,88 @@ export default function TransactionList() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2">
                     {typeof transaction.description === 'object' 
                       ? JSON.stringify(transaction.description) 
                       : transaction.description}
                   </td>
-                  <td className="px-4 py-2 text-green-500">
-                    +{typeof transaction.amount === 'number' 
-                      ? transaction.amount.toFixed(2) 
-                      : parseFloat(String(transaction.amount)).toFixed(2)}
+                  <td className={`px-3 py-2 ${transaction.is_income ? 'text-green-500' : 'text-red-500'}`}>
+                    {transaction.is_income ? '+' : '-'}
+                    {typeof transaction.amount === 'number' 
+                      ? Math.abs(transaction.amount).toFixed(2) 
+                      : Math.abs(parseFloat(String(transaction.amount))).toFixed(2)}
                   </td>
-                  <td 
-                    className="px-4 py-2 cursor-pointer relative"
-                    onClick={() => {
-                      if (!transaction.lunchMoneyId) return;
-                      startEditing(transaction.lunchMoneyId);
-                    }}
-                  >                    
+                  <td className="px-3 py-2 cursor-pointer relative">
                     <div className="relative">
-                      <select
-                        ref={categoryInputRef}
-                        className="w-full p-1 border border-gray-300 dark:border-slate-600 bg-transparent dark:bg-transparent text-gray-900 dark:text-white rounded appearance-none pr-8"
-                        style={{
-                          backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e")',
-                          backgroundPosition: 'right 0.5rem center',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundSize: '1.5em 1.5em'
+                      <div 
+                        onClick={() => {
+                          // Toggle dropdown - close if already open, open if closed
+                          setOpenDropdown(openDropdown === transaction.lunchMoneyId ? null : transaction.lunchMoneyId);
                         }}
-                        value={
-                          // Simple and direct approach to get the category ID
-                          transaction.originalData?.category_id || 
-                          (transaction.lunchMoneyCategory ? transaction.lunchMoneyCategory : "none")
-                        }
-                        onChange={(e) => {
-                          handleCategoryChange(transaction.lunchMoneyId, e.target.value);
-                        }}
-                        onBlur={() => setEditingTransaction(null)}
+                        className={`w-full py-1 px-2 border ${
+                          successfulUpdates[transaction.lunchMoneyId] 
+                            ? 'border-green-500 dark:border-green-500' 
+                            : 'border-gray-300 dark:border-slate-600'
+                        } bg-transparent dark:bg-transparent text-gray-900 dark:text-white rounded cursor-pointer flex items-center justify-between`}
                       >
-                        <option value="none">-- Uncategorized --</option>
-                        {categories.map(category => 
-                          typeof category === 'string' ? (
-                            <option key={category} value={category}>
-                              {category}
-                            </option>
-                          ) : (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
-                          )
-                        )}
-                      </select>
+                        <span>
+                          {transaction.originalData?.category_name || 
+                           transaction.lunchMoneyCategory || 
+                           "-- Uncategorized --"}
+                        </span>
+                        {/* Dropdown arrow */}
+                        <svg className="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      
+                      {/* Dropdown menu */}
+                      {openDropdown === transaction.lunchMoneyId && (
+                        <div className="absolute z-10 mt-1 w-full bg-white dark:bg-slate-700 shadow-lg max-h-60 rounded-md py-1 text-sm ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
+                          <div 
+                            className="cursor-pointer px-3 py-1 hover:bg-gray-100 dark:hover:bg-slate-600"
+                            onClick={() => handleCategoryChange(transaction.lunchMoneyId, "none")}
+                          >
+                            -- Uncategorized --
+                          </div>
+                          {categories.map(category => {
+                            const categoryId = typeof category === 'string' ? category : category.id;
+                            const categoryName = typeof category === 'string' ? category : category.name;
+                            
+                            return (
+                              <div 
+                                key={categoryId}
+                                className="cursor-pointer px-3 py-1 hover:bg-gray-100 dark:hover:bg-slate-600"
+                                onClick={() => handleCategoryChange(transaction.lunchMoneyId, categoryId)}
+                              >
+                                {categoryName}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      
+                      {/* Loading spinner */}
+                      {updatingCategory === transaction.lunchMoneyId && (
+                        <div className="absolute right-0 top-0 h-full flex items-center pr-2">
+                          <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </div>
+                      )}
+                      
+                      {/* Success checkmark */}
+                      {successfulUpdates[transaction.lunchMoneyId] && (
+                        <div className="absolute right-0 top-0 h-full flex items-center pr-2">
+                          <svg className="h-4 w-4 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
                     </div>
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2">
                     {transaction.predictedCategory || "Not predicted"}
                   </td>
                 </tr>
