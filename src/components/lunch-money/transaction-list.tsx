@@ -55,6 +55,17 @@ export default function TransactionList() {
   const [categorizing, setCategorizing] = useState(false);
   const [successfulUpdates, setSuccessfulUpdates] = useState<Record<string, boolean>>({});
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [operationInProgress, setOperationInProgress] = useState<boolean>(false);
+  const [progressPercent, setProgressPercent] = useState<number>(0);
+  const [progressMessage, setProgressMessage] = useState<string>('');
+  const [operationType, setOperationType] = useState<'none' | 'training' | 'categorizing'>('none');
+  
+  // New state variables for the categorization workflow
+  const [showOnlyCategorized, setShowOnlyCategorized] = useState<boolean>(false);
+  const [categorizedTransactions, setCategorizedTransactions] = useState<Map<string, {category: string, score: number}>>(new Map());
+  const [pendingCategoryUpdates, setPendingCategoryUpdates] = useState<Record<string, {categoryId: string, score: number}>>({});
+  const [applyingAll, setApplyingAll] = useState<boolean>(false);
+  const [applyingIndividual, setApplyingIndividual] = useState<string | null>(null);
 
   // Fetch transactions when component mounts
   useEffect(() => {
@@ -458,7 +469,176 @@ export default function TransactionList() {
     }
   };
 
-  // Modify the handleTrainSelected function to call tagTransactionsAsTrained after successful training
+  // Add a generic function to handle polling for both operations
+  const pollForCompletion = async (predictionId: string, type: 'training' | 'categorizing') => {
+    // Constants for polling
+    const maxPolls = 120; // Maximum number of polling attempts (10 minutes with 5s interval)
+    const pollInterval = 5000; // 5 seconds between polls
+    const maxConsecutiveErrors = 3;
+    let pollCount = 0;
+    let consecutiveErrors = 0;
+    
+    setOperationInProgress(true);
+    setOperationType(type);
+    setProgressPercent(5); // Start with a little progress shown
+    setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} started...`);
+
+    while (pollCount < maxPolls) {
+      try {
+        pollCount++;
+        
+        // Update progress based on poll count (simple approximation)
+        // Reserve the last 20% for completion
+        const progressValue = Math.min(80, Math.floor((pollCount / maxPolls) * 100));
+        setProgressPercent(progressValue);
+        
+        // Wait for the poll interval
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        
+        // Call the service to check status
+        console.log(`Checking ${type} status for prediction ID: ${predictionId} (attempt ${pollCount}/${maxPolls})`);
+        
+        const response = await fetch(`https://txclassify.onrender.com/status/${predictionId}`, {
+          headers: {
+            'X-API-Key': 'test_api_key_fixed',
+            'Accept': 'application/json',
+          },
+        });
+
+        // Handle different response codes
+        if (!response.ok) {
+          const statusCode = response.status;
+          console.log(`Server returned error code: ${statusCode} for prediction ID: ${predictionId}`);
+
+          // If we get a 502/503/504, the worker might have restarted
+          if (statusCode === 502 || statusCode === 503 || statusCode === 504) {
+            consecutiveErrors++;
+            setProgressMessage(`Server error (${statusCode}), retrying...`);
+
+            if (consecutiveErrors >= maxConsecutiveErrors) {
+              setToastMessage({
+                message: `${type === 'training' ? 'Training' : 'Categorization'} failed after ${consecutiveErrors} consecutive worker errors`,
+                type: 'error'
+              });
+              setOperationInProgress(false);
+              setOperationType('none');
+              return { status: 'failed', error: 'Too many consecutive worker errors' };
+            }
+            continue;
+          }
+
+          // For 404, could mean the prediction is gone/complete
+          if (statusCode === 404) {
+            // Early phase - job might not be registered yet
+            if (pollCount < 5) {
+              setProgressMessage('Waiting for job to start...');
+              continue;
+            }
+            
+            // Later phase - job might be complete and cleaned up
+            if (pollCount > 20) {
+              setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} complete.`);
+              setProgressPercent(100);
+              setTimeout(() => {
+                setOperationInProgress(false);
+                setOperationType('none');
+              }, 2000);
+              return { status: 'completed', message: 'Process completed' };
+            }
+            
+            continue;
+          }
+          
+          consecutiveErrors++;
+          if (consecutiveErrors >= maxConsecutiveErrors) {
+            setToastMessage({
+              message: `${type === 'training' ? 'Training' : 'Categorization'} failed after ${consecutiveErrors} consecutive errors`,
+              type: 'error'
+            });
+            setOperationInProgress(false);
+            setOperationType('none');
+            return { status: 'failed', error: 'Too many consecutive errors' };
+          }
+          continue;
+        }
+
+        // Reset consecutive errors on successful response
+        consecutiveErrors = 0;
+
+        // Parse the response
+        const result = await response.json();
+        console.log("Status response:", result);
+
+        // Handle completed status
+        if (result.status === "completed") {
+          setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`);
+          setProgressPercent(100);
+          
+          // Show success toast
+          setToastMessage({
+            message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`,
+            type: 'success'
+          });
+          
+          // Keep progress bar visible for a moment
+          setTimeout(() => {
+            setOperationInProgress(false);
+            setOperationType('none');
+          }, 2000);
+          
+          return { 
+            status: 'completed', 
+            results: result.results || result.config?.results || [], 
+            message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!` 
+          };
+        } else if (result.status === "failed") {
+          const errorMessage = result.error || result.message || 'Unknown error';
+          setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} failed: ${errorMessage}`);
+          
+          setToastMessage({
+            message: `${type === 'training' ? 'Training' : 'Categorization'} failed: ${errorMessage}`,
+            type: 'error'
+          });
+          
+          setOperationInProgress(false);
+          setOperationType('none');
+          return { status: 'failed', error: errorMessage };
+        }
+
+        // Still in progress, update progress message
+        let statusMessage = `${type === 'training' ? 'Training' : 'Categorization'} in progress...`;
+        if (result.message) {
+          statusMessage += ` ${result.message}`;
+        }
+        setProgressMessage(statusMessage);
+        
+      } catch (error) {
+        console.error('Error polling status:', error);
+        
+        consecutiveErrors++;
+        if (consecutiveErrors >= maxConsecutiveErrors) {
+          setToastMessage({
+            message: `Failed to check ${type === 'training' ? 'training' : 'categorization'} status after ${consecutiveErrors} consecutive errors`,
+            type: 'error'
+          });
+          setOperationInProgress(false);
+          setOperationType('none');
+          return { status: 'failed', error: 'Error checking status' };
+        }
+      }
+    }
+
+    // If we reach here, we've polled too many times without completion
+    setToastMessage({
+      message: `${type === 'training' ? 'Training' : 'Categorization'} is taking longer than expected. Please try again.`,
+      type: 'error'
+    });
+    setOperationInProgress(false);
+    setOperationType('none');
+    return { status: 'unknown', message: 'Maximum polling attempts reached' };
+  };
+
+  // Update handleTrainSelected to use the new polling function
   const handleTrainSelected = async () => {
     if (selectedTransactions.length === 0) {
       setToastMessage({
@@ -477,10 +657,10 @@ export default function TransactionList() {
     }
 
     // Show loading state
-    setToastMessage({
-      message: 'Preparing to train classification model...',
-      type: 'success'
-    });
+    setOperationInProgress(true);
+    setOperationType('training');
+    setProgressPercent(0);
+    setProgressMessage('Preparing training data...');
 
     try {
       // Format transactions for training to match the API schema requirements
@@ -489,33 +669,19 @@ export default function TransactionList() {
         .map(tx => ({
           description: tx.description, // Required by API schema
           Category: tx.lunchMoneyCategory || 'Uncategorized' // Required by API schema with capital C
-          // Remove other fields that are not required and may be causing issues
         }));
       
       if (trainingData.length === 0) {
         throw new Error('No valid transactions selected for training');
       }
 
-      // Debug: Log each transaction to verify format
-      console.log("Transactions for training:");
-      trainingData.forEach((tx, index) => {
-        console.log(`Transaction ${index + 1}:`, tx);
-        // Verify required fields are present and not undefined/null
-        if (!tx.description) {
-          console.error(`Missing description in transaction ${index + 1}`);
-        }
-        if (!tx.Category) {
-          console.error(`Missing Category in transaction ${index + 1}`);
-        }
-      });
-
       // Prepare the payload based on the API schema
       const payload = {
         transactions: trainingData,
-        userId: 'test_user_fixed', // Optional
+        userId: 'test_user_fixed', // For testing
         expenseSheetId: 'lunchmoney', // Required
         spreadsheetId: 'lunchmoney', // Required for classification
-        // Include column configuration if needed
+        // Include column configuration
         columnOrderCategorisation: {
           descriptionColumn: "B",
           categoryColumn: "C",
@@ -524,7 +690,8 @@ export default function TransactionList() {
         categorisationTab: "LunchMoney"
       };
 
-      console.log("Sending payload to training API:", JSON.stringify(payload));
+      setProgressPercent(10);
+      setProgressMessage('Sending training request...');
 
       // Call the training API endpoint
       const response = await fetch('https://txclassify.onrender.com/train', {
@@ -538,80 +705,26 @@ export default function TransactionList() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
-        console.error("Training API error:", errorData);
-        
-        // Handle validation errors specifically
-        if (errorData.code === 400 && errorData.details && Array.isArray(errorData.details)) {
-          const validationErrors = errorData.details.map((detail: { location: string, message: string }) => 
-            `${detail.location}: ${detail.message}`
-          ).join(', ');
-          
-          throw new Error(`Validation error: ${validationErrors}`);
-        }
-        
-        throw new Error(
-          errorData.error || 
-          (typeof errorData === 'object' ? JSON.stringify(errorData) : errorData) || 
-          'Training request failed'
-        );
+        throw new Error(errorData.error || 'Training request failed');
       }
 
       const result = await response.json();
       console.log("Training response:", result);
 
-      // If we have a prediction ID, store it for status checking
+      // If we have a prediction ID, start polling
       if (result.prediction_id || result.predictionId) {
         const predictionId = result.prediction_id || result.predictionId;
         localStorage.setItem('training_prediction_id', predictionId);
         
-        // Show success message
-        setToastMessage({
-          message: `Training started! Monitoring progress...`,
-          type: 'success'
-        });
+        // Poll for status
+        const pollResult = await pollForCompletion(predictionId, 'training');
         
-        // Instead of immediately redirecting, poll for status
-        const [pollPromise, pollTimeout] = withTimeout(
-          pollTrainingStatus(predictionId),
-          60000 // 1 minute timeout
-        );
-        
-        try {
-          const pollResult = await pollPromise;
-          console.log("Polling completed:", pollResult);
-          
-          if (pollResult.status === 'completed') {
-            // Apply "Trained" tag to the selected transactions
-            await tagTransactionsAsTrained(selectedTransactions);
-            
-            // On success, redirect to status page to view results
-            router.push(`/lunch-money/training-status?prediction_id=${predictionId}`);
-          } else if (pollResult.status === 'failed') {
-            // On failure, show error but don't redirect
-            setToastMessage({
-              message: `Training failed: ${pollResult.error || 'Unknown error'}`,
-              type: 'error'
-            });
-          } else {
-            // Apply "Trained" tag anyway since we might not know for sure if it failed
-            await tagTransactionsAsTrained(selectedTransactions);
-            
-            // On unknown/timeout, redirect to status page for manual checking
-            setToastMessage({
-              message: 'Redirecting to status page for detailed progress...',
-              type: 'success'
-            });
-            router.push(`/lunch-money/training-status?prediction_id=${predictionId}`);
-          }
-        } catch (pollError) {
-          console.error("Error during polling:", pollError);
-          // On polling error, redirect to status page
-          setToastMessage({
-            message: 'Training started but monitoring failed. Redirecting to status page...',
-            type: 'success'
-          });
-          router.push(`/lunch-money/training-status?prediction_id=${predictionId}`);
+        // If training completed successfully, apply "Trained" tag to selected transactions
+        if (pollResult.status === 'completed') {
+          await tagTransactionsAsTrained(selectedTransactions);
         }
+        
+        return pollResult;
       } else {
         throw new Error('No prediction ID received from training service');
       }
@@ -621,152 +734,12 @@ export default function TransactionList() {
         message: error instanceof Error ? error.message : 'Failed to start training',
         type: 'error'
       });
+      setOperationInProgress(false);
+      setOperationType('none');
     }
   };
 
-  // Add this function outside of handleTrainSelected but inside the component
-  const pollTrainingStatus = async (predictionId: string) => {
-    // Constants for polling
-    const maxPolls = 120; // Maximum number of polling attempts (10 minutes with 5s interval)
-    const pollInterval = 5000; // 5 seconds between polls
-    const maxConsecutiveErrors = 3;
-    let pollCount = 0;
-    let consecutiveErrors = 0;
-    
-    setToastMessage({
-      message: 'Checking training status...',
-      type: 'success'
-    });
-
-    while (pollCount < maxPolls) {
-      try {
-        pollCount++;
-        
-        // Wait for the poll interval
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
-        
-        // Call the service to check status
-        console.log(`Checking training status for prediction ID: ${predictionId} (attempt ${pollCount}/${maxPolls})`);
-        const response = await fetch(`https://txclassify.onrender.com/status/${predictionId}`, {
-          headers: {
-            'X-API-Key': 'test_api_key_fixed',
-            'Accept': 'application/json',
-          },
-        });
-
-        // Handle different response codes
-        if (!response.ok) {
-          const statusCode = response.status;
-          console.log(`Server returned error code: ${statusCode} for prediction ID: ${predictionId}`);
-
-          // If we get a 502/503/504, the worker might have restarted
-          if (statusCode === 502 || statusCode === 503 || statusCode === 504) {
-            consecutiveErrors++;
-            console.warn(`Worker error (${statusCode}) on attempt ${pollCount}, consecutive errors: ${consecutiveErrors}`);
-
-            if (consecutiveErrors >= maxConsecutiveErrors) {
-              setToastMessage({
-                message: `Training failed after ${consecutiveErrors} consecutive worker errors`,
-                type: 'error'
-              });
-              return { status: 'failed', error: 'Too many consecutive worker errors' };
-            }
-            continue;
-          }
-
-          // For 404, could mean the prediction is gone/complete
-          if (statusCode === 404) {
-            setToastMessage({
-              message: 'Training status no longer available. It may have completed.',
-              type: 'success'
-            });
-            return { status: 'unknown', message: 'Status no longer available' };
-          }
-          
-          consecutiveErrors++;
-          if (consecutiveErrors >= maxConsecutiveErrors) {
-            setToastMessage({
-              message: `Training failed after ${consecutiveErrors} consecutive errors`,
-              type: 'error'
-            });
-            return { status: 'failed', error: 'Too many consecutive errors' };
-          }
-          continue;
-        }
-
-        // Reset consecutive errors on successful response
-        consecutiveErrors = 0;
-
-        // Parse the response
-        const result = await response.json();
-        console.log("Status response:", result);
-
-        // Handle completed status
-        if (result.status === "completed") {
-          setToastMessage({
-            message: 'Training completed successfully!',
-            type: 'success'
-          });
-          return { status: 'completed', message: 'Training completed successfully!' };
-        } else if (result.status === "failed") {
-          const errorMessage = result.error || result.message || 'Unknown error';
-          setToastMessage({
-            message: `Training failed: ${errorMessage}`,
-            type: 'error'
-          });
-          return { status: 'failed', error: errorMessage };
-        }
-
-        // Still in progress, update toast with status
-        setToastMessage({
-          message: `Training in progress... ${result.message || ''}`,
-          type: 'success'
-        });
-        
-      } catch (error) {
-        console.error('Error polling status:', error);
-        
-        consecutiveErrors++;
-        if (consecutiveErrors >= maxConsecutiveErrors) {
-          setToastMessage({
-            message: `Failed to check training status after ${consecutiveErrors} consecutive errors`,
-            type: 'error'
-          });
-          return { status: 'failed', error: 'Error checking status' };
-        }
-      }
-    }
-
-    // If we reach here, we've polled too many times without completion
-    setToastMessage({
-      message: 'Training is taking longer than expected. Please check status page.',
-      type: 'success'
-    });
-    return { status: 'unknown', message: 'Maximum polling attempts reached' };
-  };
-
-  // Add utility function for timeout
-  const withTimeout = <T,>(promise: Promise<T>, timeout: number): [Promise<T>, NodeJS.Timeout] => {
-    let timeoutId: NodeJS.Timeout = setTimeout(() => {}, 0); // Initialize with a dummy timeout
-    
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        reject(new Error(`Operation timed out after ${timeout}ms`));
-      }, timeout);
-    });
-    
-    // Create a race between the original promise and the timeout
-    const wrappedPromise = Promise.race([
-      promise,
-      timeoutPromise
-    ]) as Promise<T>;
-    
-    // Ensure the timeout is cleared when the promise resolves or rejects
-    wrappedPromise.finally(() => clearTimeout(timeoutId));
-    
-    return [wrappedPromise, timeoutId];
-  };
-
+  // Update handleCategorizeSelected to use the new polling function
   const handleCategorizeSelected = async () => {
     if (selectedTransactions.length === 0) {
       setToastMessage({
@@ -777,11 +750,10 @@ export default function TransactionList() {
     }
 
     // Show loading state
-    setCategorizing(true);
-    setToastMessage({
-      message: 'Preparing to categorize transactions...',
-      type: 'success'
-    });
+    setOperationInProgress(true);
+    setOperationType('categorizing');
+    setProgressPercent(0);
+    setProgressMessage('Preparing to categorize transactions...');
 
     try {
       // Get the selected transactions with all their data
@@ -795,19 +767,18 @@ export default function TransactionList() {
       // Transactions to classify should include description but no category
       const transactionsToClassify = selectedTxs.map(tx => tx.description);
       
-      // Prepare the payload for the categorization API according to API schema
-      // Using the exact values that work in test-api-endpoints.js
+      setProgressPercent(10);
+      setProgressMessage('Sending categorization request...');
+      
+      // Prepare the payload for the categorization API
       const payload = {
         transactions: transactionsToClassify,
-        // categories: uniqueCategories, // Removing this as it's not in the working example
         userId: 'test_user_fixed',
-        spreadsheetId: 'test-sheet-id', // Changed to match test-api-endpoints.js
-        sheetName: 'test-sheet', // Changed to match test-api-endpoints.js
+        spreadsheetId: 'test-sheet-id',
+        sheetName: 'test-sheet',
         categoryColumn: 'E',
         startRow: '1'
       };
-
-      console.log("Sending payload to categorization API:", JSON.stringify(payload));
 
       // Call the categorization API endpoint
       const response = await fetch('https://txclassify.onrender.com/classify', {
@@ -821,7 +792,6 @@ export default function TransactionList() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => response.text());
-        console.error("Categorization API error:", errorData);
         throw new Error(typeof errorData === 'object' ? JSON.stringify(errorData) : errorData || 'Categorization request failed');
       }
 
@@ -833,128 +803,20 @@ export default function TransactionList() {
         const predictionId = result.prediction_id;
         localStorage.setItem('categorization_prediction_id', predictionId);
         
-        // Show processing message
-        setToastMessage({
-          message: `Categorization started! Monitoring progress...`,
-          type: 'success'
-        });
-        
-        // Wait a bit longer before starting to poll to allow the backend to initialize
+        // Wait a bit before polling to allow the backend to start processing
+        setProgressPercent(15);
+        setProgressMessage('Waiting for categorization to initialize...');
         await new Promise(resolve => setTimeout(resolve, 5000));
         
         // Poll for categorization results
-        const [pollPromise, pollTimeout] = withTimeout(
-          pollCategorizationStatus(predictionId),
-          120000 // 2 minute timeout (longer than before)
-        );
+        const pollResult = await pollForCompletion(predictionId, 'categorizing');
         
-        try {
-          const pollResult = await pollPromise;
-          console.log("Polling completed:", pollResult);
-          
-          // Direct handler for the format in the error message
-          if (pollResult && 
-              pollResult.status === 'completed' && 
-              pollResult.results && 
-              Array.isArray(pollResult.results)) {
-            console.log("Using the standard results array format");
-            updateTransactionsWithPredictions(pollResult.results);
-            setToastMessage({
-              message: `Successfully categorized ${pollResult.results.length} transactions!`,
-              type: 'success'
-            });
-            return;
-          }
-          
-          // Handle the exact format from the error message
-          if (pollResult && 
-              pollResult.status === 'completed' && 
-              pollResult.config && 
-              pollResult.results && 
-              Array.isArray(pollResult.results)) {
-            console.log("Using the format from the error message with config and results");
-            updateTransactionsWithPredictions(pollResult.results);
-            setToastMessage({
-              message: `Successfully categorized ${pollResult.results.length} transactions!`,
-              type: 'success'
-            });
-            return;
-          }
-          
-          // Extract results based on the response format
-          let resultsToUse = [];
-          
-          if (pollResult.results && Array.isArray(pollResult.results)) {
-            // Direct results array
-            resultsToUse = pollResult.results;
-            console.log("Using direct results array from polling response");
-          } 
-          else if (pollResult.config && pollResult.config.results && Array.isArray(pollResult.config.results)) {
-            // Results in config.results format
-            resultsToUse = pollResult.config.results;
-            console.log("Using results from config.results in polling response");
-          }
-          // For the format in your example, where results are directly in the config property
-          else if (pollResult.config && Array.isArray(pollResult.config.results)) {
-            resultsToUse = pollResult.config.results;
-            console.log("Using results array from config.results");
-          }
-          else if (pollResult.config && Array.isArray(pollResult.config)) {
-            resultsToUse = pollResult.config;
-            console.log("Using config array as results");
-          }
-          
-          // Check if we might need to extract from your specific format
-          if (resultsToUse.length === 0 && pollResult.config) {
-            console.log("Checking for results in specific API format");
-            // Try to get results directly from the root of the response
-            if (pollResult.config.results) {
-              resultsToUse = Array.isArray(pollResult.config.results) 
-                ? pollResult.config.results 
-                : [pollResult.config.results];
-              console.log("Found results in config.results");
-            }
-          }
-          
-          if (resultsToUse.length > 0) {
-            // Update transactions with predicted categories
-            updateTransactionsWithPredictions(resultsToUse);
-            
-            setToastMessage({
-              message: `Successfully categorized ${resultsToUse.length} transactions!`,
-              type: 'success'
-            });
-          } else if (pollResult.status === 'failed') {
-            setToastMessage({
-              message: `Categorization failed: ${pollResult.error || 'Unknown error'}`,
-              type: 'error'
-            });
-          } else {
-            // Last resort - try to use the results array from the example format
-            if (typeof pollResult === 'object' && pollResult && 'config' in pollResult) {
-              const apiResponse = pollResult as any;
-              if (apiResponse.results && Array.isArray(apiResponse.results)) {
-                updateTransactionsWithPredictions(apiResponse.results);
-                setToastMessage({
-                  message: `Successfully categorized ${apiResponse.results.length} transactions!`,
-                  type: 'success'
-                });
-                return;
-              }
-            }
-            
-            setToastMessage({
-              message: 'No categorization results were found. Please check the console for details.',
-              type: 'error'
-            });
-          }
-        } catch (pollError) {
-          console.error("Error during polling:", pollError);
-          setToastMessage({
-            message: 'Error checking categorization status. Please try again.',
-            type: 'error'
-          });
+        if (pollResult.status === 'completed' && pollResult.results) {
+          // Process results from pollResult
+          updateTransactionsWithPredictions(pollResult.results);
         }
+        
+        return pollResult;
       } else {
         throw new Error('No prediction ID received from categorization service');
       }
@@ -964,242 +826,9 @@ export default function TransactionList() {
         message: error instanceof Error ? error.message : 'Failed to categorize transactions',
         type: 'error'
       });
-    } finally {
-      setCategorizing(false);
+      setOperationInProgress(false);
+      setOperationType('none');
     }
-  };
-
-  // Function to poll categorization status
-  const pollCategorizationStatus = async (predictionId: string) => {
-    // Constants for polling
-    const maxPolls = 60; // Maximum number of polling attempts (5 minutes with 5s interval)
-    const initialDelay = 5000; // Initial delay before first poll (5 seconds)
-    const pollInterval = 7000; // 7 seconds between polls
-    const maxConsecutiveErrors = 3;
-    let pollCount = 0;
-    let consecutiveErrors = 0;
-    let earlyPhase = true; // Flag for the early polling phase
-    
-    setToastMessage({
-      message: 'Waiting for categorization to start...',
-      type: 'success'
-    });
-
-    // Initial delay to allow the backend to set up the job
-    await new Promise(resolve => setTimeout(resolve, initialDelay));
-    
-    while (pollCount < maxPolls) {
-      try {
-        pollCount++;
-        
-        // The first few attempts are in the "early phase" where 404s are more expected
-        if (pollCount > 5) {
-          earlyPhase = false;
-        }
-        
-        // Call the service to check status
-        console.log(`Checking categorization status for prediction ID: ${predictionId} (attempt ${pollCount}/${maxPolls})`);
-        const response = await fetch(`https://txclassify.onrender.com/status/${predictionId}`, {
-          headers: {
-            'X-API-Key': 'test_api_key_fixed',
-            'Accept': 'application/json',
-          },
-        });
-
-        // Handle different response codes
-        if (!response.ok) {
-          const statusCode = response.status;
-          console.log(`Server returned error code: ${statusCode} for prediction ID: ${predictionId}`);
-
-          // If we get a 502/503/504, the worker might have restarted
-          if (statusCode === 502 || statusCode === 503 || statusCode === 504) {
-            consecutiveErrors++;
-            console.warn(`Worker error (${statusCode}) on attempt ${pollCount}, consecutive errors: ${consecutiveErrors}`);
-
-            if (consecutiveErrors >= maxConsecutiveErrors) {
-              setToastMessage({
-                message: `Categorization failed after ${consecutiveErrors} consecutive worker errors`,
-                type: 'error'
-              });
-              return { status: 'failed', error: 'Too many consecutive worker errors' };
-            }
-            
-            // Use a longer delay for server errors
-            await new Promise(resolve => setTimeout(resolve, pollInterval * 1.5));
-            continue;
-          }
-
-          // For 404, could mean the prediction is still initializing or already complete
-          if (statusCode === 404) {
-            // During early phase, 404 is likely because job hasn't started yet
-            if (earlyPhase) {
-              console.log("Received 404 in early phase - job may still be initializing");
-              setToastMessage({
-                message: 'Waiting for categorization to initialize...',
-                type: 'success'
-              });
-              // Use a longer delay during early phase for 404s
-              await new Promise(resolve => setTimeout(resolve, pollInterval * 2));
-              continue;
-            }
-            
-            // If we're in mid-phase (not too early, not too late), keep trying
-            if (pollCount < 20) {
-              console.log("Received 404 after several attempts - still waiting for job to be found");
-              await new Promise(resolve => setTimeout(resolve, pollInterval * 1.5));
-              continue;
-            }
-            
-            // Later in the process, 404 might mean the job is complete and data was cleaned up
-            console.log("Received 404 after many attempts - job may have completed and been cleaned up");
-            setToastMessage({
-              message: 'Categorization status no longer available. Please check results in the UI.',
-              type: 'success'
-            });
-            return { status: 'unknown', message: 'Status no longer available' };
-          }
-          
-          consecutiveErrors++;
-          if (consecutiveErrors >= maxConsecutiveErrors) {
-            setToastMessage({
-              message: `Categorization failed after ${consecutiveErrors} consecutive errors`,
-              type: 'error'
-            });
-            return { status: 'failed', error: 'Too many consecutive errors' };
-          }
-          
-          await new Promise(resolve => setTimeout(resolve, pollInterval));
-          continue;
-        }
-
-        // Reset consecutive errors on successful response
-        consecutiveErrors = 0;
-
-        // Parse the response
-        let result;
-        try {
-          const responseText = await response.text();
-          console.log("Raw status response:", responseText);
-          result = JSON.parse(responseText);
-        } catch (parseError) {
-          console.error("Error parsing response:", parseError);
-          consecutiveErrors++;
-          await new Promise(resolve => setTimeout(resolve, pollInterval));
-          continue;
-        }
-
-        console.log("Parsed status response:", result);
-
-        // Extract results from the response based on various potential formats
-        let results = [];
-        
-        // Direct results array at root level
-        if (Array.isArray(result.results)) {
-          results = result.results;
-          console.log("Found results array at root level");
-        } 
-        // Results in result.result.results (common in API response)
-        else if (result.result && result.result.results) {
-          if (Array.isArray(result.result.results)) {
-            results = result.result.results;
-            console.log("Found results array in result.result.results");
-          } else if (result.result.results.data && Array.isArray(result.result.results.data)) {
-            results = result.result.results.data;
-            console.log("Found results array in result.result.results.data");
-          }
-        }
-        // Sometimes nested under config result
-        else if (result.config && result.config.result && result.config.result.results) {
-          results = result.config.result.results;
-          console.log("Found results array in config.result.results");
-        }
-        // Direct in config.results as seen in the API response you shared
-        else if (result.config && result.results) {
-          results = result.results;
-          console.log("Found results array in root with config present");
-        }
-        // Special case to match the exact format you shared in the error
-        else if (result.status === "completed" && result.config && Array.isArray(result.results)) {
-          results = result.results;
-          console.log("Found results array in root level matching the example format");
-        }
-
-        console.log(`Extracted ${results.length} results`);
-
-        // If we still don't have results, check for the format in the example you provided
-        if (results.length === 0 && result.status === "completed") {
-          if (Array.isArray(result.results)) {
-            results = result.results;
-            console.log("Using results array from completed response");
-          }
-        }
-
-        // Handle completed status
-        if (result.status === "completed") {
-          setToastMessage({
-            message: 'Categorization completed successfully!',
-            type: 'success'
-          });
-          return { 
-            status: 'completed', 
-            results, 
-            config: result.config, // Include the config when available
-            message: 'Categorization completed successfully!' 
-          };
-        } else if (result.status === "failed") {
-          const errorMessage = result.error || result.message || 'Unknown error';
-          setToastMessage({
-            message: `Categorization failed: ${errorMessage}`,
-            type: 'error'
-          });
-          return { status: 'failed', error: errorMessage };
-        }
-
-        // If we have results but status isn't explicitly completed, consider it complete
-        if (results.length > 0) {
-          setToastMessage({
-            message: 'Categorization completed with results!',
-            type: 'success'
-          });
-          return { 
-            status: 'completed', 
-            results, 
-            config: result.config, // Include the config when available
-            message: 'Categorization completed with results!' 
-          };
-        }
-
-        // Still in progress, update toast with status
-        setToastMessage({
-          message: `Categorization in progress... ${result.message || ''}`,
-          type: 'success'
-        });
-        
-        // Wait for the poll interval before next attempt
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
-      } catch (error) {
-        console.error('Error polling status:', error);
-        
-        consecutiveErrors++;
-        if (consecutiveErrors >= maxConsecutiveErrors) {
-          setToastMessage({
-            message: `Failed to check categorization status after ${consecutiveErrors} consecutive errors`,
-            type: 'error'
-          });
-          return { status: 'failed', error: 'Error checking status' };
-        }
-        
-        // Wait for the poll interval before retry
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
-      }
-    }
-
-    // If we reach here, we've polled too many times without completion
-    setToastMessage({
-      message: 'Categorization is taking longer than expected. Please try again later.',
-      type: 'error'
-    });
-    return { status: 'unknown', message: 'Maximum polling attempts reached' };
   };
 
   // Function to update local transaction data with predicted categories
@@ -1222,8 +851,8 @@ export default function TransactionList() {
       console.log("Results appear to be in the correct format already!");
     }
     
-    // Map of narratives to predicted categories
-    const predictionMap = new Map();
+    // Create a new map for categorized transactions
+    const newCategorizedTransactions = new Map();
     
     // Process results and build prediction map
     results.forEach((result, index) => {
@@ -1240,7 +869,7 @@ export default function TransactionList() {
       
       if (narrative && predictedCategory) {
         console.log(`Result ${index+1}: "${narrative}" → "${predictedCategory}" (${similarityScore})`);
-        predictionMap.set(narrative, {
+        newCategorizedTransactions.set(narrative, {
           category: predictedCategory,
           score: similarityScore
         });
@@ -1249,52 +878,52 @@ export default function TransactionList() {
       }
     });
     
-    console.log("Built prediction map with", predictionMap.size, "entries");
-    console.log("Selected transaction IDs:", selectedTransactions);
+    console.log("Built categorization map with", newCategorizedTransactions.size, "entries");
     
-    // Keep track of how many transactions were updated
-    let updatedCount = 0;
+    // Clear any pending updates and set the new categorized transactions
+    setPendingCategoryUpdates({});
+    setCategorizedTransactions(newCategorizedTransactions);
     
-    // Update transactions with predictions
-    setTransactions(prev => {
-      const updated = prev.map(tx => {
-        // Check if this transaction is selected
-        if (!selectedTransactions.includes(tx.lunchMoneyId)) {
-          return tx;
-        }
-        
-        // Find prediction that matches this transaction description
-        const prediction = predictionMap.get(tx.description);
-        
+    // Enable the filter to show only categorized transactions
+    setShowOnlyCategorized(true);
+    
+    // Create a mapping of transaction IDs to predicted categories and scores for easier access
+    const pendingUpdates: Record<string, {categoryId: string, score: number}> = {};
+    
+    // Map the predictions to transaction IDs
+    selectedTransactions.forEach(txId => {
+      const tx = transactions.find(t => t.lunchMoneyId === txId);
+      if (tx && tx.description) {
+        const prediction = newCategorizedTransactions.get(tx.description);
         if (prediction) {
-          console.log(`Matched transaction "${tx.description}" with prediction:`, prediction);
-          updatedCount++;
-          return {
-            ...tx,
-            predictedCategory: prediction.category,
-            similarityScore: prediction.score
+          // Find the category ID for this predicted category name
+          const categoryObj = categories.find(cat => 
+            typeof cat !== 'string' && 
+            cat.name.toLowerCase() === prediction.category.toLowerCase()
+          );
+          
+          // Use the found category ID or the category name as fallback
+          const categoryId = categoryObj && typeof categoryObj !== 'string' 
+            ? categoryObj.id 
+            : prediction.category;
+          
+          pendingUpdates[txId] = {
+            categoryId,
+            score: prediction.score
           };
         }
-        
-        // If no exact match, try to find by substring
-        for (const [narrative, pred] of predictionMap.entries()) {
-          if (tx.description.includes(narrative) || narrative.includes(tx.description)) {
-            console.log(`Fuzzy matched "${tx.description}" with "${narrative}"`);
-            updatedCount++;
-            return {
-              ...tx,
-              predictedCategory: pred.category,
-              similarityScore: pred.score
-            };
-          }
-        }
-        
-        console.log(`No match found for transaction: "${tx.description}"`);
-        return tx;
-      });
-      
-      console.log(`Updated ${updatedCount} transactions with predictions`);
-      return updated;
+      }
+    });
+    
+    // Store the pending updates
+    setPendingCategoryUpdates(pendingUpdates);
+    
+    console.log("Prepared", Object.keys(pendingUpdates).length, "pending category updates");
+    
+    // Show a success toast
+    setToastMessage({
+      message: `Categorized ${Object.keys(pendingUpdates).length} transactions. Review and apply the changes.`,
+      type: 'success'
     });
   };
 
@@ -1312,6 +941,225 @@ export default function TransactionList() {
     
     // If not found in categories, check if the transaction has the category name
     return categoryId;
+  };
+
+  // Function to apply a single predicted category
+  const applyPredictedCategory = async (transactionId: string) => {
+    const update = pendingCategoryUpdates[transactionId];
+    if (!update) {
+      console.error(`No pending update found for transaction ${transactionId}`);
+      return;
+    }
+
+    // Set loading state for this specific transaction
+    setApplyingIndividual(transactionId);
+
+    try {
+      // Send update to the API
+      const response = await fetch('/api/lunch-money/transactions', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transactionId,
+          categoryId: update.categoryId === "none" ? null : update.categoryId
+        })
+      });
+      
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Failed to update category');
+      }
+      
+      // Find category name for display
+      let categoryName = update.categoryId;
+      const selectedCategory = categories.find(cat => 
+        typeof cat !== 'string' && cat.id === update.categoryId
+      );
+      if (selectedCategory && typeof selectedCategory !== 'string') {
+        categoryName = selectedCategory.name;
+      }
+      
+      // Update local state
+      setTransactions(prev => 
+        prev.map(tx => {
+          if (tx.lunchMoneyId === transactionId) {
+            return {
+              ...tx,
+              category: update.categoryId === "none" ? null : update.categoryId,
+              lunchMoneyCategory: update.categoryId === "none" ? null : categoryName,
+              originalData: {
+                ...tx.originalData,
+                category_id: update.categoryId === "none" ? null : update.categoryId,
+                category_name: update.categoryId === "none" ? null : categoryName
+              }
+            };
+          }
+          return tx;
+        })
+      );
+      
+      // Show success indicator
+      setSuccessfulUpdates(prev => ({
+        ...prev,
+        [transactionId]: true
+      }));
+      
+      // Clear this pending update
+      setPendingCategoryUpdates(prev => {
+        const newUpdates = {...prev};
+        delete newUpdates[transactionId];
+        return newUpdates;
+      });
+      
+      // Show success toast
+      setToastMessage({
+        message: 'Category updated in Lunch Money',
+        type: 'success'
+      });
+      
+    } catch (error) {
+      console.error('Error updating category:', error);
+      setToastMessage({
+        message: error instanceof Error ? error.message : 'Failed to update category',
+        type: 'error'
+      });
+    } finally {
+      setApplyingIndividual(null);
+    }
+  };
+
+  // Function to apply all predicted categories
+  const applyAllPredictedCategories = async () => {
+    const transactionIds = Object.keys(pendingCategoryUpdates);
+    if (transactionIds.length === 0) {
+      setToastMessage({
+        message: "No categorizations to apply",
+        type: "error"
+      });
+      return;
+    }
+
+    // Set global loading state
+    setApplyingAll(true);
+
+    try {
+      // Process in batches of 5 to avoid overwhelming the API
+      const batchSize = 5;
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (let i = 0; i < transactionIds.length; i += batchSize) {
+        const batch = transactionIds.slice(i, i + batchSize);
+        
+        // Create an array of promises for the batch
+        const promises = batch.map(async (txId) => {
+          const update = pendingCategoryUpdates[txId];
+          
+          try {
+            const response = await fetch('/api/lunch-money/transactions', {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                transactionId: txId,
+                categoryId: update.categoryId === "none" ? null : update.categoryId
+              })
+            });
+            
+            if (!response.ok) {
+              throw new Error('Failed to update category');
+            }
+            
+            return { success: true, txId };
+          } catch (error) {
+            console.error(`Error updating transaction ${txId}:`, error);
+            return { success: false, txId };
+          }
+        });
+        
+        // Wait for all promises in this batch to complete
+        const results = await Promise.all(promises);
+        
+        // Count successes and failures
+        results.forEach(result => {
+          if (result.success) {
+            successCount++;
+            
+            // Show success indicator
+            setSuccessfulUpdates(prev => ({
+              ...prev,
+              [result.txId]: true
+            }));
+            
+            // Get the update info
+            const update = pendingCategoryUpdates[result.txId];
+            
+            // Find category name for display
+            let categoryName = update.categoryId;
+            const selectedCategory = categories.find(cat => 
+              typeof cat !== 'string' && cat.id === update.categoryId
+            );
+            if (selectedCategory && typeof selectedCategory !== 'string') {
+              categoryName = selectedCategory.name;
+            }
+            
+            // Update transaction in the local state
+            setTransactions(prev => 
+              prev.map(tx => {
+                if (tx.lunchMoneyId === result.txId) {
+                  return {
+                    ...tx,
+                    category: update.categoryId === "none" ? null : update.categoryId,
+                    lunchMoneyCategory: update.categoryId === "none" ? null : categoryName,
+                    originalData: {
+                      ...tx.originalData,
+                      category_id: update.categoryId === "none" ? null : update.categoryId,
+                      category_name: update.categoryId === "none" ? null : categoryName
+                    }
+                  };
+                }
+                return tx;
+              })
+            );
+          } else {
+            failCount++;
+          }
+        });
+      }
+      
+      // Clear all pending updates
+      setPendingCategoryUpdates({});
+      
+      // Show success toast
+      setToastMessage({
+        message: `Updated ${successCount} categories${failCount > 0 ? `, ${failCount} failed` : ''}`,
+        type: successCount > 0 ? 'success' : 'error'
+      });
+      
+    } catch (error) {
+      console.error('Error applying all categories:', error);
+      setToastMessage({
+        message: error instanceof Error ? error.message : 'Failed to apply categories',
+        type: 'error'
+      });
+    } finally {
+      setApplyingAll(false);
+    }
+  };
+
+  // Get filtered transactions based on categorization status
+  const getFilteredTransactions = () => {
+    if (showOnlyCategorized) {
+      return transactions.filter(tx => 
+        selectedTransactions.includes(tx.lunchMoneyId) && 
+        Object.keys(pendingCategoryUpdates).includes(tx.lunchMoneyId)
+      );
+    }
+    return transactions;
   };
 
   if (loading) {
@@ -1333,8 +1181,11 @@ export default function TransactionList() {
     );
   }
 
+  // Get the transactions to display based on the filter
+  const filteredTransactions = getFilteredTransactions();
+
   return (
-    <div className="text-gray-900 dark:text-gray-100 text-sm">
+    <div className="text-gray-900 dark:text-gray-100 text-sm bg-white dark:bg-slate-900 min-h-screen">
       {/* Toast notification */}
       {toastMessage && (
         <div className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow-lg z-50 ${
@@ -1344,221 +1195,355 @@ export default function TransactionList() {
         </div>
       )}
 
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <div>
-            <label htmlFor="startDate" className="block text-sm font-medium">Start Date:</label>
-            <input
-              type="date"
-              id="startDate"
-              name="startDate"
-              value={pendingDateRange.startDate}
-              onChange={handleDateRangeChange}
-              className="p-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded"
-            />
+      {/* Operation Progress Bar */}
+      {operationInProgress && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl w-96 max-w-full">
+            <div className="text-center mb-4">
+              <h3 className="font-medium text-lg">
+                {operationType === 'training' ? 'Training Model' : 'Categorizing Transactions'}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 text-sm mt-2">{progressMessage}</p>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-2">
+              <div 
+                className={`h-3 rounded-full ${operationType === 'training' ? 'bg-purple-600' : 'bg-yellow-500'}`}
+                style={{ width: `${progressPercent}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-right">
+              {progressPercent}%
+            </p>
           </div>
-          <div>
-            <label htmlFor="endDate" className="block text-sm font-medium">End Date:</label>
-            <input
-              type="date"
-              id="endDate"
-              name="endDate"
-              value={pendingDateRange.endDate}
-              onChange={handleDateRangeChange}
-              className="p-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded"
-            />
-          </div>
-          <button
-            onClick={applyDateFilter}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mt-4 md:mt-auto"
-          >
-            Apply Date Filter
-          </button>
         </div>
-        <div className="flex flex-col gap-2 md:flex-row">
+      )}
+
+      {/* Header with title and action buttons */}
+      <div className="flex justify-between items-center py-4 px-6 border-b border-gray-200 dark:border-slate-700 mb-6">
+        <h1 className="text-2xl font-bold">Lunch Money Transactions</h1>
+        
+        <div className="flex gap-2">
           <button
-            onClick={handleImportTransactions}
-            disabled={loading || transactions.length === 0 || importStatus === 'importing'}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-500"
+            className="px-4 py-2 bg-gray-200 text-gray-800 dark:bg-slate-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-slate-600"
           >
-            {importStatus === 'importing' ? 'Importing...' : 'Import All to Database'}
+            Settings
           </button>
-          <button
-            onClick={handleTrainSelected}
-            disabled={selectedTransactions.length === 0 || categorizing}
-            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-300 disabled:text-gray-500"
-          >
-            Train with Selected ({selectedTransactions.length})
-          </button>
-          <button
+          <button 
             onClick={handleCategorizeSelected}
-            disabled={selectedTransactions.length === 0 || categorizing}
-            className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:bg-gray-300 disabled:text-gray-500"
+            disabled={selectedTransactions.length === 0 || operationInProgress}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed"
           >
-            {categorizing ? 'Categorizing...' : 'Categorize Selected'} ({selectedTransactions.length})
+            Classify Transactions
+          </button>
+          <button
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Debug API
           </button>
         </div>
       </div>
 
-      {importStatus !== 'idle' && (
-        <div className={`mb-4 p-4 rounded ${
-          importStatus === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-100' : 
-          importStatus === 'error' ? 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-100' : 
-          'bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-100'
-        }`}>
-          {importMessage}
+      <div className="px-6">
+        {/* Date filters and action buttons */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="flex flex-wrap items-center gap-4">
+            <div>
+              <label htmlFor="startDate" className="block text-sm font-medium mb-1">Start Date:</label>
+              <input
+                type="date"
+                id="startDate"
+                name="startDate"
+                value={pendingDateRange.startDate}
+                onChange={handleDateRangeChange}
+                className="p-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-800 rounded text-sm"
+                disabled={operationInProgress}
+              />
+            </div>
+            <div>
+              <label htmlFor="endDate" className="block text-sm font-medium mb-1">End Date:</label>
+              <input
+                type="date"
+                id="endDate"
+                name="endDate"
+                value={pendingDateRange.endDate}
+                onChange={handleDateRangeChange}
+                className="p-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-800 rounded text-sm"
+                disabled={operationInProgress}
+              />
+            </div>
+            <button
+              onClick={applyDateFilter}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed mt-4 md:mt-5"
+              disabled={operationInProgress}
+            >
+              Apply Date Filter
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleImportTransactions}
+              disabled={loading || transactions.length === 0 || importStatus === 'importing' || operationInProgress}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed"
+            >
+              {importStatus === 'importing' ? 'Importing...' : 'Import All to Database'}
+            </button>
+            <button
+              onClick={handleTrainSelected}
+              disabled={selectedTransactions.length === 0 || operationInProgress}
+              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed"
+            >
+              Train with Selected ({selectedTransactions.length})
+            </button>
+            <button
+              onClick={handleCategorizeSelected}
+              disabled={selectedTransactions.length === 0 || operationInProgress}
+              className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed"
+            >
+              Categorize Selected ({selectedTransactions.length})
+            </button>
+          </div>
         </div>
-      )}
 
-      {transactions.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          No transactions found for the selected date range.
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 dark:border-slate-700 text-sm">
-            <thead className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-white">
-              <tr>
-                <th className="px-3 py-2 text-left">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedTransactions.length > 0}
-                      onChange={handleSelectAll}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
-                    />
-                    <span className="ml-2">Select</span>
-                  </label>
-                </th>
-                <th className="px-3 py-2 text-left">Date</th>
-                <th className="px-3 py-2 text-left">Description</th>
-                <th className="px-3 py-2 text-left">Amount</th>
-                <th className="px-3 py-2 text-left">Category</th>
-                <th className="px-3 py-2 text-left">Predicted Category</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
-              {transactions.map((transaction) => (
-                <tr key={transaction.lunchMoneyId} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 bg-white dark:bg-slate-800">
-                  <td className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedTransactions.includes(transaction.lunchMoneyId)}
-                      onChange={() => handleSelectTransaction(transaction.lunchMoneyId)}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <div>
-                      {typeof transaction.date === 'string' 
-                        ? transaction.date 
-                        : transaction.date instanceof Date 
-                          ? format(transaction.date, 'yyyy-MM-dd')
-                          : 'Invalid date'
-                      }
-                    </div>
-                    {transaction.tags && Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {transaction.tags?.map((tag: any, idx: number) => (
-                          <span 
-                            key={`${typeof tag === 'string' ? tag : tag.name || tag.id || idx}-${idx}`}
-                            className="text-xs bg-blue-600 text-white rounded-full px-2 py-0.5">
-                            {typeof tag === 'string' ? tag : tag.name || 'Tag'}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    {typeof transaction.description === 'object' 
-                      ? JSON.stringify(transaction.description) 
-                      : transaction.description}
-                  </td>
-                  <td className={`px-3 py-2 ${transaction.is_income ? 'text-green-500' : 'text-red-500'}`}>
-                    {transaction.is_income ? '+' : '-'}
-                    {typeof transaction.amount === 'number' 
-                      ? Math.abs(transaction.amount).toFixed(2) 
-                      : Math.abs(parseFloat(String(transaction.amount))).toFixed(2)}
-                  </td>
-                  <td className="px-3 py-2 cursor-pointer relative">
-                    <div className="relative">
-                      <div 
-                        onClick={() => {
-                          // Toggle dropdown - close if already open, open if closed
-                          setOpenDropdown(openDropdown === transaction.lunchMoneyId ? null : transaction.lunchMoneyId);
-                        }}
-                        className={`w-full py-1 px-2 border ${
-                          successfulUpdates[transaction.lunchMoneyId] 
-                            ? 'border-green-500 dark:border-green-500' 
-                            : 'border-gray-300 dark:border-slate-600'
-                        } bg-transparent dark:bg-transparent text-gray-900 dark:text-white rounded cursor-pointer flex items-center justify-between`}
-                      >
-                        <span>
-                          {transaction.originalData?.category_name || 
-                           transaction.lunchMoneyCategory || 
-                           "-- Uncategorized --"}
-                        </span>
-                        {/* Dropdown arrow */}
-                        <svg className="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      
-                      {/* Dropdown menu */}
-                      {openDropdown === transaction.lunchMoneyId && (
-                        <div className="absolute z-10 mt-1 w-full bg-white dark:bg-slate-700 shadow-lg max-h-60 rounded-md py-1 text-sm ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
-                          <div 
-                            className="cursor-pointer px-3 py-1 hover:bg-gray-100 dark:hover:bg-slate-600"
-                            onClick={() => handleCategoryChange(transaction.lunchMoneyId, "none")}
-                          >
-                            -- Uncategorized --
-                          </div>
-                          {categories.map(category => {
-                            const categoryId = typeof category === 'string' ? category : category.id;
-                            const categoryName = typeof category === 'string' ? category : category.name;
-                            
-                            return (
-                              <div 
-                                key={categoryId}
-                                className="cursor-pointer px-3 py-1 hover:bg-gray-100 dark:hover:bg-slate-600"
-                                onClick={() => handleCategoryChange(transaction.lunchMoneyId, categoryId)}
-                              >
-                                {categoryName}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                      
-                      {/* Loading spinner */}
-                      {updatingCategory === transaction.lunchMoneyId && (
-                        <div className="absolute right-0 top-0 h-full flex items-center pr-2">
-                          <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                        </div>
-                      )}
-                      
-                      {/* Success checkmark */}
-                      {successfulUpdates[transaction.lunchMoneyId] && (
-                        <div className="absolute right-0 top-0 h-full flex items-center pr-2">
-                          <svg className="h-4 w-4 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2">
-                    {transaction.predictedCategory || "Not predicted"}
-                  </td>
+        {importStatus !== 'idle' && (
+          <div className={`mb-4 p-4 rounded ${
+            importStatus === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-100' : 
+            importStatus === 'error' ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-100' : 
+            'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-100'
+          }`}>
+            {importMessage}
+          </div>
+        )}
+
+        {/* Categorization Controls - Styled banner */}
+        {Object.keys(pendingCategoryUpdates).length > 0 && (
+          <div className="mb-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-3">
+              <div className="flex items-center gap-3">
+                <span className="font-medium text-amber-800 dark:text-amber-300">Categorization Results:</span>
+                <span className="text-amber-800 dark:text-amber-300">{Object.keys(pendingCategoryUpdates).length} transactions categorized</span>
+                
+                <label className="inline-flex items-center ml-4 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-amber-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
+                    checked={showOnlyCategorized}
+                    onChange={() => setShowOnlyCategorized(!showOnlyCategorized)}
+                  />
+                  <span className="ml-2 text-amber-800 dark:text-amber-300">Show only categorized transactions</span>
+                </label>
+              </div>
+              
+              <button
+                onClick={applyAllPredictedCategories}
+                disabled={applyingAll || Object.keys(pendingCategoryUpdates).length === 0}
+                className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed"
+              >
+                {applyingAll ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Applying...
+                  </span>
+                ) : (
+                  `Apply All Categories (${Object.keys(pendingCategoryUpdates).length})`
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {filteredTransactions.length === 0 ? (
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
+            No transactions found for the selected criteria.
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-700">
+            <table className="min-w-full bg-white dark:bg-slate-800 text-sm">
+              <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left">
+                    <label className="inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedTransactions.length > 0}
+                        onChange={handleSelectAll}
+                        className="h-4 w-4 accent-blue-600 border-gray-300 rounded dark:border-gray-600 dark:bg-slate-600"
+                      />
+                      <span className="ml-2 font-medium">Select</span>
+                    </label>
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">Date</th>
+                  <th className="px-4 py-3 text-left font-medium">Description</th>
+                  <th className="px-4 py-3 text-left font-medium">Amount</th>
+                  <th className="px-4 py-3 text-left font-medium">Category</th>
+                  <th className="px-4 py-3 text-left font-medium">Predicted Category</th>
+                  {Object.keys(pendingCategoryUpdates).length > 0 && (
+                    <th className="px-4 py-3 text-left font-medium">Actions</th>
+                  )}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
+                {filteredTransactions.map((transaction) => {
+                  const pendingUpdate = pendingCategoryUpdates[transaction.lunchMoneyId];
+                  const hasPendingUpdate = !!pendingUpdate;
+                  
+                  return (
+                    <tr key={transaction.lunchMoneyId} className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 ${
+                      hasPendingUpdate ? 'bg-amber-50 dark:bg-amber-900/10' : 'bg-white dark:bg-slate-800'
+                    }`}>
+                      <td className="px-4 py-3 align-top">
+                        <input
+                          type="checkbox"
+                          checked={selectedTransactions.includes(transaction.lunchMoneyId)}
+                          onChange={() => handleSelectTransaction(transaction.lunchMoneyId)}
+                          className="h-4 w-4 accent-blue-600 border-gray-300 rounded dark:border-gray-600 dark:bg-slate-600"
+                        />
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        {typeof transaction.date === 'string' 
+                          ? transaction.date 
+                          : transaction.date instanceof Date 
+                            ? format(transaction.date, 'yyyy-MM-dd')
+                            : 'Invalid date'
+                        }
+                        {transaction.tags && Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {transaction.tags?.map((tag: any, idx: number) => (
+                              <span 
+                                key={`${typeof tag === 'string' ? tag : tag.name || tag.id || idx}-${idx}`}
+                                className="text-xs bg-blue-600 text-white rounded-full px-2 py-0.5">
+                                {typeof tag === 'string' ? tag : tag.name || 'Tag'}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        {typeof transaction.description === 'object' 
+                          ? JSON.stringify(transaction.description) 
+                          : transaction.description}
+                      </td>
+                      <td className={`px-4 py-3 align-top font-medium ${transaction.is_income ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'}`}>
+                        {transaction.is_income ? '+' : '-'}
+                        {typeof transaction.amount === 'number' 
+                          ? Math.abs(transaction.amount).toFixed(2) 
+                          : Math.abs(parseFloat(String(transaction.amount))).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <div className="relative">
+                          <select
+                            value={transaction.originalData?.category_id || "none"}
+                            onChange={(e) => handleCategoryChange(transaction.lunchMoneyId, e.target.value)}
+                            disabled={updatingCategory === transaction.lunchMoneyId}
+                            className={`w-full py-1.5 px-2 pr-8 appearance-none rounded border ${
+                              successfulUpdates[transaction.lunchMoneyId] 
+                                ? 'border-green-500 dark:border-green-500 bg-green-50 dark:bg-green-950/20' 
+                                : hasPendingUpdate
+                                  ? 'border-amber-500 dark:border-amber-500 bg-amber-50 dark:bg-amber-950/20'
+                                  : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800'
+                            } text-gray-800 dark:text-gray-200`}
+                          >
+                            <option value="none">-- Uncategorized --</option>
+                            {categories.map(category => {
+                              const categoryId = typeof category === 'string' ? category : category.id;
+                              const categoryName = typeof category === 'string' ? category : category.name;
+                              
+                              return (
+                                <option key={categoryId} value={categoryId}>
+                                  {categoryName}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500 dark:text-gray-400">
+                            <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          
+                          {/* Loading spinner */}
+                          {updatingCategory === transaction.lunchMoneyId && (
+                            <div className="absolute right-0 top-0 h-full flex items-center pr-8">
+                              <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                            </div>
+                          )}
+                          
+                          {/* Success checkmark */}
+                          {successfulUpdates[transaction.lunchMoneyId] && (
+                            <div className="absolute right-0 top-0 h-full flex items-center pr-8">
+                              <svg className="h-4 w-4 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        {hasPendingUpdate ? (
+                          <div className="flex items-center">
+                            <span className="font-medium text-amber-600 dark:text-amber-400">
+                              {pendingUpdate.categoryId === "none" ? "Uncategorized" : 
+                                getCategoryNameById(pendingUpdate.categoryId) || pendingUpdate.categoryId}
+                            </span>
+                            {pendingUpdate.score > 0 && (
+                              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                ({Math.round(pendingUpdate.score * 100)}% match)
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          transaction.predictedCategory || "Not predicted"
+                        )}
+                      </td>
+                      
+                      {/* Actions column for Apply button */}
+                      {Object.keys(pendingCategoryUpdates).length > 0 && (
+                        <td className="px-4 py-3 align-top">
+                          {hasPendingUpdate && (
+                            <button
+                              onClick={() => applyPredictedCategory(transaction.lunchMoneyId)}
+                              disabled={applyingIndividual === transaction.lunchMoneyId || successfulUpdates[transaction.lunchMoneyId]}
+                              className={`px-3 py-1 rounded text-sm font-medium ${
+                                successfulUpdates[transaction.lunchMoneyId]
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                  : 'bg-amber-600 text-white hover:bg-amber-700 disabled:bg-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed'
+                              }`}
+                            >
+                              {applyingIndividual === transaction.lunchMoneyId ? (
+                                <span className="flex items-center">
+                                  <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Applying
+                                </span>
+                              ) : successfulUpdates[transaction.lunchMoneyId] ? (
+                                <span className="flex items-center">
+                                  <svg className="h-3 w-3 mr-1 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                  Applied
+                                </span>
+                              ) : (
+                                "Apply"
+                              )}
+                            </button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
