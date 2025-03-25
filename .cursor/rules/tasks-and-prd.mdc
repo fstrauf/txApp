@@ -1,0 +1,12 @@
+---
+description: For anything task and PRD relaed
+globs: 
+alwaysApply: false
+---
+
+# Your rule content
+
+- General ovrview of the produc we are building [prd.txt](mdc:scripts/prd.txt)
+- Broken down tasks of the prd. contains what we are building, priorities and dependenciew [tasks.json](mdc:tasks/tasks.json)
+- When asked to work on the next task, always refer to [tasks.json](mdc:tasks/tasks.json) and check the highest priority, available tasl.
+- After completing work, make sure to update [tasks.json](mdc:tasks/tasks.json) with what has been completed
