@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { categories, transactions } from "@/db/schema";
+import { findUserByEmail, findUniqueCategory } from "@/db/utils";
+import { and, count, eq, ilike, ne } from "drizzle-orm";
 
 // Helper function to get category with authorization check
 async function getCategoryWithAuth(
@@ -12,18 +15,13 @@ async function getCategoryWithAuth(
     return { error: "Unauthorized", status: 401 };
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true },
-  });
+  const user = await findUserByEmail(email);
 
   if (!user) {
     return { error: "User not found", status: 404 };
   }
 
-  const category = await prisma.category.findUnique({
-    where: { id },
-  });
+  const category = await findUniqueCategory(id);
 
   if (!category) {
     return { error: "Category not found", status: 404 };
@@ -96,15 +94,19 @@ export async function PATCH(
 
     // If name is changing, check for duplicates
     if (name && name !== category.name) {
-      const existingCategory = await prisma.category.findFirst({
-        where: {
-          name: { equals: name, mode: 'insensitive' },
-          userId: user.id,
-          id: { not: id } // exclude current category
-        }
-      });
+      const existingCategory = await db
+        .select()
+        .from(categories)
+        .where(
+          and(
+            ilike(categories.name, name),
+            eq(categories.userId, user.id),
+            ne(categories.id, id) // exclude current category
+          )
+        )
+        .limit(1);
 
-      if (existingCategory) {
+      if (existingCategory.length > 0) {
         return NextResponse.json(
           { message: "A category with this name already exists" },
           { status: 400 }
@@ -113,12 +115,13 @@ export async function PATCH(
     }
 
     // Update the category
-    const updatedCategory = await prisma.category.update({
-      where: { id },
-      data: {
+    const [updatedCategory] = await db
+      .update(categories)
+      .set({
         name: name || undefined,
-      },
-    });
+      })
+      .where(eq(categories.id, id))
+      .returning();
 
     return NextResponse.json(updatedCategory);
   } catch (error) {
@@ -161,12 +164,15 @@ export async function DELETE(
     }
 
     // Check if category is used in any transactions
-    const transactionCount = await prisma.transaction.count({
-      where: {
-        categoryId: id,
-        userId: user.id
-      }
-    });
+    const [{ value: transactionCount }] = await db
+      .select({ value: count() })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.categoryId, id),
+          eq(transactions.userId, user.id)
+        )
+      );
 
     if (transactionCount > 0) {
       return NextResponse.json(
@@ -176,9 +182,9 @@ export async function DELETE(
     }
 
     // Delete the category
-    await prisma.category.delete({
-      where: { id },
-    });
+    await db
+      .delete(categories)
+      .where(eq(categories.id, id));
 
     return NextResponse.json({ message: "Category deleted successfully" });
   } catch (error) {

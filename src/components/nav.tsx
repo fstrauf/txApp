@@ -61,6 +61,14 @@ export function Nav() {
                 Lunch Money
               </Link>
               <Link
+                href="/dashboard/analytics"
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  pathname.startsWith("/dashboard/analytics") ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                Analytics
+              </Link>
+              <Link
                 href="/settings"
                 className={`text-sm font-medium transition-colors hover:text-primary ${
                   pathname.startsWith("/settings") ? "text-primary" : "text-muted-foreground"

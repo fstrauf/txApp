@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { db } from '@/db';
+import { trainingJobs, transactions, classificationJobs } from '@/db/schema';
+import { findUserByEmail, createId } from '@/db/utils';
 import { ClassifyServiceClient } from '@/lib/classify-service';
+import { and, eq, inArray } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authConfig);
@@ -28,9 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
+    const user = await findUserByEmail(session.user.email);
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -44,13 +45,19 @@ export async function POST(request: NextRequest) {
     }
     
     // Verify that the training job exists and belongs to the user
-    const trainingJob = await prisma.trainingJob.findFirst({
-      where: {
-        id: trainingJobId,
-        userId: user.id,
-        status: 'completed',
-      },
-    });
+    const trainingJobResult = await db
+      .select()
+      .from(trainingJobs)
+      .where(
+        and(
+          eq(trainingJobs.id, trainingJobId),
+          eq(trainingJobs.userId, user.id),
+          eq(trainingJobs.status, 'completed')
+        )
+      )
+      .limit(1);
+    
+    const trainingJob = trainingJobResult[0];
     
     if (!trainingJob) {
       return NextResponse.json(
@@ -60,14 +67,17 @@ export async function POST(request: NextRequest) {
     }
     
     // Get the transactions to classify
-    const transactions = await prisma.transaction.findMany({
-      where: {
-        id: { in: transactionIds },
-        userId: user.id,
-      },
-    });
+    const transactionsToClassify = await db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          inArray(transactions.id, transactionIds),
+          eq(transactions.userId, user.id)
+        )
+      );
     
-    if (transactions.length === 0) {
+    if (transactionsToClassify.length === 0) {
       return NextResponse.json(
         { error: 'No valid transactions found for classification' },
         { status: 400 }
@@ -75,22 +85,23 @@ export async function POST(request: NextRequest) {
     }
     
     // Create a new classification job
-    const classificationJob = await prisma.classificationJob.create({
-      data: {
+    const [classificationJob] = await db
+      .insert(classificationJobs)
+      .values({
+        id: createId(),
         userId: user.id,
         status: 'pending',
-      }
-    });
+        createdAt: new Date(),
+      })
+      .returning();
     
     // Link transactions to the classification job
-    await prisma.transaction.updateMany({
-      where: {
-        id: { in: transactionIds },
-      },
-      data: {
+    await db
+      .update(transactions)
+      .set({
         classificationJobId: classificationJob.id,
-      },
-    });
+      })
+      .where(inArray(transactions.id, transactionIds));
     
     // Initialize the classification service client
     const classifyClient = new ClassifyServiceClient({
@@ -100,19 +111,19 @@ export async function POST(request: NextRequest) {
     
     // Start the classification process
     const classificationResult = await classifyClient.classifyTransactions(
-      transactions,
+      transactionsToClassify,
       trainingJob.predictionId || trainingJobId
     );
     
     // Update the classification job with the prediction ID
-    await prisma.classificationJob.update({
-      where: { id: classificationJob.id },
-      data: {
+    await db
+      .update(classificationJobs)
+      .set({
         status: classificationResult.status,
         predictionId: classificationResult.prediction_id,
         error: classificationResult.error,
-      },
-    });
+      })
+      .where(eq(classificationJobs.id, classificationJob.id));
     
     return NextResponse.json({
       success: classificationResult.status !== 'failed',

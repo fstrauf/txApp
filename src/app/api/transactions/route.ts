@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { bankAccounts, categories, transactions } from "@/db/schema";
+import { 
+  createId, 
+  findUserByEmail, 
+  findBankAccountByNameAndUserId, 
+  findCategoryByNameAndUserId 
+} from "@/db/utils";
+import { and, desc, eq } from "drizzle-orm";
 
 export async function POST(request: Request) {
   try {
@@ -12,10 +20,7 @@ export async function POST(request: Request) {
     }
 
     // Get the user ID
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
+    const user = await findUserByEmail(session.user.email);
 
     if (!user) {
       return new NextResponse("User not found", { status: 404 });
@@ -29,18 +34,26 @@ export async function POST(request: Request) {
     }
 
     // Create a default bank account for the user if none exists
-    let bankAccount = await prisma.bankAccount.findFirst({
-      where: { userId: user.id },
-    });
+    let bankAccount = await db
+      .select()
+      .from(bankAccounts)
+      .where(eq(bankAccounts.userId, user.id))
+      .limit(1)
+      .then(results => results[0] || null);
 
     if (!bankAccount) {
-      bankAccount = await prisma.bankAccount.create({
-        data: {
-          name: "Default Account",
-          type: "Checking",
-          userId: user.id,
-        },
-      });
+      const newBankAccount = {
+        id: createId(),
+        name: "Default Account",
+        type: "Checking",
+        userId: user.id,
+        balance: "0", // Use string for decimal values
+      };
+      
+      [bankAccount] = await db
+        .insert(bankAccounts)
+        .values(newBankAccount)
+        .returning();
     }
 
     // Find or create appropriate default category if none provided
@@ -48,12 +61,15 @@ export async function POST(request: Request) {
     
     if (categoryId) {
       // Verify the category exists and belongs to the user
-      category = await prisma.category.findFirst({
-        where: { 
-          id: categoryId,
-          userId: user.id
-        },
-      });
+      category = await db
+        .select()
+        .from(categories)
+        .where(and(
+          eq(categories.id, categoryId),
+          eq(categories.userId, user.id)
+        ))
+        .limit(1)
+        .then(results => results[0] || null);
       
       if (!category) {
         return NextResponse.json({ error: "Category not found" }, { status: 404 });
@@ -62,54 +78,77 @@ export async function POST(request: Request) {
       // Use or create a default category
       const defaultCategoryName = type === "income" ? "Uncategorized Income" : "Uncategorized Expense";
       
-      category = await prisma.category.findFirst({
-        where: { 
-          name: defaultCategoryName,
-          userId: user.id
-        },
-      });
+      category = await findCategoryByNameAndUserId(defaultCategoryName, user.id);
 
       if (!category) {
-        category = await prisma.category.create({
-          data: {
-            name: defaultCategoryName,
-            isDefault: true,
-            userId: user.id,
-          },
-        });
+        const newCategory = {
+          id: createId(),
+          name: defaultCategoryName,
+          isDefault: true,
+          userId: user.id,
+        };
+        
+        [category] = await db
+          .insert(categories)
+          .values(newCategory)
+          .returning();
       }
     }
 
     // Create transaction with the proper amount and type
-    const transaction = await prisma.transaction.create({
-      data: {
-        amount: Math.abs(amount), // Always store positive amount
-        type,  // Store the transaction type
-        description,
-        date: new Date(date),
-        bankAccountId: bankAccount.id,
-        categoryId: category.id,
-        userId: user.id,
+    const newTransaction = {
+      id: createId(),
+      amount: String(Math.abs(amount)), // Convert to string for decimal column
+      type,
+      description,
+      date: new Date(date),
+      bankAccountId: bankAccount.id,
+      categoryId: category.id,
+      userId: user.id,
+      isReconciled: false,
+    };
+    
+    const [transaction] = await db
+      .insert(transactions)
+      .values(newTransaction)
+      .returning();
+    
+    // Get related category and bank account for response
+    const transactionResult = await db
+      .select({
+        transaction: transactions,
+        category: categories,
+        bankAccountName: bankAccounts.name,
+      })
+      .from(transactions)
+      .where(eq(transactions.id, transaction.id))
+      .leftJoin(categories, eq(transactions.categoryId, categories.id))
+      .leftJoin(bankAccounts, eq(transactions.bankAccountId, bankAccounts.id))
+      .limit(1);
+
+    const transactionWithRelations = transactionResult[0] ? {
+      ...transactionResult[0].transaction,
+      category: transactionResult[0].category,
+      bankAccount: {
+        name: transactionResult[0].bankAccountName,
       },
-      include: {
-        category: true,
-        bankAccount: {
-          select: { name: true }
-        }
-      }
-    });
+    } : transaction;
 
     // Update bank account balance
-    await prisma.bankAccount.update({
-      where: { id: bankAccount.id },
-      data: {
-        balance: {
-          increment: type === "income" ? Math.abs(amount) : -Math.abs(amount),
-        },
-      },
-    });
+    const currentBalance = Number(bankAccount.balance) || 0;
+    const amountValue = Math.abs(Number(amount));
+    const newBalance = type === "income" 
+      ? currentBalance + amountValue 
+      : currentBalance - amountValue;
+      
+    await db
+      .update(bankAccounts)
+      .set({
+        balance: String(newBalance),
+      })
+      .where(eq(bankAccounts.id, bankAccount.id));
 
-    return NextResponse.json(transaction);
+    return NextResponse.json(transactionWithRelations);
   } catch (error) {
     console.error("[TRANSACTIONS_POST]", error);
     return new NextResponse("Internal error", { status: 500 });
@@ -125,38 +164,58 @@ export async function GET(request: Request) {
     }
 
     // Get the user ID
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
+    const user = await findUserByEmail(session.user.email);
 
     if (!user) {
       return new NextResponse("User not found", { status: 404 });
     }
 
-    const transactions = await prisma.transaction.findMany({
-      where: {
-        userId: user.id,
-      },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        bankAccount: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-      orderBy: {
-        date: "desc",
-      },
-    });
-    return NextResponse.json(transactions);
+    const results = await db
+      .select({
+        id: transactions.id,
+        date: transactions.date,
+        description: transactions.description,
+        amount: transactions.amount,
+        type: transactions.type,
+        isReconciled: transactions.isReconciled,
+        notes: transactions.notes,
+        createdAt: transactions.createdAt,
+        updatedAt: transactions.updatedAt,
+        categoryId: transactions.categoryId,
+        categoryName: categories.name,
+        bankAccountId: transactions.bankAccountId,
+        bankAccountName: bankAccounts.name,
+      })
+      .from(transactions)
+      .where(eq(transactions.userId, user.id))
+      .leftJoin(categories, eq(transactions.categoryId, categories.id))
+      .leftJoin(bankAccounts, eq(transactions.bankAccountId, bankAccounts.id))
+      .orderBy(desc(transactions.date));
+      
+    // Transform the results to match the expected format
+    const formattedTransactions = results.map(row => ({
+      id: row.id,
+      date: row.date,
+      description: row.description,
+      amount: row.amount,
+      type: row.type,
+      isReconciled: row.isReconciled,
+      notes: row.notes,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      bankAccountId: row.bankAccountId,
+      categoryId: row.categoryId,
+      category: row.categoryId ? {
+        id: row.categoryId,
+        name: row.categoryName,
+      } : null,
+      bankAccount: row.bankAccountId ? {
+        id: row.bankAccountId,
+        name: row.bankAccountName,
+      } : null,
+    }));
+    
+    return NextResponse.json(formattedTransactions);
   } catch (error) {
     console.error("[TRANSACTIONS_GET]", error);
     return new NextResponse("Internal error", { status: 500 });

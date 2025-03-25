@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,43 +7,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User model
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?   // Hashed password
-  accounts      Account[]
-  sessions      Session[]
-  // App specific relations
-  bankAccounts  BankAccount[]
-  transactions  Transaction[]
-  categories    Category[]
-  // Lunch Money integration
-  lunchMoneyApiKey String?    // Lunch Money API key
-  classifyApiKey   String?    // API key for the transaction classification service
-  trainingJobs     TrainingJob[]
+  id                 String              @id @default(cuid())
+  name               String?
+  email              String?             @unique
+  emailVerified      DateTime?
+  image              String?
+  password           String?
+  classifyApiKey     String?
+  lunchMoneyApiKey   String?
+  accounts           Account[]
+  bankAccounts       BankAccount[]
+  categories         Category[]
   classificationJobs ClassificationJob[]
+  monthlyAggregates  MonthlyAggregate[]
+  sessions           Session[]
+  trainingJobs       TrainingJob[]
+  transactions       Transaction[]
 }
 
-// NextAuth.js models
 model Account {
   id                String  @id @default(cuid())
+  userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-  userId            String
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -62,7 +52,6 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// VerificationToken model for email verification
 model VerificationToken {
   identifier String
   token      String   @unique
@@ -71,88 +60,118 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// App specific models
 model BankAccount {
-  id            String        @id @default(cuid())
-  name          String
-  type          String        // e.g., Checking, Savings, Credit Card
-  balance       Float         @default(0)
-  userId        String
-  plaidItemId   String?       // For Plaid integration (future)
-  plaidAccessToken String?    @db.Text // For Plaid integration (future)
-  lastSync      DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  transactions  Transaction[]
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String        @id @default(cuid())
+  name             String
+  type             String
+  balance          Float         @default(0)
+  userId           String
+  plaidItemId      String?
+  plaidAccessToken String?
+  lastSync         DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions     Transaction[]
 }
 
 model Category {
-  id            String        @id @default(cuid())
-  name          String
-  icon          String?       // For UI display
-  userId        String        // User-defined categories
-  isDefault     Boolean       @default(false) // System default categories
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  transactions  Transaction[]
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String            @id @default(cuid())
+  name             String
+  icon             String?
+  userId           String
+  isDefault        Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryExpenses CategoryExpense[]
+  transactions     Transaction[]
 
-  @@unique([name, userId]) // Prevent duplicate category names per user
+  @@unique([name, userId])
 }
 
 model Transaction {
-  id            String      @id @default(cuid())
-  date          DateTime
-  description   String
-  amount        Float       // Always positive value
-  type          String      // 'income' or 'expense'
-  bankAccountId String
-  categoryId    String?
-  userId        String
-  isReconciled  Boolean     @default(false)
-  notes         String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  bankAccount   BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
-  category      Category?   @relation(fields: [categoryId], references: [id])
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // Lunch Money specific fields
-  lunchMoneyId  String?     // ID in Lunch Money system
-  lunchMoneyCategory String? // Original category from Lunch Money
-  // Classification related fields
-  trainingJob   TrainingJob?    @relation(fields: [trainingJobId], references: [id])
-  trainingJobId String?
-  classificationJob ClassificationJob? @relation(fields: [classificationJobId], references: [id])
+  id                  String             @id @default(cuid())
+  date                DateTime
+  description         String
+  amount              Float
+  type                String
+  bankAccountId       String
+  categoryId          String?
+  userId              String
+  isReconciled        Boolean            @default(false)
+  notes               String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
   classificationJobId String?
-  isTrainingData Boolean @default(false) // Used for training data
-  predictedCategory String? // Category predicted by the model
-  similarityScore Float?   // Confidence score of prediction
+  isTrainingData      Boolean            @default(false)
+  lunchMoneyCategory  String?
+  lunchMoneyId        String?
+  predictedCategory   String?
+  similarityScore     Float?
+  trainingJobId       String?
+  bankAccount         BankAccount        @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  category            Category?          @relation(fields: [categoryId], references: [id])
+  classificationJob   ClassificationJob? @relation(fields: [classificationJobId], references: [id])
+  trainingJob         TrainingJob?       @relation(fields: [trainingJobId], references: [id])
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, lunchMoneyId])
 }
 
-// Models for transaction classification
 model TrainingJob {
-  id              String        @id @default(cuid())
-  userId          String
-  status          String        // "pending", "processing", "completed", "failed"
-  predictionId    String?       // ID from the classification service
-  createdAt       DateTime      @default(now())
-  completedAt     DateTime?
-  error           String?
-  transactions    Transaction[] // Transactions used for training
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String        @id @default(cuid())
+  userId       String
+  status       String
+  predictionId String?
+  createdAt    DateTime      @default(now())
+  completedAt  DateTime?
+  error        String?
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 }
 
 model ClassificationJob {
-  id              String        @id @default(cuid())
-  userId          String
-  status          String        // "pending", "processing", "completed", "failed"
-  predictionId    String?       // ID from the classification service
-  createdAt       DateTime      @default(now())
-  completedAt     DateTime?     
-  error           String?
-  transactions    Transaction[] // Transactions that were classified
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String        @id @default(cuid())
+  userId       String
+  status       String
+  predictionId String?
+  createdAt    DateTime      @default(now())
+  completedAt  DateTime?
+  error        String?
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}
+
+model MonthlyAggregate {
+  id               String            @id @default(cuid())
+  month            DateTime
+  userId           String
+  income           Float             @default(0)
+  tax              Float             @default(0)
+  credit           Float             @default(0)
+  netIncome        Float             @default(0)
+  expenses         Float             @default(0)
+  netSavings       Float             @default(0)
+  netBurn          Float             @default(0)
+  savingsRate      Float             @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  categoryExpenses CategoryExpense[]
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month])
+}
+
+model CategoryExpense {
+  id                 String           @id @default(cuid())
+  monthlyAggregateId String
+  categoryId         String
+  amount             Float            @default(0)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  category           Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  monthlyAggregate   MonthlyAggregate @relation(fields: [monthlyAggregateId], references: [id], onDelete: Cascade)
+
+  @@unique([monthlyAggregateId, categoryId])
 }

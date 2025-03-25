@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { findUserByEmail } from "@/db/utils";
+import { eq } from "drizzle-orm";
 
 export async function POST(request: Request) {
   try {
@@ -18,10 +21,17 @@ export async function POST(request: Request) {
       return new NextResponse("Invalid input", { status: 400 });
     }
 
-    const user = await prisma.user.update({
-      where: { email: session.user.email },
-      data: { name },
-    });
+    const existingUser = await findUserByEmail(session.user.email);
+    
+    if (!existingUser) {
+      return new NextResponse("User not found", { status: 404 });
+    }
+
+    const [user] = await db
+      .update(users)
+      .set({ name })
+      .where(eq(users.email, session.user.email))
+      .returning();
 
     return NextResponse.json({
       success: true,

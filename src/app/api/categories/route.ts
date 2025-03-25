@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authConfig } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { db } from '@/db';
+import { categories } from '@/db/schema';
+import { findUserByEmail, findCategoryByNameAndUserId, createId } from '@/db/utils';
+import { asc, eq, ilike, or } from 'drizzle-orm';
 
 // GET - Fetch all categories for the user
 export async function GET(request: NextRequest) {
@@ -12,25 +15,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
-    });
+    const user = await findUserByEmail(session.user.email!);
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     
-    const categories = await prisma.category.findMany({
-      where: {
-        OR: [
-          { userId: user.id },
-          { isDefault: true }
-        ]
-      },
-      orderBy: { name: 'asc' }
-    });
+    const userCategories = await db
+      .select()
+      .from(categories)
+      .where(or(eq(categories.userId, user.id), eq(categories.isDefault, true)))
+      .orderBy(asc(categories.name));
     
-    return NextResponse.json({ categories });
+    return NextResponse.json({ categories: userCategories });
   } catch (error) {
     console.error('Error fetching categories:', error);
     return NextResponse.json(
@@ -49,9 +46,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
-    });
+    const user = await findUserByEmail(session.user.email!);
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -64,24 +59,21 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if category with same name already exists for this user
-    const existingCategory = await prisma.category.findFirst({
-      where: {
-        name: { equals: name, mode: 'insensitive' },
-        userId: user.id
-      }
-    });
+    const existingCategory = await findCategoryByNameAndUserId(name, user.id);
     
     if (existingCategory) {
       return NextResponse.json({ error: 'A category with this name already exists' }, { status: 409 });
     }
     
-    const category = await prisma.category.create({
-      data: {
-        name,
-        icon: icon || null,
-        userId: user.id
-      }
-    });
+    const newCategory = {
+      id: createId(),
+      name,
+      icon: icon || null,
+      userId: user.id,
+      isDefault: false,
+    };
+    
+    const [category] = await db.insert(categories).values(newCategory).returning();
     
     return NextResponse.json({ category });
   } catch (error) {

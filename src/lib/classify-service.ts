@@ -1,5 +1,39 @@
-import { Transaction, Category } from '@prisma/client';
-import { prisma } from './prisma';
+import { db } from '@/db';
+import { categories } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+
+// Define transaction types for the application
+export interface Transaction {
+  id: string;
+  date: Date;
+  description: string;
+  amount: string | number;
+  type: string;
+  bankAccountId: string;
+  categoryId: string | null;
+  userId: string;
+  isReconciled: boolean;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  classificationJobId?: string | null;
+  isTrainingData?: boolean;
+  lunchMoneyCategory?: string | null;
+  lunchMoneyId?: string | null;
+  predictedCategory?: string | null;
+  similarityScore?: string | null;
+  trainingJobId?: string | null;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  icon?: string | null;
+  userId: string;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 interface TransactionWithCategory extends Transaction {
   category?: Category | null;
@@ -74,10 +108,15 @@ export class ClassifyServiceClient {
         
         // If not included, fetch it if categoryId exists
         if (!categoryName && tx.categoryId) {
-          const category = await prisma.category.findUnique({
-            where: { id: tx.categoryId }
-          });
-          categoryName = category?.name;
+          const categoryResults = await db
+            .select()
+            .from(categories)
+            .where(eq(categories.id, tx.categoryId))
+            .limit(1);
+          
+          if (categoryResults.length > 0) {
+            categoryName = categoryResults[0].name;
+          }
         }
         
         return {

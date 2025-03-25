@@ -1,11 +1,18 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { NextAuthOptions } from "next-auth";
-import { prisma } from "@/lib/prisma";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
+import { db } from "@/db";
+import { sql } from "drizzle-orm";
 
+// Define a type for our User
+interface User {
+  id: string;
+  email: string | null;
+  name: string | null;
+}
+
+// Simplified auth configuration with direct SQL queries
 export const authConfig: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -18,27 +25,48 @@ export const authConfig: NextAuthOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
-        });
+        try {
+          console.log(`Authenticating: ${credentials.email}`);
+          
+          // Use direct SQL query to find the user
+          const userResult = await db.execute(
+            sql`SELECT * FROM "User" WHERE email = ${credentials.email} LIMIT 1`
+          );
+          
+          if (userResult.rows.length === 0) {
+            console.log(`User not found: ${credentials.email}`);
+            return null;
+          }
+          
+          const rawUser = userResult.rows[0];
+          
+          // Ensure password is a string
+          if (typeof rawUser.password !== 'string' || !rawUser.password) {
+            console.log(`Invalid password format for user: ${credentials.email}`);
+            return null;
+          }
+          
+          const isPasswordValid = await compare(credentials.password, rawUser.password);
+          
+          if (!isPasswordValid) {
+            console.log(`Invalid password for user: ${credentials.email}`);
+            return null;
+          }
 
-        if (!user) {
+          console.log(`User authenticated successfully: ${credentials.email}`);
+          
+          // Return a properly typed user object
+          const user: User = {
+            id: String(rawUser.id),
+            email: typeof rawUser.email === 'string' ? rawUser.email : null,
+            name: typeof rawUser.name === 'string' ? rawUser.name : null
+          };
+          
+          return user;
+        } catch (error) {
+          console.error("Auth error:", error);
           return null;
         }
-
-        const isPasswordValid = await compare(credentials.password, user.password || "");
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        };
       },
     }),
   ],
@@ -51,6 +79,7 @@ export const authConfig: NextAuthOptions = {
   callbacks: {
     async session({ session, token }) {
       if (token.sub && session.user) {
+        // @ts-expect-error - Adding id to session user
         session.user.id = token.sub;
       }
       return session;
@@ -59,4 +88,5 @@ export const authConfig: NextAuthOptions = {
       return token;
     },
   },
+  debug: process.env.NODE_ENV !== "production",
 }; 

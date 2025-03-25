@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { bankAccounts } from "@/db/schema";
+import { findUserByEmail } from "@/db/utils";
+import { asc, eq } from "drizzle-orm";
 
 export async function GET(request: Request) {
   try {
@@ -15,10 +18,7 @@ export async function GET(request: Request) {
     }
 
     // Get the user ID
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
+    const user = await findUserByEmail(session.user.email);
 
     if (!user) {
       return NextResponse.json(
@@ -28,14 +28,11 @@ export async function GET(request: Request) {
     }
 
     // Fetch all bank accounts for this user
-    const accounts = await prisma.bankAccount.findMany({
-      where: {
-        userId: user.id,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
+    const accounts = await db
+      .select()
+      .from(bankAccounts)
+      .where(eq(bankAccounts.userId, user.id))
+      .orderBy(asc(bankAccounts.name));
 
     return NextResponse.json(accounts);
   } catch (error) {

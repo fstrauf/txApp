@@ -1,8 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+// This file is kept for backwards compatibility to make the migration smoother
+// It now re-exports the Drizzle db connection
+import { db } from '../db';
 
-// Prevent multiple instances of Prisma Client in development
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
-
-export const prisma = globalForPrisma.prisma || new PrismaClient();
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma; 
+export { db as prisma }; 
