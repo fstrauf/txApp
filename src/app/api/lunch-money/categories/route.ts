@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authConfig } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { findUserByEmail } from '@/db/utils';
 
 // Fetch categories from Lunch Money API
 async function fetchLunchMoneyCategories(apiKey: string) {
@@ -73,15 +73,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
-    });
+    const user = await findUserByEmail(session.user.email!);
     
     if (!user?.lunchMoneyApiKey) {
       return NextResponse.json({ error: 'Lunch Money API key not found' }, { status: 400 });
     }
     
-    const categories = await fetchLunchMoneyCategories(user.lunchMoneyApiKey);
+    const categories = await fetchLunchMoneyCategories(user.lunchMoneyApiKey as string);
     
     // Format categories to match our expected structure
     const formattedCategories = categories.map((cat: any) => ({
@@ -113,9 +111,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
-    });
+    const user = await findUserByEmail(session.user.email!);
     
     if (!user?.lunchMoneyApiKey) {
       return NextResponse.json({ error: 'Lunch Money API key not found' }, { status: 400 });
@@ -131,7 +127,7 @@ export async function PATCH(request: NextRequest) {
     const lunchMoneyCategoryId = categoryId === "none" ? null : Number(categoryId);
     
     const result = await updateLunchMoneyCategory(
-      user.lunchMoneyApiKey, 
+      user.lunchMoneyApiKey as string, 
       transactionId,
       lunchMoneyCategoryId
     );

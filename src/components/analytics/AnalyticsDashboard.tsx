@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { format, subMonths } from 'date-fns';
-import MonthlyTable from './MonthlyTable';
+import { MonthlyTable } from '.';
 
 // Define types explicitly to match MonthlyTable
 interface CategoryExpense {
   id: string;
   monthlyAggregateId: string;
   categoryId: string;
-  amount: number;
+  amount: number | { toString(): string };
   createdAt: Date;
   updatedAt: Date;
   category: {
@@ -22,14 +22,14 @@ interface MonthlyAggregate {
   id: string;
   userId: string;
   month: Date;
-  income: number;
-  tax: number;
-  credit: number;
-  netIncome: number;
-  expenses: number;
-  netSavings: number;
-  netBurn: number;
-  savingsRate: number;
+  income: number | { toString(): string };
+  tax: number | { toString(): string };
+  credit: number | { toString(): string };
+  netIncome: number | { toString(): string };
+  expenses: number | { toString(): string };
+  netSavings: number | { toString(): string };
+  netBurn: number | { toString(): string };
+  savingsRate: number | { toString(): string };
   createdAt: Date;
   updatedAt: Date;
   categoryExpenses: CategoryExpense[];

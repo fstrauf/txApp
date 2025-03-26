@@ -27,11 +27,14 @@ export async function GET(request: Request) {
       );
     }
 
+    // Cast user.id to string to satisfy TypeScript
+    const userId = user.id as string;
+
     // Fetch all bank accounts for this user
     const accounts = await db
       .select()
       .from(bankAccounts)
-      .where(eq(bankAccounts.userId, user.id))
+      .where(eq(bankAccounts.userId, userId))
       .orderBy(asc(bankAccounts.name));
 
     return NextResponse.json(accounts);

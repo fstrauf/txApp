@@ -9,7 +9,7 @@ import { formatDate } from "@/lib/utils";
 
 type Transaction = {
   id: string;
-  amount: number;
+  amount: number | { toString(): string };
   description: string;
   date: string;
   category: {
@@ -20,6 +20,15 @@ type Transaction = {
     name: string;
   };
 };
+
+// Helper function to safely convert potentially decimal object to number
+function toNumber(value: number | { toString(): string }): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+  // If it's a Drizzle decimal object, convert to string then to number
+  return parseFloat(value.toString());
+}
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -54,7 +63,7 @@ export default function Dashboard() {
   }
 
   const totalBalance = transactions.reduce((acc, transaction) => {
-    return acc + transaction.amount;
+    return acc + toNumber(transaction.amount);
   }, 0);
 
   const monthlyIncome = transactions
@@ -62,24 +71,24 @@ export default function Dashboard() {
       const transactionDate = new Date(transaction.date);
       const now = new Date();
       return (
-        transaction.amount > 0 &&
+        toNumber(transaction.amount) > 0 &&
         transactionDate.getMonth() === now.getMonth() &&
         transactionDate.getFullYear() === now.getFullYear()
       );
     })
-    .reduce((acc, transaction) => acc + transaction.amount, 0);
+    .reduce((acc, transaction) => acc + toNumber(transaction.amount), 0);
 
   const monthlyExpenses = transactions
     .filter((transaction) => {
       const transactionDate = new Date(transaction.date);
       const now = new Date();
       return (
-        transaction.amount < 0 &&
+        toNumber(transaction.amount) < 0 &&
         transactionDate.getMonth() === now.getMonth() &&
         transactionDate.getFullYear() === now.getFullYear()
       );
     })
-    .reduce((acc, transaction) => acc + Math.abs(transaction.amount), 0);
+    .reduce((acc, transaction) => acc + Math.abs(toNumber(transaction.amount)), 0);
 
   const savingsRate =
     monthlyIncome > 0
@@ -156,8 +165,8 @@ export default function Dashboard() {
                           {formatDate(transaction.date)} • {transaction.bankAccount.name}
                         </div>
                       </div>
-                      <div className={transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}>
-                        {transaction.amount > 0 ? '+' : '-'}${Math.abs(transaction.amount).toFixed(2)}
+                      <div className={toNumber(transaction.amount) > 0 ? 'text-green-600' : 'text-red-600'}>
+                        {toNumber(transaction.amount) > 0 ? '+' : '-'}${Math.abs(toNumber(transaction.amount)).toFixed(2)}
                       </div>
                     </div>
                   ))}

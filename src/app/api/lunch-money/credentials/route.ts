@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authConfig } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { db } from '@/db';
+import { users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { findUserByEmail } from '@/db/utils';
 
 // GET handler to check if the user has Lunch Money credentials
 export async function GET(request: NextRequest) {
@@ -12,14 +15,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
-      select: {
-        id: true,
-        email: true,
-        lunchMoneyApiKey: true
-      }
-    });
+    const user = await findUserByEmail(session.user.email!);
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -47,9 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email! }
-    });
+    const user = await findUserByEmail(session.user.email!);
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -78,10 +72,9 @@ export async function POST(request: NextRequest) {
     }
     
     // Save the API key
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lunchMoneyApiKey: apiKey }
-    });
+    await db.update(users)
+      .set({ lunchMoneyApiKey: apiKey })
+      .where(eq(users.id, user.id as string));
     
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -102,19 +95,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email! }
-    });
+    const user = await findUserByEmail(session.user.email!);
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     
     // Remove the API key
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lunchMoneyApiKey: null }
-    });
+    await db.update(users)
+      .set({ lunchMoneyApiKey: null })
+      .where(eq(users.id, user.id as string));
     
     return NextResponse.json({ success: true });
   } catch (error) {

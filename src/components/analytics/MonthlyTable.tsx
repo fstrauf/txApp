@@ -2,14 +2,20 @@
 
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Category } from '@prisma/client';
+
+// Helper function to convert decimal values to numbers
+function toNumber(value: number | { toString(): string } | null | undefined): number {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === 'number') return value;
+  return parseFloat(value.toString());
+}
 
 // Define types manually to avoid Prisma client issues
 interface CategoryExpense {
   id: string;
   monthlyAggregateId: string;
   categoryId: string;
-  amount: number;
+  amount: number | { toString(): string };
   createdAt: Date;
   updatedAt: Date;
   category: {
@@ -22,14 +28,14 @@ interface MonthlyAggregate {
   id: string;
   userId: string;
   month: Date;
-  income: number;
-  tax: number;
-  credit: number;
-  netIncome: number;
-  expenses: number;
-  netSavings: number;
-  netBurn: number;
-  savingsRate: number;
+  income: number | { toString(): string };
+  tax: number | { toString(): string };
+  credit: number | { toString(): string };
+  netIncome: number | { toString(): string };
+  expenses: number | { toString(): string };
+  netSavings: number | { toString(): string };
+  netBurn: number | { toString(): string };
+  savingsRate: number | { toString(): string };
   createdAt: Date;
   updatedAt: Date;
   categoryExpenses: CategoryExpense[];
@@ -62,18 +68,18 @@ export default function MonthlyTable({ data }: MonthlyTableProps) {
   };
 
   // Format currency
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | { toString(): string } | null | undefined) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(toNumber(amount));
   };
 
   // Format percentage
-  const formatPercentage = (percentage: number) => {
-    return `${percentage.toFixed(1)}%`;
+  const formatPercentage = (percentage: number | { toString(): string } | null | undefined) => {
+    return `${toNumber(percentage).toFixed(1)}%`;
   };
 
   return (
@@ -115,12 +121,12 @@ export default function MonthlyTable({ data }: MonthlyTableProps) {
                   {formatCurrency(month.expenses)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span className={month.netSavings >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  <span className={toNumber(month.netSavings) >= 0 ? 'text-green-600' : 'text-red-600'}>
                     {formatCurrency(month.netSavings)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span className={month.savingsRate >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  <span className={toNumber(month.savingsRate) >= 0 ? 'text-green-600' : 'text-red-600'}>
                     {formatPercentage(month.savingsRate)}
                   </span>
                 </td>
@@ -145,8 +151,10 @@ export default function MonthlyTable({ data }: MonthlyTableProps) {
                           const catExpense = month.categoryExpenses.find(
                             e => e.category.name === catName
                           );
-                          const amount = catExpense ? catExpense.amount : 0;
-                          const percentage = month.expenses > 0 ? (amount / month.expenses) * 100 : 0;
+                          const amount = catExpense ? toNumber(catExpense.amount) : 0;
+                          const percentage = toNumber(month.expenses) > 0 
+                            ? (amount / toNumber(month.expenses)) * 100 
+                            : 0;
                           
                           return (
                             <div key={catName} className="flex justify-between">

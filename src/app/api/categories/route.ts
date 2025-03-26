@@ -4,7 +4,7 @@ import { authConfig } from '@/lib/auth';
 import { db } from '@/db';
 import { categories } from '@/db/schema';
 import { findUserByEmail, findCategoryByNameAndUserId, createId } from '@/db/utils';
-import { asc, eq, ilike, or } from 'drizzle-orm';
+import { asc, eq, or } from 'drizzle-orm';
 
 // GET - Fetch all categories for the user
 export async function GET(request: NextRequest) {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const userCategories = await db
       .select()
       .from(categories)
-      .where(or(eq(categories.userId, user.id), eq(categories.isDefault, true)))
+      .where(or(eq(categories.userId, user.id as string), eq(categories.isDefault, true)))
       .orderBy(asc(categories.name));
     
     return NextResponse.json({ categories: userCategories });
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if category with same name already exists for this user
-    const existingCategory = await findCategoryByNameAndUserId(name, user.id);
+    const existingCategory = await findCategoryByNameAndUserId(name, user.id as string);
     
     if (existingCategory) {
       return NextResponse.json({ error: 'A category with this name already exists' }, { status: 409 });
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       id: createId(),
       name,
       icon: icon || null,
-      userId: user.id,
+      userId: user.id as string,
       isDefault: false,
     };
     

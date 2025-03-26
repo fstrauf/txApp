@@ -26,7 +26,7 @@ type BankAccount = {
 
 type Transaction = {
   id: string;
-  amount: number;
+  amount: number | { toString(): string };
   description: string;
   date: string;
   type: 'income' | 'expense';
@@ -39,6 +39,15 @@ type Transaction = {
     name: string;
   };
 };
+
+// Helper function to safely convert potentially decimal object to number
+function toNumber(value: number | { toString(): string }): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+  // If it's a Drizzle decimal object, convert to string then to number
+  return parseFloat(value.toString());
+}
 
 export default function TransactionsPage() {
   const { data: session, status } = useSession();
@@ -113,7 +122,7 @@ export default function TransactionsPage() {
       ...prev,
       [transaction.id]: {
         description: transaction.description,
-        amount: Math.abs(transaction.amount),
+        amount: Math.abs(toNumber(transaction.amount)),
         date: formatDateForInput(transaction.date),
         categoryId: transaction.category.id,
         type: transaction.type,
@@ -138,7 +147,7 @@ export default function TransactionsPage() {
       setError("");
       
       const transactionData = editingTransactions[transactionId];
-      const amount = parseFloat(transactionData.amount.toString());
+      const amount = toNumber(transactionData.amount);
       if (isNaN(amount)) {
         setError("Invalid amount");
         return;
@@ -208,7 +217,7 @@ export default function TransactionsPage() {
       ...prev,
       [transactionId]: {
         ...prev[transactionId],
-        [name]: name === 'amount' ? parseFloat(value) || 0 : value,
+        [name]: name === 'amount' ? toNumber(value) || 0 : value,
       },
     }));
   };
@@ -345,7 +354,7 @@ export default function TransactionsPage() {
           },
           body: JSON.stringify({
             description: transaction.description,
-            amount: transaction.amount,
+            amount: toNumber(transaction.amount),
             type: transaction.type,
             date: transaction.date,
             categoryId: bulkCategoryId,
@@ -669,7 +678,7 @@ export default function TransactionsPage() {
                           />
                         ) : (
                           <span className={transaction.type === 'expense' ? 'text-red-600' : 'text-green-600'}>
-                            {transaction.type === 'expense' ? '-' : ''}${Math.abs(transaction.amount).toFixed(2)}
+                            {transaction.type === 'expense' ? '-' : ''}${Math.abs(toNumber(transaction.amount)).toFixed(2)}
                           </span>
                         )}
                       </td>
