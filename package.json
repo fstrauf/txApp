@@ -11,13 +11,18 @@
     "generate": "node scripts/dev.js generate",
     "parse-prd": "node scripts/dev.js parse-prd",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node src/db/migrate.js"
+    "db:migrate": "node src/db/migrate.js",
+    "api": "tsx src/server/index.ts",
+    "dev:api": "concurrently \"next dev --turbopack\" \"tsx src/server/index.ts\"",
+    "test:db": "tsx src/db/test-connection.ts",
+    "create-test-user": "node src/db/create-test-user.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@auth/core": "^0.38.0",
     "@auth/drizzle-adapter": "^1.8.0",
     "@auth/prisma-adapter": "^2.8.0",
+    "@hono/node-server": "^1.8.2",
     "@prisma/client": "^6.5.0",
     "@types/jsonwebtoken": "^9.0.9",
     "bcryptjs": "^3.0.2",
@@ -28,6 +33,7 @@
     "cli-table3": "^0.6.3",
     "clsx": "^2.1.1",
     "commander": "^11.1.0",
+    "concurrently": "^8.2.2",
     "csv-parse": "^5.6.0",
     "csv-parser": "^3.2.0",
     "date-fns": "^4.1.0",
@@ -35,6 +41,7 @@
     "drizzle-orm": "^0.41.0",
     "figlet": "^1.7.0",
     "gradient-string": "^2.0.2",
+    "hono": "^4.2.0",
     "jsonwebtoken": "^9.0.2",
     "next": "15.2.3",
     "next-auth": "^4.24.11",
@@ -42,12 +49,14 @@
     "ora": "^7.0.1",
     "pg": "^8.14.1",
     "plaid": "^31.1.0",
+    "postgres": "^3.4.5",
     "prisma": "^6.5.0",
     "react": "^19.0.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
-    "tailwind-merge": "^3.0.2"
+    "tailwind-merge": "^3.0.2",
+    "tsx": "^4.7.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -70,6 +79,5 @@
       "esbuild",
       "prisma"
     ]
-  },
-  "type": "module"
+  }
 }
