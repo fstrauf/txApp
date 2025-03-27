@@ -23,6 +23,12 @@ export default function Home() {
         >
           Sign In
         </Link>
+        <Link
+          href="/banking"
+          className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+        >
+          Connect Bank
+        </Link>
       </div>
     </div>
   );
