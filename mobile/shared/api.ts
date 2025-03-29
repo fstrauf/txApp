@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
+import Constants from 'expo-constants';
 import {
   ApiError,
   ApiResponse,
@@ -7,6 +8,12 @@ import {
   TransactionResponse,
   UserProfile,
 } from './types';
+
+// Get the API URL from environment or use a default
+const API_URL = Constants.expoConfig?.extra?.apiUrl || 
+  process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:8000' 
+    : 'https://your-api.vercel.app'; // Replace with your Vercel API URL
 
 /**
  * API service for both web and mobile applications

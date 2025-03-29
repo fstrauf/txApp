@@ -14,4 +14,5 @@ alwaysApply: true
 - no mock data! this is a production application and we can't just return dummy data if it doesn't work.
 - don't create documentation or README or .md files unless explicity tasked
 - pnpm is the package manager all commands should use pnpm
+- make sure that everything we create that is reusable between webapp and mobile is created as hono endpoint
 

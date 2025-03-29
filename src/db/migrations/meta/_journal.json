@@ -15,6 +15,20 @@
       "when": 1742936373958,
       "tag": "0001_furry_salo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1743115656973,
+      "tag": "0002_outgoing_slapstick",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1743146786609,
+      "tag": "0003_illegal_susan_delgado",
+      "breakpoints": true
     }
   ]
 }

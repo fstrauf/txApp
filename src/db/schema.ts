@@ -7,6 +7,10 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  json,
+  uuid,
+  pgEnum,
+  integer,
 } from 'drizzle-orm/pg-core';
 
 // Auth-related tables
@@ -19,9 +23,9 @@ export const users = pgTable('User', {
   password: text('password'),
   classifyApiKey: text('classifyApiKey'),
   lunchMoneyApiKey: text('lunchMoneyApiKey'),
-  createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow(),
-  updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow(),
 });
+
+export const appBetaOptInStatusEnum = pgEnum('AppBetaOptInStatus', ['OPTED_IN', 'DISMISSED']);
 
 export const accounts = pgTable(
   'Account',
@@ -35,11 +39,19 @@ export const accounts = pgTable(
     providerAccountId: text('providerAccountId').notNull(),
     refresh_token: text('refresh_token'),
     access_token: text('access_token'),
-    expires_at: text('expires_at'),
+    expires_at: integer('expires_at'),
     token_type: text('token_type'),
     scope: text('scope'),
     id_token: text('id_token'),
     session_state: text('session_state'),
+    categorisationRange: text('categorisationRange'),
+    categorisationTab: text('categorisationTab'),
+    columnOrderCategorisation: json('columnOrderCategorisation'),
+    api_key: text('api_key').unique(),
+    created_at: timestamp('created_at', { mode: 'date' }),
+    lastUsed: timestamp('lastUsed', { mode: 'date' }),
+    requestsCount: text('requestsCount').default('0'),
+    appBetaOptIn: appBetaOptInStatusEnum('appBetaOptIn'),
   },
   (account) => ({
     providerProviderAccountIdIndex: uniqueIndex('provider_provider_account_id_idx').on(
@@ -211,6 +223,23 @@ export const categoryExpenses = pgTable(
   })
 );
 
+// TxClassify tables
+export const embeddings = pgTable('embeddings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  data: text('data').notNull(),
+  created_at: timestamp('created_at', { mode: 'date' }).defaultNow(),
+  updated_at: timestamp('updated_at', { mode: 'date' }).$onUpdate(() => new Date()),
+  embedding_id: text('embedding_id').unique().notNull(),
+  accountId: text('accountId').references(() => accounts.id),
+});
+
+export const webhookResults = pgTable('webhook_results', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  prediction_id: text('prediction_id').unique().notNull(),
+  results: json('results').notNull(),
+  created_at: timestamp('created_at', { mode: 'date' }).defaultNow(),
+});
+
 // Relationships
 export const accountsRelations = relations(accounts, ({ one }) => ({
   user: one(users, { fields: [accounts.userId], references: [users.id] }),
@@ -259,6 +288,13 @@ export const categoryExpensesRelations = relations(categoryExpenses, ({ one }) =
   monthlyAggregate: one(monthlyAggregates, {
     fields: [categoryExpenses.monthlyAggregateId],
     references: [monthlyAggregates.id],
+  }),
+}));
+
+export const embeddingsRelations = relations(embeddings, ({ one }) => ({
+  account: one(accounts, {
+    fields: [embeddings.accountId],
+    references: [accounts.id],
   }),
 }));
 

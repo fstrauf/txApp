@@ -1,0 +1,2 @@
+-- Initial schema (placeholder)
+-- This file exists to fix the migration process 

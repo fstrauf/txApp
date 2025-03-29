@@ -7,6 +7,7 @@ const { db } = require('../db/index');
 const { users, transactions } = require('../db/schema');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const authRoutes = require('./routes/auth').default;
 
 // Initialize Hono app
 const app = new Hono();
@@ -38,6 +39,10 @@ publicRoutes.get('/', (c: Context) => {
   return c.json({ message: 'API is running' });
 });
 
+// Register the password reset routes
+publicRoutes.route('/auth', authRoutes);
+
+// Legacy login route (can be removed once clients are updated to use the new route)
 publicRoutes.post('/auth/login', async (c: Context) => {
   try {
     const { email, password } = await c.req.json();
