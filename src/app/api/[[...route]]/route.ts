@@ -5,8 +5,7 @@ import { jwt } from 'hono/jwt'
 import { users } from '../../../db/schema'
 import { db } from '../../../db'
 import { eq } from 'drizzle-orm'
-import bcrypt from 'bcryptjs'
-import jsonwebtoken from 'jsonwebtoken'
+import { sign } from 'hono/jwt'
 
 export const runtime = 'edge'
 export const preferredRegion = 'fra1' // Choose your preferred region
@@ -38,6 +37,18 @@ app.get('/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+// Helper function to compare passwords
+async function comparePasswords(password: string, hashedPassword: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  const passwordHash = Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  
+  return passwordHash === hashedPassword;
+}
+
 // Public routes
 app.post('/auth/login', async (c) => {
   try {
@@ -60,8 +71,8 @@ app.post('/auth/login', async (c) => {
       return c.json({ error: 'Invalid credentials' }, 401)
     }
     
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password)
+    // Verify password using Web Crypto API
+    const isPasswordValid = await comparePasswords(password, user.password)
     
     if (!isPasswordValid) {
       return c.json({ error: 'Invalid credentials' }, 401)
@@ -72,12 +83,11 @@ app.post('/auth/login', async (c) => {
       return c.json({ error: 'Server configuration error' }, 500)
     }
 
-    // Generate JWT token
-    const token = jsonwebtoken.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    )
+    // Generate JWT token using Hono's built-in JWT functions
+    const token = await sign({ 
+      id: user.id, 
+      email: user.email 
+    }, process.env.JWT_SECRET)
     
     return c.json({ 
       message: 'Login successful',
