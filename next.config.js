@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Add any Next.js config options here
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'tx-app.vercel.app'],
+    },
+  },
 }
 
 module.exports = nextConfig 
