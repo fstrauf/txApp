@@ -7,7 +7,7 @@ import * as jwt from 'jsonwebtoken';
 import { Resend } from 'resend';
 
 // Get environment variables
-const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@expensesorted.com';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'ExpenseSorted <noreply@expensesorted.com>';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
