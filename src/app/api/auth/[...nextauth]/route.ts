@@ -8,9 +8,17 @@ import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { Resend } from 'resend';
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
 const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@expensesorted.com';
+
+// Initialize a function to get the Resend client when needed
+function getResendClient() {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) {
+    console.warn("Warning: RESEND_API_KEY is not defined - Email functionality will not work properly");
+    return null;
+  }
+  return new Resend(RESEND_API_KEY);
+}
 
 // Ensure you have NEXTAUTH_SECRET in .env.local
 // This should be a string, not with quotes around it
