@@ -7,11 +7,17 @@ import { Resend } from 'resend';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Should be in .env
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
-// Initialize Resend with API key
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@expensesorted.com';
-const resend = new Resend(RESEND_API_KEY);
+
+// Initialize Resend only when needed
+function getResendClient() {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) {
+    console.warn("Warning: RESEND_API_KEY is not defined - Email functionality will not work properly");
+    return null;
+  }
+  return new Resend(RESEND_API_KEY);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,8 +54,11 @@ export async function POST(req: NextRequest) {
     // Build the reset URL
     const resetUrl = `${APP_URL}/auth/reset-password?token=${token}`;
 
-    // Send email using Resend
-    if (RESEND_API_KEY) {
+    // Get the Resend client
+    const resend = getResendClient();
+    
+    // Send email using Resend if client is available
+    if (resend) {
       // Ensure email is a string 
       const userEmail = user.email || email;
       

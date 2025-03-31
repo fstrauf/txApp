@@ -6,11 +6,20 @@ import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { Resend } from 'resend';
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Get environment variables
 const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@expensesorted.com';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// Initialize Resend only when needed
+function getResendClient() {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) {
+    console.warn("Warning: RESEND_API_KEY is not defined - Email functionality will not work properly");
+    return null;
+  }
+  return new Resend(RESEND_API_KEY);
+}
 
 const auth = new Hono();
 
@@ -99,8 +108,11 @@ auth.post('/forgot-password', async (c) => {
     // Build the reset URL
     const resetUrl = `${APP_URL}/auth/reset-password?token=${token}`;
 
-    // Send email using Resend
-    if (process.env.RESEND_API_KEY) {
+    // Get Resend client
+    const resend = getResendClient();
+    
+    // Send email using Resend if available
+    if (resend) {
       // Ensure we have a valid email address
       const userEmail = user.email || email;
       
