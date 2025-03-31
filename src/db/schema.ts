@@ -25,6 +25,8 @@ export const users = pgTable('users', {
   lunchMoneyApiKey: text('lunchMoneyApiKey'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   passwordUpdatedAt: timestamp('password_updated_at', { withTimezone: true }),
+  resetToken: text('resetToken'),
+  resetTokenExpiry: timestamp('resetTokenExpiry', { mode: 'date', withTimezone: true }),
 });
 
 export const appBetaOptInStatusEnum = pgEnum('appBetaOptInStatus', ['OPTED_IN', 'DISMISSED']);
@@ -32,7 +34,7 @@ export const appBetaOptInStatusEnum = pgEnum('appBetaOptInStatus', ['OPTED_IN', 
 export const accounts = pgTable(
   'accounts',
   {
-    id: text('id').primaryKey().notNull(),
+    id: text('id').primaryKey().notNull().default(sql`gen_random_uuid()`),
     userId: text('userId')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
@@ -64,8 +66,8 @@ export const accounts = pgTable(
 );
 
 export const sessions = pgTable('sessions', {
-  id: text('id').primaryKey().notNull(),
-  sessionToken: text('sessionToken').unique().notNull(),
+  id: text('id').notNull(), // Keep the id field, but it's NOT the primary key
+  sessionToken: text('sessionToken').primaryKey().notNull(), // Make sessionToken the PK
   userId: text('userId')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),

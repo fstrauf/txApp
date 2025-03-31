@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as bcrypt from 'bcryptjs';
-import * as jwt from 'jsonwebtoken';
-import { db } from '../../../../db';
-import { users } from '../../../../db/schema';
+import { db } from '@/db';
+import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { hashPassword } from '@/lib/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Should be stored in .env
-
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { token, password } = await req.json();
+    const { token, password } = await request.json();
 
     if (!token || !password) {
       return NextResponse.json(
@@ -18,45 +15,49 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify the token
-    let payload: any;
-    try {
-      payload = jwt.verify(token, JWT_SECRET);
-    } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 400 }
-      );
-    }
-
-    const { email } = payload;
-
-    // Find the user
+    // Find user with this reset token
     const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
+      where: eq(users.resetToken, token),
     });
 
     if (!user) {
       return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
+        { error: 'Invalid token' },
+        { status: 400 }
+      );
+    }
+
+    // Check if token has expired
+    const now = new Date();
+    const tokenExpiry = user.resetTokenExpiry ? new Date(user.resetTokenExpiry) : null;
+
+    if (!tokenExpiry || tokenExpiry < now) {
+      return NextResponse.json(
+        { error: 'Token has expired' },
+        { status: 400 }
       );
     }
 
     // Hash the new password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await hashPassword(password);
 
-    // Update the user's password
+    // Update user with new password and clear reset token
     await db
       .update(users)
-      .set({ 
-        password: hashedPassword
+      .set({
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+        passwordUpdatedAt: new Date(),
       })
       .where(eq(users.id, user.id));
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(
+      { success: true },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error('Password reset error:', error);
+    console.error('Error resetting password:', error);
     return NextResponse.json(
       { error: 'Failed to reset password' },
       { status: 500 }

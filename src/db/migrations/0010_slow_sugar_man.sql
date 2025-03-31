@@ -1,0 +1,1 @@
+ALTER TABLE "sessions" ADD COLUMN "id" text NOT NULL;
