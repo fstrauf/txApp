@@ -13,6 +13,11 @@ const EMAIL_FROM = process.env.EMAIL_FROM || 'ExpenseSorted <noreply@expensesort
 
 export async function POST(request: Request) {
   try {
+    // Log environment variables to help debug
+    console.log("DEBUG - EMAIL_FROM value:", EMAIL_FROM);
+    console.log("DEBUG - Raw env value:", process.env.EMAIL_FROM);
+    console.log("DEBUG - Type of EMAIL_FROM:", typeof EMAIL_FROM);
+    
     const { email } = await request.json();
 
     if (!email) {
@@ -64,33 +69,89 @@ export async function POST(request: Request) {
     console.log(`Reset URL: ${resetUrl}`);
     
     try {
-      const emailResult = await resend.emails.send({
-        from: EMAIL_FROM,
-        to: email,
-        subject: "Reset your password",
-        html: `
-          <h1>Reset Your Password</h1>
-          <p>You requested a password reset for your ExpenseSorted account.</p>
-          <p>Click the link below to reset your password. This link will expire in 1 hour.</p>
-          <a href="${resetUrl}">Reset Password</a>
-          <p>If you didn't request this, you can safely ignore this email.</p>
-        `,
-      });
+      // First try with the custom domain
+      const formattedFrom = "ExpenseSorted <noreply@expensesorted.com>";
       
-      console.log("Resend email response:", emailResult);
+      // Fallback to a resend.com address if needed
+      const fallbackFrom = "ExpenseSorted <onboarding@resend.dev>";
       
-      return NextResponse.json(
-        { 
-          success: true, 
-          debug: { 
-            emailSent: true, 
-            resetToken, 
-            resetUrl,
-            resendResponse: emailResult 
-          } 
-        },
-        { status: 200 }
-      );
+      console.log("DEBUG - Trying to send email with from:", formattedFrom);
+      
+      try {
+        const emailResult = await resend.emails.send({
+          from: formattedFrom,
+          to: email,
+          subject: "Reset your password",
+          html: `
+            <h1>Reset Your Password</h1>
+            <p>You requested a password reset for your ExpenseSorted account.</p>
+            <p>Click the link below to reset your password. This link will expire in 1 hour.</p>
+            <a href="${resetUrl}">Reset Password</a>
+            <p>If you didn't request this, you can safely ignore this email.</p>
+          `,
+        });
+        
+        console.log("Resend email response:", emailResult);
+        
+        return NextResponse.json(
+          { 
+            success: true, 
+            debug: { 
+              emailSent: true, 
+              resetToken, 
+              resetUrl,
+              resendResponse: emailResult 
+            } 
+          },
+          { status: 200 }
+        );
+      } catch (primaryError) {
+        console.error("Error with primary email sender:", primaryError);
+        
+        // If it's a validation error, try the fallback
+        if (primaryError && 
+            typeof primaryError === 'object' && 
+            'name' in primaryError && 
+            primaryError.name === 'validation_error') {
+          console.log("Validation error - trying fallback sender:", fallbackFrom);
+          
+          try {
+            const fallbackResult = await resend.emails.send({
+              from: fallbackFrom,
+              to: email,
+              subject: "Reset your password",
+              html: `
+                <h1>Reset Your Password</h1>
+                <p>You requested a password reset for your ExpenseSorted account.</p>
+                <p>Click the link below to reset your password. This link will expire in 1 hour.</p>
+                <a href="${resetUrl}">Reset Password</a>
+                <p>If you didn't request this, you can safely ignore this email.</p>
+              `,
+            });
+            
+            console.log("Fallback email response:", fallbackResult);
+            
+            return NextResponse.json(
+              { 
+                success: true, 
+                debug: { 
+                  emailSent: true, 
+                  resetToken, 
+                  resetUrl,
+                  fallbackUsed: true,
+                  resendResponse: fallbackResult 
+                } 
+              },
+              { status: 200 }
+            );
+          } catch (fallbackError) {
+            console.error("Error with fallback email sender:", fallbackError);
+            throw fallbackError; // Re-throw to be caught by the outer catch
+          }
+        } else {
+          throw primaryError; // Re-throw non-validation errors
+        }
+      }
     } catch (resendError) {
       console.error("Resend email error:", resendError);
       
