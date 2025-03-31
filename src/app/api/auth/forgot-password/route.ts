@@ -9,7 +9,7 @@ import { getResendClient } from "@/lib/resend";
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Should be in .env
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@expensesorted.com';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'ExpenseSorted <noreply@expensesorted.com>';
 
 export async function POST(request: Request) {
   try {
