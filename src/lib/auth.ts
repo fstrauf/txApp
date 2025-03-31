@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
+import { JWT } from "next-auth/jwt";
 
 // Define a type for our User
 interface User {
@@ -79,7 +80,6 @@ export const authConfig: NextAuthOptions = {
   callbacks: {
     async session({ session, token }) {
       if (token.sub && session.user) {
-        // @ts-expect-error - Adding id to session user
         session.user.id = token.sub;
       }
       return session;

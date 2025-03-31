@@ -50,8 +50,7 @@ export async function POST(req: NextRequest) {
     await db
       .update(users)
       .set({ 
-        password: hashedPassword,
-        updatedAt: new Date()
+        password: hashedPassword
       })
       .where(eq(users.id, user.id));
 

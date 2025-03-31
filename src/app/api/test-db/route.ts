@@ -63,7 +63,7 @@ async function createOrUpdateUser(email: string, password: string) {
       await db.update(users)
         .set({ 
           password: hashedPassword,
-          updated_at: new Date()
+          updatedAt: new Date()
         })
         .where(eq(users.id, existingUser.id));
       
@@ -82,9 +82,8 @@ async function createOrUpdateUser(email: string, password: string) {
         name,
         email,
         password: hashedPassword,
-        email_verified: new Date(),
-        created_at: new Date(),
-        updated_at: new Date()
+        emailVerified: new Date(),
+        updatedAt: new Date()
       });
       
       return NextResponse.json({

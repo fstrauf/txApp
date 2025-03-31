@@ -23,16 +23,14 @@ interface Props {
 }
 
 const PostHogProviderWrapper: FC<Props> = ({ children }) => {
-  // Temporarily commented out Auth0 functionality
-  // const { user } = useUser();
+  // Currently not using Auth0 - will be implemented later
   const user = null;
 
   useEffect(() => {
-    // Identify user if logged in with Auth0 (using sub as distinct ID)
-    if (user && user.sub) {
-      posthog.identify(user.sub, {
-        email: user.email,
-      });
+    // This will be re-implemented when Auth0 integration is complete
+    // For now, we'll use session-based identity
+    if (user) {
+      posthog.reset(); // Clear any previous identity
     }
   }, [user]);
 

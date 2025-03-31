@@ -1,4 +1,4 @@
-const { db } = require('../db/index');
+const dbClient = require('../db/index').db;
 const { users } = require('../db/schema');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
@@ -9,12 +9,12 @@ async function createTestUser() {
     const hashedPassword = await bcrypt.hash('test123', 10);
 
     // Create test user
-    await db.insert(users).values({
+    await dbClient.insert(users).values({
       id: uuidv4(),
       name: 'Test User',
       email: 'test@example.com',
       password: hashedPassword,
-      createdAt: new Date(),
+      emailVerified: new Date(),
       updatedAt: new Date(),
     });
 

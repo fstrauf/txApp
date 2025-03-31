@@ -1,13 +1,14 @@
-const { Hono } = require('hono');
-const { cors } = require('hono/cors');
-const { jwt: honoJwt } = require('hono/jwt');
-const { logger } = require('hono/logger');
-const { eq } = require('drizzle-orm');
-const { db } = require('../db/index');
-const { users, transactions } = require('../db/schema');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const authRoutes = require('./routes/auth').default;
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { jwt as honoJwt } from 'hono/jwt';
+import { logger } from 'hono/logger';
+import { eq } from 'drizzle-orm';
+import { db } from '../db/index';
+import { users, transactions } from '../db/schema';
+import bcrypt from 'bcryptjs';
+import jsonwebtoken from 'jsonwebtoken';
+import { default as authRoutes } from './routes/auth';
+import type { Context } from 'hono';
 
 // Initialize Hono app
 const app = new Hono();
@@ -18,9 +19,6 @@ interface JwtPayload {
   email: string;
   [key: string]: unknown;
 }
-
-// Import Context type from Hono
-import type { Context } from 'hono';
 
 // Middleware
 app.use('*', logger());
@@ -68,7 +66,7 @@ publicRoutes.post('/auth/login', async (c: Context) => {
     }
     
     // Generate JWT token
-    const token = jwt.sign(
+    const token = jsonwebtoken.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
@@ -149,4 +147,4 @@ protectedRoutes.get('/transactions', async (c: Context) => {
 app.route('', publicRoutes);
 app.route('/api', protectedRoutes);
 
-module.exports = app; 
+export default app; 

@@ -19,7 +19,7 @@ export default function BetaAccessBanner() {
 
   // Check if the user has already opted in or dismissed the banner
   useEffect(() => {
-    if (isUserLoading) {
+    if (isLoading) {
       return;
     }
 
@@ -46,7 +46,7 @@ export default function BetaAccessBanner() {
     };
 
     checkUserPreference();
-  }, [user, isUserLoading]);
+  }, [user, isLoading]);
 
   // Track when the banner is viewed
   useEffect(() => {
