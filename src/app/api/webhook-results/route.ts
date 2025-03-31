@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
+import { db } from '@/db';
+import { webhookResults } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,9 +12,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Prediction ID is required' }, { status: 400 });
     }
 
-    const webhookResult = await prisma.webhookResult.findUnique({
-      where: { prediction_id: predictionId }
-    });
+    const [webhookResult] = await db
+      .select()
+      .from(webhookResults)
+      .where(eq(webhookResults.prediction_id, predictionId))
+      .limit(1);
 
     if (!webhookResult) {
       return NextResponse.json({ error: 'Webhook result not found' }, { status: 404 });
@@ -22,19 +25,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(webhookResult);
   } catch (error) {
     console.error('Error fetching webhook result:', error);
-    
-    // Handle specific Prisma errors
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2025') {
-        return NextResponse.json({ error: 'Record not found.' }, { status: 404 });
-      }
-    }
-    
-    // Handle connection errors
-    if (error instanceof Prisma.PrismaClientInitializationError) {
-      return NextResponse.json({ error: 'Database connection failed.' }, { status: 503 });
-    }
-    
     return NextResponse.json({ error: 'Failed to fetch webhook result' }, { status: 500 });
   }
 }
@@ -49,35 +39,31 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if a webhook result with this prediction_id already exists
-    const existingResult = await prisma.webhookResult.findUnique({
-      where: { prediction_id }
-    });
+    const [existingResult] = await db
+      .select()
+      .from(webhookResults)
+      .where(eq(webhookResults.prediction_id, prediction_id))
+      .limit(1);
 
     if (existingResult) {
       return NextResponse.json({ error: 'Webhook result already exists for this prediction ID' }, { status: 409 });
     }
 
-    const webhookResult = await prisma.webhookResult.create({
-      data: {
+    const [webhookResult] = await db
+      .insert(webhookResults)
+      .values({
         prediction_id,
         results
-      }
-    });
+      })
+      .returning();
 
     return NextResponse.json(webhookResult);
   } catch (error) {
     console.error('Error creating webhook result:', error);
     
-    // Handle specific Prisma errors
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2002') {
-        return NextResponse.json({ error: 'A webhook result with this prediction ID already exists.' }, { status: 409 });
-      }
-    }
-    
-    // Handle connection errors
-    if (error instanceof Prisma.PrismaClientInitializationError) {
-      return NextResponse.json({ error: 'Database connection failed.' }, { status: 503 });
+    // Check for unique constraint violation
+    if (error instanceof Error && error.message.includes('duplicate key value')) {
+      return NextResponse.json({ error: 'A webhook result with this prediction ID already exists.' }, { status: 409 });
     }
     
     return NextResponse.json({ error: 'Failed to create webhook result' }, { status: 500 });

@@ -4,15 +4,8 @@
   "installCommand": "pnpm install",
   "regions": ["fra1"],
   "outputDirectory": ".next",
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://${API_URL}/:path*"
-    }
-  ],
   "env": {
     "VERCEL_ENV": "production",
-    "NODE_ENV": "production",
-    "API_URL": "@api_url"
+    "NODE_ENV": "production"
   }
 } 

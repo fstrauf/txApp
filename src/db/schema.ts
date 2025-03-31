@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
   boolean,
   decimal,
@@ -14,23 +14,27 @@ import {
 } from 'drizzle-orm/pg-core';
 
 // Auth-related tables
-export const users = pgTable('User', {
-  id: text('id').primaryKey().notNull(),
+export const users = pgTable('users', {
+  id: text('id').primaryKey().notNull().default(sql`gen_random_uuid()`),
   name: text('name'),
   email: text('email').unique(),
-  emailVerified: timestamp('emailVerified', { mode: 'date' }),
+  emailVerified: timestamp('emailVerified', { mode: 'date', withTimezone: true }),
   image: text('image'),
   password: text('password'),
   classifyApiKey: text('classifyApiKey'),
   lunchMoneyApiKey: text('lunchMoneyApiKey'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  passwordUpdatedAt: timestamp('password_updated_at', { withTimezone: true }),
+  resetToken: text('resetToken'),
+  resetTokenExpiry: timestamp('resetTokenExpiry', { mode: 'date', withTimezone: true }),
 });
 
-export const appBetaOptInStatusEnum = pgEnum('AppBetaOptInStatus', ['OPTED_IN', 'DISMISSED']);
+export const appBetaOptInStatusEnum = pgEnum('appBetaOptInStatus', ['OPTED_IN', 'DISMISSED']);
 
 export const accounts = pgTable(
-  'Account',
+  'accounts',
   {
-    id: text('id').primaryKey().notNull(),
+    id: text('id').primaryKey().notNull().default(sql`gen_random_uuid()`),
     userId: text('userId')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
@@ -48,9 +52,9 @@ export const accounts = pgTable(
     categorisationTab: text('categorisationTab'),
     columnOrderCategorisation: json('columnOrderCategorisation'),
     api_key: text('api_key').unique(),
-    created_at: timestamp('created_at', { mode: 'date' }),
-    lastUsed: timestamp('lastUsed', { mode: 'date' }),
-    requestsCount: text('requestsCount').default('0'),
+    created_at: timestamp('created_at', { mode: 'date', withTimezone: true }),
+    lastUsed: timestamp('lastUsed', { mode: 'date', withTimezone: true }),
+    requestsCount: integer('requestsCount').default(0),
     appBetaOptIn: appBetaOptInStatusEnum('appBetaOptIn'),
   },
   (account) => ({
@@ -61,21 +65,21 @@ export const accounts = pgTable(
   })
 );
 
-export const sessions = pgTable('Session', {
-  id: text('id').primaryKey().notNull(),
-  sessionToken: text('sessionToken').unique().notNull(),
+export const sessions = pgTable('sessions', {
+  id: text('id').notNull(), // Keep the id field, but it's NOT the primary key
+  sessionToken: text('sessionToken').primaryKey().notNull(), // Make sessionToken the PK
   userId: text('userId')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  expires: timestamp('expires', { mode: 'date' }).notNull(),
+  expires: timestamp('expires', { mode: 'date', withTimezone: true }).notNull(),
 });
 
 export const verificationTokens = pgTable(
-  'VerificationToken',
+  'verificationTokens',
   {
     identifier: text('identifier').notNull(),
     token: text('token').notNull(),
-    expires: timestamp('expires', { mode: 'date' }).notNull(),
+    expires: timestamp('expires', { mode: 'date', withTimezone: true }).notNull(),
   },
   (vt) => ({
     compoundKey: primaryKey(vt.identifier, vt.token),
@@ -83,7 +87,7 @@ export const verificationTokens = pgTable(
 );
 
 // Application-specific tables
-export const bankAccounts = pgTable('BankAccount', {
+export const bankAccounts = pgTable('bankAccounts', {
   id: text('id').primaryKey().notNull(),
   name: text('name').notNull(),
   type: text('type').notNull(),
@@ -93,13 +97,13 @@ export const bankAccounts = pgTable('BankAccount', {
     .references(() => users.id, { onDelete: 'cascade' }),
   plaidItemId: text('plaidItemId'),
   plaidAccessToken: text('plaidAccessToken'),
-  lastSync: timestamp('lastSync', { mode: 'date' }),
-  createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt', { mode: 'date' }).$onUpdate(() => new Date()).notNull(),
+  lastSync: timestamp('lastSync', { mode: 'date', withTimezone: true }),
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
 });
 
 export const categories = pgTable(
-  'Category',
+  'categories',
   {
     id: text('id').primaryKey().notNull(),
     name: text('name').notNull(),
@@ -108,43 +112,43 @@ export const categories = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     isDefault: boolean('isDefault').default(false).notNull(),
-    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
-    updatedAt: timestamp('updatedAt', { mode: 'date' }).$onUpdate(() => new Date()).notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
   },
   (category) => ({
     nameUserIdIndex: uniqueIndex('name_userId_idx').on(category.name, category.userId),
   })
 );
 
-export const trainingJobs = pgTable('TrainingJob', {
+export const trainingJobs = pgTable('trainingJobs', {
   id: text('id').primaryKey().notNull(),
   userId: text('userId')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   status: text('status').notNull(),
   predictionId: text('predictionId'),
-  createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
-  completedAt: timestamp('completedAt', { mode: 'date' }),
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp('completedAt', { mode: 'date', withTimezone: true }),
   error: text('error'),
 });
 
-export const classificationJobs = pgTable('ClassificationJob', {
+export const classificationJobs = pgTable('classificationJobs', {
   id: text('id').primaryKey().notNull(),
   userId: text('userId')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   status: text('status').notNull(),
   predictionId: text('predictionId'),
-  createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
-  completedAt: timestamp('completedAt', { mode: 'date' }),
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp('completedAt', { mode: 'date', withTimezone: true }),
   error: text('error'),
 });
 
 export const monthlyAggregates = pgTable(
-  'MonthlyAggregate',
+  'monthlyAggregates',
   {
     id: text('id').primaryKey().notNull(),
-    month: timestamp('month', { mode: 'date' }).notNull(),
+    month: timestamp('month', { mode: 'date', withTimezone: true }).notNull(),
     userId: text('userId')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
@@ -156,8 +160,8 @@ export const monthlyAggregates = pgTable(
     netSavings: decimal('netSavings', { precision: 12, scale: 2 }).default('0').notNull(),
     netBurn: decimal('netBurn', { precision: 12, scale: 2 }).default('0').notNull(),
     savingsRate: decimal('savingsRate', { precision: 4, scale: 2 }).default('0').notNull(),
-    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
-    updatedAt: timestamp('updatedAt', { mode: 'date' }).$onUpdate(() => new Date()).notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
   },
   (monthlyAggregate) => ({
     userIdMonthIndex: uniqueIndex('userId_month_idx').on(
@@ -168,10 +172,10 @@ export const monthlyAggregates = pgTable(
 );
 
 export const transactions = pgTable(
-  'Transaction',
+  'transactions',
   {
     id: text('id').primaryKey().notNull(),
-    date: timestamp('date', { mode: 'date' }).notNull(),
+    date: timestamp('date', { mode: 'date', withTimezone: true }).notNull(),
     description: text('description').notNull(),
     amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
     type: text('type').notNull(),
@@ -184,8 +188,8 @@ export const transactions = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     isReconciled: boolean('isReconciled').default(false).notNull(),
     notes: text('notes'),
-    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
-    updatedAt: timestamp('updatedAt', { mode: 'date' }).$onUpdate(() => new Date()).notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
     classificationJobId: text('classificationJobId').references(() => classificationJobs.id),
     isTrainingData: boolean('isTrainingData').default(false).notNull(),
     lunchMoneyCategory: text('lunchMoneyCategory'),
@@ -203,7 +207,7 @@ export const transactions = pgTable(
 );
 
 export const categoryExpenses = pgTable(
-  'CategoryExpense',
+  'categoryExpenses',
   {
     id: text('id').primaryKey().notNull(),
     monthlyAggregateId: text('monthlyAggregateId')
@@ -213,8 +217,8 @@ export const categoryExpenses = pgTable(
       .notNull()
       .references(() => categories.id, { onDelete: 'cascade' }),
     amount: decimal('amount', { precision: 12, scale: 2 }).default('0').notNull(),
-    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
-    updatedAt: timestamp('updatedAt', { mode: 'date' }).$onUpdate(() => new Date()).notNull(),
+    createdAt: timestamp('createdAt', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { withTimezone: true }).$onUpdate(() => new Date()).notNull(),
   },
   (categoryExpense) => ({
     monthlyAggregateIdCategoryIdIndex: uniqueIndex(
@@ -227,17 +231,17 @@ export const categoryExpenses = pgTable(
 export const embeddings = pgTable('embeddings', {
   id: uuid('id').primaryKey().defaultRandom(),
   data: text('data').notNull(),
-  created_at: timestamp('created_at', { mode: 'date' }).defaultNow(),
-  updated_at: timestamp('updated_at', { mode: 'date' }).$onUpdate(() => new Date()),
+  created_at: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow(),
+  updated_at: timestamp('updated_at', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()),
   embedding_id: text('embedding_id').unique().notNull(),
   accountId: text('accountId').references(() => accounts.id),
 });
 
-export const webhookResults = pgTable('webhook_results', {
+export const webhookResults = pgTable('webhookResults', {
   id: uuid('id').primaryKey().defaultRandom(),
   prediction_id: text('prediction_id').unique().notNull(),
   results: json('results').notNull(),
-  created_at: timestamp('created_at', { mode: 'date' }).defaultNow(),
+  created_at: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow(),
 });
 
 // Relationships

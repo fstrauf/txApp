@@ -22,12 +22,12 @@ export async function findUserByEmail(email: string) {
   try {
     console.log(`Looking up user with email: ${email}`);
     
-    // Try using direct SQL query since we're having issues
-    const result = await db.execute(sql`SELECT * FROM "User" WHERE "email" = ${email} LIMIT 1`);
+    // Use Drizzle query builder instead of raw SQL
+    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
     
-    if (result.rows.length > 0) {
+    if (result.length > 0) {
       console.log(`User found with email ${email}`);
-      return result.rows[0];
+      return result[0];
     }
     
     console.log(`No user found with email ${email}`);

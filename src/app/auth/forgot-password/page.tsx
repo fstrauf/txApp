@@ -1,114 +1,137 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { useState } from "react";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError(null);
 
     try {
-      // In a real application, you would call an API to send a reset email
-      // For this demo, we'll just simulate success
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setIsSubmitted(true);
-      
-      // In production, you would send a reset email here:
-      // const response = await fetch('/api/auth/reset-password', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email })
-      // });
-      //
-      // if (!response.ok) {
-      //   const data = await response.json();
-      //   throw new Error(data.error || 'Failed to send reset email');
-      // }
-      
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send reset email');
-      console.error(err);
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Something went wrong");
+      }
+
+      setIsSuccess(true);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  if (isSubmitted) {
-    return (
-      <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">Check Your Email</h1>
-        <div className="mb-6 p-4 bg-green-100 text-green-700 rounded text-center">
-          <p>We've sent a password reset link to <strong>{email}</strong></p>
-          <p className="mt-2">Please check your inbox and follow the instructions to reset your password.</p>
-        </div>
-        <div className="text-center">
-          <Link 
-            href="/auth/signin" 
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Return to sign in
-          </Link>
-        </div>
-      </div>
-    );
   }
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-6">Reset Your Password</h1>
-      
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
-          {error}
+    <div className="flex min-h-screen flex-col items-center justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+          Reset your password
+        </h2>
+        <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+          Enter your email address and we'll send you a link to reset your password.
+        </p>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white dark:bg-gray-800 px-4 py-8 shadow sm:rounded-lg sm:px-10">
+          {isSuccess ? (
+            <div className="text-center">
+              <svg
+                className="h-12 w-12 text-green-500 mx-auto"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
+                Check your email
+              </h3>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                We've sent a password reset link to {email}. The link will expire in 1 hour.
+              </p>
+              <div className="mt-6">
+                <Link
+                  href="/auth/signin"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  Return to sign in
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={onSubmit} className="space-y-6">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Email address
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="you@example.com"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="text-sm text-red-500">
+                  {error}
+                </div>
+              )}
+
+              <div>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  {isLoading ? "Sending..." : "Send reset link"}
+                </Button>
+              </div>
+
+              <div className="text-center">
+                <Link
+                  href="/auth/signin"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  Back to sign in
+                </Link>
+              </div>
+            </form>
+          )}
         </div>
-      )}
-      
-      <p className="text-gray-600 mb-6">
-        Enter your email address below and we'll send you a link to reset your password.
-      </p>
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email Address
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            placeholder="name@example.com"
-            required
-          />
-        </div>
-        
-        <Button
-          type="submit"
-          disabled={isLoading}
-          className="w-full"
-        >
-          {isLoading ? 'Sending...' : 'Send Reset Link'}
-        </Button>
-      </form>
-      
-      <div className="mt-6 text-center">
-        <Link 
-          href="/auth/signin" 
-          className="text-blue-600 hover:text-blue-800"
-        >
-          Back to sign in
-        </Link>
       </div>
     </div>
   );

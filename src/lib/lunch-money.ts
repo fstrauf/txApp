@@ -1,13 +1,19 @@
-import { Transaction as PrismaTransaction } from '@prisma/client';
+import { InferSelectModel } from 'drizzle-orm';
+import { transactions } from '@/db/schema';
 
-// Extend the Transaction type to include Lunch Money fields
-interface Transaction extends PrismaTransaction {
-  lunchMoneyId?: string;
-  lunchMoneyCategory?: string;
-  isTrainingData?: boolean;
-  predictedCategory?: string;
-  similarityScore?: number;
+// Define our transaction type based on the schema
+type DbTransaction = InferSelectModel<typeof transactions>;
+
+// Create an interface for the fields we want to add/modify
+interface LunchMoneyFields {
+  lunchMoneyId: string | null;
+  lunchMoneyCategory: string | null;
+  predictedCategory: string | null;
+  similarityScore: string | null;
 }
+
+// Define a type that merges our DB transaction with the Lunch Money fields
+type Transaction = DbTransaction;
 
 interface LunchMoneyTransaction {
   id: number;
@@ -115,13 +121,14 @@ export class LunchMoneyClient {
     return {
       date: new Date(lmTransaction.date),
       description: lmTransaction.payee,
-      amount: Math.abs(lmTransaction.amount),
+      amount: lmTransaction.amount.toString(), // Convert to string for Drizzle
       type: lmTransaction.amount < 0 ? 'expense' : 'income',
       userId,
       bankAccountId,
       lunchMoneyId: lmTransaction.id.toString(),
-      lunchMoneyCategory: lmTransaction.category_name || undefined,
-      notes: lmTransaction.notes || undefined,
+      lunchMoneyCategory: lmTransaction.category_name,
+      notes: lmTransaction.notes,
+      isTrainingData: false, // Default to false for new transactions
     };
   }
 } 
