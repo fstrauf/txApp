@@ -182,6 +182,90 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Benefits & Value Proposition Section */}
+        <div className="bg-white rounded-2xl shadow-soft p-8 mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+            Why Choose Expense Sorted Add-on
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-6xl mx-auto">
+            {/* Benefit 1: Save Hours Every Month */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 hover:border-primary/20 transition-colors shadow-sm hover:shadow-md flex">
+              <div className="mr-5 flex-shrink-0">
+                <div className="bg-primary/10 rounded-full p-4 w-16 h-16 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2 text-gray-900">Save Hours Every Month</h3>
+                <p className="text-gray-600">Automatic categorization replaces tedious manual tracking of expenses, freeing up hours each month for what truly matters.</p>
+              </div>
+            </div>
+            
+            {/* Benefit 2: Easy & Effortless */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 hover:border-primary/20 transition-colors shadow-sm hover:shadow-md flex">
+              <div className="mr-5 flex-shrink-0">
+                <div className="bg-primary/10 rounded-full p-4 w-16 h-16 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 3.5L13.5 21.5M4 8.5H10M4 16.5H10" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2 text-gray-900">Easy & Effortless</h3>
+                <p className="text-gray-600">No complex rules or formulas to maintain. Unlike rigid rule-based categorization, our AI adapts on its own to new transactions.</p>
+              </div>
+            </div>
+            
+            {/* Benefit 3: Customized to You */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 hover:border-primary/20 transition-colors shadow-sm hover:shadow-md flex">
+              <div className="mr-5 flex-shrink-0">
+                <div className="bg-primary/10 rounded-full p-4 w-16 h-16 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2 text-gray-900">Customized to Your Spending</h3>
+                <p className="text-gray-600">Train the AI on your data so it fits your unique spending patterns – your categories, your terms, your budget.</p>
+              </div>
+            </div>
+            
+            {/* Benefit 4: Privacy First */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 hover:border-primary/20 transition-colors shadow-sm hover:shadow-md flex">
+              <div className="mr-5 flex-shrink-0">
+                <div className="bg-primary/10 rounded-full p-4 w-16 h-16 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2 text-gray-900">Privacy First</h3>
+                <p className="text-gray-600">100% Privacy – your transactions stay in your Google Sheet. </p>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA Button */}
+          <div className="mt-10 text-center">
+            <a 
+              href="https://workspace.google.com/marketplace/app/expense_sorted/456363921097"
+              className="inline-flex items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-md hover:shadow-lg"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Try the Add-on Free
+              <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+        </div>
+
         {/* Product Demo Video */}
         <div className="rounded-2xl overflow-hidden shadow-soft mb-16 bg-surface p-6">
           <div className="aspect-video relative">
