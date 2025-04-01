@@ -90,6 +90,98 @@ export default function Home() {
           {/* Removed old link section and paragraph */}
         </div>
 
+        {/* Workflow Visualization Section - Monthly Process */}
+        <div className="bg-white rounded-2xl shadow-soft p-4 md:p-8 mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6 md:mb-8 text-center">
+            How It Works: Your Monthly Budget Workflow
+          </h2>
+          
+          <div className="grid md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
+            {/* Step 1: Import */}
+            <div className="flex flex-col items-center relative bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow h-full">
+              <div className="flex items-center mb-4 md:mb-6">
+                <div className="bg-primary/10 rounded-full h-10 w-10 md:h-16 md:w-16 flex items-center justify-center mr-3 flex-shrink-0">
+                  <span className="text-primary font-bold text-xl md:text-2xl">1</span>
+                </div>
+                <h3 className="text-lg md:text-xl font-semibold md:hidden">Import Transactions</h3>
+              </div>
+              <h3 className="text-xl font-semibold mb-3 hidden md:block text-center">Import Transactions</h3>
+              <p className="text-gray-600 text-center mb-4">Start by importing or pasting your monthly bank transactions into Google Sheets.</p>
+              <div className="mt-auto bg-gray-50 rounded-lg p-3 w-full h-[300px] flex items-center justify-center overflow-hidden">
+                <Image
+                  src="/f-you-money-import-transactions.png"
+                  width={693}
+                  height={400}
+                  alt="Importing transactions into Google Sheets"
+                  className="w-full object-contain max-h-full"
+                />
+              </div>
+              {/* Arrow for desktop - visible only on md+ screens */}
+              <div className="hidden md:block absolute right-0 top-1/3 transform translate-x-1/2 z-10">
+                <svg width="40" height="24" viewBox="0 0 40 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M39.0607 13.0607C39.6464 12.4749 39.6464 11.5251 39.0607 10.9393L29.5147 1.3934C28.9289 0.807612 27.9792 0.807612 27.3934 1.3934C26.8076 1.97918 26.8076 2.92893 27.3934 3.51472L35.8787 12L27.3934 20.4853C26.8076 21.0711 26.8076 22.0208 27.3934 22.6066C27.9792 23.1924 28.9289 23.1924 29.5147 22.6066L39.0607 13.0607ZM0 13.5H38V10.5H0V13.5Z" fill="#E2E8F0"/>
+                </svg>
+              </div>
+            </div>
+
+            {/* Step 2: Auto-Categorize */}
+            <div className="flex flex-col items-center relative bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow h-full">
+              <div className="flex items-center mb-4 md:mb-6">
+                <div className="bg-primary/10 rounded-full h-10 w-10 md:h-16 md:w-16 flex items-center justify-center mr-3 flex-shrink-0">
+                  <span className="text-primary font-bold text-xl md:text-2xl">2</span>
+                </div>
+                <h3 className="text-lg md:text-xl font-semibold md:hidden">Auto-Categorize with AI</h3>
+              </div>
+              <h3 className="text-xl font-semibold mb-3 hidden md:block text-center">Auto-Categorize with AI</h3>
+              <p className="text-gray-600 text-center mb-4">Click the Expense Sorted add-on. Our AI categorizes all transactions in seconds.</p>
+              <div className="mt-auto bg-gray-50 rounded-lg p-3 w-full h-[300px] flex items-center justify-center overflow-hidden">
+                <Image
+                  src="/f-you-money-categorise-transactions.png"
+                  width={614}
+                  height={400}
+                  alt="AI auto-categorizing expenses in Google Sheets"
+                  className="w-full object-contain max-h-full"
+                />
+              </div>
+              {/* Arrow for desktop - visible only on md+ screens */}
+              <div className="hidden md:block absolute right-0 top-1/3 transform translate-x-1/2 z-10">
+                <svg width="40" height="24" viewBox="0 0 40 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M39.0607 13.0607C39.6464 12.4749 39.6464 11.5251 39.0607 10.9393L29.5147 1.3934C28.9289 0.807612 27.9792 0.807612 27.3934 1.3934C26.8076 1.97918 26.8076 2.92893 27.3934 3.51472L35.8787 12L27.3934 20.4853C26.8076 21.0711 26.8076 22.0208 27.3934 22.6066C27.9792 23.1924 28.9289 23.1924 29.5147 22.6066L39.0607 13.0607ZM0 13.5H38V10.5H0V13.5Z" fill="#E2E8F0"/>
+                </svg>
+              </div>
+            </div>
+
+            {/* Step 3: Review */}
+            <div className="flex flex-col items-center bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow h-full">
+              <div className="flex items-center mb-4 md:mb-6">
+                <div className="bg-primary/10 rounded-full h-10 w-10 md:h-16 md:w-16 flex items-center justify-center mr-3 flex-shrink-0">
+                  <span className="text-primary font-bold text-xl md:text-2xl">3</span>
+                </div>
+                <h3 className="text-lg md:text-xl font-semibold md:hidden">Review & Analyze</h3>
+              </div>
+              <h3 className="text-xl font-semibold mb-3 hidden md:block text-center">Review & Analyze</h3>
+              <p className="text-gray-600 text-center mb-4">Review your categorized data and instantly see your spending summary in your sheet.</p>
+              <div className="mt-auto bg-gray-50 rounded-lg p-3 w-full h-[300px] flex items-center justify-center overflow-hidden">
+                <Image
+                  src="/f-you-money-analyse-transactions.png"
+                  width={400}
+                  height={300}
+                  alt="Analyzing spending patterns in financial dashboard"
+                  className="w-full object-contain max-h-full"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Time Saving Highlight */}
+          <div className="max-w-lg mx-auto mt-10 md:mt-12 text-center py-4">
+            <div className="inline-block bg-green-50 border border-green-100 text-green-700 font-semibold px-6 py-2 rounded-full text-sm mb-2">
+              20 seconds instead of 20 minutes
+            </div>
+            <p className="text-gray-600 max-w-md mx-auto">No more tedious sorting – Expense Sorted handles it for you, every month.</p>
+          </div>
+        </div>
+
         {/* Product Demo Video */}
         <div className="rounded-2xl overflow-hidden shadow-soft mb-16 bg-surface p-6">
           <div className="aspect-video relative">
