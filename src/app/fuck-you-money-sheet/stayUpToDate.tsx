@@ -1,43 +1,6 @@
 "use client";
-import { useState } from "react";
 
 export default function StayUpToDate() {
-  const [email, setEmail] = useState("");
-  // const [showEmailInput, setShowEmailInput] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
-  // const [submitted, setSubmitted] = useState(false);
-
-  const handleEmailSubmit = async (e: { preventDefault: () => void }) => {
-    e.preventDefault();
-    try {
-      const body = { email };
-
-      try {
-        const response = await fetch("/api/createEmailContact", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Fetched data:", data);
-          // setSubmitted(true);
-          setStatusMessage("You're on the list");
-        } else {
-          console.error("API call failed with status:", response.status);
-          setStatusMessage("Something went wrong, please try again later");
-        }
-      } catch (error) {
-        console.error("An error occurred:", error);
-        setStatusMessage("Something went wrong, please try again later");
-      }
-    } catch (error) {
-      console.error("Error submitting email:", error);
-      setStatusMessage("Something went wrong, please try again later");
-    }
-  };
-
   return (
     <div className="bg-surface rounded-xl p-6 shadow-soft max-w-2xl mx-auto mt-8">
       <p className="text-gray-700 mb-3 text-center">Join our community of users:</p>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { accounts } from '@/db/schema';
+import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
 
@@ -15,21 +15,21 @@ export async function GET(request: NextRequest) {
 
     console.log(`Fetching API key for user ID: ${userId}`);
 
-    // Find account by userId using Drizzle
+    // Find user by userId using Drizzle
     const result = await db
-      .select({ api_key: accounts.api_key })
-      .from(accounts)
-      .where(eq(accounts.userId, userId))
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
       .limit(1);
 
-    console.log(`Found ${result.length} account records`);
+    console.log(`Found ${result.length} user records`);
     
-    // Return the api_key or null if not found
-    return NextResponse.json(result.length > 0 ? { api_key: result[0].api_key } : { api_key: null });
+    // Return all user data or null if not found
+    return NextResponse.json(result.length > 0 ? result[0] : null);
   } catch (error) {
-    console.error('Error fetching account:', error);
+    console.error('Error fetching user account:', error);
     return NextResponse.json({ 
-      error: 'Failed to fetch account', 
+      error: 'Failed to fetch user account', 
       details: error instanceof Error ? error.message : String(error) 
     }, { status: 500 });
   }
@@ -45,42 +45,26 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Updating API key for user ID: ${userId}`);
-    console.log(`Required fields for Account table: id, userId, type, provider, providerAccountId`);
 
-    // Check if account exists
-    const existingAccount = await db
-      .select({ id: accounts.id })
-      .from(accounts)
-      .where(eq(accounts.userId, userId))
+    // Check if user exists
+    const existingUser = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
       .limit(1);
 
-    console.log(`Found ${existingAccount.length} existing account records`);
+    console.log(`Found ${existingUser.length} existing user records`);
     
-    let result;
-    
-    if (existingAccount.length > 0) {
-      // Update existing account
-      console.log(`Updating existing account for user ID: ${userId}`);
-      result = await db
-        .update(accounts)
-        .set({ api_key })
-        .where(eq(accounts.userId, userId))
-        .returning();
-    } else {
-      // Create new account
-      console.log(`Creating new account for user ID: ${userId}`);
-      result = await db
-        .insert(accounts)
-        .values({
-          id: uuid(),
-          userId,
-          api_key,
-          type: 'credentials',
-          provider: 'credentials',
-          providerAccountId: userId,
-        })
-        .returning();
+    if (existingUser.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+    
+    // Update user with new API key
+    const result = await db
+      .update(users)
+      .set({ api_key })
+      .where(eq(users.id, userId))
+      .returning();
 
     console.log(`Operation result:`, result);
     

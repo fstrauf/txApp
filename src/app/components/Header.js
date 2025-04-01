@@ -39,11 +39,11 @@ export default function Header() {
             </svg>
           </button>
         </div>
-        <div className="sm:flex hidden">
+        <div className="sm:flex hidden space-x-6">
           <NavBarButtons />
         </div>
         {isMenuOpen && (
-          <div className="sm:hidden w-full mt-4">
+          <div className="sm:hidden w-full mt-4 space-y-3">
             <NavBarButtons />
           </div>
         )}

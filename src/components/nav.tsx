@@ -34,6 +34,14 @@ export function Nav() {
           <span className="font-bold">Finance Tracker</span>
         </Link>
         <div className="flex flex-1 items-center justify-between space-x-4 md:justify-end">
+          <Link
+            href="/pricing"
+            className={`text-sm font-medium transition-colors hover:text-primary ${
+              pathname === "/pricing" ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            Pricing
+          </Link>
           {session ? (
             <>
               <Link

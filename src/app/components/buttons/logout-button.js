@@ -3,8 +3,8 @@ import { signOut } from "next-auth/react";
 export const LogoutButton = () => {
   return (
     <button
-      className="px-6 py-3 rounded-xl bg-white text-primary border border-primary/10 font-semibold hover:bg-gray-50 transition-all duration-200 shadow-soft flex items-center justify-center"
-      onClick={() => signOut({ callbackUrl: '/' })}
+      onClick={() => signOut({ callbackUrl: "/" })}
+      className="px-4 py-2 rounded-lg bg-white text-gray-700 border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-all duration-200"
     >
       Log Out
     </button>

@@ -6,6 +6,7 @@ import Instructions from "./instructions";
 import Intro from "./intro";
 import StayUpToDate from "./stayUpToDate";
 import PageHeader from "../../components/PageHeader";
+import AddOnButton from "../components/buttons/AddOnButton";
 
 export default function FinancialFreedomSheet() {
   return (
@@ -13,6 +14,24 @@ export default function FinancialFreedomSheet() {
       <main className="container mx-auto px-4 py-8 md:py-16 max-w-7xl">
         <div className="bg-surface rounded-2xl shadow-soft p-4 md:p-8 space-y-6 md:space-y-8">
           <PageHeader title="Financial Freedom - Cost of Living Tracking" />
+
+          {/* Add-on Cross-Promotion Banner */}
+          <div className="max-w-3xl mx-auto bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl p-4 border border-primary/20 mb-6">
+            <div className="flex flex-row items-center justify-between gap-4">
+              <div className="flex items-center">
+                <div className="bg-white p-2 rounded-full shadow-sm mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div className="max-w-md">
+                  <h3 className="font-semibold text-gray-900">Supercharge Your Spreadsheet</h3>
+                  <p className="text-sm text-gray-700">Automatically categorize transactions in seconds with our Google Sheets Add-on</p>
+                </div>
+              </div>
+              <AddOnButton size="md" variant="primary" text="Install Add-on" className="whitespace-nowrap flex-shrink-0" />
+            </div>
+          </div>
 
           {/* Key Benefits Summary - Added for immediate value clarity */}
           <div className="max-w-3xl mx-auto bg-primary/5 rounded-xl p-4 md:p-6 mb-6 md:mb-8">
@@ -77,6 +96,23 @@ export default function FinancialFreedomSheet() {
               <Intro />
               <Instructions />
             </div>
+            
+            {/* Final Add-on Cross-Promotion */}
+            <div className="mt-12 bg-gray-50 p-6 rounded-xl border border-gray-200">
+              <h3 className="text-xl font-bold text-center mb-4">Ready to save hours every month?</h3>
+              <div className="flex flex-col items-center">
+                <p className="text-center text-gray-700 max-w-2xl mb-6">
+                  This spreadsheet works great on its own, but with our AI-powered add-on, you can automatically categorize all your transactions in seconds instead of spending hours doing it manually.
+                </p>
+                <AddOnButton 
+                  size="lg" 
+                  variant="primary" 
+                  text="Install the AI Add-on" 
+                  className="shadow-md"
+                />
+                <p className="mt-3 text-xs text-gray-500">One-time purchase, no subscription required</p>
+              </div>
+            </div>
           </div>
         </div>
       </main>
@@ -112,6 +148,12 @@ function Navigation() {
       >
         Instructions
       </Link>
+      <AddOnButton 
+        size="lg" 
+        variant="secondary" 
+        text="Get Add-on" 
+        className="rounded-xl font-semibold shadow-soft"
+      />
     </nav>
   );
 }

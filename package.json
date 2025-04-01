@@ -11,9 +11,8 @@
     "generate": "node scripts/dev.js generate",
     "parse-prd": "node scripts/dev.js parse-prd",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:push": "drizzle-kit push:pg",
+    "db:push": "drizzle-kit push",
     "db:pull": "drizzle-kit introspect:pg",
     "db:drop": "drizzle-kit drop",
     "auth:fix": "pnpm update next-auth@4.24.5 && pnpm update @auth/core @auth/drizzle-adapter",
@@ -68,6 +67,7 @@
     "react-hot-toast": "^2.5.2",
     "react-icons": "^5.5.0",
     "resend": "^4.2.0",
+    "stripe": "^17.7.0",
     "tailwind-merge": "^3.0.2",
     "tsx": "^4.7.0",
     "uuid": "^11.1.0"
