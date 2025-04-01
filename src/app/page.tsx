@@ -1,26 +1,17 @@
 "use client";
 import Image from "next/image";
-import Testimonials from "./components/Testimonials.js";
 import References from "./components/References.js";
 import FAQ from "./components/FAQ.js";
-import Features from "./components/Features.js";
 import Link from "next/link";
 import Head from "next/head";
 import { FaGoogle } from "react-icons/fa";
-import { useState, useEffect } from "react";
 
 export default function Home() {
-  const [showAlternateButton, setShowAlternateButton] = useState(false);
+  // Remove A/B test state
+  // const [showAlternateButton, setShowAlternateButton] = useState(false);
 
-  useEffect(() => {
-    // Simple A/B testing based on random assignment
-    // In production, you'd use a more sophisticated A/B testing framework
-    const abTestValue = Math.random() > 0.5;
-    setShowAlternateButton(abTestValue);
-
-    // You could also store this in localStorage to maintain consistency for the user
-    localStorage.setItem("useAlternateButton", String(abTestValue));
-  }, []);
+  // Remove A/B test effect
+  // useEffect(() => { ... }, []);
 
   return (
     <div className="min-h-screen bg-background-default">
@@ -31,78 +22,72 @@ export default function Home() {
       </div>
 
       <main className="container mx-auto px-4 py-8 md:py-16 max-w-5xl">
-        {/* Hero Section - Emotional heading with clear promise */}
-        <div className="text-center mb-8 md:mb-12">
+        {/* Hero Section - AI Add-on Focus */}
+        <div className="text-center mb-12 md:mb-16">
+          {/* Updated Headline */}
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-6 leading-tight">
-            Unlock Your{" "}
-            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Financial Freedom
-            </span>
-            ,
+            Automate Your Monthly Budgeting
             <br className="hidden md:block" />
-            <span className="md:hidden"> </span>One Expense at a Time
+            in{" "}
+            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              Google Sheets with AI
+            </span>
           </h1>
+          {/* Updated Subheadline */}
           <div className="flex flex-col gap-3 md:gap-4 mb-6 md:mb-8 max-w-3xl mx-auto">
             <p className="text-lg md:text-xl text-gray-800">
-              Track your spending, savings, and financial runway in minutes – without complicated apps
+              Categorize a month's transactions in seconds, not hours, directly in your spreadsheet.
             </p>
-            <div className="text-base md:text-lg text-gray-600 flex flex-col gap-2">
-              <p>✨ Automatic expense categorization</p>
-              <p>📊 Simple, powerful spreadsheet</p>
-              <p>🎯 Turn confusion into confidence</p>
-            </div>
+            {/* Removed the feature list div */}
           </div>
 
-          {/* A/B Testing CTA Buttons */}
-          {showAlternateButton ? (
-            <Link
-              href="/fuck-you-money-sheet"
-              className="inline-flex items-center px-6 py-3 md:px-8 md:py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-base md:text-lg w-full md:w-auto justify-center md:justify-start"
-            >
-              Get Your Financial Freedom Spreadsheet
-              <svg className="ml-2 w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
-          ) : (
-            <Link
-              href="/fuck-you-money-sheet"
-              className="inline-flex items-center px-6 py-3 md:px-8 md:py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-base md:text-lg w-full md:w-auto justify-center md:justify-start"
-            >
-              Get Your Financial Freedom Spreadsheet
-              <svg className="ml-2 w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
-          )}
-          <p className="mt-2 text-sm text-gray-600">
-            Track your finances and calculate how long your savings will last
-          </p>
-
-          {/* Quick Social Proof */}
-          <div className="mt-6 text-gray-600">
-            <p>Over 1,000 people are already on their path to financial independence</p>
-          </div>
-
-          <div className="mt-6 flex flex-wrap gap-4 justify-center">
+          {/* Primary and Secondary CTAs */}
+          <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-3">
+            {/* Primary CTA: Install Add-on */}
             <Link
               href="https://workspace.google.com/marketplace/app/expense_sorted/456363921097"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center px-6 py-3 rounded-lg bg-white border-2 border-primary text-primary font-semibold hover:bg-primary/10 transition-all duration-200 shadow-sm gap-2"
+              className="inline-flex items-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-lg w-full md:w-auto justify-center"
             >
-              <FaGoogle className="w-5 h-5" />
-              Get Google Workspace Add-on
+              <FaGoogle className="mr-2 w-5 h-5" />
+              Install the Add-on
             </Link>
-            
+            {/* Secondary CTA: Download Template */}
             <Link
-              href="/pricing"
-              className="inline-flex items-center px-6 py-3 rounded-lg bg-secondary text-white font-semibold hover:bg-secondary-dark transition-all duration-200 shadow-sm"
+              href="/fuck-you-money-sheet"
+              className="inline-flex items-center px-6 py-3 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm w-full md:w-auto justify-center"
             >
-              View Pricing Plans
+              Download Free Template
+              {/* Optional: Add an icon like download or spreadsheet */}
             </Link>
           </div>
-          <p className="mt-2 text-sm text-gray-600">Already using Google Sheets? Install directly from Marketplace</p>
+
+          {/* Hero Image */}
+          <div className="max-w-5xl mx-auto my-8 px-4">
+            <div className="relative bg-white rounded-2xl p-8">
+              <Image
+                src="/hero expense sorted.gif"
+                width={1920}
+                height={1080}
+                alt="AI-powered expense categorization in Google Sheets"
+                className="w-full rounded-lg shadow-xl"
+                priority={true}
+                quality={100}
+              />
+            </div>
+          </div>
+
+          {/* Trust Statement */}
+          <p className="text-sm text-gray-600">
+            ✅ Your data stays in your Google Sheet – never leaves your control.
+          </p>
+
+          {/* Quick Social Proof */}
+          <div className="mt-8 text-gray-600">
+            <p>Over 1,000 people are already automating their budgeting</p>
+          </div>
+          {/* Removed old link section and paragraph */}
         </div>
 
         {/* Product Demo Video */}
