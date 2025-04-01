@@ -292,15 +292,15 @@ export default function Home() {
                 </div>
                 
                 <div>
-                  <Link
+            <Link
                     href="/fuck-you-money-sheet"
                     className="inline-flex items-center px-6 py-3 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm"
-                  >
+            >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
                     Download Free Template
-                  </Link>
+            </Link>
                   
                   <p className="text-xs text-gray-500 mt-2">No signup required. Free download, no strings attached.</p>
                 </div>
@@ -434,13 +434,13 @@ export default function Home() {
               </p>
               <div className="flex items-center mt-4">
                 <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 overflow-hidden">
-                  <Image
-                    src="/testimonial-alex.jpg"
+                <Image
+                  src="/testimonial-alex.jpg"
                     width={40}
                     height={40}
-                    alt="Alex M."
-                    className="w-full h-full object-cover"
-                  />
+                  alt="Alex M."
+                  className="w-full h-full object-cover"
+                />
                 </div>
                 <div>
                   <p className="font-semibold">Alex M.</p>
@@ -461,13 +461,13 @@ export default function Home() {
               </p>
               <div className="flex items-center mt-4">
                 <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 overflow-hidden">
-                  <Image
-                    src="/testimonial-sarah.jpg"
+                <Image
+                  src="/testimonial-sarah.jpg"
                     width={40}
                     height={40}
-                    alt="Sarah K."
-                    className="w-full h-full object-cover"
-                  />
+                  alt="Sarah K."
+                  className="w-full h-full object-cover"
+                />
                 </div>
                 <div>
                   <p className="font-semibold">Sarah K.</p>
@@ -488,13 +488,13 @@ export default function Home() {
               </p>
               <div className="flex items-center mt-4">
                 <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 overflow-hidden">
-                  <Image
-                    src="/testimonial-liam.jpg"
+                <Image
+                  src="/testimonial-liam.jpg"
                     width={40}
                     height={40}
-                    alt="Liam R."
-                    className="w-full h-full object-cover"
-                  />
+                  alt="Liam R."
+                  className="w-full h-full object-cover"
+                />
                 </div>
                 <div>
                   <p className="font-semibold">Liam R.</p>
