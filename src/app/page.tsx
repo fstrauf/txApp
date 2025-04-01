@@ -200,7 +200,7 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="text-xl font-semibold mb-2 text-gray-900">Save Hours Every Month</h3>
-                <p className="text-gray-600">Automatic categorization replaces tedious manual tracking of expenses, freeing up hours each month for what truly matters.</p>
+                <p className="text-gray-600">Automatic categorization replaces tedious manual tracking of expenses.</p>
               </div>
             </div>
             
@@ -215,7 +215,7 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="text-xl font-semibold mb-2 text-gray-900">Easy & Effortless</h3>
-                <p className="text-gray-600">No complex rules or formulas to maintain. Unlike rigid rule-based categorization, our AI adapts on its own to new transactions.</p>
+                <p className="text-gray-600">No complex rules. Unlike rule-based categorization, our AI adapts on its own to new transactions.</p>
               </div>
             </div>
             
@@ -230,7 +230,7 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="text-xl font-semibold mb-2 text-gray-900">Customized to Your Spending</h3>
-                <p className="text-gray-600">Train the AI on your data so it fits your unique spending patterns – your categories, your terms, your budget.</p>
+                <p className="text-gray-600">Use your data to fit your unique spending patterns – your categories, your terms, your budget.</p>
               </div>
             </div>
             
