@@ -13,6 +13,18 @@ import {
   integer,
 } from 'drizzle-orm/pg-core';
 
+// App beta opt in status enum
+export const appBetaOptInStatusEnum = pgEnum('appBetaOptInStatus', ['OPTED_IN', 'DISMISSED']);
+
+// Subscription plan enum
+export const subscriptionPlanEnum = pgEnum('subscriptionPlan', ['FREE', 'SILVER', 'GOLD']);
+
+// Subscription status enum
+export const subscriptionStatusEnum = pgEnum('subscriptionStatus', ['ACTIVE', 'CANCELED', 'PAST_DUE', 'TRIALING']);
+
+// Billing cycle enum
+export const billingCycleEnum = pgEnum('billingCycle', ['MONTHLY', 'ANNUAL']);
+
 // Auth-related tables
 export const users = pgTable('users', {
   id: text('id').primaryKey().notNull().default(sql`gen_random_uuid()`),
@@ -27,18 +39,18 @@ export const users = pgTable('users', {
   passwordUpdatedAt: timestamp('password_updated_at', { withTimezone: true }),
   resetToken: text('resetToken'),
   resetTokenExpiry: timestamp('resetTokenExpiry', { mode: 'date', withTimezone: true }),
+  // Subscription fields
+  api_key: text('api_key').unique(),
+  subscriptionPlan: subscriptionPlanEnum('subscriptionPlan').default('FREE'),
+  subscriptionStatus: subscriptionStatusEnum('subscriptionStatus'),
+  billingCycle: billingCycleEnum('billingCycle'),
+  stripeCustomerId: text('stripeCustomerId'),
+  stripeSubscriptionId: text('stripeSubscriptionId'),
+  trialEndsAt: timestamp('trialEndsAt', { mode: 'date', withTimezone: true }),
+  currentPeriodEndsAt: timestamp('currentPeriodEndsAt', { mode: 'date', withTimezone: true }),
+  monthlyCategorizations: integer('monthlyCategorizations').default(0),
+  categoriesResetDate: timestamp('categoriesResetDate', { mode: 'date', withTimezone: true }),
 });
-
-export const appBetaOptInStatusEnum = pgEnum('appBetaOptInStatus', ['OPTED_IN', 'DISMISSED']);
-
-// Subscription plan enum
-export const subscriptionPlanEnum = pgEnum('subscriptionPlan', ['FREE', 'SILVER', 'GOLD']);
-
-// Subscription status enum
-export const subscriptionStatusEnum = pgEnum('subscriptionStatus', ['ACTIVE', 'CANCELED', 'PAST_DUE', 'TRIALING']);
-
-// Billing cycle enum
-export const billingCycleEnum = pgEnum('billingCycle', ['MONTHLY', 'ANNUAL']);
 
 export const accounts = pgTable(
   'accounts',
@@ -60,21 +72,11 @@ export const accounts = pgTable(
     categorisationRange: text('categorisationRange'),
     categorisationTab: text('categorisationTab'),
     columnOrderCategorisation: json('columnOrderCategorisation'),
-    api_key: text('api_key').unique(),
     created_at: timestamp('created_at', { mode: 'date', withTimezone: true }),
     lastUsed: timestamp('lastUsed', { mode: 'date', withTimezone: true }),
     requestsCount: integer('requestsCount').default(0),
     appBetaOptIn: appBetaOptInStatusEnum('appBetaOptIn'),
-    // New subscription fields
-    subscriptionPlan: subscriptionPlanEnum('subscriptionPlan').default('FREE'),
-    subscriptionStatus: subscriptionStatusEnum('subscriptionStatus'),
-    billingCycle: billingCycleEnum('billingCycle'),
-    stripeCustomerId: text('stripeCustomerId'),
-    stripeSubscriptionId: text('stripeSubscriptionId'),
-    trialEndsAt: timestamp('trialEndsAt', { mode: 'date', withTimezone: true }),
-    currentPeriodEndsAt: timestamp('currentPeriodEndsAt', { mode: 'date', withTimezone: true }),
-    monthlyCategorizations: integer('monthlyCategorizations').default(0), // Used for tracking usage limits
-    categoriesResetDate: timestamp('categoriesResetDate', { mode: 'date', withTimezone: true }), // When monthly usage resets
+    // Note: Subscription fields moved to users table
   },
   (account) => ({
     providerProviderAccountIdIndex: uniqueIndex('provider_provider_account_id_idx').on(

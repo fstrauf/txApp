@@ -1,13 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
+interface SubscriptionInfo {
+  subscriptionPlan: string;
+  subscriptionStatus: string | null;
+  billingCycle: string | null;
+  trialEndsAt: string | null;
+  currentPeriodEndsAt: string | null;
+  hasActiveSubscription: boolean;
+}
+
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [isLoading, setIsLoading] = useState<{silver: boolean, gold: boolean}>({ silver: false, gold: false });
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
   const { data: session } = useSession();
   const router = useRouter();
   
@@ -16,6 +27,29 @@ export default function PricingPage() {
   const goldMonthly = 10;
   const silverAnnual = silverMonthly * 12 * 0.8;
   const goldAnnual = goldMonthly * 12 * 0.8;
+
+  useEffect(() => {
+    // Fetch current subscription info if user is logged in
+    if (session?.user) {
+      fetchSubscriptionInfo();
+    }
+  }, [session]);
+
+  const fetchSubscriptionInfo = async () => {
+    try {
+      setIsLoadingSubscription(true);
+      const response = await fetch('/api/user-subscription');
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSubscription(data);
+      }
+    } catch (error) {
+      console.error('Error fetching subscription info:', error);
+    } finally {
+      setIsLoadingSubscription(false);
+    }
+  };
 
   // Function to handle subscription
   const handleSubscribe = async (plan: string) => {
@@ -44,6 +78,53 @@ export default function PricingPage() {
     }
   };
 
+  // Helper to format dates
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return null;
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  // Helper to get subscription badge
+  const getSubscriptionBadge = () => {
+    if (!subscription) return null;
+    
+    const plan = subscription.subscriptionPlan;
+    const status = subscription.subscriptionStatus || '';
+    
+    let badgeColor = 'bg-gray-100 text-gray-800'; // Default for FREE
+    
+    if (plan === 'SILVER') {
+      badgeColor = 'bg-blue-100 text-blue-800';
+    } else if (plan === 'GOLD') {
+      badgeColor = 'bg-yellow-100 text-yellow-800';
+    }
+    
+    if (status === 'TRIALING') {
+      badgeColor = 'bg-purple-100 text-purple-800';
+    } else if (status === 'PAST_DUE') {
+      badgeColor = 'bg-red-100 text-red-800';
+    }
+    
+    if (plan === 'FREE' && !status) {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          Free Plan
+        </span>
+      );
+    }
+    
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${badgeColor}`}>
+        {plan}{status === 'TRIALING' ? ' (Trial)' : ''}
+      </span>
+    );
+  };
+
+  const isPlanActive = (plan: string): boolean => {
+    if (!subscription || !subscription.hasActiveSubscription) return false;
+    return subscription.subscriptionPlan === plan;
+  };
+
   return (
     <div className="bg-background-default min-h-screen py-12">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -57,6 +138,26 @@ export default function PricingPage() {
           <p className="text-lg text-gray-700 max-w-3xl mx-auto">
             Choose the plan that best fits your needs. Get started with a free trial, no credit card required.
           </p>
+
+          {/* Current Subscription Banner (if logged in and has subscription) */}
+          {session && subscription && subscription.hasActiveSubscription && (
+            <div className="mt-6 bg-white rounded-xl p-4 max-w-md mx-auto border border-gray-200 shadow-sm">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium text-gray-900">Current Plan:</span>
+                {getSubscriptionBadge()}
+              </div>
+              {subscription.trialEndsAt && (
+                <p className="text-sm text-gray-700 mb-1">
+                  Trial ends: {formatDate(subscription.trialEndsAt)}
+                </p>
+              )}
+              {subscription.currentPeriodEndsAt && (
+                <p className="text-sm text-gray-700">
+                  Next billing: {formatDate(subscription.currentPeriodEndsAt)}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Billing toggle */}
           <div className="flex items-center justify-center mt-8">
@@ -79,10 +180,17 @@ export default function PricingPage() {
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Silver Plan */}
-          <div className="bg-white rounded-2xl shadow-soft p-8 border border-gray-100 flex flex-col">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Silver</h2>
-              <p className="text-gray-600 mt-2">Perfect for personal budgeting</p>
+          <div className={`bg-white rounded-2xl shadow-soft p-8 ${isPlanActive('SILVER') ? 'border-2 border-blue-400' : 'border border-gray-100'} flex flex-col`}>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Silver</h2>
+                <p className="text-gray-600 mt-2">Perfect for personal budgeting</p>
+              </div>
+              {isPlanActive('SILVER') && (
+                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                  Current Plan
+                </span>
+              )}
             </div>
             
             <div className="mb-6">
@@ -118,8 +226,12 @@ export default function PricingPage() {
             
             <button
               onClick={() => handleSubscribe('silver')}
-              disabled={isLoading.silver}
-              className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70"
+              disabled={isLoading.silver || isPlanActive('SILVER')}
+              className={`inline-flex justify-center items-center px-6 py-3 rounded-xl ${
+                isPlanActive('SILVER') 
+                  ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                  : 'bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow'
+              } text-center disabled:opacity-70`}
             >
               {isLoading.silver ? (
                 <>
@@ -129,25 +241,32 @@ export default function PricingPage() {
                   </svg>
                   Processing...
                 </>
-              ) : session ? "Subscribe Now" : "Sign in to Subscribe"}
+              ) : isPlanActive('SILVER') ? "Current Plan" : session ? "Subscribe Now" : "Sign in to Subscribe"}
             </button>
             
             <p className="text-sm text-center mt-4 text-gray-600">
-              Start with a free trial, no credit card required
+              Start with a free trial!
             </p>
           </div>
           
           {/* Gold Plan */}
-          <div className="bg-white rounded-2xl shadow-soft p-8 border-2 border-primary/20 flex flex-col relative overflow-hidden">
+          <div className={`bg-white rounded-2xl shadow-soft p-8 ${isPlanActive('GOLD') ? 'border-2 border-yellow-400' : 'border-2 border-primary/20'} flex flex-col relative overflow-hidden`}>
             <div className="absolute top-3 right-2 translate-x-[30%] translate-y-[-10%] rotate-45">
               <div className="bg-primary text-white text-xs px-8 py-1 shadow-md">
                 Popular
               </div>
             </div>
             
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Gold</h2>
-              <p className="text-gray-600 mt-2">For serious budget management</p>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Gold</h2>
+                <p className="text-gray-600 mt-2">For serious budget management</p>
+              </div>
+              {isPlanActive('GOLD') && (
+                <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-medium">
+                  Current Plan
+                </span>
+              )}
             </div>
             
             <div className="mb-6">
@@ -195,8 +314,12 @@ export default function PricingPage() {
             
             <button
               onClick={() => handleSubscribe('gold')}
-              disabled={isLoading.gold}
-              className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70"
+              disabled={isLoading.gold || isPlanActive('GOLD')}
+              className={`inline-flex justify-center items-center px-6 py-3 rounded-xl ${
+                isPlanActive('GOLD') 
+                  ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                  : 'bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow'
+              } text-center disabled:opacity-70`}
             >
               {isLoading.gold ? (
                 <>
@@ -206,11 +329,11 @@ export default function PricingPage() {
                   </svg>
                   Processing...
                 </>
-              ) : session ? "Subscribe Now" : "Sign in to Subscribe"}
+              ) : isPlanActive('GOLD') ? "Current Plan" : session ? "Subscribe Now" : "Sign in to Subscribe"}
             </button>
             
             <p className="text-sm text-center mt-4 text-gray-600">
-              Start with a free trial, no credit card required
+              Start with a free trial!
             </p>
           </div>
         </div>

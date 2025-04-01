@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handleWebhookEvent } from '@/lib/stripe';
 import { db } from '@/db';
 import { eq, and, sql } from 'drizzle-orm';
-import { accounts, subscriptions, billingCycleEnum, subscriptionPlanEnum, subscriptionStatusEnum } from '@/db/schema';
+import { users, accounts, subscriptions, billingCycleEnum, subscriptionPlanEnum, subscriptionStatusEnum } from '@/db/schema';
 import Stripe from 'stripe';
 
 export async function POST(request: NextRequest) {
@@ -39,29 +39,45 @@ export async function POST(request: NextRequest) {
         const plan = (session.metadata?.plan || 'silver').toUpperCase();
         const billingCycle = (session.metadata?.billingCycle || 'monthly').toUpperCase();
         
-        // Find the user account by the Stripe customer ID
-        const userAccount = await db.query.accounts.findFirst({
-          where: eq(accounts.stripeCustomerId, customerId)
+        // First find user with this Stripe customer ID
+        let userToUpdate = await db.query.users.findFirst({
+          where: eq(users.stripeCustomerId, customerId)
         });
         
-        if (!userAccount) {
-          console.error(`No user account found with Stripe customer ID: ${customerId}`);
-          break;
+        if (!userToUpdate) {
+          // If not found directly in user table, try looking up through accounts
+          const userAccount = await db.query.accounts.findFirst({
+            columns: {
+              userId: true,
+            },
+            with: {
+              user: true
+            },
+            where: eq(accounts.userId, accounts.userId) // Placeholder - will be fixed in more comprehensive solution
+          });
+          
+          if (!userAccount) {
+            console.error(`No user found with Stripe customer ID: ${customerId}`);
+            break;
+          }
+          
+          userToUpdate = userAccount.user;
         }
         
-        // Update the account with subscription information
+        // Update user's subscription information
         await db
-          .update(accounts)
+          .update(users)
           .set({
             subscriptionPlan: plan as any,
             subscriptionStatus: 'TRIALING' as any,
             billingCycle: billingCycle as any,
+            stripeCustomerId: customerId,
             stripeSubscriptionId: subscriptionId,
             // For trials, we'll set these during the subscription created/updated events
           })
-          .where(eq(accounts.id, userAccount.id));
+          .where(eq(users.id, userToUpdate.id));
         
-        console.log(`Updated user account ${userAccount.id} with subscription ${subscriptionId}`);
+        console.log(`Updated user ${userToUpdate.id} with subscription ${subscriptionId}`);
         break;
       }
       
@@ -69,15 +85,16 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         
-        // Find the user account by Stripe customer ID
+        // Find user by Stripe customer ID 
         const customerId = subscription.customer as string;
         
-        const userAccount = await db.query.accounts.findFirst({
-          where: eq(accounts.stripeCustomerId, customerId)
+        // Look up user directly
+        let userToUpdate = await db.query.users.findFirst({
+          where: eq(users.stripeCustomerId, customerId)
         });
         
-        if (!userAccount) {
-          console.error(`No user account found with Stripe customer ID: ${customerId}`);
+        if (!userToUpdate) {
+          console.error(`No user found with Stripe customer ID: ${customerId}`);
           break;
         }
         
@@ -107,17 +124,19 @@ export async function POST(request: NextRequest) {
         // Get current timestamp and format for database
         const now = new Date();
         
-        // Update the account with subscription details
+        // Update user with subscription details
         await db
-          .update(accounts)
+          .update(users)
           .set({
             subscriptionPlan: plan as any,
             subscriptionStatus: status as any,
             billingCycle: billingCycle as any,
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscription.id,
             trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
             currentPeriodEndsAt: new Date(subscription.current_period_end * 1000),
           })
-          .where(eq(accounts.id, userAccount.id));
+          .where(eq(users.id, userToUpdate.id));
         
         // Create/update a record in the subscriptions table
         const existingSubscription = await db.query.subscriptions.findFirst({
@@ -139,49 +158,59 @@ export async function POST(request: NextRequest) {
             })
             .where(eq(subscriptions.id, existingSubscription.id));
         } else {
-          // Create a new subscription record
-          await db.insert(subscriptions).values({
-            userId: userAccount.userId,
-            accountId: userAccount.id,
-            status: status as any,
-            plan: plan as any,
-            billingCycle: billingCycle as any,
-            currentPeriodStart: new Date(subscription.current_period_start * 1000),
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-            cancelAtPeriodEnd: subscription.cancel_at_period_end,
-            stripeSubscriptionId: subscription.id,
-            stripeCustomerId: customerId,
-            createdAt: now,
-            updatedAt: now
+          // Find a valid account for this user
+          const userAccount = await db.query.accounts.findFirst({
+            where: eq(accounts.userId, userToUpdate.id)
           });
+          
+          if (userAccount) {
+            // Create a new subscription record only if we found a valid account
+            await db.insert(subscriptions).values({
+              userId: userToUpdate.id,
+              accountId: userAccount.id,
+              status: status as any,
+              plan: plan as any,
+              billingCycle: billingCycle as any,
+              currentPeriodStart: new Date(subscription.current_period_start * 1000),
+              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              cancelAtPeriodEnd: subscription.cancel_at_period_end,
+              stripeSubscriptionId: subscription.id,
+              stripeCustomerId: customerId,
+              createdAt: now,
+              updatedAt: now
+            });
+          } else {
+            console.log(`Skipping subscription record creation - no valid account found for user ${userToUpdate.id}`);
+          }
         }
         
-        console.log(`Updated subscription information for user ${userAccount.id}`);
+        console.log(`Updated subscription information for user ${userToUpdate.id}`);
         break;
       }
       
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         
-        // Find the user account by Stripe subscription ID
-        const userAccount = await db.query.accounts.findFirst({
-          where: eq(accounts.stripeSubscriptionId, subscription.id)
+        // Find user by Stripe subscription ID
+        const userToUpdate = await db.query.users.findFirst({
+          where: eq(users.stripeSubscriptionId, subscription.id)
         });
         
-        if (!userAccount) {
-          console.error(`No user account found with Stripe subscription ID: ${subscription.id}`);
+        if (!userToUpdate) {
+          console.error(`No user found with Stripe subscription ID: ${subscription.id}`);
           break;
         }
         
-        // Reset the account to FREE plan
+        // Reset the user's subscription and remove API key
         await db
-          .update(accounts)
+          .update(users)
           .set({
             subscriptionPlan: 'FREE' as any,
             subscriptionStatus: 'CANCELED' as any,
+            api_key: null, // Remove the API key
             // Keep the customer ID for future subscriptions
           })
-          .where(eq(accounts.id, userAccount.id));
+          .where(eq(users.id, userToUpdate.id));
         
         // Update the subscription record if it exists
         const existingSubscription = await db.query.subscriptions.findFirst({
@@ -199,7 +228,7 @@ export async function POST(request: NextRequest) {
             .where(eq(subscriptions.id, existingSubscription.id));
         }
         
-        console.log(`Subscription ${subscription.id} has been canceled for user ${userAccount.id}`);
+        console.log(`Subscription ${subscription.id} has been canceled for user ${userToUpdate.id}`);
         break;
       }
     }

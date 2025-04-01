@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { createCheckoutSession, createCustomer } from '@/lib/stripe';
 import { db } from '@/db';
 import { eq } from 'drizzle-orm';
-import { accounts } from '@/db/schema';
+import { users } from '@/db/schema';
 import { authConfig } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -36,13 +36,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user's account info
+    // Get user's info
     const userId = session.user.id;
-    const userAccount = await db.query.accounts.findFirst({
-      where: eq(accounts.userId, userId)
+    const userRecord = await db.query.users.findFirst({
+      where: eq(users.id, userId)
     });
 
-    let stripeCustomerId = userAccount?.stripeCustomerId;
+    let stripeCustomerId = userRecord?.stripeCustomerId;
 
     // If user doesn't have a Stripe customer ID, create one
     if (!stripeCustomerId) {
@@ -58,9 +58,9 @@ export async function GET(request: NextRequest) {
       
       // Store the customer ID in the database
       await db
-        .update(accounts)
+        .update(users)
         .set({ stripeCustomerId })
-        .where(eq(accounts.userId, userId));
+        .where(eq(users.id, userId));
     }
     
     // Create a checkout session
