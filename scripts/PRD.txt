@@ -1,191 +1,84 @@
-<context>
-# Overview  
-A personal finance analytics dashboard that connects with Lunch Money API to provide detailed monthly financial metrics including income, expenses, savings rate, and category-specific expenditures. This tool helps users track their financial health over time without manual data entry, while enabling supplementary income data that may not be available in Lunch Money.
+Expense Sorted Website Strategy Plan
 
-# Core Features  
-1. **Monthly Financial Aggregates**
-   - Income tracking (possibly manual entry)
-   - Tax calculation and credit tracking
-   - Net income, expenses, and net savings calculations
-   - Savings rate metrics and trends over time
-   - Category-specific expense tracking (Groceries, Shopping, etc.)
+Homepage Flow
 
-2. **Financial Dashboard**
-   - Monthly aggregate table display
-   - Savings rate visualization and trends
-   - Category breakdown of expenses
-   - Net burn/savings tracking
+The homepage should immediately highlight the AI-powered Google Sheets add-on as the core product, while incorporating the free budgeting spreadsheet as a secondary benefit. Structure the content in a logical flow that mirrors a typical user’s monthly budgeting process. For example:
+	1.	Hero Section (AI Add-on Focus): Present a clear value proposition for the add-on right at the top. For instance, a tagline like “Automate Your Monthly Budgeting in Google Sheets with AI” conveys the main benefit. Include a brief subtext (1-2 lines) emphasizing saving time and effort (e.g. “Categorize a month’s transactions in seconds, not hours, directly in your spreadsheet.”). Use a strong Call-to-Action (CTA) such as a prominent button labeled “Install the Add-on” or “Start Free Trial” (whichever fits your model). As a secondary option, mention the free template (e.g. a link or smaller button “Get Free Budget Template”) – but visually ensure the add-on CTA stands out as the primary action. A supporting image or illustration in the hero could show a Google Sheet with transactions automatically being categorized to instantly grab attention. Additionally, include a small trust tagline beneath the CTA, such as “Your data stays in your Google Sheet – nothing is stored on our servers” for immediate reassurance on privacy.
+	2.	“How It Works” Section (Monthly Workflow): Right below the hero, illustrate the typical monthly workflow that many users follow, highlighting how Expense Sorted streamlines it. This can be a step-by-step visual or infographic. For example, use three steps with icons or a horizontal timeline:
+	•	Step 1: Import Transactions – “Start by importing or pasting your monthly bank transactions into Google Sheets (or into our free template).”
+	•	Step 2: Auto-Categorize with AI – “Click the Expense Sorted add-on. Our AI, trained on your own past spending, categorizes all transactions in seconds.” Emphasize that this replaces tedious manual tagging of each expense ￼. Highlight speed and ease here (e.g. “20 seconds instead of 2 hours” as an example scenario).
+	•	Step 3: Review & Analyze – “Review the categorized data in your sheet and see your spending summary or budget instantly.” Mention that because it’s in Google Sheets, users can customize further or adjust any entry (the AI suggestions are editable, giving full control).
+Visually, each step could be accompanied by a small screenshot or icon (e.g., a file icon for import, a magic wand or AI icon for auto-categorize, and a chart or checkmark for review). By walking the user through this familiar workflow, you’re showing that the add-on fits naturally into what they already do each month, just making it faster and easier. At the end of this section, consider a short line like “No more tedious sorting – Expense Sorted handles it for you, every month.” to reinforce the benefit.
+	3.	Value Proposition Section (Benefits): After illustrating the workflow, present a section that calls out the key value propositions of the add-on in a concise, scannable way. This can be a set of 3-4 highlighted benefits with icons or short headers, each with a one-sentence explanation:
+	•	Save Hours Every Month: Emphasize the time saved by automating categorization (“Automatic categorization replaces tedious manual tracking of expenses ￼, freeing up hours each month.”).
+	•	Easy & Effortless: Stress that no complicated setup is needed (“No complex rules or formulas – just one click in Google Sheets and your expenses are sorted.”). This underscores that it’s easier than rules-based systems. You can even subtly contrast with rule-based tools: e.g., “Unlike rigid rule-based categorization that you have to maintain, our AI adapts on its own to new transactions ￼ ￼.”
+	•	Customized to You: Highlight that the AI learns your categories and preferences over time (“Train the AI on your data so it fits your unique spending patterns – your categories, your terms ￼.”). Users can use their own category names (e.g. “Yoga” or “Kid’s Activities”) and the AI will recognize them, which is more personalized than generic budgeting apps.
+	•	Privacy First: Reinforce the privacy stance as a core value (“100% Privacy – your transactions never leave your Google Sheet.”). Add that Expense Sorted uses secure Google authentication and does not store any transaction data on external servers ￼. This point should assure users that their financial data isn’t being siphoned away, easing a major concern with financial tools.
+	•	(Optional) Works with Your Sheet: If space allows, mention flexibility: “Built for Google Sheets – keep the flexibility of a spreadsheet. Use it with our template or any Google Sheet you already have.” This makes it clear the add-on can integrate into existing workflows without forcing a new app or platform.
+Each of these points can be visually represented (e.g., a clock icon for saving time, a magic wand for ease, a person icon or puzzle piece for custom fit, a lock for privacy). Make the layout engaging, like a 2x2 grid on desktop or a carousel on mobile, so readers can quickly grasp why this product is valuable.
+	4.	Free Budget Spreadsheet Section: Although the focus is the add-on, dedicate a smaller section to the Free Financial Freedom Spreadsheet as a lead-in resource. Title this section in a way that shows it’s a bonus or companion, for example: “📊 Get Started with a Free Budget Template.” In 2-3 sentences, explain that this Google Sheets template helps track spending, savings, and financial runway (continuing the current messaging of helping users see how long their savings last). Make it clear this template is included for free to provide immediate value. For example: “New to budgeting in Google Sheets? Our free Financial Freedom Spreadsheet gives you a ready-made template to track expenses, visualize your budget, and even calculate how long your savings can last. It’s the perfect companion to the Expense Sorted add-on – use the sheet to manage your finances, and let our AI handle the categorization.” Include a CTA here as well, like a button or link “Download the Free Template.” This CTA should be noticeable but styled as secondary compared to the primary add-on CTA (e.g. a lighter-colored button). You might also mention “No signup required for the template” if it’s a direct download, or if an email is required, clarify “Free download, no strings attached” to encourage trust. The idea is to reassure users they can gain value immediately (which builds goodwill and leads) even if they’re not ready to pay – but also to position the template as the on-ramp to the add-on. Visually, you can show a small screenshot of the spreadsheet (for instance, a glimpse of a transactions table or a chart from the template) to let users see what they’re getting.
+	5.	Testimonials / Social Proof: Keep or introduce a section for user testimonials or statistics to build trust. For example, reuse the quotes from Alex, Sarah, Liam, etc., but consider also adding one that specifically praises the time saved or ease of the add-on (if available). If you have any metrics or badges, this is a good place: e.g. “Over 1,000 users have tracked over $X in spending with Expense Sorted” or “Join 1,000+ people who’ve accelerated their budgeting workflow.” If the add-on has a rating on the Google Workspace Marketplace or has been featured somewhere, include that (maybe as a star rating graphic or logo strip of publications, if applicable). The goal is to reinforce credibility. Make sure at least one testimonial or statement touches on trust/privacy if possible (for instance, a user noting they feel secure using it, or how it fits seamlessly with Google Sheets which they trust). This aligns with emphasizing privacy and ease.
+	6.	FAQ/Closing CTA: You already have a Common Questions section; ensure the most pertinent questions about the add-on are included and perhaps move this above the final CTA. Key questions likely remain: “How does the AI categorization work?”, “Is my data secure?”, “Can I customize categories?”, “How accurate is it?” These map exactly to the concerns prospects have. You can present these as collapsible FAQs or brief answers. For example, for security, answer with a reassurance: “Yes – your data is secure. Expense Sorted processes data within your Google Sheet and doesn’t send your transactions to any external server.” It might even state “Your data never leaves your spreadsheet” plainly here again. Keep answers short and positive, and consider linking to a more detailed privacy policy or support page if they want deeper info. After the FAQs, have a final call-to-action banner: something like “Ready to automate your budgeting and save hours each month?” followed by the primary CTA “Get the Add-on” (and possibly the secondary “Download Template” if you want to echo both options one more time). This bookends the page with a clear next step for the user.
 
-3. **Data Synchronization**
-   - Lunch Money API integration
-   - Monthly data aggregation
-   - Storage of historical monthly summaries
-   - Support for manual data entry where needed
+By structuring the homepage in this flow – Problem/Pain (manual tracking) -> Solution (AI add-on) -> How it works -> Benefits -> Free Resource -> Trust signals -> CTA – you guide the visitor through understanding why they need the add-on and how to get it, while still offering the free sheet as a value-add. The monthly import-and-categorize workflow is front and center, making it easy for users to see themselves using the product in their routine. Throughout the homepage, maintain a consistent tone that is helpful and confident, positioning the add-on as a modern upgrade to a familiar process (budgeting in a spreadsheet).
 
-# User Experience  
-1. **User Personas**
-   - Financial Tracker: User who wants detailed insights into their spending and saving habits
-   - Retirement Planner: User focused on long-term financial planning and saving goals
-   - Budget Manager: User who needs detailed category-level expense tracking
+Product Messaging
 
-2. **Key User Flows**
-   - Initial Setup: Connect Lunch Money API, configure income sources
-   - Monthly Review: Check latest financial metrics and trends
-   - Data Maintenance: Add missing income information, review categorizations
-   - Financial Planning: Analyze savings rate, adjust spending in specific categories
+The messaging should clearly convey what the add-on does and why it’s beneficial, focusing on speed, ease, customization, and privacy. Here are the core messaging points to emphasize across the site (in headlines, subheadings, and body text), ensuring they align with user needs:
+	•	“Automate Your Monthly Workflow” – Seamless Integration with Google Sheets: Make it clear that Expense Sorted isn’t a separate app to learn, but a smart extension of Google Sheets. For example, “Expense Sorted lives right inside Google Sheets, supercharging the monthly budgeting workflow you already know.” This tells users that they can keep using spreadsheets (which they’re comfortable with) and just add AI to eliminate the boring parts. Emphasize that the add-on fits into their routine: importing transactions and categorizing them is something they likely do already, and now it becomes one-click simple. This messaging ties the product to the existing habit of monthly expense tracking, rather than asking them to adopt a whole new system.
+	•	“Save Time with One-Click Categorization” – Speed and Efficiency: Stress the time-saving aspect at every opportunity. Many users dread the manual work of categorizing transactions one by one. Use messaging like “Turn hours of manual expense sorting into seconds” or “Categorize an entire month’s transactions with a single click.” Back this up with concrete imagery in words: e.g., “Instead of scrolling through hundreds of lines and assigning categories by hand, let our AI do it for you in an instant.” You can even include a small comparison: “Manual categorization = 2-3 hours/month. Expense Sorted AI = <1 minute.” The current site’s phrasing that it “replaces tedious manual tracking” ￼ is effective – keep that sentiment. The goal is for the user to immediately understand they will get their time back to focus on analysis or other tasks (or simply to not dread budgeting).
+	•	“No More Complicated Rules” – Ease of Use over Rules-Based Systems: Many spreadsheet power users have tried using formulas or rule-based tools (like Tiller’s AutoCat or custom scripts) to categorize transactions. Your messaging should position Expense Sorted as a far easier alternative that doesn’t require maintenance or technical know-how. For instance: “Skip the hassle of setting up and maintaining keyword rules. Our AI understands your transactions without manual rules.” You might add a brief explanation: “Traditional rules-based categorization (e.g., ‘if description contains X then category = Food’) can break or miss new cases ￼. Expense Sorted’s AI is self-learning – it adapts as your transaction patterns change, catching those new merchants or categories automatically ￼.” By highlighting this, you appeal to both less technical users (who wouldn’t set up rules at all) and to advanced users (who realize they can stop constantly updating their rules). The phrasing “no complicated formulas or coding needed” would reassure users that anyone can use the add-on. Essentially, simplicity is a big selling point – it’s plug-and-play AI.
+	•	“Customized Categories that Learn from You” – Personalization: A key advantage of your AI approach is that it can be trained on the user’s own data. Make sure the messaging communicates that the tool isn’t a generic one-size-fits-all categorizer – it actually uses the user’s past categorizations to improve. For example: “The more you use Expense Sorted, the smarter it gets. It learns from how you categorize, so it can apply your personal category scheme consistently.” Explain that users aren’t forced into predefined categories – they define their own (or use the ones in the template) and the AI will use those. A line like “Your budget, your categories – now on autopilot” could capture this. Also note that because you can train it on prior transactions, even the first run can be tailored if they have some data. By conveying customization, you differentiate from budgeting apps that might have fixed category sets or limited flexibility. It’s basically the power of a custom spreadsheet with the brains of AI. You can reinforce that the user retains control: “You can always review and adjust categories – and the AI will learn from any corrections.” This point is supported by the fact that manual adjustments are allowed and help improve accuracy ￼. Messaging here should assure them that automation doesn’t mean losing control, it means less grunt work and more consistency.
+	•	“Privacy-First and Secure” – Trust and Data Protection: Given the sensitivity of financial data, highlight privacy as a non-negotiable feature. The messaging should be extremely clear that “Your data stays in your Google Sheet. Period.” Explain in simple terms that the AI runs via the Google Sheets add-on and does not upload your transactions to any server. If applicable, mention “No Expense Sorted employee or database ever sees your transactions – everything is processed by the add-on within your Google account.” You can add that it uses Google’s secure OAuth for permissions and nothing more ￼, which means it has read/write access to the sheet but doesn’t have external copies. Using phrases like “privacy-first design” or “built with a zero-data policy” can drive this home. This messaging should appear anywhere a user might be hesitating to connect the tool – on the homepage, near CTAs, in the FAQ, etc. You might even make it a highlighted point in the hero or the value prop section (as discussed). In addition, transparency is key to trust: consider linking to a brief privacy overview or stating “openly explained in our privacy policy.” The language should make users feel safe: e.g., “We’ll never ask for your bank login or store your financial info. All data stays under your control in Google Sheets.” This is a strong selling point for those who are wary of cloud budgeting apps and an advantage over many fintech apps that do aggregate data on their servers. Leverage it in your messaging as a competitive advantage.
+	•	“Built for Google Sheets Lovers” – Familiarity and Control: While not explicitly requested, it’s implied in your product that using Google Sheets as the base is intentional (you mention “without complicated apps” on the current site ￼). Make sure to communicate that users get to keep the flexibility and transparency of a spreadsheet. For example: “Because it all runs in Google Sheets, you can drill into the data, add your own formulas or tweaks, and trust what you see. It’s your spreadsheet – now just smarter.” This message will resonate with the DIY budgeters who often export data to CSVs and maintain spreadsheets because they want full control or visibility. It positions the add-on as an enhancer of something the user already values (their spreadsheet) rather than a replacement. It also subtly suggests a low learning curve (Google Sheets is familiar to many) and no need to switch to a proprietary interface.
 
-3. **UI/UX Considerations**
-   - Clean, tabular layout similar to spreadsheet for familiar experience
-   - Visual charts for trend analysis
-   - Responsive design for desktop and mobile
-   - Simple data entry forms for manual income tracking
+Overall, the product messaging should consistently paint the picture that Expense Sorted = Google Sheets + AI = fast, easy, personalized budgeting with full privacy. These points should be reflected in the homepage sections, the about page, and any marketing copy. Repetition is okay if phrased in varying ways – e.g., a headline, then a detailed blurb, then a one-liner somewhere else – to ensure visitors don’t miss these critical value messages. By the end of reading the site, a user should be able to recall that this add-on will save me a ton of time each month, it works with my own budget setup, and I don’t have to worry about my data or complicated setup. Every piece of copy should ladder up to that understanding.
 
-# Technical Architecture  
-1. **System Components**
-   - Frontend: Next.js application with Tailwind CSS
-   - Backend: Node.js API for data processing
-   - Database: PostgreSQL with tables for monthly aggregates
-   - Sync Service: Scheduled jobs for Lunch Money data refresh
+Visual Layout & CTAs
 
-2. **Data Models**
-   - MonthlyAggregate: Stores monthly financial summary (income, expenses, savings)
-   - CategoryExpenses: Stores expense breakdown by category
-   - IncomeSource: Tracks different income sources (manual entry)
-   - SyncStatus: Tracks last successful sync operation
+Design the layout such that the paid AI add-on is visually prioritized, while the free sheet is present but not distracting from the main message. Here are some visual and structural recommendations:
+	•	Primary vs Secondary Call-to-Action: Establish a clear visual hierarchy for the CTAs. The primary CTA (for the add-on) should use a standout color (consistent with your branding, e.g. a bright accent) and be larger or more prominent. For example, a solid filled button that says “Install Add-on” or “Start Free Trial” placed in the hero and repeated in the final section. The secondary CTA (for the free sheet) can be a less dominant style – perhaps an outlined button or a simple link styled button that says “Get the Free Template”. In the hero, you might place the secondary CTA as a smaller button next to or below the main one. On mobile, it could stack with the primary CTA first, then the secondary. Using different styles ensures users instantly see what the main action is. Also, consider the wording: to reinforce focus, the main button could be action-oriented about the add-on (e.g. “Try Expense Sorted Add-on”), whereas the template CTA could be phrased as a supplemental action (“Download Budget Template”). This way, even if both are side-by-side, the user perceives the add-on as the featured product and the template as a bonus.
+	•	Hero Section Layout: In the hero, use a split layout or overlay to communicate both pieces (add-on and sheet) without confusion. One effective approach could be a hero image that combines the concept of Google Sheets + AI. For instance, show a screenshot of a Google Sheets interface: on one side of the sheet, transactions are listed, and on the other side (perhaps a sidebar or simply highlighted cells), you show categories being filled in automatically. This single image can convey “Google Sheets + automatic categorization” in one glance. If possible, an animation or GIF could be even more engaging – e.g., an animation of rows getting categorized or a cursor clicking an “AI Categorize” button. If creating a custom graphic, you could show an inbox of receipts or bank CSV going into a Google Sheet and then that turning into a organized summary chart – something that visualizes going from messy data to sorted insights with AI magic. Make sure any text on the image is legible or provide a caption if needed. However, avoid clutter: the hero should not try to explain everything, just to visually reinforce the tagline. Keep the copy on the hero minimal (tagline + subtext + CTA), and let the image support the context.
+	•	Section Separation: Use clear section breaks to differentiate content about the add-on vs the template. For example, the **“How it Works” and **“Benefits” sections are all about the add-on (with maybe a passing mention of the template usage). When you reach the **“Free Spreadsheet” section, you could use a different background color or a highlighting element to show it’s a slightly different topic. This could be a lightly shaded block or a banner within the page. By doing so, a user scrolling quickly can see “Ok, above was about the main product, here’s about a free sheet”. Within that free sheet section, keep the content concise and focused on the fact that it’s free and useful (so it feels like a bonus, not a distraction). You might include a small image thumbnail of the spreadsheet (maybe a mini screenshot of the budget overview or transaction sheet) to give a visual cue. Place the CTA for the sheet right there with it.
+	•	Side-by-Side Comparisons: Another visual technique is to use side-by-side panels to explain the relationship between the add-on and the sheet. For example, a two-column section titled “Two Tools – One Powerful Combination” or “How Expense Sorted Works:” with Left side: “Expense Sorted AI Add-on” and Right side: “Financial Freedom Template”. Under each, a short description:
+	•	Add-on side: focus on “Automates categorization, lives in Google Sheets, powered by AI.”
+	•	Template side: “Google Sheets budget template for tracking & analysis, free forever.”
+And below each, the respective CTA button. This directly splits the messaging so users understand both offerings in parallel. Visually, you could have an icon or small graphic for each (e.g., a puzzle piece or robot icon for the AI add-on, and a spreadsheet icon for the template). If doing this, keep it fairly early on the page so it clarifies the relationship upfront. However, ensure that even in this format, the add-on column is given a tad more emphasis (maybe a heading or badge like “Premium Add-on” vs “Free Template” to denote which is the paid product).
+	•	Imagery and Icons: Throughout the page, use imagery that reinforces the product’s use case. Real screenshots from your Google Sheets add-on interface can add credibility – for example, showing the Google Sheets Add-ons menu or the sidebar of your extension with a “Categorize” button. If the add-on has any distinctive UI when active (like a sidebar listing uncategorized vs categorized count, or a popup for training categories), consider including that in an image. You might embed an image of the Google Workspace Marketplace listing or badge (“Available on Google Workspace Marketplace”) as well. For the workflow steps section, simple icons (like upload icon for import, AI brain icon for categorize, chart icon for analyze) will break up text nicely and help visual learners. Use a consistent style for icons that matches your brand (flat design, outline, etc.). Also, use images of spreadsheets or finances sparingly but meaningfully – e.g., a snippet of rows of data turning green or something to imply success. Avoid generic stock photos of people with finances, if possible, since the audience likely wants to see the actual product context (spreadsheets, data, etc.).
+	•	Responsive and Clear: On mobile, the layout should stack logically. The hero text and image might stack (image could become smaller or a background). Ensure CTAs are large enough to tap. For sections with side-by-side content (like a two-column comparison), those should stack vertically on mobile with the add-on content first (again reinforcing priority) and the template second. Use heading styles and white space to clearly delineate each section so even on a small screen it doesn’t run together. Each section should ideally convey one concept; avoid any single section that tries to talk about both products at once on mobile without a clear break, as that could confuse a quick reader.
+	•	Visual Emphasis on Add-on Benefits: Consider a feature highlight graphic if possible – for instance, a stylized graphic of a sheet with a wand indicating “automatic”. Some sites do a hero illustration of their app in use. If you have the ability, an illustrative graphic of a person happily looking at a laptop with Google Sheets on it and categories populating could be inviting. However, since this is an add-on (which can be somewhat abstract to illustrate), using the actual Google Sheets context is likely more effective to help the user immediately get the context. If your team can create a short demo video or GIF, placing that prominently (maybe in the “How it Works” section or as a modal when clicking “See it in action”) could greatly increase understanding. Just ensure there are static images or text alternatives for those who don’t watch the video.
 
-3. **APIs and Integrations**
-   - Lunch Money API for transaction data
-   - Custom API endpoints for manual data entry
-   - Data transformation layer for metric calculations
+In summary, the layout should draw the eye to the add-on’s value first and foremost – via a compelling hero and visuals of the process – while carving out a distinct space for the free template so interested users can find it. By using visual hierarchy (color, size, placement), you prevent the free offering from overshadowing the paid product. All CTAs should be clearly labeled so users know what action they are taking (install add-on vs download template), reducing any confusion. The end result should be a homepage that is scannable: a user could scroll and at a glance see “AI Add-on for Google Sheets (main thing) – how it works – why it’s great – plus a free template – lots of people trust it – let’s get started.”
 
-4. **Infrastructure Requirements**
-   - Secure API token storage
-   - Scheduled jobs for monthly aggregation
-   - Database for historical data storage
+Trust Signals & Privacy Messaging
 
-# Development Roadmap  
-1. **Phase 1: Core Data Foundation**
-   - Set up project structure and database schema
-   - Implement Lunch Money API client
-   - Build transaction fetching and storage mechanism
-   - Create monthly aggregation logic
-   - Develop manual income entry interface
-   - Implement basic month-by-month metrics calculation
+Building trust is essential, especially since this involves financial data. You should incorporate trust signals and privacy assurances throughout the site’s key touchpoints, particularly near CTAs where users make the decision to install or sign up. Here’s how to reinforce trust:
+	•	Persistent Privacy Reminder near CTAs: Whenever you ask the user to take action (install the add-on, start a trial, sign up, etc.), include a brief note about privacy adjacent to the button. For example, under the primary CTA in the hero, a line of smaller text could read: “✅ Privacy First: Your data stays in your Google Sheet, not our servers.” This simple statement, right at the conversion point, can alleviate fears. Similarly, if you have a “Get Started” or “Sign Up” button anywhere, a nearby note like “No financial data ever leaves your spreadsheet” or “We never see your transactions” can be very reassuring. The key is that at the moment of decision, the user sees a guarantee of data safety.
+	•	Trust Badges or Indicators: If the add-on is on the Google Workspace Marketplace and has reviews or a star rating, consider showing a badge like “★★★★★ 4.8/5 on Google Marketplace” (if applicable) or simply “Available on Google Marketplace” with the logo – this leverages Google’s brand trust. You could also use a “Google verified” icon if your add-on has been verified by Google (OAuth verification process). Another badge could be “1000+ users” if you have reached a significant user count; seeing that others use it successfully is a social proof. If you’ve been featured in any personal finance communities or newsletters, a subtle “As seen in…” could be added (though only if credible). However, don’t clutter the design with too many logos; 1-2 well-placed badges in the hero or near the final CTA can suffice.
+	•	Testimonial Highlights: Continue to use testimonials as they double as trust signals. Perhaps pull a short phrase from one of the testimonials to highlight in larger text somewhere (e.g., “…changed how I look at my finances forever…” or “…giving me peace of mind…” as currently on the site). A particularly relevant one might be a user emphasizing how easy or secure it is. If you have any user feedback specifically praising the categorization accuracy or the convenience, bring that into focus. Real names, photos, and occupations (as you have) add authenticity – ensure these are kept. A good spot for an impactful quote could be near the top of the page or right after explaining the workflow, to immediately provide a real-world validation of the product’s benefit.
+	•	Security/Privacy Explanation: In addition to the one-liners, consider a dedicated small section or info box about privacy. This could be part of the FAQ or a standalone banner titled “🔒 Why You Can Trust Expense Sorted”. In 2-3 sentences, explicitly state: “Expense Sorted was built with a privacy-first architecture. Your transactions never leave your spreadsheet – the AI works within Google Sheets using your computer’s processing. We use Google’s secure OAuth for the add-on, and we don’t store or see your financial data at all.” Using a lock icon and bolding “never leave your spreadsheet” can draw attention. By educating users briefly, you head off the worry before it becomes an objection. You’ve essentially answered the “Is my data secure?” question upfront. (You might even link text like “Learn more” to your Privacy Policy for those who want technical details.)
+	•	Placement of Privacy Message with Install Links: On any dedicated “Get the Add-on” or download page (if you have one, or even on the Google Marketplace listing description), reiterate the privacy stance. For example, if the user clicks “Install Add-on” and is taken to the Marketplace, ensure the description there includes a line about not storing data. On your site, if you have an install guide or a modal that opens, put a note in there too. Essentially, you can’t over-communicate privacy for a finance tool – seeing it multiple times just reinforces your honesty.
+	•	Consistency in Tone: The tone of trust messaging should be confident and transparent. Avoid vague terms; be direct (e.g., “We do not store your data” ￼ is stronger than “We take data security seriously”). Also avoid any small print that contradicts these promises. If there are any limitations (for instance, if you do send some minimal data for analytics or error logging), clarify them openly in the policy but keep the marketing message focused on financial data stays private. Consistency between what you say and what users experience will build long-term trust (like if the add-on’s permission scopes clearly align with “doesn’t transfer data externally”).
+	•	Performance and Accuracy Assurances: Trust is also built by the perception of quality. So you may want to subtly address accuracy (maybe in FAQ: “How accurate is it?” with an answer like “Typically very accurate after a brief training period – and it keeps improving. Plus, you can correct any mistakes, and it learns from them.”). This assures the user that the AI is reliable and not a gimmick. Similarly, mention support availability (another trust factor): e.g., “If you ever have questions or issues, our support is here to help” – knowing there’s help if needed makes users more comfortable adopting a new tool.
+	•	“No Credit Card for Trial” (if applicable): If you offer a free trial of the add-on or a freemium usage, and it doesn’t require immediate payment info, call that out near the signup CTA. For example: “Start your free trial – no credit card required.” This is a different kind of trust signal (not about privacy, but about lowering commitment barrier and implying you’re confident in the value). Many users hesitate to start a trial if they fear auto-charges; explicitly saying you don’t require a card up front can increase trial sign-ups. This line can be placed next to the CTA or below it just like the privacy note (perhaps in the same small font style). If your trial does require a card, you can skip this, but if not, it’s a powerful reassurance that trying the product is risk-free.
+	•	Footer and Policy Links: Continue to include Privacy Policy, Terms of Service in the footer (as you have). Perhaps also include a “Support” or “Contact” link prominently, since having an easy way to reach the team is a trust factor (users feel they can get help or get questions answered). If you have a page about “How it works” or “Security”, link it in the footer or header. Some sites have a “Security” page if their audience is very sensitive, but in this case a thorough blurb on the homepage and a privacy policy might suffice.
 
-2. **Phase 2: Financial Dashboard**
-   - Build monthly aggregate table view
-   - Implement category expense breakdown
-   - Add savings rate calculation
-   - Create basic visualization components
-   - Develop data refresh functionality
-   - Add basic filtering capabilities
+In essence, make trust and privacy messaging unmissable whenever the user is about to take action. This consistent reinforcement (“we respect your data, we won’t misuse it, others trust us, and we’re here to support you”) will reduce friction and build confidence in both the paid add-on and the brand overall. By the time a visitor clicks install or sign up, they should feel “I trust this tool with my expenses” thanks to these cues.
 
-3. **Phase 3: Extended Analytics**
-   - Implement trend analysis for savings rate
-   - Add historical comparison features
-   - Create savings rate projections
-   - Build category spending analysis
-   - Develop custom date range selection
-   - Implement data export functionality
+Navigation & User Flow
 
-4. **Phase 4: Advanced Features**
-   - Add budget comparison
-   - Implement goal tracking
-   - Create scenario modeling
-   - Add custom category grouping
-   - Develop advanced visualization options
-   - Implement user preferences and settings
+To reflect the emphasis on the add-on while still allowing discovery of the free sheet, you should adjust the site’s navigation and user journey accordingly:
+	•	Navigation Menu Structure: In the top nav, prioritize the add-on. For example, you might have a menu item or button that says “Get the Add-on” or “Install Add-on” that stands out (some sites put a primary CTA in the nav on the far right). You could then have a regular link for “Free Template” or “Budget Template” in the nav as well, but it should be visually less dominant. If your nav currently has “Sign Up / Log In”, you can keep those for returning users, but consider styling “Sign Up” as a button only if that’s primarily for the add-on onboarding. Alternatively, a “Product” dropdown could be used, with two options: “AI Add-on” and “Free Template”. However, given you want to push the add-on, it might be better to have a direct link to add-on info/installation page, and a separate link to the template. For example: nav items as Home, How It Works, Template, Pricing (if relevant), About/FAQ. In that scheme, “How It Works” could scroll to the workflow section or be its own page elaborating the usage (focusing on the add-on), while “Template” goes to a dedicated page to get the free spreadsheet (which could also capture emails).
+	•	Homepage as the Central Hub: The homepage should cater to both entry points (add-on focused user and freebie seeker) as discussed. Ensure that from the homepage hero, a user can choose their path clearly: either directly to installing the add-on (primary path) or to getting the free sheet (secondary path). This dual-path CTA approach catches both kinds of visitors: those who came for a powerful tool and those who came for a free template. However, note: many users won’t distinguish the two offerings immediately, so the content we outlined will educate them as they scroll. Some may click the first thing they see. That’s why making the primary CTA clearly about the add-on (and visually primary) is important – it nudges the curious user toward the product you want to sell. Meanwhile, those specifically looking for a template (perhaps through SEO or blog links) will scan for that keyword and find the “Free Template” link or section.
+	•	Dedicated Template Page or Modal: Consider having a separate landing page for the free sheet (if not already). For example, “/free-budget-template” which the nav and the homepage “Download Template” CTA both point to. On that page, you can describe the sheet’s features (like how it tracks expenses, calculates financial runway, etc. – basically what your current homepage does in the “Why Use the Financial Freedom Spreadsheet” section). You could require an email to send the template link or just provide a direct link to make a copy of the Google Sheet. Align this with your lead capture strategy: if capturing email, make the value clear (e.g., “Get the free template and occasional tips on using it effectively”). If not capturing, just provide it freely and perhaps invite them to sign up for updates elsewhere. On the template page, be sure to cross-promote the add-on heavily. For instance, mention “For automatic categorization, use our Expense Sorted AI add-on (free trial included)”. Perhaps even have an upsell banner on that page: “Tired of categorizing transactions manually in this sheet? Let our AI do it – try the add-on.” This way, anyone who comes in purely for the template is immediately introduced to the paid product and how it enhances the template.
+	•	User Onboarding Flow: Streamline how a new user gets both components if they want them. One idea is to make the “Get Started” process a unified flow where they obtain the template and the add-on in sequence. For example, if a user clicks “Get Started Now” (assuming this is a general onboarding CTA), you could direct them to a page or signup flow that first offers the template (with a big “Copy Template” button) and then instructs them to install the add-on (with an “Install Add-on” button or link to Marketplace). Essentially a checklist: Step 1: Get the Sheet, Step 2: Install the Add-on. This kind of guided approach can ensure users don’t miss either piece. If you have a sign-up system, this could be after account creation or before – depending on whether account creation is needed for the add-on. Since the add-on uses Google authentication, you might not need a separate account system at all, unless you track usage or subscription status. If you do have a subscription management outside of Google Marketplace, then “Sign Up” likely registers them for that. In that case, integrate that with the flow: e.g., after sign-up, immediately prompt copying the sheet and adding the add-on. The key is to make the process to fully use the product as frictionless and obvious as possible. A new user shouldn’t be left wondering “Okay I installed the add-on, now what?” or “I have this sheet, how do I make it categorize things?” – the site and any follow-up emails should guide them through both.
+	•	Emphasize Add-on in Menu Language: Little wording choices in navigation can guide user perception. For instance, instead of a generic “Get Started” in the nav, you might label it “Install Add-on” so it’s explicit. If you have a “Features” or “Why Us” page, focus that content on the AI and automation features (the template features can be secondary there or on the template page). If you have a “Pricing” page in the future, highlight the add-on pricing and simply note “Includes free template” as a footnote, rather than vice versa. Basically, all roads lead to the add-on ultimately, with the template as a pit stop or bonus.
+	•	Cross-links and Prompts: Within the website content, ensure cross-pollination between the two offerings. For example, on the homepage when the free template section appears, include a line like “The template is great on its own, but it’s even better when paired with our AI categorization. Don’t forget to install the add-on to turbocharge your budgeting!”. Conversely, on any template-centric page or documentation, regularly prompt the user like “Save time by using the Expense Sorted add-on to categorize these transactions automatically.” This integrated messaging guarantees that someone who comes in through any funnel learns about the complementary product.
+	•	Retention and Follow-Up: While not purely a website structure item, consider the user flow after acquiring the product. If a user downloads the template but does not install the add-on, perhaps send a follow-up email (if you got their email) highlighting how the add-on can save them time, or a success story of someone who started with the sheet then upgraded. Conversely, if someone installs the add-on via the Marketplace, have the add-on (or confirmation page) direct them to resources like “Download our free budget template to maximize what you can do with the add-on.” This could simply be a link in the add-on’s sidebar UI or welcome message. Aligning these flows means the website and the product work in tandem to introduce each piece to the user.
+	•	Maintaining Free Discovery: Despite the emphasis shift, make sure the free sheet is still easily discoverable for those specifically searching for it. SEO-wise, you might have blog posts or use-case pages that draw people looking for a “Google Sheets expense tracker template”. Those should funnel into the template page. On the site’s top-level navigation or footer, a link labeled “Free Budget Spreadsheet” or “Expense Template (Free)” will catch the eye of freebie hunters. Once they land there, your messaging will gently push them toward the add-on in addition to providing the value they came for. This way, you capture leads through the free offer without distracting those who come looking to solve the problem with a paid tool.
 
-# Logical Dependency Chain
-1. **Foundation Layer**
-   - Database schema setup
-   - Lunch Money API integration
-   - Basic data sync process
-   - Income data entry forms
+In summary, adjust the navigation to feature the AI add-on prominently and treat the free template as a supporting feature. Guide users so that they understand the relationship: the free sheet is not an alternative to the paid product but rather a companion or first step. Make it possible to get either independently, but encourage getting both. The user flow from arriving at the site to actually using the product should feel like a cohesive path: learn about add-on -> trust it -> install it (and get the sheet) -> achieve value. By refining menus, CTAs, and pages around this flow, you’ll likely see more users progressing to the add-on (which is your primary conversion) while still satisfying those who just want the template (and converting some of those later on).
 
-2. **Core Processing Layer**
-   - Monthly aggregation logic
-   - Expense categorization
-   - Savings rate calculation
-   - Basic metrics computation
+⸻
 
-3. **Visualization Layer**
-   - Monthly aggregate table
-   - Basic charts and metrics
-   - Category breakdown display
-   - Data refresh and filtering
-
-4. **Advanced Features**
-   - Trend analysis and projections
-   - Historical comparisons
-   - Custom reporting options
-   - Data export functionality
-
-# Risks and Mitigations  
-1. **Missing Income Data**
-   - Risk: Lunch Money may not have complete income information
-   - Mitigation: Build robust manual entry forms for income data with validation
-
-2. **Category Mapping**
-   - Risk: Categories in Lunch Money may not match desired reporting categories
-   - Mitigation: Create a flexible category mapping system
-
-3. **Data Synchronization Challenges**
-   - Risk: Complex sync process may lead to errors or inconsistencies
-   - Mitigation: Focus on monthly aggregates rather than transaction-level sync
-
-4. **Calculation Accuracy**
-   - Risk: Complex financial metrics may have calculation errors
-   - Mitigation: Implement unit tests for all financial calculations, provide transparent calculation methods
-
-# Appendix  
-1. **Monthly Aggregate Data Structure**
-```
-MonthlyAggregate {
-  month: Date (YYYY-MM-01),
-  income: Decimal,
-  tax: Decimal,
-  credit: Decimal,
-  netIncome: Decimal,
-  expenses: Decimal,
-  netSavings: Decimal,
-  netBurn: Decimal,
-  savingsRate: Decimal,
-  growingSavingsRateOverTime: Decimal,
-  savingsRateOfTotal: Decimal,
-  savingsOfTotalOverTime: Decimal,
-  
-  // Category expenses
-  groceries: Decimal,
-  shopping: Decimal,
-  dinnerBars: Decimal,
-  medical: Decimal,
-  transport: Decimal,
-  utility: Decimal,
-  travel: Decimal,
-  kids: Decimal,
-  business: Decimal,
-  living: Decimal
-}
-```
-
-2. **Category Mapping**
-```
-CategoryMapping {
-  lunchMoneyCategory: String,
-  reportingCategory: String (enum of available categories),
-  isActive: Boolean
-}
-```
-
-3. **Data Sync Process**
-The monthly sync process will:
-1. Fetch all transactions for the target month from Lunch Money
-2. Categorize transactions based on the category mapping
-3. Sum up expenses by category
-4. Combine with manually entered income data
-5. Calculate derivative metrics (savings rate, etc.)
-6. Store the monthly aggregate in the database
-
-This approach focuses on monthly aggregates rather than transaction-level synchronization, simplifying the process while still providing the desired analytics.
-</context>
+By implementing this updated structure and messaging strategy, the website will clearly communicate that Expense Sorted’s AI add-on is the star of the show – a tool that streamlines a familiar Google Sheets budgeting workflow with speed and personalization – and that the free spreadsheet is a valuable bonus to help users get started. The homepage will tell a story that resonates with the target audience’s existing habits, show exactly how the product fits in, and address trust concerns head-on. Visually separating the add-on vs. template offerings and carefully placing CTAs and assurances will guide users to the paid product without alienating those initially looking for something free. Navigation and content will work together to accommodate both entry points (paid and free) but ultimately drive home the benefits of the AI-powered solution. With these changes, the site should convert more visitors into happy add-on users, all while growing goodwill through the free tool and a privacy-forward approach.

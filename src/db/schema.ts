@@ -31,6 +31,15 @@ export const users = pgTable('users', {
 
 export const appBetaOptInStatusEnum = pgEnum('appBetaOptInStatus', ['OPTED_IN', 'DISMISSED']);
 
+// Subscription plan enum
+export const subscriptionPlanEnum = pgEnum('subscriptionPlan', ['FREE', 'SILVER', 'GOLD']);
+
+// Subscription status enum
+export const subscriptionStatusEnum = pgEnum('subscriptionStatus', ['ACTIVE', 'CANCELED', 'PAST_DUE', 'TRIALING']);
+
+// Billing cycle enum
+export const billingCycleEnum = pgEnum('billingCycle', ['MONTHLY', 'ANNUAL']);
+
 export const accounts = pgTable(
   'accounts',
   {
@@ -56,6 +65,16 @@ export const accounts = pgTable(
     lastUsed: timestamp('lastUsed', { mode: 'date', withTimezone: true }),
     requestsCount: integer('requestsCount').default(0),
     appBetaOptIn: appBetaOptInStatusEnum('appBetaOptIn'),
+    // New subscription fields
+    subscriptionPlan: subscriptionPlanEnum('subscriptionPlan').default('FREE'),
+    subscriptionStatus: subscriptionStatusEnum('subscriptionStatus'),
+    billingCycle: billingCycleEnum('billingCycle'),
+    stripeCustomerId: text('stripeCustomerId'),
+    stripeSubscriptionId: text('stripeSubscriptionId'),
+    trialEndsAt: timestamp('trialEndsAt', { mode: 'date', withTimezone: true }),
+    currentPeriodEndsAt: timestamp('currentPeriodEndsAt', { mode: 'date', withTimezone: true }),
+    monthlyCategorizations: integer('monthlyCategorizations').default(0), // Used for tracking usage limits
+    categoriesResetDate: timestamp('categoriesResetDate', { mode: 'date', withTimezone: true }), // When monthly usage resets
   },
   (account) => ({
     providerProviderAccountIdIndex: uniqueIndex('provider_provider_account_id_idx').on(
@@ -64,6 +83,27 @@ export const accounts = pgTable(
     ),
   })
 );
+
+// Add subscriptions table to track history of subscriptions
+export const subscriptions = pgTable('subscriptions', {
+  id: text('id').primaryKey().notNull().default(sql`gen_random_uuid()`),
+  userId: text('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  accountId: text('accountId')
+    .notNull()
+    .references(() => accounts.id, { onDelete: 'cascade' }),
+  status: subscriptionStatusEnum('status').notNull(),
+  plan: subscriptionPlanEnum('plan').notNull(),
+  billingCycle: billingCycleEnum('billingCycle').notNull(),
+  currentPeriodStart: timestamp('currentPeriodStart', { mode: 'date', withTimezone: true }).notNull(),
+  currentPeriodEnd: timestamp('currentPeriodEnd', { mode: 'date', withTimezone: true }).notNull(),
+  cancelAtPeriodEnd: boolean('cancelAtPeriodEnd').default(false),
+  stripeSubscriptionId: text('stripeSubscriptionId'),
+  stripeCustomerId: text('stripeCustomerId'),
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
+});
 
 export const sessions = pgTable('sessions', {
   id: text('id').notNull(), // Keep the id field, but it's NOT the primary key
@@ -300,6 +340,11 @@ export const embeddingsRelations = relations(embeddings, ({ one }) => ({
     fields: [embeddings.accountId],
     references: [accounts.id],
   }),
+}));
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  user: one(users, { fields: [subscriptions.userId], references: [users.id] }),
+  account: one(accounts, { fields: [subscriptions.accountId], references: [accounts.id] }),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({

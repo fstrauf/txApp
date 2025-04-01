@@ -84,7 +84,7 @@ export default function Home() {
             <p>Over 1,000 people are already on their path to financial independence</p>
           </div>
 
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap gap-4 justify-center">
             <Link
               href="https://workspace.google.com/marketplace/app/expense_sorted/456363921097"
               target="_blank"
@@ -94,8 +94,15 @@ export default function Home() {
               <FaGoogle className="w-5 h-5" />
               Get Google Workspace Add-on
             </Link>
-            <p className="mt-2 text-sm text-gray-600">Already using Google Sheets? Install directly from Marketplace</p>
+            
+            <Link
+              href="/pricing"
+              className="inline-flex items-center px-6 py-3 rounded-lg bg-secondary text-white font-semibold hover:bg-secondary-dark transition-all duration-200 shadow-sm"
+            >
+              View Pricing Plans
+            </Link>
           </div>
+          <p className="mt-2 text-sm text-gray-600">Already using Google Sheets? Install directly from Marketplace</p>
         </div>
 
         {/* Product Demo Video */}
