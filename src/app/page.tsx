@@ -266,6 +266,63 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Free Spreadsheet Section */}
+        <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-soft p-8 mb-16 border border-gray-100">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col md:flex-row gap-8 items-center">
+              {/* Text Content */}
+              <div className="md:w-1/2 space-y-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+                  Get Started with a Free Budget Template
+                </h2>
+                
+                <p className="text-gray-600">
+                  New to budgeting in Google Sheets? Our free Financial Freedom Spreadsheet gives you a ready-made template 
+                  to track expenses, visualize your budget, and calculate how long your savings can last. It's the perfect 
+                  companion to the Expense Sorted add-on.
+                </p>
+                
+                <div className="bg-primary/5 rounded-lg p-4 border border-primary/10">
+                  <p className="text-sm font-medium text-primary flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Works even better with automatic categorization from the Expense Sorted add-on!
+                  </p>
+                </div>
+                
+                <div>
+                  <Link
+                    href="/fuck-you-money-sheet"
+                    className="inline-flex items-center px-6 py-3 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download Free Template
+                  </Link>
+                  
+                  <p className="text-xs text-gray-500 mt-2">No signup required. Free download, no strings attached.</p>
+                </div>
+              </div>
+              
+              {/* Screenshot */}
+              <div className="md:w-1/2">
+                <div className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow border border-gray-200">
+                  <Image
+                    src="/f-you-money-expense-vs-savings.png"
+                    width={600}
+                    height={400}
+                    alt="Financial Freedom Spreadsheet Template"
+                    className="w-full"
+                    priority={false}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Product Demo Video */}
         <div className="rounded-2xl overflow-hidden shadow-soft mb-16 bg-surface p-6">
           <div className="aspect-video relative">
@@ -343,57 +400,123 @@ export default function Home() {
         </div>
 
         {/* Testimonials Section - Enhanced with faces and more details */}
-        <div className="bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl p-8 mb-16">
-          <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">What Our Community Says</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-xl shadow-soft flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-gray-200 mb-4 overflow-hidden">
-                <Image
-                  src="/testimonial-alex.jpg"
-                  width={64}
-                  height={64}
-                  alt="Alex M."
-                  className="w-full h-full object-cover"
-                />
+        <div className="bg-white rounded-2xl shadow-soft p-8 mb-16 border border-gray-100">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">What Our Users Say</h2>
+          
+          {/* Trust Badges */}
+          <div className="flex flex-wrap justify-center items-center gap-6 mb-12 px-4">
+            <div className="bg-gray-50 rounded-lg py-3 px-5 flex items-center border border-gray-200">
+              <div className="bg-green-100 p-2 rounded-full mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
               </div>
-              <p className="text-gray-600 mb-4 text-center">
-                "It changed how I look at my finances forever. Now I know exactly where my money goes."
-              </p>
-              <p className="font-semibold">— Alex M.</p>
-              <p className="text-sm text-gray-500">Software Engineer</p>
+              <span className="font-medium">Google Workspace Verified</span>
+            </div>            
+            
+            <div className="bg-gray-50 rounded-lg py-3 px-5 flex items-center border border-gray-200">
+              <div className="text-yellow-400 mr-2">★★★★★</div>
+              <span className="font-medium p-2">5/5 Rating</span>
             </div>
-            <div className="bg-white p-6 rounded-xl shadow-soft flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-gray-200 mb-4 overflow-hidden">
-                <Image
-                  src="/testimonial-sarah.jpg"
-                  width={64}
-                  height={64}
-                  alt="Sarah K."
-                  className="w-full h-full object-cover"
-                />
+          </div>
+          
+          {/* Testimonials Grid - Focusing on key benefits */}
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Time Saving Testimonial */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[280px]">
+              <div className="mb-4 text-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
               </div>
-              <p className="text-gray-600 mb-4 text-center">
-                "I now know exactly how long my savings will last, giving me peace of mind to make career changes."
+              <p className="text-gray-600 mb-auto">
+                "I used to spend hours categorizing expenses. With Expense Sorted's AI, it's now done in seconds. Their spreadsheet + add-on combo is perfect."
               </p>
-              <p className="font-semibold">— Sarah K.</p>
-              <p className="text-sm text-gray-500">Marketing Consultant</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-soft flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-gray-200 mb-4 overflow-hidden">
-                <Image
-                  src="/testimonial-liam.jpg"
-                  width={64}
-                  height={64}
-                  alt="Liam R."
-                  className="w-full h-full object-cover"
-                />
+              <div className="flex items-center mt-4">
+                <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 overflow-hidden">
+                  <Image
+                    src="/testimonial-alex.jpg"
+                    width={40}
+                    height={40}
+                    alt="Alex M."
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div>
+                  <p className="font-semibold">Alex M.</p>
+                  <p className="text-xs text-gray-500">Software Engineer</p>
+                </div>
               </div>
-              <p className="text-gray-600 mb-4 text-center">
-                "No more guessing. Financial freedom feels achievable now that I have a clear roadmap."
-              </p>
-              <p className="font-semibold">— Liam R.</p>
-              <p className="text-sm text-gray-500">Small Business Owner</p>
             </div>
+            
+            {/* Ease of Use Testimonial */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[280px]">
+              <div className="mb-4 text-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <p className="text-gray-600 mb-auto">
+                "So much easier than rules-based solutions I tried before. The AI just works, adapting to new merchants automatically without constant tweaking."
+              </p>
+              <div className="flex items-center mt-4">
+                <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 overflow-hidden">
+                  <Image
+                    src="/testimonial-sarah.jpg"
+                    width={40}
+                    height={40}
+                    alt="Sarah K."
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div>
+                  <p className="font-semibold">Sarah K.</p>
+                  <p className="text-xs text-gray-500">Marketing Consultant</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Privacy Testimonial */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[280px]">
+              <div className="mb-4 text-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <p className="text-gray-600 mb-auto">
+                "I was hesitant to use financial tools that store my data on their servers. Expense Sorted's privacy-first approach keeping everything in my Google Sheet is exactly what I wanted."
+              </p>
+              <div className="flex items-center mt-4">
+                <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 overflow-hidden">
+                  <Image
+                    src="/testimonial-liam.jpg"
+                    width={40}
+                    height={40}
+                    alt="Liam R."
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div>
+                  <p className="font-semibold">Liam R.</p>
+                  <p className="text-xs text-gray-500">Small Business Owner</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* CTA */}
+          <div className="mt-10 text-center">
+            <Link
+              href="https://workspace.google.com/marketplace/app/expense_sorted/456363921097"
+              className="inline-flex items-center px-6 py-3 rounded-lg bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-md"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Join Our Happy Users
+              <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
           </div>
         </div>
 
