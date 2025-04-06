@@ -71,8 +71,8 @@ export default function BetaAccessBanner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          lists: ["441356"], // Using the landing page list ID
-          tags: ["app_beta_interest"], // Add a tag to segment these subscribers
+          source: "BETA_ACCESS",
+          tags: ["app_beta_interest"],
         }),
       });
 

@@ -25,6 +25,9 @@ export const subscriptionStatusEnum = pgEnum('subscriptionStatus', ['ACTIVE', 'C
 // Billing cycle enum
 export const billingCycleEnum = pgEnum('billingCycle', ['MONTHLY', 'ANNUAL']);
 
+// Subscribers source enum
+export const subscriberSourceEnum = pgEnum('subscriberSource', ['SPREADSHEET', 'BETA_ACCESS', 'OTHER']);
+
 // Auth-related tables
 export const users = pgTable('users', {
   id: text('id').primaryKey().notNull().default(sql`gen_random_uuid()`),
@@ -51,6 +54,20 @@ export const users = pgTable('users', {
   monthlyCategorizations: integer('monthlyCategorizations').default(0),
   categoriesResetDate: timestamp('categoriesResetDate', { mode: 'date', withTimezone: true }),
 });
+
+// Email subscribers table
+export const subscribers = pgTable(
+  'subscribers',
+  {
+    id: text('id').primaryKey().notNull().default(sql`gen_random_uuid()`),
+    email: text('email').notNull().unique(),
+    source: subscriberSourceEnum('source').default('OTHER'),
+    tags: json('tags').$type<string[]>(),
+    isActive: boolean('isActive').default(true),
+    createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
+  }
+);
 
 export const accounts = pgTable(
   'accounts',

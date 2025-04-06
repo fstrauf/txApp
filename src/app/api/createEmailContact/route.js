@@ -1,64 +1,59 @@
 import { NextResponse } from "next/server";
+import { Resend } from 'resend';
+import { db } from '@/db';
+import { subscribers } from '@/db/schema';
+import { createId } from '@/db/utils';
 
 export async function POST(req) {
   try {
     const data = await req.json();
     const email = data.email;
     const tags = data.tags || []; // Get tags if provided
-    const lists = data.lists || ["441356"]; // Get lists if provided, default to landing page list
+    const source = data.source || "OTHER"; // Get source if provided
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // Prepare the request body
-    const requestBody = {
-      email,
-      lists: lists, // Use the provided lists or default
-    };
-
-    // Add tags if provided
-    if (tags.length > 0) {
-      requestBody.tags = tags;
-    }
-
-    const response = await fetch("https://api.sendfox.com/contacts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.SENDFOX_API_KEY}`,
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    // Get the response data
-    const responseData = await response.json().catch(() => null);
-
-    if (response.ok) {
-      return NextResponse.json({
-        success: true,
-        message: "Successfully subscribed!",
+    // Create a new subscriber in the database or handle if subscriber already exists
+    try {
+      // First, try to store the email in our database
+      await db.insert(subscribers).values({
+        id: createId(),
+        email,
+        source,
+        tags: tags,
+        isActive: true,
       });
-    } else {
-      // Check if it's a duplicate email error (which is actually okay for us)
-      if (responseData?.message?.includes("already exists")) {
-        // For existing contacts, we might want to update their tags
-        // This would require an additional API call to update the contact
-        // But for simplicity, we'll just return success
-        return NextResponse.json({
-          success: true,
-          message: "Email already subscribed",
-        });
+    } catch (dbError) {
+      // If it's a unique constraint error (email already exists), we'll just continue
+      // Otherwise, we'll throw the error
+      if (!dbError.message.includes('unique constraint')) {
+        throw dbError;
       }
-
-      console.error("SendFox API error:", responseData);
-      return NextResponse.json(
-        {
-          error: "Failed to subscribe. Please try again.",
-        },
-        { status: response.status }
-      );
     }
+
+    // Initialize Resend client
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    // Add the subscriber to Resend
+    try {
+      await resend.contacts.create({
+        email,
+        firstName: data.firstName || '',
+        lastName: data.lastName || '',
+        unsubscribed: false
+      });
+    } catch (resendError) {
+      // If the contact already exists in Resend, we can just continue
+      // Other errors should be logged but shouldn't necessarily fail the request
+      console.error("Resend API error:", resendError);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Successfully subscribed!",
+    });
   } catch (error) {
     console.error("Error in email subscription:", error);
     return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });

@@ -8,8 +8,6 @@
     "start": "next start",
     "lint": "next lint",
     "list": "node scripts/dev.js list",
-    "generate": "node scripts/dev.js generate",
-    "parse-prd": "node scripts/dev.js parse-prd",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",

@@ -36,7 +36,11 @@ export default function GetItHereButton() {
       const response = await fetch("/api/createEmailContact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailToSend }),
+        body: JSON.stringify({ 
+          email: emailToSend,
+          source: "SPREADSHEET",
+          tags: ["spreadsheet-user"]
+        }),
       });
 
       const data = await response.json();
