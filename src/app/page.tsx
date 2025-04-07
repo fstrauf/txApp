@@ -5,6 +5,7 @@ import FAQ from "./components/FAQ.js";
 import Link from "next/link";
 import Head from "next/head";
 import { FaGoogle } from "react-icons/fa";
+import AppBetaPopup from "@/components/shared/AppBetaPopup";
 
 export default function Home() {
   // Remove A/B test state
@@ -15,6 +16,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background-default">
+      <AppBetaPopup />
       <div className="container">
         <Head>
           <link rel="canonical" href="https://www.expensesorted.com/" />
