@@ -6,13 +6,56 @@ import Link from "next/link";
 import Head from "next/head";
 import { FaGoogle } from "react-icons/fa";
 import AppBetaPopup from "@/components/shared/AppBetaPopup";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function Home() {
-  // Remove A/B test state
-  // const [showAlternateButton, setShowAlternateButton] = useState(false);
+  // State for Lunch Money Email Capture
+  const [showLunchMoneyEmailInput, setShowLunchMoneyEmailInput] = useState(false);
+  const [lunchMoneyEmail, setLunchMoneyEmail] = useState("");
+  const [isSubmittingLunchMoneyEmail, setIsSubmittingLunchMoneyEmail] = useState(false);
+  const [lunchMoneyEmailError, setLunchMoneyEmailError] = useState("");
+  const [lunchMoneyEmailSuccess, setLunchMoneyEmailSuccess] = useState(false);
 
-  // Remove A/B test effect
-  // useEffect(() => { ... }, []);
+  // Handler for Lunch Money Email Submission
+  const handleLunchMoneyEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmittingLunchMoneyEmail(true);
+    setLunchMoneyEmailError("");
+    setLunchMoneyEmailSuccess(false);
+
+    if (!lunchMoneyEmail) {
+      setLunchMoneyEmailError("Please enter a valid email address.");
+      setIsSubmittingLunchMoneyEmail(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/createEmailContact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: lunchMoneyEmail,
+          source: "OTHER",
+          tags: ["lunch-money-waitlist"]
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setLunchMoneyEmailSuccess(true); // Show success message
+        // Optionally clear email or keep it: setEmail("");
+      } else {
+        setLunchMoneyEmailError(data.error || "Failed to subscribe. Please try again.");
+      }
+    } catch (error) {
+      setLunchMoneyEmailError("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmittingLunchMoneyEmail(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background-default">
@@ -265,6 +308,86 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </a>
+          </div>
+        </div>
+
+        {/* Integrations Section (Now including Lunch Money Teaser) */}
+        <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-soft p-8 mb-16 border border-gray-100">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col md:flex-row gap-8 items-center">
+              {/* Text Content - Updated for Lunch Money */}
+              <div className="md:w-1/2 space-y-6 text-center md:text-left">
+                {/* Updated Heading */}
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+                   🚀 Coming Soon: Lunch Money Integration!
+                </h2>
+                
+                {/* Conditionally render paragraph/button OR email form */}
+                {!showLunchMoneyEmailInput ? (
+                  <>
+                    {/* Teaser Paragraph */}
+                    <p className="text-lg text-gray-700">
+                      Love <a href="https://lunchmoney.app/" target="_blank" rel="noopener noreferrer" className="font-semibold text-secondary hover:underline">Lunch Money</a>? Soon you'll be able to supercharge it with Expense Sorted's AI categorization.
+                    </p>
+
+                    {/* Waitlist Button (triggers email input) */}
+                    <div className="pt-2">
+                      <Button
+                        onClick={() => setShowLunchMoneyEmailInput(true)} // Show input on click
+                        className="inline-flex items-center px-6 py-3 rounded-lg bg-secondary text-white font-semibold hover:bg-secondary-dark transition-all duration-200 shadow-md"
+                      >
+                        Join the Waitlist
+                        <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                      </Button>
+                    </div>
+                  </>
+                ) : lunchMoneyEmailSuccess ? (
+                   <p className="text-green-600 font-medium text-lg">Thanks! We'll notify you when it's ready.</p>
+                ) : (
+                  // Email Input Form
+                  <form onSubmit={handleLunchMoneyEmailSubmit} className="space-y-3 pt-2">
+                    <p className="text-gray-600">Enter your email to get notified:</p>
+                    <div>
+                      <Input
+                        type="email"
+                        value={lunchMoneyEmail}
+                        onChange={(e) => setLunchMoneyEmail(e.target.value)}
+                        placeholder="your.email@example.com"
+                        required
+                        disabled={isSubmittingLunchMoneyEmail}
+                        className="max-w-sm" // Limit width
+                      />
+                      {lunchMoneyEmailError && <p className="text-red-500 text-sm mt-1">{lunchMoneyEmailError}</p>}
+                    </div>
+                    <div>
+                      <Button
+                        type="submit"
+                        disabled={isSubmittingLunchMoneyEmail}
+                         className="bg-secondary text-white font-semibold hover:bg-secondary-dark"
+                      >
+                        {isSubmittingLunchMoneyEmail ? 'Submitting...' : 'Notify Me'}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+             </div>
+              
+              {/* Screenshot -> Lunch Money Logo */}
+              <div className="md:w-1/2 flex justify-center items-center">
+                <div className="rounded-lg overflow-hidden">
+                  <Image
+                    src="/lunchmoney.png"
+                    width={250}
+                    height={250}
+                    alt="Lunch Money Logo"
+                    className="max-w-[150px] md:max-w-[200px]"
+                    priority={false}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
