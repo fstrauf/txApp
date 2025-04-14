@@ -37,7 +37,6 @@ export default function TransactionList() {
   const [toastMessage, setToastMessage] = useState<ToastMessage | null>(null);
   const categoryInputRef = useRef<HTMLSelectElement>(null);
   const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
-  const [categorizing, setCategorizing] = useState(false);
   const [successfulUpdates, setSuccessfulUpdates] = useState<Record<string, boolean>>({});
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [operationInProgress, setOperationInProgress] = useState<boolean>(false);
@@ -529,36 +528,30 @@ export default function TransactionList() {
 
   // Add a generic function to handle polling for both operations
   const pollForCompletion = async (predictionId: string, type: 'training' | 'categorizing') => {
-    // Constants for polling
-    const maxPolls = 120; // Maximum number of polling attempts (10 minutes with 5s interval)
-    const pollInterval = 5000; // 5 seconds between polls
+    const maxPolls = 120; 
+    const pollInterval = 5000; 
     const maxConsecutiveErrors = 3;
     let pollCount = 0;
     let consecutiveErrors = 0;
     
     setOperationInProgress(true);
     setOperationType(type);
-    setProgressPercent(5); // Start with a little progress shown
+    setProgressPercent(5); 
     setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} started...`);
 
     while (pollCount < maxPolls) {
       try {
         pollCount++;
-        
-        // Update progress based on poll count (simple approximation)
-        // Reserve the last 20% for completion
         const progressValue = Math.min(80, Math.floor((pollCount / maxPolls) * 100));
         setProgressPercent(progressValue);
         
-        // Wait for the poll interval
         await new Promise(resolve => setTimeout(resolve, pollInterval));
         
-        // Call the service to check status
-        console.log(`Checking ${type} status for prediction ID: ${predictionId} (attempt ${pollCount}/${maxPolls})`);
-        
-        const response = await fetch(`https://txclassify.onrender.com/status/${predictionId}`, {
+        // *** Call the INTERNAL status API route ***
+        console.log(`Checking ${type} status via internal proxy for prediction ID: ${predictionId} (attempt ${pollCount}/${maxPolls})`);
+        const response = await fetch(`/api/classify/status/${predictionId}`, { // Updated URL
           headers: {
-            'X-API-Key': 'test_api_key_fixed',
+            // 'X-API-Key': 'test_api_key_fixed', // *** REMOVED Header - Server handles it ***
             'Accept': 'application/json',
           },
         });
@@ -566,324 +559,267 @@ export default function TransactionList() {
         // Handle different response codes
         if (!response.ok) {
           const statusCode = response.status;
-          console.log(`Server returned error code: ${statusCode} for prediction ID: ${predictionId}`);
+          console.log(`Internal proxy returned error code: ${statusCode} for prediction ID: ${predictionId}`);
 
-          // If we get a 502/503/504, the worker might have restarted
-          if (statusCode === 502 || statusCode === 503 || statusCode === 504) {
+          if (statusCode === 502 || statusCode === 503 || statusCode === 504 || statusCode === 500) {
             consecutiveErrors++;
             setProgressMessage(`Server error (${statusCode}), retrying...`);
-
             if (consecutiveErrors >= maxConsecutiveErrors) {
-              setToastMessage({
-                message: `${type === 'training' ? 'Training' : 'Categorization'} failed after ${consecutiveErrors} consecutive worker errors`,
-                type: 'error'
-              });
+              setToastMessage({ message: `${type === 'training' ? 'Training' : 'Categorization'} failed after ${consecutiveErrors} consecutive server errors`, type: 'error' });
               setOperationInProgress(false);
               setOperationType('none');
-              return { status: 'failed', error: 'Too many consecutive worker errors' };
+              return { status: 'failed', error: 'Too many consecutive server errors' };
             }
-            continue;
-          }
-
-          // For 404, could mean the prediction is gone/complete
-          if (statusCode === 404) {
-            // Early phase - job might not be registered yet
-            if (pollCount < 5) {
-              setProgressMessage('Waiting for job to start...');
-              continue;
-            }
-            
-            // Later phase - job might be complete and cleaned up
-            if (pollCount > 20) {
-              setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} complete.`);
-              setProgressPercent(100);
-              setTimeout(() => {
-                setOperationInProgress(false);
-                setOperationType('none');
-              }, 2000);
-              return { status: 'completed', message: 'Process completed' };
-            }
-            
             continue;
           }
           
-          consecutiveErrors++;
-          if (consecutiveErrors >= maxConsecutiveErrors) {
-            setToastMessage({
-              message: `${type === 'training' ? 'Training' : 'Categorization'} failed after ${consecutiveErrors} consecutive errors`,
-              type: 'error'
-            });
-            setOperationInProgress(false);
-            setOperationType('none');
-            return { status: 'failed', error: 'Too many consecutive errors' };
+          // Try to parse error from proxy response
+          let errorData: { 
+            error?: string; 
+            status?: string; 
+            message?: string; 
+            results?: any[];
+            code?: number;
+          } = { error: 'Unknown error from proxy' };
+          
+          try {
+            errorData = await response.json();
+          } catch (e) { /* Ignore json parse error */ }
+
+          // Special handling for the "job context missing" error which might indicate the job completed successfully
+          if (errorData.error && errorData.error.includes('Job context missing') || 
+              (errorData.status === 'completed' && errorData.message?.includes('context was cleaned up'))) {
+            console.log('Detected "job context missing" which might indicate successful completion');
+            
+            // If the error includes 'after prediction success', treat as success
+            if (errorData.error?.includes('after prediction success') || 
+                errorData.message?.includes('completed successfully')) {
+              setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} likely completed successfully.`);
+              setProgressPercent(100);
+              setTimeout(() => { setOperationInProgress(false); setOperationType('none'); }, 2000);
+              return { 
+                status: 'completed', 
+                results: errorData.results || [],
+                message: 'Process likely completed successfully but context was cleaned up'
+              };
+            }
           }
-          continue;
+
+          // Handle 404 from proxy (could mean job completed and cleaned up, or job never existed)
+          if (statusCode === 404) {
+            if (pollCount < 5) {
+              setProgressMessage('Waiting for job to start...');
+              continue;
+            } 
+            if (pollCount > 20) {
+              setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} complete.`);
+              setProgressPercent(100);
+              setTimeout(() => { setOperationInProgress(false); setOperationType('none'); }, 2000);
+              return { status: 'completed', message: 'Process completed (inferred from 404)' };
+            }
+            // Continue polling for a bit longer if 404 is received early/mid polling
+            continue; 
+          }
+          
+          // Handle other client/server errors from proxy (like 400, 401)
+          setToastMessage({ message: `Error checking status: ${errorData.error || response.statusText}`, type: 'error' });
+          setOperationInProgress(false);
+          setOperationType('none');
+          return { status: 'failed', error: errorData.error || `Proxy error ${statusCode}` };
         }
 
         // Reset consecutive errors on successful response
         consecutiveErrors = 0;
 
-        // Parse the response
         const result = await response.json();
-        console.log("Status response:", result);
+        console.log("Status response (from proxy):", result);
 
-        // Handle completed status
         if (result.status === "completed") {
           setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`);
           setProgressPercent(100);
-          
-          // Show success toast
-          setToastMessage({
-            message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`,
-            type: 'success'
-          });
-          
-          // Keep progress bar visible for a moment
-          setTimeout(() => {
-            setOperationInProgress(false);
-            setOperationType('none');
-          }, 2000);
-          
-          return { 
-            status: 'completed', 
-            results: result.results || result.config?.results || [], 
-            message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!` 
-          };
+          setToastMessage({ message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`, type: 'success' });
+          setTimeout(() => { setOperationInProgress(false); setOperationType('none'); }, 2000);
+          return { status: 'completed', results: result.results || result.config?.results || [], message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!` };
         } else if (result.status === "failed") {
           const errorMessage = result.error || result.message || 'Unknown error';
           setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} failed: ${errorMessage}`);
-          
-          setToastMessage({
-            message: `${type === 'training' ? 'Training' : 'Categorization'} failed: ${errorMessage}`,
-            type: 'error'
-          });
-          
+          setToastMessage({ message: `${type === 'training' ? 'Training' : 'Categorization'} failed: ${errorMessage}`, type: 'error' });
           setOperationInProgress(false);
           setOperationType('none');
           return { status: 'failed', error: errorMessage };
         }
 
-        // Still in progress, update progress message
         let statusMessage = `${type === 'training' ? 'Training' : 'Categorization'} in progress...`;
-        if (result.message) {
-          statusMessage += ` ${result.message}`;
-        }
+        if (result.message) statusMessage += ` ${result.message}`;
         setProgressMessage(statusMessage);
         
       } catch (error) {
-        console.error('Error polling status:', error);
-        
+        console.error('Error polling status via proxy:', error);
         consecutiveErrors++;
         if (consecutiveErrors >= maxConsecutiveErrors) {
-          setToastMessage({
-            message: `Failed to check ${type === 'training' ? 'training' : 'categorization'} status after ${consecutiveErrors} consecutive errors`,
-            type: 'error'
-          });
+          setToastMessage({ message: `Failed to check ${type === 'training' ? 'training' : 'categorization'} status after ${consecutiveErrors} consecutive network/parsing errors`, type: 'error' });
           setOperationInProgress(false);
           setOperationType('none');
-          return { status: 'failed', error: 'Error checking status' };
+          return { status: 'failed', error: 'Error checking status via proxy' };
         }
       }
     }
 
-    // If we reach here, we've polled too many times without completion
-    setToastMessage({
-      message: `${type === 'training' ? 'Training' : 'Categorization'} is taking longer than expected. Please try again.`,
-      type: 'error'
-    });
+    setToastMessage({ message: `${type === 'training' ? 'Training' : 'Categorization'} is taking longer than expected. Please try again.`, type: 'error' });
     setOperationInProgress(false);
     setOperationType('none');
     return { status: 'unknown', message: 'Maximum polling attempts reached' };
   };
 
-  // Update handleTrainSelected to use the new polling function
+  // Update handleTrainSelected to use the new polling function AND the internal API route
   const handleTrainSelected = async () => {
     if (selectedTransactions.length === 0) {
-      setToastMessage({
-        message: "Please select at least one transaction for training",
-        type: "error"
-      });
+      setToastMessage({ message: "Please select at least one transaction for training", type: "error" });
       return;
     }
 
     if (selectedTransactions.length < 10) {
-      setToastMessage({
-        message: "Please select at least 10 transactions for training (API requirement)",
-        type: "error"
-      });
+      setToastMessage({ message: "Please select at least 10 transactions for training (API requirement)", type: "error" });
       return;
     }
 
-    // Show loading state
     setOperationInProgress(true);
     setOperationType('training');
     setProgressPercent(0);
     setProgressMessage('Preparing training data...');
 
     try {
-      // Format transactions for training to match the API schema requirements
       const trainingData = transactions
         .filter(tx => selectedTransactions.includes(tx.lunchMoneyId))
-        .map(tx => ({
-          description: tx.description, // Required by API schema
-          Category: tx.lunchMoneyCategory || 'Uncategorized' // Required by API schema with capital C
-        }));
+        .map(tx => {
+          // Use is_income flag directly from the transaction data
+          // This is explicitly set by Lunch Money
+          return {
+            description: tx.description,
+            Category: tx.lunchMoneyCategory || 'Uncategorized',
+            money_in: tx.is_income, // Directly use is_income flag
+            amount: tx.amount // Include amount for context only
+          };
+        });
       
-      if (trainingData.length === 0) {
-        throw new Error('No valid transactions selected for training');
-      }
+      if (trainingData.length === 0) throw new Error('No valid transactions selected for training');
 
-      // Prepare the payload based on the API schema
       const payload = {
         transactions: trainingData,
-        userId: 'test_user_fixed', // For testing
-        expenseSheetId: 'lunchmoney', // Required
-        spreadsheetId: 'lunchmoney', // Required for classification
-        // Include column configuration
-        columnOrderCategorisation: {
-          descriptionColumn: "B",
-          categoryColumn: "C",
-        },
-        categorisationRange: "A:Z",
-        categorisationTab: "LunchMoney"
+        expenseSheetId: 'lunchmoney', 
+        spreadsheetId: 'lunchmoney'
       };
 
       setProgressPercent(10);
       setProgressMessage('Sending training request...');
 
-      // Call the training API endpoint
-      const response = await fetch('https://txclassify.onrender.com/train', {
+      const response = await fetch('/api/classify/train', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': 'test_api_key_fixed'
         },
         body: JSON.stringify(payload),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
-        throw new Error(errorData.error || 'Training request failed');
+        throw new Error(result.error || `Training request failed with status ${response.status}`);
       }
 
-      const result = await response.json();
-      console.log("Training response:", result);
+      console.log("Training response (from proxy):", result);
 
-      // If we have a prediction ID, start polling
       if (result.prediction_id || result.predictionId) {
         const predictionId = result.prediction_id || result.predictionId;
         localStorage.setItem('training_prediction_id', predictionId);
         
-        // Poll for status
         const pollResult = await pollForCompletion(predictionId, 'training');
-        
-        // If training completed successfully, apply "Trained" tag to selected transactions
         if (pollResult.status === 'completed') {
           await tagTransactionsAsTrained(selectedTransactions);
         }
-        
         return pollResult;
       } else {
         throw new Error('No prediction ID received from training service');
       }
     } catch (error) {
       console.error('Error starting training:', error);
-      setToastMessage({
-        message: error instanceof Error ? error.message : 'Failed to start training',
-        type: 'error'
-      });
+      setToastMessage({ message: error instanceof Error ? error.message : 'Failed to start training', type: 'error' });
       setOperationInProgress(false);
       setOperationType('none');
     }
   };
 
-  // Update handleCategorizeSelected to use the new polling function
+  // Update handleCategorizeSelected to use the internal API route
   const handleCategorizeSelected = async () => {
     if (selectedTransactions.length === 0) {
-      setToastMessage({
-        message: "Please select at least one transaction for categorization",
-        type: "error"
-      });
+      setToastMessage({ message: "Please select at least one transaction for categorization", type: "error" });
       return;
     }
 
-    // Show loading state
     setOperationInProgress(true);
     setOperationType('categorizing');
     setProgressPercent(0);
     setProgressMessage('Preparing to categorize transactions...');
 
     try {
-      // Get the selected transactions with all their data
-      const selectedTxs = transactions
-        .filter(tx => selectedTransactions.includes(tx.lunchMoneyId));
-      
-      if (selectedTxs.length === 0) {
-        throw new Error('No valid transactions selected for categorization');
-      }
+      const selectedTxs = transactions.filter(tx => selectedTransactions.includes(tx.lunchMoneyId));
+      if (selectedTxs.length === 0) throw new Error('No valid transactions selected for categorization');
         
-      // Transactions to classify should include description but no category
-      const transactionsToClassify = selectedTxs.map(tx => tx.description);
+      const transactionsToClassify = selectedTxs.map(tx => {
+        // Use is_income flag directly from Lunch Money
+        return {
+          description: tx.description,
+          Narrative: tx.description, // Add Narrative for compatibility
+          money_in: tx.is_income, // Directly use is_income flag
+          amount: tx.amount // Include amount for context only
+        };
+      });
       
       setProgressPercent(10);
       setProgressMessage('Sending categorization request...');
       
-      // Prepare the payload for the categorization API
       const payload = {
         transactions: transactionsToClassify,
-        userId: 'test_user_fixed',
-        spreadsheetId: 'test-sheet-id',
-        sheetName: 'test-sheet',
-        categoryColumn: 'E',
-        startRow: '1'
+        spreadsheetId: 'test-sheet-id'
       };
 
-      // Call the categorization API endpoint
-      const response = await fetch('https://txclassify.onrender.com/classify', {
+      // *** Call the INTERNAL API route ***
+      const response = await fetch('/api/classify/classify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': 'test_api_key_fixed'
         },
         body: JSON.stringify(payload),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => response.text());
-        throw new Error(typeof errorData === 'object' ? JSON.stringify(errorData) : errorData || 'Categorization request failed');
+        throw new Error(result.error || `Categorization request failed with status ${response.status}`);
       }
 
-      const result = await response.json();
-      console.log("Categorization response:", result);
+      console.log("Categorization response (from proxy):", result);
 
-      // If we have a prediction ID, start polling for results
       if (result.prediction_id) {
         const predictionId = result.prediction_id;
         localStorage.setItem('categorization_prediction_id', predictionId);
         
-        // Wait a bit before polling to allow the backend to start processing
         setProgressPercent(15);
         setProgressMessage('Waiting for categorization to initialize...');
         await new Promise(resolve => setTimeout(resolve, 5000));
         
-        // Poll for categorization results
         const pollResult = await pollForCompletion(predictionId, 'categorizing');
         
         if (pollResult.status === 'completed' && pollResult.results) {
-          // Process results from pollResult
           updateTransactionsWithPredictions(pollResult.results);
         }
-        
         return pollResult;
       } else {
         throw new Error('No prediction ID received from categorization service');
       }
     } catch (error) {
       console.error('Error during categorization:', error);
-      setToastMessage({
-        message: error instanceof Error ? error.message : 'Failed to categorize transactions',
-        type: 'error'
-      });
+      setToastMessage({ message: error instanceof Error ? error.message : 'Failed to categorize transactions', type: 'error' });
       setOperationInProgress(false);
       setOperationType('none');
     }
@@ -1228,6 +1164,16 @@ export default function TransactionList() {
     return transactions;
   };
 
+  // *** NEW: Handler to cancel/discard pending categorization predictions ***
+  const handleCancelCategorization = () => {
+    console.log("Cancelling pending categorization updates.");
+    setPendingCategoryUpdates({});
+    setCategorizedTransactions(new Map()); // Clear the map holding prediction details
+    setShowOnlyCategorized(false); // Turn off the "show predictions" filter
+    // Optionally reset other filters or show a toast
+    setToastMessage({ message: 'Discarded pending category predictions.', type: 'success' }); 
+  };
+
   // Handle error state
   if (loading) {
     return <div>Loading transactions...</div>;
@@ -1252,7 +1198,7 @@ export default function TransactionList() {
   const filteredTransactions = getFilteredTransactions();
 
   return (
-    <div className="text-gray-900 dark:text-gray-100 text-sm bg-white dark:bg-slate-900 min-h-screen p-4">
+    <div className="text-gray-900 text-sm bg-white min-h-screen p-4">
       {/* Toast notification */}
       <ToastNotification toastMessage={toastMessage} />
 
@@ -1291,6 +1237,7 @@ export default function TransactionList() {
           operationInProgress={operationInProgress}
           importStatus={importStatus}
           importMessage={importMessage}
+          handleCancelCategorization={handleCancelCategorization}
         />
       </div>
 

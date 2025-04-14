@@ -5,7 +5,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
-const EXTERNAL_TRAIN_URL = 'https://txclassify.onrender.com/train';
+const EXTERNAL_CLASSIFY_URL = 'https://txclassify.onrender.com/classify';
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authConfig);
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const userId = session.user.id;
 
   try {
-    // 1. Get the user's *correct* API key (api_key)
+    // 1. Get the user's API key
     const userResult = await db
       .select({ apiKey: users.api_key })
       .from(users)
@@ -27,9 +27,6 @@ export async function POST(request: NextRequest) {
     const userApiKey = userResult[0]?.apiKey;
 
     if (!userApiKey) {
-      // Use the hardcoded key as a fallback *only if intended for testing/demo*
-      // Or return an error if a real key is always required
-      // userApiKey = 'test_api_key_fixed';
       console.warn(`User ${userId} does not have an API key configured.`);
       return NextResponse.json({ error: 'API key not configured for this user.' }, { status: 400 });
     }
@@ -37,13 +34,13 @@ export async function POST(request: NextRequest) {
     // 2. Get the payload from the incoming request
     const payload = await request.json();
 
-    // 3. Call the external training service with the user's API key
-    console.log(`Proxying training request for user ${userId} to ${EXTERNAL_TRAIN_URL}`);
-    const externalResponse = await fetch(EXTERNAL_TRAIN_URL, {
+    // 3. Call the external classification service with the user's API key
+    console.log(`Proxying classification request for user ${userId} to ${EXTERNAL_CLASSIFY_URL}`);
+    const externalResponse = await fetch(EXTERNAL_CLASSIFY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': userApiKey,
+        'X-API-Key': userApiKey, // Use the fetched user-specific key
         'Accept': 'application/json',
       },
       body: JSON.stringify(payload),
@@ -53,16 +50,15 @@ export async function POST(request: NextRequest) {
     const responseData = await externalResponse.json();
 
     if (!externalResponse.ok) {
-       console.error(`External training service error for user ${userId}:`, externalResponse.status, responseData);
-       // Forward the status code and error message from the external service
+       console.error(`External classification service error for user ${userId}:`, externalResponse.status, responseData);
        return NextResponse.json(responseData, { status: externalResponse.status });
     }
 
-    console.log(`External training service success for user ${userId}:`, responseData);
+    console.log(`External classification service success for user ${userId}:`, responseData);
     return NextResponse.json(responseData);
 
   } catch (error) {
-    console.error(`Error in /api/classify/train proxy for user ${userId}:`, error);
-    return NextResponse.json({ error: 'Internal Server Error during training proxy' }, { status: 500 });
+    console.error(`Error in /api/classify/classify proxy for user ${userId}:`, error);
+    return NextResponse.json({ error: 'Internal Server Error during classification proxy' }, { status: 500 });
   }
 } 

@@ -21,23 +21,27 @@ export default function CategorySelect({
   successfulUpdates,
   hasPendingUpdate
 }: CategorySelectProps) {
+  const selectedValue = transaction.originalData?.category_id ? 
+                        String(transaction.originalData.category_id) : 
+                        "none";
+
   return (
     <div className="relative">
       <select
-        value={transaction.originalData?.category_id || "none"}
+        value={selectedValue}
         onChange={(e) => handleCategoryChange(transaction.lunchMoneyId, e.target.value)}
         disabled={updatingCategory === transaction.lunchMoneyId}
-        className={`w-full py-1.5 px-2 pr-8 appearance-none rounded border ${
+        className={`w-full py-1.5 px-2 pr-8 appearance-none rounded-md border text-sm shadow-sm focus:ring-primary focus:border-primary ${
           successfulUpdates[transaction.lunchMoneyId] 
-            ? 'border-green-500 dark:border-green-500 bg-green-50 dark:bg-green-950/20' 
+            ? 'border-green-500 bg-green-50 text-green-800' 
             : hasPendingUpdate
-              ? 'border-amber-500 dark:border-amber-500 bg-amber-50 dark:bg-amber-950/20'
-              : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800'
-        } text-gray-800 dark:text-gray-200`}
+              ? 'border-secondary bg-secondary/5 text-secondary-dark'
+              : 'border-gray-300 bg-white text-gray-800'
+        }`}
       >
         <option value="none">-- Uncategorized --</option>
         {categories.map(category => {
-          const categoryId = typeof category === 'string' ? category : category.id;
+          const categoryId = typeof category === 'string' ? category : String(category.id);
           const categoryName = typeof category === 'string' ? category : category.name;
           
           return (
@@ -47,7 +51,7 @@ export default function CategorySelect({
           );
         })}
       </select>
-      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500 dark:text-gray-400">
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
         <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
         </svg>
