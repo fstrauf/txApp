@@ -8,6 +8,8 @@ import { users, transactions } from '../db/schema';
 import bcrypt from 'bcryptjs';
 import jsonwebtoken from 'jsonwebtoken';
 import { default as authRoutes } from './routes/auth';
+import { default as transactionRoutes } from './routes/transactions.js';
+import { default as bankAccountRoutes } from './routes/bankAccounts.js';
 import type { Context } from 'hono';
 
 // Initialize Hono app
@@ -146,5 +148,10 @@ protectedRoutes.get('/transactions', async (c: Context) => {
 // Mount routes
 app.route('', publicRoutes);
 app.route('/api', protectedRoutes);
+
+// Mount transaction routes under /api/transactions
+protectedRoutes.route('/transactions', transactionRoutes);
+// Mount bank account routes under /api/bank-accounts
+protectedRoutes.route('/bank-accounts', bankAccountRoutes);
 
 export default app; 
