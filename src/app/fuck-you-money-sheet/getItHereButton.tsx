@@ -2,6 +2,7 @@
 import { useState } from "react";
 // Use next-auth/react for session management
 import { useSession } from "next-auth/react";
+import { Button } from "@/components/ui/button"; // Import the Button component
 
 export default function GetItHereButton() {
   const [email, setEmail] = useState("");
@@ -81,36 +82,31 @@ export default function GetItHereButton() {
     );
   }
 
-  // If user is logged in, show the links directly
+  // If user is logged in, show the links directly using Button component
   if (user) {
     return (
       <div className="text-center mt-8">
-        {/* Show success message and links directly for logged-in users */}
         <div className="space-y-4">
           <p className="text-green-600 mb-4">Welcome back! Here's your spreadsheet:</p>
-          <a
-            className="inline-flex items-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow"
-            href="https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Access Spreadsheet
-            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </a>
-          <div className="mt-4">
+          <Button asChild size="lg">
             <a
-              className="inline-flex items-center px-8 py-4 rounded-xl bg-white text-primary border border-primary/10 font-semibold hover:bg-gray-50 transition-all duration-200 shadow-soft"
-              href="/api-key"
+              href="https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983"
               target="_blank"
               rel="noopener noreferrer"
+              className="text-white"
             >
-              Get API Key
-              <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              Access Spreadsheet
             </a>
+          </Button>
+          <div className="mt-4">
+            <Button asChild size="lg">
+              <a
+                href="/api-key"
+                rel="noopener noreferrer"
+              >
+                Get API Key
+              </a>
+            </Button>
           </div>
         </div>
       </div>
@@ -120,33 +116,34 @@ export default function GetItHereButton() {
   // If user is not logged in, proceed with the email collection flow
   return (
     <div className="text-center mt-8">
-      {/* 1. Submitted State: Show success and links (after anonymous submission) */}
+      {/* 1. Submitted State: Show success and links using Button component */}
       {submitted && (
         <div className="space-y-4">
           <p className="text-green-600 mb-4">Thanks! Here's your spreadsheet:</p>
-          <a
-            className="inline-flex items-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow"
-            href="https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Access Spreadsheet
-            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </a>
-          <div className="mt-4">
+          <Button asChild size="lg">
             <a
-              className="inline-flex items-center px-8 py-4 rounded-xl bg-white text-primary border border-primary/10 font-semibold hover:bg-gray-50 transition-all duration-200 shadow-soft"
-              href="/api-key"
+              href="https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Get API Key
+              Access Spreadsheet
               <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </a>
+          </Button>
+          <div className="mt-4">
+            <Button asChild size="lg">
+              <a
+                href="/api-key"
+                rel="noopener noreferrer"
+              >
+                Get API Key
+                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+            </Button>
           </div>
         </div>
       )}
@@ -171,7 +168,7 @@ export default function GetItHereButton() {
         </div>
       )}
 
-      {/* 3. Email Form State: Show if button was clicked (only for anonymous users) */}
+      {/* 3. Email Form State: Use Button component for submit */}
       {!submitted && !isLoading && showEmailInput && (
         <form onSubmit={handleEmailSubmit} className="space-y-4 max-w-sm mx-auto">
            <div className="flex flex-col items-center space-y-4">
@@ -185,31 +182,32 @@ export default function GetItHereButton() {
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent w-full"
             />
             {error && <p className="text-red-500 text-sm">{error}</p>}
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
-              className="inline-flex items-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow disabled:opacity-50 disabled:cursor-not-allowed w-full justify-center"
+              size="lg" // Use large size
+              className="w-full justify-center" // Add w-full for full width
             >
               Submit & Get Spreadsheet
               <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
-      {/* 4. Initial Button State: Show only if anonymous, not submitted, not loading, and button not clicked */}
+      {/* 4. Initial Button State: Use Button component */}
       {!submitted && !isLoading && !showEmailInput && (
-        <button
+        <Button
           onClick={handleGetSpreadsheet}
-          className="inline-flex items-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow"
+          size="lg" // Use large size
         >
           Get the Spreadsheet
           <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-        </button>
+        </Button>
       )}
     </div>
   );
