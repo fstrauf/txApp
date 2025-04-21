@@ -6,6 +6,10 @@ import { jwt } from 'hono/jwt'
 import { sql } from '@vercel/postgres'
 import { sign } from 'hono/jwt'
 import type { Context } from 'hono'
+import { db } from '@/db'
+import { users, subscriptions } from '@/db/schema'
+import { eq, desc } from 'drizzle-orm'
+import { cancelSubscription as stripeCancelSubscription } from '@/lib/stripe'
 
 export const runtime = 'edge'
 export const preferredRegion = 'fra1' // Choose your preferred region
@@ -110,29 +114,98 @@ const authMiddleware = jwt({
   secret: process.env.JWT_SECRET || 'fallback-secret-key'
 })
 
-// Protected route example
+// Updated protected route to include subscription details
 app.get('/user/profile', authMiddleware, async (c: Context) => {
   try {
     const payload = c.get('jwtPayload') as JwtPayload
-    const userId = payload.id as string
+    const userId = payload.id
     
-    // Query the database for user profile data
-    const result = await sql`
-      SELECT id, email, name FROM "User" 
-      WHERE id = ${userId} LIMIT 1
-    `
-    
-    const user = result.rows[0] as DbUser | undefined
-    
-    if (!user) {
+    // Query user data and their latest subscription details
+    const userResult = await db.query.users.findFirst({
+      columns: {
+        id: true,
+        email: true,
+        name: true,
+        image: true, // Include image if available
+        stripeSubscriptionId: true, // Needed to link to subscriptions table
+      },
+      where: eq(users.id, userId),
+    });
+
+    if (!userResult) {
       return c.json({ error: 'User not found' }, 404)
     }
+
+    let subscriptionResult = null;
+    if (userResult.stripeSubscriptionId) {
+      // Fetch the corresponding subscription details using the ID from the user record
+      subscriptionResult = await db.query.subscriptions.findFirst({
+        columns: {
+          status: true,
+          plan: true,
+          billingCycle: true,
+          cancelAtPeriodEnd: true,
+          currentPeriodEnd: true,
+        },
+        where: eq(subscriptions.stripeSubscriptionId, userResult.stripeSubscriptionId),
+        orderBy: (subscriptions, { desc }) => [desc(subscriptions.createdAt)], // Get the latest if multiple exist
+      });
+    }
     
-    return c.json({ user })
+    // Combine user and subscription data
+    const userProfile = {
+      ...userResult,
+      subscription: subscriptionResult // Add subscription details to the response
+    };
+
+    return c.json({ user: userProfile })
   } catch (err) {
     const error = err instanceof Error ? err : new Error('Unknown error')
     console.error('Profile fetch error:', error.message)
     return c.json({ error: 'Failed to fetch user profile' }, 500)
+  }
+})
+
+// New endpoint to cancel Stripe subscription
+app.post('/stripe/cancel-subscription', authMiddleware, async (c: Context) => {
+  try {
+    const payload = c.get('jwtPayload') as JwtPayload
+    const userId = payload.id
+
+    // Find user to get their Stripe subscription ID
+    const userRecord = await db.query.users.findFirst({
+      columns: {
+        stripeSubscriptionId: true
+      },
+      where: eq(users.id, userId)
+    })
+
+    if (!userRecord || !userRecord.stripeSubscriptionId) {
+      console.error(`User ${userId} does not have a Stripe subscription ID.`);
+      return c.json({ error: 'No active subscription found to cancel.' }, 404)
+    }
+
+    const stripeSubscriptionId = userRecord.stripeSubscriptionId
+
+    // Call Stripe to cancel the subscription at the period end
+    await stripeCancelSubscription(stripeSubscriptionId)
+
+    // Update the subscription record in our database to reflect cancellation pending
+    await db.update(subscriptions)
+      .set({ cancelAtPeriodEnd: true, updatedAt: new Date() })
+      .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId));
+
+    console.log(`Subscription ${stripeSubscriptionId} marked for cancellation at period end for user ${userId}.`)
+    return c.json({ message: 'Subscription cancellation initiated successfully. It will remain active until the end of the current billing period.' })
+
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error('Unknown error')
+    console.error('Subscription cancellation error:', error.message)
+    // Provide a more specific error message if possible
+    const errorMessage = error.message.includes('No such subscription') 
+      ? 'Could not find an active subscription to cancel.' 
+      : 'Failed to cancel subscription.'
+    return c.json({ error: errorMessage }, 500)
   }
 })
 
