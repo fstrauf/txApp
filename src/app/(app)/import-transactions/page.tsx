@@ -1,15 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
-import { useAuth } from '@/context/AuthContext'; // Assuming you have an AuthContext for token
+// import { useAuth } from '@/context/AuthContext'; // Removed useAuth
+import { useSession } from 'next-auth/react'; // Import useSession
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react"; // For loading spinner
+import { Loader2, Check, ChevronsUpDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils"; // Assuming you have this utility function
 
 interface BankAccount {
     id: string;
@@ -22,14 +26,14 @@ interface AnalysisResult {
     detectedDelimiter: string;
 }
 
+// Define the types a column can be mapped to
+type MappedFieldType = 'date' | 'amount' | 'description' | 'currency' | 'none';
+
+// Update ImportConfig interface
 interface ImportConfig {
     bankAccountId: string;
-    mappings: {
-        date: string;
-        amount: string;
-        description: string;
-        currency?: string;
-    };
+    // Mappings structure changed: Key is CSV Header, Value is the field type
+    mappings: Record<string, MappedFieldType>; 
     dateFormat: string;
     amountFormat: 'standard' | 'negate' | 'sign_column';
     signColumn?: string;
@@ -37,201 +41,424 @@ interface ImportConfig {
     delimiter?: string;
 }
 
-// Ensure mappings always has all required keys, even if empty initially
-type ConfigState = Partial<Omit<ImportConfig, 'mappings'>> & {
-    mappings: Partial<ImportConfig['mappings']> & Required<Pick<ImportConfig['mappings'], 'date' | 'amount' | 'description'>>;
+// Update ConfigState: Mappings type changed, remove specific required fields here
+// Validation will happen during submit based on the Record values
+type ConfigState = Partial<Omit<ImportConfig, 'mappings' | 'bankAccountId'>> & {
+    mappings: Record<string, MappedFieldType>; 
 };
 
+// Define common date formats compatible with date-fns
+const commonDateFormats = [
+    { value: 'yyyy-MM-dd HH:mm:ss', label: 'YYYY-MM-DD HH:MM:SS (e.g., 2023-12-31 14:30:00)' },
+    { value: 'yyyy-MM-dd', label: 'YYYY-MM-DD (e.g., 2023-12-31)' },
+    { value: 'MM/dd/yyyy', label: 'MM/DD/YYYY (e.g., 12/31/2023)' },
+    { value: 'dd/MM/yyyy', label: 'DD/MM/YYYY (e.g., 31/12/2023)' },
+    { value: 'dd.MM.yyyy', label: 'DD.MM.YYYY (e.g., 31.12.2023)' },
+    { value: 'yyyy/MM/dd', label: 'YYYY/MM/DD (e.g., 2023/12/31)' },
+];
+
 const ImportTransactionsPage: React.FC = () => {
-    const { token } = useAuth(); // Get JWT token from context
+    // const { token, isLoading: isAuthLoading } = useAuth(); // Removed useAuth
+    const { status: sessionStatus } = useSession(); // Get session status from NextAuth
     const [file, setFile] = useState<File | null>(null);
     const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
     const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+    // Initialize mappings as an empty object
     const [config, setConfig] = useState<ConfigState>({
-        mappings: { date: '', amount: '', description: '' }, 
-        dateFormat: 'YYYY-MM-DD', // Default example
+        mappings: {}, 
+        // Set initial default format from the list
+        dateFormat: commonDateFormats[1].value, // Default to yyyy-MM-dd
         amountFormat: 'standard',
         skipRows: 0,
     });
-    const [isLoading, setIsLoading] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const isLoading = sessionStatus === 'loading' || isProcessing;
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [comboboxOpen, setComboboxOpen] = useState(false);
+    const [selectedAccountIdOrNewName, setSelectedAccountIdOrNewName] = useState("");
 
-    // Fetch bank accounts on component mount
+    // Fetch bank accounts on component mount, wait for session
     useEffect(() => {
         const fetchBankAccounts = async () => {
-            if (!token) return;
-            setIsLoading(true);
+            // Wait until session is authenticated
+            if (sessionStatus !== 'authenticated') return;
+            
+            setIsProcessing(true);
             try {
-                const response = await fetch('/api/bank-accounts', { // Ensure correct API URL if needed
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                });
+                // Remove Authorization header - rely on cookie
+                const response = await fetch('/api/bank-accounts'); 
                 if (!response.ok) {
-                    throw new Error('Failed to fetch bank accounts');
+                    // Handle potential 401/403 if session is invalid server-side
+                    if (response.status === 401 || response.status === 403) {
+                         throw new Error('Unauthorized. Please log in again.');
+                    }
+                    const errorData = await response.json().catch(() => ({ error: 'Failed to fetch bank accounts' }));
+                    throw new Error(errorData.error || 'Failed to fetch bank accounts');
                 }
                 const data = await response.json();
                 setBankAccounts(data.bankAccounts || []);
             } catch (error: any) {
                 setFeedback({ type: 'error', message: `Error fetching accounts: ${error.message}` });
             } finally {
-                setIsLoading(false);
+                setIsProcessing(false);
             }
         };
 
         fetchBankAccounts();
-    }, [token]);
+    }, [sessionStatus]); // Depend on sessionStatus
 
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+        console.log("handleFileChange triggered");
         const selectedFile = e.target.files?.[0];
         if (selectedFile) {
             setFile(selectedFile);
-            setAnalysisResult(null); // Reset analysis if new file is chosen
+            setAnalysisResult(null); 
             setFeedback(null);
-            // Automatically trigger analysis
+            setSelectedAccountIdOrNewName(""); // Reset account selection
+            console.log("Calling handleAnalyze...");
+            // No need to pass auth loading state anymore
             handleAnalyze(selectedFile);
         }
     };
 
     const handleAnalyze = async (selectedFile: File) => {
-        if (!selectedFile || !token) return;
+        console.log("handleAnalyze called");
+        
+        // Check session status before making request
+        if (sessionStatus !== 'authenticated') {
+            console.error('Analysis stopped: User not authenticated.');
+            setFeedback({ type: 'error', message: 'You must be logged in to analyze files.'});
+            return;
+        }
+        
+        // Check if file exists (already done in handleFileChange but good practice)
+        if (!selectedFile) {
+             console.error('Analysis stopped: No file selected.'); 
+             setFeedback({ type: 'error', message: 'Please select a file first.'});
+             return;
+        }
 
-        setIsLoading(true);
+        setIsProcessing(true);
         setFeedback(null);
         const formData = new FormData();
         formData.append('file', selectedFile);
 
         try {
-            const response = await fetch('/api/transactions/analyze', { // Use relative path to proxy via Next.js
+            console.log("Sending request to /api/transactions/analyze");
+             // Remove Authorization header - rely on cookie
+            const response = await fetch('/api/transactions/analyze', { 
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
+                // headers: { 'Authorization': `Bearer ${token}` }, // Removed header
                 body: formData,
             });
+            console.log("Analyze Response Status:", response.status);
 
             const result = await response.json();
+            console.log("Analyze Response Body:", result);
 
             if (!response.ok) {
-                throw new Error(result.error || 'Analysis failed');
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error('Unauthorized. Please log in again.');
+                }
+                throw new Error(result.error || `Analysis failed with status ${response.status}`);
             }
 
             setAnalysisResult(result);
-            // Pre-fill delimiter if detected
-            if (result.detectedDelimiter) {
-                setConfig(prev => ({ ...prev, delimiter: result.detectedDelimiter, mappings: { ...prev.mappings } })); // Ensure mappings is spread
+            // Initialize mappings: Set all columns to 'none' initially
+            let initialMappings = result.headers.reduce((acc: Record<string, MappedFieldType>, header: string) => {
+                acc[header] = 'none';
+                // Simple auto-detection based on common keywords
+                const lowerHeader = header.toLowerCase();
+                if (lowerHeader.includes('date') || lowerHeader.includes('created')) acc[header] = 'date';
+                else if (lowerHeader.includes('amount') || lowerHeader.includes('value') || lowerHeader.includes('source amount')) acc[header] = 'amount';
+                else if (lowerHeader.includes('desc') || lowerHeader.includes('payee') || lowerHeader.includes('memo') || lowerHeader.includes('target name') || lowerHeader.includes('reference')) acc[header] = 'description';
+                else if (lowerHeader.includes('currency')) acc[header] = 'currency';
+                return acc;
+            }, {});
+
+            // --- Enforce Uniqueness for Auto-Detected Required Fields --- 
+            // Update to include 'currency' as a field needing unique auto-assignment
+            const uniqueAutoAssignFields: MappedFieldType[] = ['date', 'amount', 'description', 'currency'];
+            uniqueAutoAssignFields.forEach(fieldType => {
+                let foundFirst = false;
+                Object.keys(initialMappings).forEach(header => {
+                    if (initialMappings[header] === fieldType) {
+                        if (foundFirst) {
+                            initialMappings[header] = 'none'; // Reset subsequent matches
+                        } else {
+                            foundFirst = true; // Keep the first match
+                        }
+                    }
+                });
+            });
+            // --- End Uniqueness Enforcement ---
+
+            // --- Auto-detect Date Format from Preview --- 
+            let detectedDateFormat = commonDateFormats[1].value; // Default to yyyy-MM-dd
+            const dateHeader = Object.keys(initialMappings).find(h => initialMappings[h] === 'date');
+            if (dateHeader && result.previewRows.length > 0) {
+                const firstDateValue = String(result.previewRows[0][dateHeader] || '');
+                // Check for formats in our common list
+                if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/.test(firstDateValue)) {
+                    detectedDateFormat = commonDateFormats[0].value; // yyyy-MM-dd HH:mm:ss
+                } else if (/^\d{4}-\d{2}-\d{2}$/.test(firstDateValue)) {
+                     detectedDateFormat = commonDateFormats[1].value; // yyyy-MM-dd
+                 } else if (/^\d{2}\/\d{2}\/\d{4}/.test(firstDateValue)) {
+                     detectedDateFormat = commonDateFormats[2].value; // MM/dd/yyyy
+                 } else if (/^\d{2}\/\d{2}\/\d{4}/.test(firstDateValue)) {
+                     detectedDateFormat = commonDateFormats[3].value; // dd/MM/yyyy
+                 } else if (/^\d{2}\.\d{2}\.\d{4}/.test(firstDateValue)) {
+                     detectedDateFormat = commonDateFormats[4].value; // dd.MM.yyyy
+                 } else if (/^\d{4}\/\d{2}\/\d{2}/.test(firstDateValue)) {
+                     detectedDateFormat = commonDateFormats[5].value; // yyyy/MM/dd
+                 }
+                 // Add more sophisticated detection if needed
             }
+            // --- End Auto-detect --- 
+
+            setConfig(prev => ({
+                 ...prev, 
+                 mappings: initialMappings, 
+                 delimiter: result.detectedDelimiter || prev.delimiter, 
+                 dateFormat: detectedDateFormat // Pre-select the detected format
+            }));
+
         } catch (error: any) {
+            console.error("Error during analysis fetch:", error);
             setFeedback({ type: 'error', message: `Analysis Error: ${error.message}` });
-            setAnalysisResult(null); // Clear results on error
+            setAnalysisResult(null); 
         } finally {
-            setIsLoading(false);
+            console.log("handleAnalyze finished");
+            setIsProcessing(false);
         }
     };
 
-    const handleConfigChange = (field: keyof ImportConfig | `mappings.${keyof ImportConfig['mappings']}` , value: string | number) => {
+    const handleConfigChange = (field: keyof Omit<ImportConfig, 'mappings' | 'bankAccountId'>, value: string | number) => {
         setConfig(prev => {
-            let updatedConfig = { ...prev };
-
-            if (field.startsWith('mappings.')) {
-                const mappingField = field.split('.')[1] as keyof ImportConfig['mappings'];
-                // Update nested mapping field
-                updatedConfig = {
-                    ...prev,
-                    mappings: {
-                        ...prev.mappings, // Spread previous mappings first
-                        [mappingField]: String(value) // Override specific field
-                    }
-                };
-            } else if (field === 'skipRows') {
+            const updatedConfig = { ...prev, mappings: { ...prev.mappings } }; // Ensure mappings is copied
+             if (field === 'skipRows') {
                 updatedConfig[field] = Number(value);
             } else {
-                // Handle other top-level fields (bankAccountId, dateFormat, amountFormat, signColumn, delimiter)
-                // Need to cast field to keyof ConfigState for type safety
-                updatedConfig[field as keyof Omit<ImportConfig, 'mappings'>] = String(value) as any; // Use `as any` carefully or refine types
+                // Explicitly cast field to the correct type excluding mappings and bankAccountId
+                 updatedConfig[field as keyof Omit<ConfigState, 'mappings' | 'bankAccountId'>] = String(value) as any;
             }
-            
-            // Reset signColumn
             if (field === 'amountFormat' && value !== 'sign_column') {
                 updatedConfig.signColumn = undefined;
             }
-            
             return updatedConfig;
+        });
+    };
+
+    // New handler for mapping changes directly from the table header
+    const handleMappingChange = (csvHeader: string, fieldType: MappedFieldType) => {
+        setConfig(prevConfig => {
+            const newMappings = { ...prevConfig.mappings };
+
+            // If assigning a unique field (date, amount, description, currency), ensure it's unique
+            // Updated list to include 'currency'
+            const uniqueFields: MappedFieldType[] = ['date', 'amount', 'description', 'currency'];
+            if (uniqueFields.includes(fieldType)) {
+                // Find if any other header is currently mapped to this fieldType
+                const currentHeaderForField = Object.keys(newMappings).find(
+                    header => newMappings[header] === fieldType
+                );
+                // If another header has this mapping, set it back to 'none'
+                if (currentHeaderForField && currentHeaderForField !== csvHeader) {
+                    newMappings[currentHeaderForField] = 'none';
+                }
+            }
+            
+            // Update the mapping for the current header
+            newMappings[csvHeader] = fieldType;
+            
+            return { ...prevConfig, mappings: newMappings };
         });
     };
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        if (!file || !analysisResult || !token || !config.bankAccountId || !config.mappings?.date || !config.mappings?.amount || !config.mappings?.description || !config.dateFormat || !config.amountFormat) {
-            setFeedback({ type: 'error', message: 'Please upload a file, ensure analysis is complete, and fill all required configuration fields.' });
+        
+         // Check session status before making request
+        if (sessionStatus !== 'authenticated') {
+            console.error('Import stopped: User not authenticated.');
+            setFeedback({ type: 'error', message: 'You must be logged in to import files.'});
             return;
         }
+        
+        // --- Validation --- 
+        let apiMappings: { date?: string; amount?: string; description?: string; currency?: string } = {};
+        let requiredFieldsFound = { date: false, amount: false, description: false };
+        let mappingErrors: string[] = [];
 
-        setIsLoading(true);
+        if (config.mappings) {
+            for (const header in config.mappings) {
+                const fieldType = config.mappings[header];
+                if (fieldType !== 'none') {
+                    // Check uniqueness only for required fields
+                    const isRequiredField = requiredFieldsFound.hasOwnProperty(fieldType);
+                    
+                    if (apiMappings[fieldType as keyof typeof apiMappings]) {
+                        // If it's a required field OR the optional field we care about (currency), and it's already mapped, error.
+                        // Allow other optional fields to be mapped multiple times if needed in the future, but currency should ideally be unique or first-wins.
+                        if (isRequiredField || fieldType === 'currency') { 
+                            mappingErrors.push(`Field '${fieldType}' is mapped to multiple columns ('${apiMappings[fieldType as keyof typeof apiMappings]}' and '${header}'). Consider mapping only one or skipping duplicates.`);
+                            // Don't assign the duplicate for required fields or currency
+                            continue; // Skip assignment for this duplicate header
+                        }
+                        // If it's another optional field type in the future, we might allow multiple mappings
+                        // For now, just skip assigning duplicates without erroring.
+
+                    } else {
+                        // Assign the header if the field type slot is empty
+                        apiMappings[fieldType as keyof typeof apiMappings] = header;
+                        if (isRequiredField) {
+                            requiredFieldsFound[fieldType as keyof typeof requiredFieldsFound] = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!requiredFieldsFound.date) mappingErrors.push("A column must be mapped to 'date'.");
+        if (!requiredFieldsFound.amount) mappingErrors.push("A column must be mapped to 'amount'.");
+        if (!requiredFieldsFound.description) mappingErrors.push("A column must be mapped to 'description'.");
+
+        // Other validations
+        if (!file || !analysisResult || !selectedAccountIdOrNewName || !config.dateFormat || !config.amountFormat) {
+            mappingErrors.push("Please select a file, account, date format, and amount format.");
+        }
+        if (config.amountFormat === 'sign_column' && !config.signColumn) {
+             mappingErrors.push("Sign Column must be selected when Amount Format is 'Separate Sign Column'.");
+        }
+        // Make sure signColumn is one of the headers if needed
+        if (config.amountFormat === 'sign_column' && config.signColumn && !analysisResult?.headers.includes(config.signColumn)) {
+             mappingErrors.push(`Selected Sign Column '${config.signColumn}' not found in CSV headers.`);
+        }
+        
+        if (mappingErrors.length > 0) {
+            setFeedback({ type: 'error', message: `Configuration errors: ${mappingErrors.join(' ')}` });
+            return;
+        }
+        // --- End Validation ---
+
+        setIsProcessing(true);
         setFeedback(null);
-
-        const submitConfig: ImportConfig = {
-            bankAccountId: config.bankAccountId!,
-            mappings: {
-                date: config.mappings.date!,
-                amount: config.mappings.amount!,
-                description: config.mappings.description!,
-                currency: config.mappings.currency,
-            },
-            dateFormat: config.dateFormat!,
-            amountFormat: config.amountFormat!,
-            signColumn: config.amountFormat === 'sign_column' ? config.signColumn : undefined,
-            skipRows: Number(config.skipRows || 0),
-            delimiter: config.delimiter || undefined, 
-        };
-
-        const importData = new FormData();
-        importData.append('file', file);
-        importData.append('config', JSON.stringify(submitConfig));
+        let targetAccountId = '';
 
         try {
-            const response = await fetch('/api/transactions/import', { // Use relative path
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: importData,
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                // Provide more specific feedback if available
-                const errorDetails = result.details ? ` Details: ${JSON.stringify(result.details)}` : '';
-                throw new Error(result.error || 'Import failed' + errorDetails);
+            // Check if selected value is an existing ID or a new name
+            const existingAccount = bankAccounts.find(acc => acc.id === selectedAccountIdOrNewName);
+            
+            if (existingAccount) {
+                targetAccountId = existingAccount.id;
+                console.log(`Using existing account ID: ${targetAccountId}`);
+            } else {
+                // Assume it's a new name, try to create it
+                const newAccountName = selectedAccountIdOrNewName.trim();
+                if (!newAccountName) {
+                    throw new Error("Bank account name cannot be empty.");
+                }
+                console.log(`Attempting to create new account: ${newAccountName}`);
+                const createResponse = await fetch('/api/bank-accounts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newAccountName })
+                });
+                const createResult = await createResponse.json();
+                if (!createResponse.ok) {
+                    throw new Error(createResult.error || 'Failed to create bank account');
+                }
+                targetAccountId = createResult.bankAccount.id;
+                console.log(`New account created with ID: ${targetAccountId}`);
+                // Add to local list and re-select it for UI consistency (optional but nice)
+                setBankAccounts(prev => [...prev, createResult.bankAccount]);
+                setSelectedAccountIdOrNewName(targetAccountId); 
             }
 
-            setFeedback({ type: 'success', message: result.message || 'Import successful!' });
-            // Optionally clear form/file after successful import
-            setFile(null);
-            setAnalysisResult(null);
+            // Construct the final config for the API using validated mappings
+            const submitConfig: Omit<ImportConfig, 'mappings' | 'bankAccountId'> & { bankAccountId: string; mappings: Required<Pick<typeof apiMappings, 'date' | 'amount' | 'description'>> & Pick<typeof apiMappings, 'currency'> } = {
+                bankAccountId: targetAccountId,
+                mappings: {
+                    date: apiMappings.date!,
+                    amount: apiMappings.amount!,
+                    description: apiMappings.description!,
+                    currency: apiMappings.currency,
+                },
+                dateFormat: config.dateFormat!,
+                amountFormat: config.amountFormat!,
+                signColumn: config.amountFormat === 'sign_column' ? config.signColumn : undefined,
+                skipRows: Number(config.skipRows || 0),
+                delimiter: config.delimiter || undefined,
+            };
+
+            const importData = new FormData();
+            // Add explicit check for file to satisfy TypeScript
+            if (file) {
+                importData.append('file', file);
+            } else {
+                // Should not happen due to validation, but handle defensively
+                throw new Error("File became unavailable during submission process.");
+            }
+            importData.append('config', JSON.stringify(submitConfig));
+
+            console.log(`Submitting import for account ID: ${targetAccountId}`);
+            const importResponse = await fetch('/api/transactions/import', { 
+                method: 'POST', body: importData,
+            });
+            const importResult = await importResponse.json();
+            if (!importResponse.ok) {
+                 if (importResponse.status === 401 || importResponse.status === 403) { throw new Error('Unauthorized.'); }
+                const errorDetails = importResult.details ? ` Details: ${JSON.stringify(importResult.details)}` : '';
+                throw new Error(importResult.error || 'Import failed' + errorDetails);
+            }
+            setFeedback({ type: 'success', message: importResult.message || 'Import successful!' });
+            // Reset form, including mappings
+            setFile(null); setAnalysisResult(null); setSelectedAccountIdOrNewName("");
             setConfig({
-                mappings: { date: '', amount: '', description: '' }, 
-                dateFormat: 'YYYY-MM-DD', 
+                mappings: {}, // Reset mappings
+                dateFormat: commonDateFormats[1].value, 
                 amountFormat: 'standard', 
                 skipRows: 0,
-                bankAccountId: undefined, // Clear selected account
-                signColumn: undefined,
+                signColumn: undefined, 
                 delimiter: undefined
-            });
+             });
         } catch (error: any) {
-            setFeedback({ type: 'error', message: `Import Error: ${error.message}` });
+            setFeedback({ type: 'error', message: `Operation Failed: ${error.message}` });
         } finally {
-            setIsLoading(false);
+            setIsProcessing(false);
         }
     };
 
+    // Render loading state or content based on session status
+    if (sessionStatus === 'loading') {
+        return (
+            <div className="container mx-auto p-4 flex justify-center items-center min-h-[300px]">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <span className="ml-2">Loading session...</span>
+            </div>
+        );
+    }
+    
+    // Optional: Redirect or show message if not authenticated
+    // You might want a more robust way to handle this, e.g., redirecting in middleware
+    if (sessionStatus === 'unauthenticated') {
+         return (
+            <div className="container mx-auto p-4">
+                <Alert variant="destructive">
+                    <AlertTitle>Not Authenticated</AlertTitle>
+                    <AlertDescription>Please log in to import transactions.</AlertDescription>
+                 </Alert>
+            </div>
+        ); 
+     }
+
+    // Main component render when authenticated
     return (
         <div className="container mx-auto p-4 space-y-6">
             <h1 className="text-2xl font-bold">Import Transactions from CSV</h1>
 
             {/* Feedback Area */}
-            {feedback && (
+             {feedback && (
                 <Alert variant={feedback.type === 'error' ? 'destructive' : 'default'}>
                     <AlertTitle>{feedback.type === 'error' ? 'Error' : 'Success'}</AlertTitle>
                     <AlertDescription>{feedback.message}</AlertDescription>
@@ -244,84 +471,113 @@ const ImportTransactionsPage: React.FC = () => {
                     <CardDescription>Select the CSV file containing your bank transactions.</CardDescription>
                 </CardHeader>
                 <CardContent>
+                    {/* isLoading combines session and processing state */}
                     <Input type="file" accept=".csv" onChange={handleFileChange} disabled={isLoading} />
                 </CardContent>
             </Card>
 
-            {isLoading && (
+            {/* Spinner only shows for processing, not initial session load */}
+            {isProcessing && (
                 <div className="flex justify-center items-center p-4">
                     <Loader2 className="h-8 w-8 animate-spin" />
                     <span className="ml-2">Processing...</span>
                 </div>
             )}
 
-            {analysisResult && (
+            {/* Config form only shows if analysis is done (implicitly authenticated already) */}
+            {sessionStatus === 'authenticated' && analysisResult && (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    <Card>
+                     <Card>
                         <CardHeader>
-                            <CardTitle>Step 2: Configure Import</CardTitle>
-                            <CardDescription>Map the columns from your CSV file and specify formats.</CardDescription>
+                            <CardTitle>Step 2: Configure Import Settings</CardTitle>
+                            <CardDescription>Select target account, formats, and map columns in the preview table below.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {/* Bank Account Selection */}
+                            {/* Bank Account Combobox */}
                             <div>
                                 <Label htmlFor="bankAccount">Target Bank Account *</Label>
-                                <Select 
-                                    onValueChange={(value) => handleConfigChange('bankAccountId', value)}
-                                    value={config.bankAccountId || ''}
-                                    required
-                                >
-                                    <SelectTrigger id="bankAccount">
-                                        <SelectValue placeholder="Select account..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {bankAccounts.map(acc => (
-                                            <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Column Mappings */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {['date', 'amount', 'description', 'currency'].map(field => (
-                                    <div key={field}>
-                                        <Label htmlFor={`map-${field}`}>Map "{field}"{field !== 'currency' ? ' *' : ' (Optional)'}</Label>
-                                        <Select 
-                                            onValueChange={(value) => handleConfigChange(`mappings.${field as keyof ImportConfig['mappings']}`, value)}
-                                            value={config.mappings?.[field as keyof ImportConfig['mappings']] || ''}
-                                            required={field !== 'currency'}
+                                <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={comboboxOpen}
+                                            className="w-full justify-between mt-1"
+                                            disabled={isLoading}
                                         >
-                                            <SelectTrigger id={`map-${field}`}>
-                                                <SelectValue placeholder="Select CSV column..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {analysisResult.headers.map(header => (
-                                                    <SelectItem key={header} value={header}>{header}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                ))}
+                                            {selectedAccountIdOrNewName
+                                                ? bankAccounts.find((acc) => acc.id === selectedAccountIdOrNewName)?.name ?? selectedAccountIdOrNewName
+                                                : "Select or create account..."}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <Command>
+                                            <CommandInput 
+                                                placeholder="Search account or type name..." 
+                                                value={selectedAccountIdOrNewName && !bankAccounts.find(a => a.id === selectedAccountIdOrNewName) ? selectedAccountIdOrNewName : ''} // Show typed value if it's not an ID
+                                                onValueChange={setSelectedAccountIdOrNewName} // Allow typing new name
+                                            />
+                                            <CommandList>
+                                                <CommandEmpty>No account found. Type name to create.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {bankAccounts.map((account) => (
+                                                        <CommandItem
+                                                            key={account.id}
+                                                            value={account.id} // Use ID as value for selection
+                                                            onSelect={(currentValue) => {
+                                                                // currentValue here is the account.id
+                                                                setSelectedAccountIdOrNewName(currentValue === selectedAccountIdOrNewName ? "" : currentValue);
+                                                                setComboboxOpen(false);
+                                                            }}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    selectedAccountIdOrNewName === account.id ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {account.name}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
 
                             {/* Format Settings */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Date Format Select (Replaced Input) */}
                                 <div>
                                     <Label htmlFor="dateFormat">Date Format *</Label>
-                                    <Input 
-                                        id="dateFormat" 
-                                        value={config.dateFormat || ''} 
-                                        onChange={e => handleConfigChange('dateFormat', e.target.value)} 
-                                        placeholder="e.g., YYYY-MM-DD, MM/DD/YYYY"
-                                        required 
-                                    />
-                                    <p className="text-sm text-muted-foreground">Use YYYY, MM, DD. Example: DD.MM.YYYY</p>
+                                    <Select
+                                        value={config.dateFormat || ''}
+                                        onValueChange={(value) => handleConfigChange('dateFormat', value)} // Use handleConfigChange
+                                        required
+                                    >
+                                        <SelectTrigger id="dateFormat">
+                                            <SelectValue placeholder="Select date format..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {commonDateFormats.map(format => (
+                                                <SelectItem key={format.value} value={format.value}>
+                                                    {format.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-sm text-muted-foreground">
+                                        Select the format matching the date column in your file.
+                                    </p>
                                 </div>
+                                
+                                {/* Amount Format Select */}
                                 <div>
                                     <Label htmlFor="amountFormat">Amount Format *</Label>
                                     <Select 
-                                        onValueChange={(value) => handleConfigChange('amountFormat', value)}
+                                        onValueChange={(value) => handleConfigChange('amountFormat', value as any)}
                                         value={config.amountFormat || ''}
                                         required
                                     >
@@ -329,12 +585,14 @@ const ImportTransactionsPage: React.FC = () => {
                                             <SelectValue placeholder="Select amount format..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="standard">Standard (e.g., 100.00, -50.00)</SelectItem>
-                                            <SelectItem value="negate">Negate all values (e.g., Expenses are 50.00)</SelectItem>
+                                            <SelectItem value="standard">Standard</SelectItem>
+                                            <SelectItem value="negate">Negate all</SelectItem>
                                             <SelectItem value="sign_column">Separate Sign Column</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
+                                
+                                {/* Sign Column Select (Conditional) */}
                                 {config.amountFormat === 'sign_column' && (
                                     <div>
                                         <Label htmlFor="signColumn">Sign Column *</Label>
@@ -386,8 +644,8 @@ const ImportTransactionsPage: React.FC = () => {
                     {/* Preview Table */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Preview Data</CardTitle>
-                            <CardDescription>First {analysisResult.previewRows.length} rows from your file.</CardDescription>
+                            <CardTitle>Step 3: Preview Data & Map Columns</CardTitle>
+                            <CardDescription>Review the first {analysisResult.previewRows.length} rows and assign 'Date', 'Amount', and 'Description' columns.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="overflow-x-auto">
@@ -395,7 +653,25 @@ const ImportTransactionsPage: React.FC = () => {
                                     <TableHeader>
                                         <TableRow>
                                             {analysisResult.headers.map(header => (
-                                                <TableHead key={header}>{header}</TableHead>
+                                                <TableHead key={header} className="whitespace-nowrap align-top pt-2 px-2">
+                                                    <div className="font-semibold mb-1">{header}</div>
+                                                     {/* Mapping Select for this column */}
+                                                    <Select 
+                                                        value={config.mappings[header] || 'none'} 
+                                                        onValueChange={(value) => handleMappingChange(header, value as MappedFieldType)} 
+                                                    >
+                                                        <SelectTrigger className="h-8 text-xs">
+                                                            <SelectValue placeholder="Map column..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="none">- Skip Column -</SelectItem>
+                                                            <SelectItem value="date">Map to: Date *</SelectItem>
+                                                            <SelectItem value="amount">Map to: Amount *</SelectItem>
+                                                            <SelectItem value="description">Map to: Description *</SelectItem>
+                                                            <SelectItem value="currency">Map to: Currency</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </TableHead>
                                             ))}
                                         </TableRow>
                                     </TableHeader>
@@ -403,7 +679,9 @@ const ImportTransactionsPage: React.FC = () => {
                                         {analysisResult.previewRows.map((row, index) => (
                                             <TableRow key={index}>
                                                 {analysisResult.headers.map(header => (
-                                                    <TableCell key={header}>{String(row[header])}</TableCell>
+                                                    <TableCell key={header} className="py-1 px-2 text-sm whitespace-nowrap">
+                                                        {String(row[header])}
+                                                    </TableCell>
                                                 ))}
                                             </TableRow>
                                         ))}

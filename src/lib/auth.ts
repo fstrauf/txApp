@@ -1,20 +1,14 @@
-import { NextAuthOptions } from "next-auth";
+import { NextAuthOptions, User as NextAuthUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { compare } from "bcryptjs";
 import { db } from "@/db";
 import * as schema from "@/db/schema"; // Import all schemas
 import { sql } from "drizzle-orm";
-import { JWT } from "next-auth/jwt";
 import * as bcrypt from 'bcryptjs';
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 
-// Define a type for our User
-interface User {
-  id: string;
-  email: string | null;
-  name: string | null;
-}
+// No longer need custom AuthorizeUser with accessToken
 
 // Simplified auth configuration with direct SQL queries
 export const authConfig: NextAuthOptions = {
@@ -37,86 +31,50 @@ export const authConfig: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      // Simplify authorize: Only verify DB password
+      async authorize(credentials): Promise<NextAuthUser | null> { 
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
         try {
-          console.log(`Authenticating: ${credentials.email}`);
+          console.log(`[Authorize] Authenticating user: ${credentials.email}`);
           
-          // First try the users table (new schema)
           const usersResult = await db.execute(
             sql`SELECT * FROM users WHERE email = ${credentials.email} LIMIT 1`
           );
           
-          if (usersResult.rows.length > 0) {
-            const user = usersResult.rows[0];
-            
-            // Ensure password is a string
-            if (typeof user.password !== 'string' || !user.password) {
-              console.log(`[Authorize] Invalid password format for user in users table: ${credentials.email}`);
-              return null;
-            }
-            
-            console.log(`[Authorize] Attempting to verify password for: ${credentials.email}`);
-            console.log(`[Authorize] Provided password length: ${credentials.password.length}`);
-            console.log(`[Authorize] Stored hash length: ${user.password.length}`);
-            console.log(`[Authorize] Stored hash (first 5): ${user.password.substring(0, 5)}`);
-
-            const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
-            console.log(`[Authorize] Password verification result (direct compare): ${isPasswordValid}`);
-            
-            if (!isPasswordValid) {
-              console.log(`[Authorize] Invalid password for user in users table (direct compare): ${credentials.email}`);
-              return null;
-            }
-
-            console.log(`User authenticated successfully from users table: ${credentials.email}`);
-            
-            // Return a properly typed user object
-            return {
-              id: String(user.id),
-              email: typeof user.email === 'string' ? user.email : null,
-              name: typeof user.name === 'string' ? user.name : null
-            };
+          if (usersResult.rows.length === 0) {
+             console.log(`[Authorize] User not found: ${credentials.email}`);
+             return null;
           }
-          
-          // If not found in users table, try the User table (legacy schema)
-          const userResult = await db.execute(
-            sql`SELECT * FROM "User" WHERE email = ${credentials.email} LIMIT 1`
-          ).catch(() => ({ rows: [] })); // Handle table not existing
-          
-          if (userResult.rows.length === 0) {
-            console.log(`User not found in any table: ${credentials.email}`);
+
+          const user = usersResult.rows[0];
+            
+          if (typeof user.password !== 'string' || !user.password) {
+            console.log(`[Authorize] Invalid password format for user: ${credentials.email}`);
             return null;
           }
-          
-          const rawUser = userResult.rows[0];
-          
-          // Ensure password is a string
-          if (typeof rawUser.password !== 'string' || !rawUser.password) {
-            console.log(`Invalid password format for user in User table: ${credentials.email}`);
-            return null;
-          }
-          
-          const isPasswordValid = await compare(credentials.password, rawUser.password);
-          
+            
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+          console.log(`[Authorize] Password verification result: ${isPasswordValid}`);
+            
           if (!isPasswordValid) {
-            console.log(`Invalid password for user in User table: ${credentials.email}`);
+            console.log(`[Authorize] Invalid password for user: ${credentials.email}`);
             return null;
           }
 
-          console.log(`User authenticated successfully from User table: ${credentials.email}`);
+          console.log(`[Authorize] User authenticated successfully (DB only): ${credentials.email}`);
           
-          // Return a properly typed user object
+          // Return standard user object (no accessToken)
           return {
-            id: String(rawUser.id),
-            email: typeof rawUser.email === 'string' ? rawUser.email : null,
-            name: typeof rawUser.name === 'string' ? rawUser.name : null
+            id: String(user.id),
+            email: typeof user.email === 'string' ? user.email : null,
+            name: typeof user.name === 'string' ? user.name : null
           };
+
         } catch (error) {
-          console.error("Auth error:", error);
+          console.error("[Authorize] Error:", error);
           return null;
         }
       },
@@ -129,13 +87,19 @@ export const authConfig: NextAuthOptions = {
     signIn: "/auth/signin",
   },
   callbacks: {
+    // Simplify session callback: Just add user ID
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
       }
+      // Removed accessToken logic
+      console.log("[Session Callback] Returning session:", session);
       return session;
     },
-    async jwt({ token }) {
+    // Simplify jwt callback: No need to handle accessToken
+    async jwt({ token, user }) {
+      // Basic JWT logic (sub is added automatically)
+      console.log("[JWT Callback] Returning token:", token);
       return token;
     },
   },

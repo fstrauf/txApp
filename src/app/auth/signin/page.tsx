@@ -11,7 +11,11 @@ export const metadata: Metadata = {
   description: "Sign in to your ExpenseSorted account",
 };
 
-export default async function SignInPage() {
+interface SignInPageProps {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+export default async function SignInPage({ searchParams }: SignInPageProps) {
   // Check if user is already signed in
   const session = await getServerSession(authConfig);
   
@@ -19,6 +23,10 @@ export default async function SignInPage() {
   if (session?.user) {
     redirect("/");
   }
+
+  const callbackUrl = typeof searchParams?.callbackUrl === 'string' 
+                        ? searchParams.callbackUrl 
+                        : '/'; // Default callback URL
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-12 sm:px-6 lg:px-8 bg-white">
@@ -39,7 +47,7 @@ export default async function SignInPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white px-4 py-8 shadow-md sm:rounded-lg sm:px-10">
-          <SignInForm />
+          <SignInForm callbackUrl={callbackUrl} />
           
           <div className="mt-6">
             <div className="relative">
