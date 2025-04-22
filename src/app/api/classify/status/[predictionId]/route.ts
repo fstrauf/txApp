@@ -91,17 +91,19 @@ export async function GET(
         });
       }
       
-      // If this is a common 500 error with job context missing, interpret as completed
+      // If this is a common 500 error with job context missing, interpret as completed BUT indicate results missing
       if (responseData.code === 500 && responseData.error === 'Job context missing or invalid after prediction success') {
-        console.log('Detected common "job context missing after success" error, assuming job completed');
+        console.log('Detected common "job context missing after success" error, assuming job completed but results lost.');
+        // Return a specific status or error indicating results are unavailable
         return NextResponse.json({
-          status: 'completed',
-          message: 'Classification likely completed successfully but context was cleaned up',
-          results: []
-        });
+          status: 'error', // Indicate an error state for the frontend
+          error: 'Classification completed, but results could not be retrieved.',
+          message: 'The prediction service cleaned up the results too quickly. Please try again or categorize manually.',
+          code: 'RESULTS_UNAVAILABLE' // Custom code for frontend handling
+        }, { status: 200 }); // Return 200 OK but with error details in body
       }
       
-      // Otherwise return the error
+      // Otherwise return the original error
       return NextResponse.json(responseData, { status: 500 });
     }
 

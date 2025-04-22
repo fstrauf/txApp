@@ -652,21 +652,25 @@ export default function TransactionList() {
         const result = await response.json();
         console.log("Status response (from proxy):", result);
 
-        if (result.status === "completed") {
-          setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`);
-          setProgressPercent(100);
-          setToastMessage({ message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`, type: 'success' });
-          setTimeout(() => { setOperationInProgress(false); setOperationType('none'); }, 2000);
-          return { status: 'completed', results: result.results || result.config?.results || [], message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!` };
-        } else if (result.status === "failed") {
-          const errorMessage = result.error || result.message || 'Unknown error';
+        // Check for explicit 'error' status from our API route or 'failed' from external service
+        if (result.status === "failed" || result.status === "error") {
+          const errorMessage = result.error || result.message || 'Unknown error during categorization';
           setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} failed: ${errorMessage}`);
           setToastMessage({ message: `${type === 'training' ? 'Training' : 'Categorization'} failed: ${errorMessage}`, type: 'error' });
           setOperationInProgress(false);
           setOperationType('none');
           return { status: 'failed', error: errorMessage };
+        } else if (result.status === "completed") {
+          setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`);
+          setProgressPercent(100);
+          setToastMessage({ message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`, type: 'success' });
+          setTimeout(() => { setOperationInProgress(false); setOperationType('none'); }, 2000);
+          // Ensure results are passed correctly, handling potential nested structure
+          const classificationResults = result.results || result.config?.results || [];
+          return { status: 'completed', results: classificationResults, message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!` };
         }
-
+        
+        // If status is still 'processing' or something else, update message and continue polling
         let statusMessage = `${type === 'training' ? 'Training' : 'Categorization'} in progress...`;
         if (result.message) statusMessage += ` ${result.message}`;
         setProgressMessage(statusMessage);
