@@ -1,0 +1,2 @@
+ALTER TABLE "embeddings" ADD COLUMN "userId" text;--> statement-breakpoint
+ALTER TABLE "embeddings" ADD CONSTRAINT "embeddings_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;

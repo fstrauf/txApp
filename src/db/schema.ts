@@ -294,6 +294,7 @@ export const embeddings = pgTable('embeddings', {
   updated_at: timestamp('updated_at', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()),
   embedding_id: text('embedding_id').unique().notNull(),
   accountId: text('accountId').references(() => accounts.id),
+  userId: text('userId').references(() => users.id),
 });
 
 export const webhookResults = pgTable('webhookResults', {

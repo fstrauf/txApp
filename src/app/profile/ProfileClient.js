@@ -25,15 +25,31 @@ export default function ProfileClient({ user: initialUser }) {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch('/api/user/profile', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        // First attempt without authorization header (relies on session cookies)
+        let response = await fetch('/api/user/profile');
+        
+        // If that fails with 401, try with the auth token from localStorage
+        if (response.status === 401) {
+          const authToken = localStorage.getItem('authToken');
+          if (authToken) {
+            response = await fetch('/api/user/profile', {
+              headers: {
+                'Authorization': `Bearer ${authToken}`
+              }
+            });
           }
-        });
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || 'Failed to fetch profile data');
         }
+        
+        if (!response.ok) {
+          if (response.headers.get('content-type')?.includes('application/json')) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to fetch profile data');
+          } else {
+            const text = await response.text();
+            throw new Error(`Failed to fetch profile data: ${text}`);
+          }
+        }
+        
         const data = await response.json();
         setUser(data.user);
       } catch (err) {
@@ -49,6 +65,7 @@ export default function ProfileClient({ user: initialUser }) {
   }, [user?.subscription]);
 
   const handleLogout = async () => {
+    localStorage.removeItem('authToken'); // Clear the token on logout
     await signOut({ callbackUrl: '/' });
   };
 
@@ -56,12 +73,31 @@ export default function ProfileClient({ user: initialUser }) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/user/profile', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+      // First attempt without authorization header (relies on session cookies)
+      let response = await fetch('/api/user/profile');
+      
+      // If that fails with 401, try with the auth token from localStorage
+      if (response.status === 401) {
+        const authToken = localStorage.getItem('authToken');
+        if (authToken) {
+          response = await fetch('/api/user/profile', {
+            headers: {
+              'Authorization': `Bearer ${authToken}`
+            }
+          });
         }
-      });
-      if (!response.ok) throw new Error('Failed to refresh profile data');
+      }
+      
+      if (!response.ok) {
+        if (response.headers.get('content-type')?.includes('application/json')) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to refresh profile data');
+        } else {
+          const text = await response.text();
+          throw new Error(`Failed to refresh profile data: ${text}`);
+        }
+      }
+      
       const data = await response.json();
       setUser(data.user);
     } catch (err) {
