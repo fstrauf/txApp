@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Button } from '@/components/ui/button'; // Assuming you have a Button component
+import { Button } from '@/components/ui/button'; // Correct import path
 
 interface SubscriptionCancellationProps {
   // Pass any necessary props, e.g., if you need to update parent state on success
@@ -77,7 +77,7 @@ export function SubscriptionCancellation({
       <Button
         onClick={handleCancelSubscription}
         disabled={isLoading}
-        variant="destructive"
+        className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
       >
         {isLoading ? 'Cancelling...' : 'Cancel Subscription'}
       </Button>

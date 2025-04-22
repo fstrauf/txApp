@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -186,7 +186,7 @@ export function ResetPasswordForm() {
               <div className="mt-6">
                 <Button
                   onClick={() => router.push("/auth/signin")}
-                  className="w-full bg-blue-600 text-white hover:bg-blue-700 py-2 px-4 rounded-md"
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Sign In
                 </Button>
@@ -197,9 +197,7 @@ export function ResetPasswordForm() {
                   <p className="text-xs text-gray-700 mb-2">Development testing options:</p>
                   <Button
                     onClick={() => window.open("/test", "_blank")}
-                    className="w-full mb-2 text-xs"
-                    variant="outline"
-                    size="sm"
+                    className="w-full mb-2 text-xs flex justify-center py-1 px-2 border border-gray-300 rounded-md shadow-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     Go to Test Login Page
                   </Button>
@@ -275,7 +273,7 @@ export function ResetPasswordForm() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 text-white hover:bg-blue-700 py-2 px-4 rounded-md"
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed"
             >
               {isLoading ? "Resetting password..." : "Reset Password"}
             </Button>
