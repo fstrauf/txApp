@@ -1,6 +1,6 @@
 import React from 'react';
 import { ImportStatus } from '../types';
-
+import HelpTooltip from '@/components/shared/HelpTooltip';
 type CategorizationControlsProps = {
   pendingCategoryUpdates: Record<string, {categoryId: string, score: number}>;
   applyingAll: boolean;
@@ -20,11 +20,9 @@ export default function CategorizationControls({
   pendingCategoryUpdates,
   applyingAll,
   applyAllPredictedCategories,
-  handleImportTransactions,
   handleTrainSelected,
   handleCategorizeSelected,
   selectedTransactionsCount,
-  loading,
   operationInProgress,
   importStatus,
   importMessage,
@@ -42,6 +40,7 @@ export default function CategorizationControls({
         >
           Train Selected ({selectedTransactionsCount})
         </button>
+        <HelpTooltip content="Train your custom model with all you transactions and correct categorisation. We recommend using as many transaction as possible here. A label will appear next to transactions that are included in the training set." />
         <button
           onClick={handleCategorizeSelected}
           disabled={selectedTransactionsCount === 0 || operationInProgress}
@@ -49,6 +48,7 @@ export default function CategorizationControls({
         >
           Categorize Selected ({selectedTransactionsCount})
         </button>
+        <HelpTooltip content="Automatically categorise transactions based on the training set. This will generate suggestions, that you can choose to apply." />
       </div>
 
       {importStatus !== 'idle' && (
