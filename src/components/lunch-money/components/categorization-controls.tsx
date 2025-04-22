@@ -36,13 +36,6 @@ export default function CategorizationControls({
     <div>
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={handleImportTransactions}
-          disabled={loading || selectedTransactionsCount === 0 || importStatus === 'importing' || operationInProgress}
-          className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg shadow-sm hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
-        >
-          {importStatus === 'importing' ? 'Importing...' : 'Import All to Database'}
-        </button>
-        <button
           onClick={handleTrainSelected}
           disabled={selectedTransactionsCount === 0 || operationInProgress}
           className="px-4 py-2 bg-primary text-white font-medium rounded-lg shadow-sm hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"

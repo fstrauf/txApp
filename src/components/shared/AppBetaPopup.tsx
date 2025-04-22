@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // Assuming you have an Input component
 
 const LOCAL_STORAGE_KEY = 'appBetaPopupInteracted';
 
@@ -162,19 +160,20 @@ export default function AppBetaPopup() {
               We're building an exciting new version of the app. Would you like to be notified when it's available for beta testing?
             </p>
             <div className="flex justify-end space-x-3">
-              <Button
-                variant="outline"
+              <button
                 onClick={() => handleUpdateStatus('DISMISSED')}
                 disabled={isLoading}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-themePrimary disabled:opacity-50"
               >
                 {isLoading ? '...' : 'No, Thanks'} 
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={() => handleUpdateStatus('OPTED_IN')}
                 disabled={isLoading}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-themePrimary hover:bg-themePrimary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-themePrimary disabled:opacity-50"
               >
                 {isLoading ? '...' : 'Yes, Notify Me!'}
-              </Button>
+              </button>
             </div>
           </>
         ) : emailSuccess ? (
@@ -186,25 +185,25 @@ export default function AppBetaPopup() {
              <h2 className="text-xl font-semibold mb-2">Get Notified!</h2>
              <p className="text-sm text-gray-600 mb-4">Enter your email to receive updates about the beta.</p>
              <div>
-                <Input
+                <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                   placeholder="your.email@example.com"
                   required
                   disabled={isSubmittingEmail}
-                  className="w-full"
+                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-themePrimary focus:border-themePrimary text-sm disabled:opacity-50"
                 />
                 {emailError && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
              </div>
              <div className="flex justify-end">
-                <Button
+                <button
                   type="submit"
                   disabled={isSubmittingEmail}
-                  className="w-full"
+                  className="w-full px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-themePrimary hover:bg-themePrimary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-themePrimary disabled:opacity-50"
                 >
                   {isSubmittingEmail ? 'Submitting...' : 'Submit Email'}
-                </Button>
+                </button>
             </div>
           </form>
         )}

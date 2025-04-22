@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { 
@@ -23,6 +23,7 @@ export default function TransactionList() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isApplyingDates, setIsApplyingDates] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const [pendingDateRange, setPendingDateRange] = useState<DateRange>({
@@ -51,6 +52,30 @@ export default function TransactionList() {
   const [pendingCategoryUpdates, setPendingCategoryUpdates] = useState<Record<string, {categoryId: string, score: number}>>({});
   const [applyingAll, setApplyingAll] = useState<boolean>(false);
   const [applyingIndividual, setApplyingIndividual] = useState<string | null>(null);
+
+  // Calculate transaction stats
+  const transactionStats = useMemo(() => {
+    let trainedCount = 0;
+    let uncategorizedCount = 0;
+
+    transactions.forEach(tx => {
+      // Check for 'Trained' tag
+      const hasTrainedTag = tx.tags?.some(tag => 
+        (typeof tag === 'string' && tag.toLowerCase() === 'trained') || 
+        (typeof tag === 'object' && tag.name?.toLowerCase() === 'trained')
+      );
+      if (hasTrainedTag) {
+        trainedCount++;
+      }
+
+      // Check if uncategorized (using originalData as the source of truth)
+      if (!tx.originalData?.category_id) { // Check if Lunch Money category ID is missing
+        uncategorizedCount++;
+      }
+    });
+
+    return { trainedCount, uncategorizedCount };
+  }, [transactions]);
 
   // Fetch transactions when component mounts
   useEffect(() => {
@@ -122,7 +147,6 @@ export default function TransactionList() {
   };
   
   const fetchTransactionsWithDates = async (dates: { startDate: string; endDate: string }) => {
-    setLoading(true);
     setError(null);
     
     console.log('Fetching with specific date range:', dates);
@@ -194,6 +218,7 @@ export default function TransactionList() {
       setError(error instanceof Error ? error.message : 'An error occurred while fetching transactions');
     } finally {
       setLoading(false);
+      setIsApplyingDates(false);
     }
   };
 
@@ -378,17 +403,10 @@ export default function TransactionList() {
   };
 
   const applyDateFilter = () => {
-    // Set the dateRange state first
-    const newDateRange = {
-      startDate: pendingDateRange.startDate,
-      endDate: pendingDateRange.endDate
-    };
-    
-    // Update state directly then fetch
-    setDateRange(newDateRange);
-    
-    // Call fetchTransactions with the new date range directly
-    fetchTransactionsWithDates(newDateRange);
+    console.log("Applying date filter with:", pendingDateRange);
+    setIsApplyingDates(true);
+    setDateRange(pendingDateRange);
+    fetchTransactionsWithDates(pendingDateRange);
   };
 
   const handleImportTransactions = async () => {
@@ -1216,12 +1234,15 @@ export default function TransactionList() {
           pendingDateRange={pendingDateRange}
           handleDateRangeChange={handleDateRangeChange}
           applyDateFilter={applyDateFilter}
-          operationInProgress={operationInProgress}
-          showOnlyUncategorized={showOnlyUncategorized}
-          setShowOnlyUncategorized={setShowOnlyUncategorized}
+          isApplying={isApplyingDates}
           showOnlyCategorized={showOnlyCategorized}
           setShowOnlyCategorized={setShowOnlyCategorized}
+          showOnlyUncategorized={showOnlyUncategorized}
+          setShowOnlyUncategorized={setShowOnlyUncategorized}
           pendingCategoryUpdates={pendingCategoryUpdates}
+          trainedCount={transactionStats.trainedCount}
+          uncategorizedCount={transactionStats.uncategorizedCount}
+          operationInProgress={operationInProgress}
         />
 
         {/* Action buttons and categorization results */}
