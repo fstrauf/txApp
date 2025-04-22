@@ -6,6 +6,8 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { users, bankAccounts, transactions, categories } from '@/db/schema';
 import { findUserByEmail, createId } from '@/db/utils';
 
+const LUNCH_MONEY_API_URL = 'https://dev.lunchmoney.app/v1/transactions';
+
 // Define interfaces for better type safety
 interface LunchMoneyTransaction {
   id: string | number;
@@ -13,9 +15,10 @@ interface LunchMoneyTransaction {
   payee?: string;
   original_name?: string;
   amount: string | number;
+  is_income?: boolean;
   notes?: string;
   category_name?: string;
-  tags?: string[];
+  tags?: Array<{id: number, name: string}> | string[];
   [key: string]: any; // Allow other properties
 }
 
@@ -25,12 +28,18 @@ interface FormattedTransaction {
   description: string;
   amount: number;
   type: 'income' | 'expense';
+  is_income: boolean;
   lunchMoneyCategory: string | null;
   notes: string;
-  tags: string[];
+  tags: Array<{id: number, name: string}>;
   originalData?: any;
   [key: string]: any; // Allow additional properties
 }
+
+// Helper to get date strings (e.g., YYYY-MM-DD)
+const getDateString = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
 
 // This function fetches transactions from the Lunch Money API
 async function fetchLunchMoneyTransactions(apiKey: string, startDate: string, endDate: string): Promise<LunchMoneyTransaction[]> {
@@ -64,19 +73,35 @@ function formatTransactions(transactions: LunchMoneyTransaction[]): FormattedTra
   }
   
   return transactions.map(tx => {
-    // Extract category information from Lunch Money
-    // Lunch Money provides category_name and category_id directly on the transaction object
     const lunchMoneyCategory = tx.category_name || null;
-    
+    const isIncome = tx.is_income === true;
+
+    // Standardize tags
+    let standardizedTags: Array<{id: number, name: string}> = [];
+    if (Array.isArray(tx.tags)) {
+      standardizedTags = tx.tags.map((tag, index) => {
+        if (typeof tag === 'string') {
+          // Assign a temporary ID if only name is provided
+          return { id: Date.now() + index, name: tag }; 
+        } else if (typeof tag === 'object' && tag !== null && tag.name) {
+          return { id: tag.id || Date.now() + index, name: tag.name };
+        } else {
+          // Handle potential unexpected tag format
+          return { id: Date.now() + index, name: 'Invalid Tag' };
+        }
+      });
+    }
+
     return {
       lunchMoneyId: tx.id.toString(),
       date: tx.date,
       description: tx.payee || tx.original_name || '',
-      amount: parseFloat(typeof tx.amount === 'string' ? tx.amount : tx.amount.toString()),
-      type: Number(tx.amount) < 0 ? 'expense' : 'income',
+      amount: parseFloat(typeof tx.amount === 'string' ? tx.amount : String(tx.amount || '0')),
+      type: isIncome ? 'income' : 'expense',
+      is_income: isIncome,
       lunchMoneyCategory,
       notes: tx.notes || '',
-      tags: tx.tags || [],  // Include tags from Lunch Money
+      tags: standardizedTags,
       originalData: tx
     };
   });
@@ -84,168 +109,78 @@ function formatTransactions(transactions: LunchMoneyTransaction[]): FormattedTra
 
 // GET handler to fetch transactions from Lunch Money
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authConfig);
+
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const userId = session.user.id;
+
   try {
-    const session = await getServerSession(authConfig);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    // 1. Get API Key
+    const userResult = await db
+      .select({ lunchMoneyApiKey: users.lunchMoneyApiKey })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const apiKey = userResult[0]?.lunchMoneyApiKey;
+
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Lunch Money API key not configured.' }, { status: 400 });
     }
-    
-    // Find user by email using the utility function
-    const user = await findUserByEmail(session.user.email!);
-    
-    if (!user?.lunchMoneyApiKey) {
-      return NextResponse.json({ error: 'Lunch Money API key not found' }, { status: 400 });
-    }
-    
-    const userId = user.id as string;
+
+    // 2. Get Date Parameters from Request URL
     const searchParams = request.nextUrl.searchParams;
-    
-    // If specific transaction IDs are provided, fetch those from the database
-    if (searchParams.has('ids')) {
-      const ids = searchParams.get('ids')!.split(',');
-      
-      // Escape and validate IDs to prevent SQL injection
-      const validatedIds = ids.filter(id => id.trim().length > 0).map(id => id.trim());
-      
-      // Only proceed if we have valid IDs
-      if (validatedIds.length === 0) {
-        return NextResponse.json({ transactions: [] });
-      }
+    const endDate = searchParams.get('end_date') || getDateString(new Date());
+    const defaultStartDate = new Date();
+    defaultStartDate.setDate(defaultStartDate.getDate() - 90); // Default to last 90 days
+    const startDate = searchParams.get('start_date') || getDateString(defaultStartDate);
 
-      // Use the db.prepare pattern that Drizzle supports
-      const query = db.select().from(transactions)
-        .where(
-          and(
-            eq(transactions.userId, userId as string),
-            inArray(transactions.lunchMoneyId, validatedIds)
-          )
-        );
-      
-      const result = await query;
-      
-      // Fetch categories separately for each transaction
-      const txWithCategories = await Promise.all(
-        result.map(async (tx) => {
-          if (tx.categoryId) {
-            const categoryQuery = db.select()
-              .from(categories)
-              .where(eq(categories.id, tx.categoryId))
-              .limit(1);
-              
-            const categoryResult = await categoryQuery;
-              
-            return {
-              ...tx,
-              category: categoryResult.length > 0 ? categoryResult[0] : null
-            };
-          }
-          return { ...tx, category: null };
-        })
-      );
-      
-      return NextResponse.json({ transactions: txWithCategories });
-    }
-    
-    // Otherwise fetch transactions from Lunch Money API
-    const startDate = searchParams.get('start_date') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const endDate = searchParams.get('end_date') || new Date().toISOString().split('T')[0];
-    
-    const lunchMoneyTransactions = await fetchLunchMoneyTransactions(user.lunchMoneyApiKey as string, startDate, endDate);
-    
-    // Log a sample transaction structure to debug
-    if (lunchMoneyTransactions.length > 0) {
-      const sampleTx = lunchMoneyTransactions[0];
-      // Only log properties that are actually present
-      console.log('FULL SAMPLE TX:', JSON.stringify({
-        id: sampleTx.id,
-        date: sampleTx.date,
-        payee: sampleTx.payee || '',
-        amount: sampleTx.amount,
-        category: sampleTx.category_name || '',
-        category_id: sampleTx.category_id || ''
-      }, null, 2));
-    }
-    
-    const formattedTransactions = formatTransactions(lunchMoneyTransactions);
-    
-    // Check if any of these transactions are already in our database
-    const lunchMoneyIds = formattedTransactions.map(tx => tx.lunchMoneyId);
-    
-    // Only proceed if we have IDs
-    if (lunchMoneyIds.length === 0) {
-      return NextResponse.json({ transactions: formattedTransactions });
-    }
+    // 3. Construct URL with Parameters for Lunch Money API
+    const url = new URL(LUNCH_MONEY_API_URL);
+    url.searchParams.append('start_date', startDate);
+    url.searchParams.append('end_date', endDate);
+    // Add other parameters like limit, offset, debit_as_negative if needed
+    // url.searchParams.append('limit', '500'); 
 
-    // Use the Drizzle query builder instead of raw SQL
-    const query = db.select({
-        id: transactions.id,
-        lunchMoneyId: transactions.lunchMoneyId,
-        categoryId: transactions.categoryId,
-        isTrainingData: transactions.isTrainingData,
-      })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.userId, userId as string),
-          inArray(transactions.lunchMoneyId, lunchMoneyIds)
-        )
-      );
+    console.log(`Fetching from Lunch Money API: ${url.toString()}`);
 
-    const existingTransactions = await query;
-    
-    // Fetch categories for existing transactions
-    const existingTransactionsWithCategories = await Promise.all(
-      existingTransactions.map(async (tx) => {
-        if (tx.categoryId) {
-          const categoryQuery = db.select({
-              id: categories.id,
-              name: categories.name
-            })
-            .from(categories)
-            .where(eq(categories.id, tx.categoryId))
-            .limit(1);
-            
-          const categoryResult = await categoryQuery;
-            
-          return {
-            ...tx,
-            category: categoryResult.length > 0 ? categoryResult[0] : null
-          };
-        }
-        return { ...tx, category: null };
-      })
-    );
-    
-    // Create a map of existing transactions for quick lookup
-    const existingTransactionMap = new Map<string, any>();
-    existingTransactionsWithCategories.forEach((tx: any) => {
-      if (tx && tx.lunchMoneyId) {
-        existingTransactionMap.set(tx.lunchMoneyId, tx);
-      }
+    // 4. Fetch transactions from Lunch Money API using the constructed URL
+    const response = await fetch(url.toString(), { 
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      // Increase timeout if necessary for large date ranges
+      // next: { revalidate: 60 } // Optional: cache control
     });
-    
-    // Merge the transactions with data from our database if available
-    const mergedTransactions = formattedTransactions.map(tx => {
-      const existingTx = existingTransactionMap.get(tx.lunchMoneyId);
-      if (existingTx) {
-        return {
-          ...tx,
-          id: existingTx.id,
-          category: existingTx.category,
-          isTrainingData: existingTx.isTrainingData
-        };
-      }
-      return tx;
-    });
-    
-    return NextResponse.json({ transactions: mergedTransactions });
+
+    if (!response.ok) {
+      let errorBody;
+      try {
+        errorBody = await response.json();
+      } catch (e) { /* Ignore parsing error */ }
+      console.error('Lunch Money API Error:', response.status, response.statusText, errorBody);
+      return NextResponse.json(
+        { error: `Failed to fetch from Lunch Money: ${response.statusText}`, details: errorBody },
+        { status: response.status }
+      );
+    }
+
+    const rawData = await response.json();
+
+    // *** Format the transactions using the helper defined in *this* file ***
+    const formattedData = formatTransactions(rawData.transactions || []);
+
+    // *** Return the formatted transactions in the expected structure ***
+    return NextResponse.json({ transactions: formattedData }); 
+
   } catch (error) {
-    console.error('Error in GET /api/lunch-money/transactions:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'An error occurred while fetching transactions' },
-      { status: 500 }
-    );
+    console.error('Error fetching Lunch Money transactions:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
