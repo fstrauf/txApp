@@ -72,7 +72,7 @@ export default function Home() {
             Automate Your Monthly Budgeting
             <br className="hidden md:block" />
             in{" "}
-            <span className="bg-test-blue text-white p-1 rounded">
+            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               Google Sheets with AI
             </span>
           </h1>
