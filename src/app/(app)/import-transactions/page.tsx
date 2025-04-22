@@ -3,16 +3,20 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 // import { useAuth } from '@/context/AuthContext'; // Removed useAuth
 import { useSession } from 'next-auth/react'; // Import useSession
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Check, ChevronsUpDown } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+// Removed shadcn imports for simple elements
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import { Label } from "@/components/ui/label";
+// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+// import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+// Keep/Uncomment complex component imports, but usage will be commented out temporarily
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
+// import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+// import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+
+import { Loader2, Check, ChevronsUpDown } from "lucide-react"; // Keep icon imports
 import { cn } from "@/lib/utils"; // Assuming you have this utility function
 
 interface BankAccount {
@@ -74,7 +78,7 @@ const ImportTransactionsPage: React.FC = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const isLoading = sessionStatus === 'loading' || isProcessing;
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-    const [comboboxOpen, setComboboxOpen] = useState(false);
+    // const [comboboxOpen, setComboboxOpen] = useState(false); // Comment out state for commented components
     const [selectedAccountIdOrNewName, setSelectedAccountIdOrNewName] = useState("");
 
     // Fetch bank accounts on component mount, wait for session
@@ -444,10 +448,10 @@ const ImportTransactionsPage: React.FC = () => {
     if (sessionStatus === 'unauthenticated') {
          return (
             <div className="container mx-auto p-4">
-                <Alert variant="destructive">
-                    <AlertTitle>Not Authenticated</AlertTitle>
-                    <AlertDescription>Please log in to import transactions.</AlertDescription>
-                 </Alert>
+                <div className={`p-4 rounded-md bg-red-50 border border-red-200 text-red-800`} role="alert">
+                    <h5 className="font-bold">Not Authenticated</h5>
+                    <p>Please log in to import transactions.</p>
+                 </div>
             </div>
         ); 
      }
@@ -457,24 +461,35 @@ const ImportTransactionsPage: React.FC = () => {
         <div className="container mx-auto p-4 space-y-6">
             <h1 className="text-2xl font-bold">Import Transactions from CSV</h1>
 
-            {/* Feedback Area */}
+            {/* Feedback Area - Replaced Alert */}
              {feedback && (
-                <Alert variant={feedback.type === 'error' ? 'destructive' : 'default'}>
-                    <AlertTitle>{feedback.type === 'error' ? 'Error' : 'Success'}</AlertTitle>
-                    <AlertDescription>{feedback.message}</AlertDescription>
-                </Alert>
+                <div className={`p-4 rounded-md ${feedback.type === 'error' ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-green-50 border border-green-200 text-green-800'}`} role="alert">
+                    <h5 className="font-bold">{feedback.type === 'error' ? 'Error' : 'Success'}</h5>
+                    <p>{feedback.message}</p>
+                </div>
             )}
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Step 1: Upload CSV File</CardTitle>
-                    <CardDescription>Select the CSV file containing your bank transactions.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {/* isLoading combines session and processing state */}
-                    <Input type="file" accept=".csv" onChange={handleFileChange} disabled={isLoading} />
-                </CardContent>
-            </Card>
+            {/* Replaced Card with div */}
+            <div className="border bg-card text-card-foreground shadow rounded-lg">
+                {/* Replaced CardHeader */}
+                <div className="flex flex-col space-y-1.5 p-6">
+                    {/* Replaced CardTitle */}
+                    <h3 className="font-semibold leading-none tracking-tight text-lg">Step 1: Upload CSV File</h3>
+                    {/* Replaced CardDescription */}
+                    <p className="text-sm text-muted-foreground">Select the CSV file containing your bank transactions.</p>
+                </div>
+                {/* Replaced CardContent */}
+                <div className="p-6 pt-0">
+                    {/* Replaced Input */}
+                    <input 
+                        type="file" 
+                        accept=".csv" 
+                        onChange={handleFileChange} 
+                        disabled={isLoading} 
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                </div>
+            </div>
 
             {/* Spinner only shows for processing, not initial session load */}
             {isProcessing && (
@@ -487,36 +502,42 @@ const ImportTransactionsPage: React.FC = () => {
             {/* Config form only shows if analysis is done (implicitly authenticated already) */}
             {sessionStatus === 'authenticated' && analysisResult && (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Step 2: Configure Import Settings</CardTitle>
-                            <CardDescription>Select target account, formats, and map columns in the preview table below.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {/* Bank Account Combobox */}
+                     {/* Replaced Card */}
+                     <div className="border bg-card text-card-foreground shadow rounded-lg">
+                        {/* Replaced CardHeader */}
+                        <div className="flex flex-col space-y-1.5 p-6">
+                            <h3 className="font-semibold leading-none tracking-tight text-lg">Step 2: Configure Import Settings</h3>
+                            <p className="text-sm text-muted-foreground">Select target account, formats, and map columns in the preview table below.</p>
+                        </div>
+                        {/* Replaced CardContent */}
+                        <div className="p-6 pt-0 space-y-4">
+                            {/* Bank Account Combobox - Temporarily Commented Out */} 
                             <div>
-                                <Label htmlFor="bankAccount">Target Bank Account *</Label>
+                                <label htmlFor="bankAccount" className="block text-sm font-medium mb-1">Target Bank Account *</label>
+                                <p className="text-sm text-red-600 p-2 bg-red-50 rounded">[Account Selector temporarily disabled - needs Headless UI implementation]</p>
+                                {/* 
                                 <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                                     <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
+                                        <button // Replaced Button
+                                            // variant="outline"
+                                            type="button" // Important for buttons inside forms
                                             role="combobox"
                                             aria-expanded={comboboxOpen}
-                                            className="w-full justify-between mt-1"
+                                            className="w-full justify-between mt-1 flex h-10 items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                             disabled={isLoading}
                                         >
                                             {selectedAccountIdOrNewName
                                                 ? bankAccounts.find((acc) => acc.id === selectedAccountIdOrNewName)?.name ?? selectedAccountIdOrNewName
                                                 : "Select or create account..."}
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
+                                        </button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                         <Command>
                                             <CommandInput 
                                                 placeholder="Search account or type name..." 
-                                                value={selectedAccountIdOrNewName && !bankAccounts.find(a => a.id === selectedAccountIdOrNewName) ? selectedAccountIdOrNewName : ''} // Show typed value if it's not an ID
-                                                onValueChange={setSelectedAccountIdOrNewName} // Allow typing new name
+                                                value={selectedAccountIdOrNewName && !bankAccounts.find(a => a.id === selectedAccountIdOrNewName) ? selectedAccountIdOrNewName : ''}
+                                                onValueChange={setSelectedAccountIdOrNewName} 
                                             />
                                             <CommandList>
                                                 <CommandEmpty>No account found. Type name to create.</CommandEmpty>
@@ -524,9 +545,8 @@ const ImportTransactionsPage: React.FC = () => {
                                                     {bankAccounts.map((account) => (
                                                         <CommandItem
                                                             key={account.id}
-                                                            value={account.id} // Use ID as value for selection
-                                                            onSelect={(currentValue) => {
-                                                                // currentValue here is the account.id
+                                                            value={account.id} 
+                                                            onSelect={(currentValue: string) => { // Added type
                                                                 setSelectedAccountIdOrNewName(currentValue === selectedAccountIdOrNewName ? "" : currentValue);
                                                                 setComboboxOpen(false);
                                                             }}
@@ -545,16 +565,18 @@ const ImportTransactionsPage: React.FC = () => {
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
+                                */}
                             </div>
 
-                            {/* Format Settings */}
+                            {/* Format Settings - Selects Temporarily Replaced/Commented Out */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Date Format Select (Replaced Input) */}
                                 <div>
-                                    <Label htmlFor="dateFormat">Date Format *</Label>
+                                    <label htmlFor="dateFormat" className="block text-sm font-medium mb-1">Date Format *</label>
+                                    <p className="text-sm text-red-600 p-2 bg-red-50 rounded">[Date Format Select temporarily disabled - needs Headless UI]</p>
+                                    {/* 
                                     <Select
                                         value={config.dateFormat || ''}
-                                        onValueChange={(value) => handleConfigChange('dateFormat', value)} // Use handleConfigChange
+                                        onValueChange={(value: string) => handleConfigChange('dateFormat', value)}
                                         required
                                     >
                                         <SelectTrigger id="dateFormat">
@@ -568,16 +590,19 @@ const ImportTransactionsPage: React.FC = () => {
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                    */}
+                                     <input type="hidden" value={config.dateFormat} /> {/* Keep value for submission */} 
                                     <p className="text-sm text-muted-foreground">
                                         Select the format matching the date column in your file.
                                     </p>
                                 </div>
                                 
-                                {/* Amount Format Select */}
                                 <div>
-                                    <Label htmlFor="amountFormat">Amount Format *</Label>
+                                    <label htmlFor="amountFormat" className="block text-sm font-medium mb-1">Amount Format *</label>
+                                     <p className="text-sm text-red-600 p-2 bg-red-50 rounded">[Amount Format Select temporarily disabled - needs Headless UI]</p>
+                                    {/* 
                                     <Select 
-                                        onValueChange={(value) => handleConfigChange('amountFormat', value as any)}
+                                        onValueChange={(value: string) => handleConfigChange('amountFormat', value as any)}
                                         value={config.amountFormat || ''}
                                         required
                                     >
@@ -590,14 +615,17 @@ const ImportTransactionsPage: React.FC = () => {
                                             <SelectItem value="sign_column">Separate Sign Column</SelectItem>
                                         </SelectContent>
                                     </Select>
+                                    */}
+                                    <input type="hidden" value={config.amountFormat} /> {/* Keep value for submission */} 
                                 </div>
                                 
-                                {/* Sign Column Select (Conditional) */}
                                 {config.amountFormat === 'sign_column' && (
                                     <div>
-                                        <Label htmlFor="signColumn">Sign Column *</Label>
+                                        <label htmlFor="signColumn" className="block text-sm font-medium mb-1">Sign Column *</label>
+                                        <p className="text-sm text-red-600 p-2 bg-red-50 rounded">[Sign Column Select temporarily disabled - needs Headless UI]</p>
+                                        {/* 
                                         <Select 
-                                            onValueChange={(value) => handleConfigChange('signColumn', value)}
+                                            onValueChange={(value: string) => handleConfigChange('signColumn', value)}
                                             value={config.signColumn || ''}
                                             required={config.amountFormat === 'sign_column'}
                                         >
@@ -610,55 +638,61 @@ const ImportTransactionsPage: React.FC = () => {
                                                 ))}
                                             </SelectContent>
                                         </Select>
+                                        */}
+                                        <input type="hidden" value={config.signColumn} /> {/* Keep value for submission */} 
                                         <p className="text-sm text-muted-foreground">Column indicating Debit/Credit (e.g., 'D'/'C')</p>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Other Settings */}
+                            {/* Other Settings - Replaced Input */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <Label htmlFor="skipRows">Header Rows to Skip</Label>
-                                    <Input 
+                                    <label htmlFor="skipRows" className="block text-sm font-medium mb-1">Header Rows to Skip</label>
+                                    <input 
                                         id="skipRows" 
                                         type="number"
                                         min="0"
                                         value={config.skipRows || 0} 
-                                        onChange={e => handleConfigChange('skipRows', parseInt(e.target.value, 10) || 0)} 
+                                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleConfigChange('skipRows', parseInt(e.target.value, 10) || 0)} 
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                     />
                                 </div>
                                 <div>
-                                    <Label htmlFor="delimiter">Delimiter (Optional)</Label>
-                                    <Input 
+                                    <label htmlFor="delimiter" className="block text-sm font-medium mb-1">Delimiter (Optional)</label>
+                                    <input 
                                         id="delimiter" 
                                         value={config.delimiter || ''} 
-                                        onChange={e => handleConfigChange('delimiter', e.target.value)} 
+                                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleConfigChange('delimiter', e.target.value)} 
                                         placeholder={`Detected: ${analysisResult.detectedDelimiter || 'Comma (,)'}`} 
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                     />
                                     <p className="text-sm text-muted-foreground">Leave blank to auto-detect.</p>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
 
-                    {/* Preview Table */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Step 3: Preview Data & Map Columns</CardTitle>
-                            <CardDescription>Review the first {analysisResult.previewRows.length} rows and assign 'Date', 'Amount', and 'Description' columns.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
+                    {/* Preview Table - Replaced Table components */} 
+                    <div className="border bg-card text-card-foreground shadow rounded-lg">
+                        <div className="flex flex-col space-y-1.5 p-6">
+                            <h3 className="font-semibold leading-none tracking-tight text-lg">Step 3: Preview Data & Map Columns</h3>
+                            <p className="text-sm text-muted-foreground">Review the first {analysisResult.previewRows.length} rows and assign 'Date', 'Amount', and 'Description' columns.</p>
+                        </div>
+                        <div className="p-6 pt-0">
+                            <div className="relative w-full overflow-auto">
+                                <table className="w-full caption-bottom text-sm">
+                                    <thead className="[&_tr]:border-b">
+                                        <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                                             {analysisResult.headers.map(header => (
-                                                <TableHead key={header} className="whitespace-nowrap align-top pt-2 px-2">
+                                                <th key={header} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 whitespace-nowrap pt-2">
                                                     <div className="font-semibold mb-1">{header}</div>
-                                                     {/* Mapping Select for this column */}
+                                                    <p className="text-sm text-red-600 p-1 bg-red-50 rounded">[Select temporarily disabled]</p>
+                                                    {/* Mapping Select Temporarily Commented Out */}
+                                                    {/* 
                                                     <Select 
                                                         value={config.mappings[header] || 'none'} 
-                                                        onValueChange={(value) => handleMappingChange(header, value as MappedFieldType)} 
+                                                        onValueChange={(value: string) => handleMappingChange(header, value as MappedFieldType)} 
                                                     >
                                                         <SelectTrigger className="h-8 text-xs">
                                                             <SelectValue placeholder="Map column..." />
@@ -671,29 +705,36 @@ const ImportTransactionsPage: React.FC = () => {
                                                             <SelectItem value="currency">Map to: Currency</SelectItem>
                                                         </SelectContent>
                                                     </Select>
-                                                </TableHead>
+                                                    */}
+                                                    <input type="hidden" value={config.mappings[header]} /> {/* Keep value */} 
+                                                </th>
                                             ))}
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="[&_tr:last-child]:border-0">
                                         {analysisResult.previewRows.map((row, index) => (
-                                            <TableRow key={index}>
+                                            <tr key={index} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                                                 {analysisResult.headers.map(header => (
-                                                    <TableCell key={header} className="py-1 px-2 text-sm whitespace-nowrap">
+                                                    <td key={header} className="p-4 align-middle [&:has([role=checkbox])]:pr-0 py-1 px-2 text-sm whitespace-nowrap">
                                                         {String(row[header])}
-                                                    </TableCell>
+                                                    </td>
                                                 ))}
-                                            </TableRow>
+                                            </tr>
                                         ))}
-                                    </TableBody>
-                                </Table>
+                                    </tbody>
+                                </table>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
 
-                    <Button type="submit" disabled={isLoading}>
+                    {/* Replaced Button */}
+                    <button 
+                        type="submit" 
+                        disabled={isLoading} 
+                        className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-themePrimary text-primary-foreground hover:bg-themePrimary/90 h-10 px-4 py-2 mt-6" // Basic primary button styles
+                    >
                         {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Importing...</> : 'Import Transactions'}
-                    </Button>
+                    </button>
                 </form>
             )}
         </div>
