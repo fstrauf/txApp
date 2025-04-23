@@ -5,7 +5,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
-const EXTERNAL_CLASSIFY_URL = 'https://txclassify.onrender.com/classify';
+const EXTERNAL_CLASSIFY_URL = process.env.EXPENSE_SORTED_API + '/classify';
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authConfig);

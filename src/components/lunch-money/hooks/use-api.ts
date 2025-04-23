@@ -298,7 +298,7 @@ export function useApi() {
     };
 
     return callExternalApi<PredictionResponse>({
-      endpoint: 'https://txclassify.onrender.com/train',
+      endpoint: process.env.EXPENSE_SORTED_API + '/train',
       method: 'POST',
       data: payload
     });
@@ -317,7 +317,7 @@ export function useApi() {
     };
 
     return callExternalApi<PredictionResponse>({
-      endpoint: 'https://txclassify.onrender.com/classify',
+      endpoint: process.env.EXPENSE_SORTED_API + '/classify',
       method: 'POST',
       data: payload
     });
@@ -328,7 +328,7 @@ export function useApi() {
     predictionId: string
   ): Promise<ApiResponse<any>> => {
     return callExternalApi<any>({
-      endpoint: `https://txclassify.onrender.com/status/${predictionId}`,
+      endpoint: `${process.env.EXPENSE_SORTED_API}/status/${predictionId}`,
       method: 'GET'
     });
   }, [callExternalApi]);

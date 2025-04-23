@@ -102,7 +102,7 @@ export function useTraining() {
         // Call the service to check status
         console.log(`Checking ${type} status for prediction ID: ${predictionId} (attempt ${pollCount}/${maxPolls})`);
         
-        const response = await fetch(`https://txclassify.onrender.com/status/${predictionId}`, {
+        const response = await fetch(`${process.env.EXPENSE_SORTED_API}/status/${predictionId}`, {
           headers: {
             'X-API-Key': 'test_api_key_fixed',
             'Accept': 'application/json',
@@ -503,7 +503,7 @@ export function useTraining() {
       }));
 
       // Call the training API endpoint
-      const response = await fetch('https://txclassify.onrender.com/train', {
+      const response = await fetch(process.env.EXPENSE_SORTED_API + '/train', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -625,7 +625,7 @@ export function useTraining() {
       };
 
       // Call the categorization API endpoint
-      const response = await fetch('https://txclassify.onrender.com/classify', {
+      const response = await fetch(process.env.EXPENSE_SORTED_API + '/classify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

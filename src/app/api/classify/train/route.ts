@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authConfig } from '@/lib/auth';
-// Remove db imports if only used for apiKey fetch
-// import { db } from '@/db';
-// import { users } from '@/db/schema';
-// import { eq } from 'drizzle-orm';
 
-const EXTERNAL_TRAIN_URL = 'https://txclassify.onrender.com/train';
+const EXTERNAL_TRAIN_URL = process.env.EXPENSE_SORTED_API + '/train';
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authConfig);
@@ -19,19 +15,7 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = session.user.id;
-
-  // *** CHANGE: Get API key from session ***
   const userApiKey = typedSession?.apiKey;
-
-  // *** REMOVED: Database query for API key ***
-  /*
-  const userResult = await db
-    .select({ apiKey: users.api_key })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  const userApiKey = userResult[0]?.apiKey;
-  */
 
   if (!userApiKey) {
     // If key is not in session, it means it wasn't fetched/added during JWT callback

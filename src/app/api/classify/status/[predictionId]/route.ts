@@ -6,22 +6,24 @@ import { authConfig } from '@/lib/auth';
 // import { users } from '@/db/schema';
 // import { eq } from 'drizzle-orm';
 
-const EXTERNAL_STATUS_URL_TEMPLATE = 'https://txclassify.onrender.com/status/{predictionId}';
+const EXTERNAL_STATUS_URL_TEMPLATE = process.env.EXPENSE_SORTED_API + '/status/{predictionId}';
 
-// Define a type for the parameters
-interface RouteParams {
-  predictionId: string;
-}
+// Define a type for the parameters - REMOVED as we parse from URL
+// interface RouteParams {
+//   predictionId: string;
+// }
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: RouteParams }
+  request: NextRequest
+  // Remove destructured params: { params }: { params: RouteParams }
 ) {
-  // No need to await params here, Next.js provides it directly
-  const { predictionId } = params;
+  // *** CHANGE: Parse predictionId from URL path ***
+  const pathname = request.nextUrl.pathname;
+  const segments = pathname.split('/');
+  const predictionId = segments.pop() || segments.pop(); // Handle potential trailing slash
 
   if (!predictionId) {
-    return NextResponse.json({ error: 'Prediction ID is required' }, { status: 400 });
+    return NextResponse.json({ error: 'Prediction ID is required in URL path' }, { status: 400 });
   }
 
   const session = await getServerSession(authConfig);
@@ -69,8 +71,29 @@ export async function GET(
       cache: 'no-store',
     });
 
-    // Forward the response (or error) back to the client
-    const responseData = await externalResponse.json();
+    // Check Content-Type before attempting to parse JSON
+    const contentType = externalResponse.headers.get('content-type');
+    let responseData;
+
+    if (contentType && contentType.includes('application/json')) {
+      // Only parse as JSON if the content type is correct
+      responseData = await externalResponse.json();
+    } else {
+      // If not JSON, read as text and log the unexpected response
+      const textResponse = await externalResponse.text();
+      console.error(
+        `External status service for ${predictionId} returned non-JSON response (Content-Type: ${contentType}):\n${textResponse.substring(0, 500)}...` // Log first 500 chars
+      );
+      // Return a specific error structure to the frontend
+      return NextResponse.json(
+        {
+          status: 'error',
+          error: 'Invalid response from backend status check.',
+          details: `Received non-JSON response (Content-Type: ${contentType})`,
+        },
+        { status: 502 } // Bad Gateway - indicates invalid response from upstream server
+      );
+    }
 
     if (!externalResponse.ok) {
       // Log specific external errors but forward them
@@ -95,6 +118,17 @@ export async function GET(
      // Check if it's a fetch error (e.g., network issue)
      if (error instanceof Error && (error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED'))) {
          return NextResponse.json({ error: 'Failed to connect to the external status service.' }, { status: 502 }); // Bad Gateway
+     }
+     // Handle JSON parsing errors specifically (though the check above should prevent most)
+     if (error instanceof SyntaxError) {
+        return NextResponse.json(
+            {
+              status: 'error',
+              error: 'Failed to parse backend response.',
+              details: error.message,
+            },
+            { status: 502 } 
+          );
      }
     return NextResponse.json({ error: 'Internal Server Error during status proxy' }, { status: 500 });
   }
