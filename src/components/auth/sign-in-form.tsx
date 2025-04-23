@@ -1,11 +1,16 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export function SignInForm() {
+// Add callbackUrl to props
+interface SignInFormProps {
+  callbackUrl?: string;
+}
+
+export function SignInForm({ callbackUrl = "/" }: SignInFormProps) { // Use default if not provided
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,16 +28,17 @@ export function SignInForm() {
       const result = await signIn("credentials", {
         email,
         password,
-        redirect: false,
+        callbackUrl: callbackUrl,
       });
 
       if (result?.error) {
+        console.error("[SignInForm] signIn error:", result.error);
         setError("Invalid email or password");
-      } else {
-        router.push("/");
-        router.refresh();
+      } else if (!result?.ok) {
+        setError("Sign in failed. Please try again.");
       }
     } catch (error) {
+      console.error("[SignInForm] onSubmit error:", error);
       setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);

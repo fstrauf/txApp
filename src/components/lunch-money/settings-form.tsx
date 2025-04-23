@@ -6,9 +6,7 @@ import { useRouter } from 'next/navigation';
 export default function LunchMoneySettingsForm() {
   const router = useRouter();
   const [lunchMoneyApiKey, setLunchMoneyApiKey] = useState('');
-  const [classifyApiKey, setClassifyApiKey] = useState('');
   const [lunchMoneyStatus, setLunchMoneyStatus] = useState<'loading' | 'valid' | 'invalid' | null>(null);
-  const [classifyStatus, setClassifyStatus] = useState<'loading' | 'valid' | 'invalid' | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -24,12 +22,6 @@ export default function LunchMoneySettingsForm() {
           setLunchMoneyStatus(data.hasApiKey ? (data.isValid ? 'valid' : 'invalid') : null);
         }
 
-        // Fetch classification API key 
-        const classifyResponse = await fetch('/api/classify/credentials');
-        if (classifyResponse.ok) {
-          const data = await classifyResponse.json();
-          setClassifyStatus(data.hasApiKey ? (data.isValid ? 'valid' : 'invalid') : null);
-        }
       } catch (error) {
         console.error('Error fetching API keys:', error);
         setError('Failed to load API key information');
@@ -66,39 +58,6 @@ export default function LunchMoneySettingsForm() {
       }
     } catch (error) {
       console.error('Error saving Lunch Money API key:', error);
-      setError('An error occurred while saving the API key');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // Save Classification API key
-  const saveClassifyApiKey = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsUpdating(true);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      const response = await fetch('/api/classify/credentials', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ apiKey: classifyApiKey }),
-      });
-
-      if (response.ok) {
-        setSuccessMessage('Classification API key saved successfully!');
-        setClassifyStatus('valid');
-        router.refresh();
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to save Classification API key');
-        setClassifyStatus('invalid');
-      }
-    } catch (error) {
-      console.error('Error saving Classification API key:', error);
       setError('An error occurred while saving the API key');
     } finally {
       setIsUpdating(false);
@@ -159,46 +118,7 @@ export default function LunchMoneySettingsForm() {
           </div>
         </form>
       </div>
-
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Transaction Classification Service</h2>
-        <p className="mb-4 text-gray-600">
-          Connect to the transaction classification service by providing your API key.
-        </p>
-
-        <form onSubmit={saveClassifyApiKey} className="space-y-4">
-          <div>
-            <label htmlFor="classifyApiKey" className="block text-sm font-medium text-gray-700 mb-1">
-              Classification API Key
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="classifyApiKey"
-                type="password"
-                value={classifyApiKey}
-                onChange={(e) => setClassifyApiKey(e.target.value)}
-                className="flex-1 p-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your classification service API key"
-                required
-              />
-              <button
-                type="submit"
-                disabled={isUpdating || !classifyApiKey}
-                className="px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 disabled:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {isUpdating ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-
-            {classifyStatus === 'valid' && (
-              <p className="mt-2 text-sm text-green-600">✓ Valid API key configured</p>
-            )}
-            {classifyStatus === 'invalid' && (
-              <p className="mt-2 text-sm text-red-600">✗ Invalid API key</p>
-            )}
-          </div>
-        </form>
-      </div>
+     
     </div>
   );
 } 

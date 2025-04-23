@@ -2,7 +2,9 @@
 import { useState } from "react";
 // Use next-auth/react for session management
 import { useSession } from "next-auth/react";
-import { Button } from "@/components/ui/button"; // Import the Button component
+// import { Button } from "@/components/ui/button"; // Remove old import
+import { Button } from '@headlessui/react'; // Import Headless UI Button
+import Link from 'next/link'; // Ensure Link is imported if needed for asChild replacement
 
 export default function GetItHereButton() {
   const [email, setEmail] = useState("");
@@ -15,6 +17,10 @@ export default function GetItHereButton() {
   const { data: session, status } = useSession();
   const user = session?.user;
   const isLoadingSession = status === "loading";
+
+  // Common button classes
+  const buttonClasses = "inline-flex items-center justify-center rounded-md px-6 py-3 text-lg font-semibold text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary";
+  const primaryButtonClasses = `${buttonClasses} bg-primary hover:bg-primary-dark data-[hover]:bg-primary-dark data-[disabled]:bg-gray-400`;
 
   const handleGetSpreadsheet = () => {
     setShowEmailInput(true);
@@ -88,25 +94,24 @@ export default function GetItHereButton() {
       <div className="text-center mt-8">
         <div className="space-y-4">
           <p className="text-green-600 mb-4">Welcome back! Here's your spreadsheet:</p>
-          <Button asChild size="lg">
-            <a
-              href="https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white"
-            >
-              Access Spreadsheet
-            </a>
-          </Button>
+          {/* Replaced Button asChild with styled Link */}
+          <Link
+            href="https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={primaryButtonClasses} // Apply button styles
+          >
+            Access Spreadsheet
+          </Link>
           <div className="mt-4">
-            <Button asChild size="lg">
-              <a
-                href="/api-key"
-                rel="noopener noreferrer"
-              >
-                Get API Key
-              </a>
-            </Button>
+            {/* Replaced Button asChild with styled Link */}
+            <Link
+              href="/api-key"
+              rel="noopener noreferrer"
+              className={primaryButtonClasses} // Apply button styles
+            >
+              Get API Key
+            </Link>
           </div>
         </div>
       </div>
@@ -120,30 +125,30 @@ export default function GetItHereButton() {
       {submitted && (
         <div className="space-y-4">
           <p className="text-green-600 mb-4">Thanks! Here's your spreadsheet:</p>
-          <Button asChild size="lg">
-            <a
-              href="https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983"
-              target="_blank"
+          {/* Replaced Button asChild with styled Link */}
+          <Link
+            href="https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={primaryButtonClasses} // Apply button styles
+          >
+            Access Spreadsheet
+            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+          <div className="mt-4">
+            {/* Replaced Button asChild with styled Link */}
+            <Link
+              href="/api-key"
               rel="noopener noreferrer"
+              className={primaryButtonClasses} // Apply button styles
             >
-              Access Spreadsheet
+              Get API Key
               <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            </a>
-          </Button>
-          <div className="mt-4">
-            <Button asChild size="lg">
-              <a
-                href="/api-key"
-                rel="noopener noreferrer"
-              >
-                Get API Key
-                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </a>
-            </Button>
+            </Link>
           </div>
         </div>
       )}
@@ -179,14 +184,13 @@ export default function GetItHereButton() {
               placeholder="Enter your email"
               required
               disabled={isLoading}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent w-full"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent w-full disabled:opacity-50"
             />
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <Button
               type="submit"
               disabled={isLoading}
-              size="lg" // Use large size
-              className="w-full justify-center" // Add w-full for full width
+              className={`${primaryButtonClasses} w-full`} // Apply base styles + full width
             >
               Submit & Get Spreadsheet
               <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,7 +205,7 @@ export default function GetItHereButton() {
       {!submitted && !isLoading && !showEmailInput && (
         <Button
           onClick={handleGetSpreadsheet}
-          size="lg" // Use large size
+          className={primaryButtonClasses} // Apply base styles
         >
           Get the Spreadsheet
           <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
