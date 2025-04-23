@@ -53,13 +53,16 @@ export default function TransactionList() {
   const [applyingAll, setApplyingAll] = useState<boolean>(false);
   const [applyingIndividual, setApplyingIndividual] = useState<string | null>(null);
 
+  // *** NEW: State for the primary filter ***
+  const [showOnlyNeedsReview, setShowOnlyNeedsReview] = useState<boolean>(true); // Default to true
+
   // Calculate transaction stats
   const transactionStats = useMemo(() => {
     let trainedCount = 0;
     let uncategorizedCount = 0;
+    let needsReviewCount = 0; // Add count for the new filter
 
     transactions.forEach(tx => {
-      // Check for 'Trained' tag
       const hasTrainedTag = tx.tags?.some(tag => 
         (typeof tag === 'string' && tag.toLowerCase() === 'trained') || 
         (typeof tag === 'object' && tag.name?.toLowerCase() === 'trained')
@@ -69,12 +72,23 @@ export default function TransactionList() {
       }
 
       // Check if uncategorized (using originalData as the source of truth)
-      if (!tx.originalData?.category_id) { // Check if Lunch Money category ID is missing
+      const isUncategorized = !tx.originalData?.category_id;
+      if (isUncategorized) {
         uncategorizedCount++;
+      }
+      
+      // Check if needs review (not trained AND not manually categorized)
+      const hasCategorizedTag = tx.tags?.some(tag => 
+        (typeof tag === 'string' && tag === 'tx-categorized') ||
+        (typeof tag === 'object' && tag.name === 'tx-categorized')
+      );
+
+      if (!hasTrainedTag && !hasCategorizedTag) {
+          needsReviewCount++;
       }
     });
 
-    return { trainedCount, uncategorizedCount };
+    return { trainedCount, uncategorizedCount, needsReviewCount }; // Include new count
   }, [transactions]);
 
   // Fetch transactions when component mounts
@@ -146,16 +160,22 @@ export default function TransactionList() {
     }
   };
   
-  const fetchTransactionsWithDates = async (dates: { startDate: string; endDate: string }) => {
+  const fetchTransactionsWithDates = async (dates: { startDate: string; endDate: string }, filterNeedsReview: boolean) => {
+    setLoading(true);
     setError(null);
     
-    console.log('Fetching with specific date range:', dates);
+    console.log('Fetching with date range:', dates, 'Filter Needs Review:', filterNeedsReview);
 
     try {
       const params = new URLSearchParams({
         start_date: dates.startDate,
         end_date: dates.endDate,
       });
+
+      // Add the filter parameter if needed
+      if (filterNeedsReview) {
+        params.append('filter', 'needs_review');
+      }
 
       const response = await fetch(`/api/lunch-money/transactions?${params}`);
       
@@ -191,7 +211,7 @@ export default function TransactionList() {
             tx.predictedCategory?.name || null : (tx.predictedCategory || null),
           // Ensure tags is an array of objects with name/id properties
           tags: Array.isArray(tx.tags) ? tx.tags.map((tag: any) => 
-            typeof tag === 'object' ? tag : { name: tag, id: `tag-${Date.now()}-${Math.random()}` }
+            typeof tag === 'object' ? tag : { name: tag, id: `tag-${Date.now()}-${Math.random()}` } // Ensure objects
           ) : []
         };
         return sanitized;
@@ -212,7 +232,8 @@ export default function TransactionList() {
       setSelectedTransactions([]);
       
       // After loading transactions, refresh categories from them
-      await fetchCategories();
+      await fetchCategories(); // Keep this
+
     } catch (error) {
       console.error('Error fetching transactions:', error);
       setError(error instanceof Error ? error.message : 'An error occurred while fetching transactions');
@@ -223,7 +244,7 @@ export default function TransactionList() {
   };
 
   const fetchTransactions = async () => {
-    fetchTransactionsWithDates(dateRange);
+    fetchTransactionsWithDates(dateRange, showOnlyNeedsReview);
   };
 
   const startEditing = (id: string) => {
@@ -231,7 +252,6 @@ export default function TransactionList() {
   };
 
   const handleCategoryChange = async (transactionId: string, categoryValue: string) => {
-    // Don't close the dropdown immediately
     setUpdatingCategory(transactionId);
     
     const transaction = transactions.find(tx => tx.lunchMoneyId === transactionId);
@@ -240,10 +260,7 @@ export default function TransactionList() {
       return;
     }
     
-    console.log(`Updating transaction ${transactionId} with category: "${categoryValue}"`);
-    
     try {
-      // Check if transaction has a "Trained" tag that needs to be removed
       const txTags = transaction.tags || [];
       let hasTrainedTag = false;
       const filteredTags = txTags.filter(tag => {
@@ -253,12 +270,7 @@ export default function TransactionList() {
         return !isTrainedTag;
       });
       
-      // Prepare tag names for API request
-      const tagNames = hasTrainedTag 
-        ? filteredTags.map(tag => typeof tag === 'string' ? tag : tag.name) 
-        : undefined;
-      
-      // Send update to the API
+      // Send update to the API, now includes existing tags for merging on backend
       const response = await fetch('/api/lunch-money/transactions', {
         method: 'PATCH',
         headers: {
@@ -267,8 +279,7 @@ export default function TransactionList() {
         body: JSON.stringify({
           transactionId: transaction.lunchMoneyId,
           categoryId: categoryValue === "none" ? null : categoryValue,
-          // Remove the "Trained" tag if it exists
-          tags: tagNames
+          tags: filteredTags // Send the *current* tags (backend will add 'tx-categorized')
         })
       });
       
@@ -278,16 +289,13 @@ export default function TransactionList() {
         throw new Error(responseData.error || 'Failed to update category');
       }
       
-      // Find category name for display
       let categoryName = categoryValue;
-      const selectedCategory = categories.find(cat => 
-        typeof cat !== 'string' && cat.id === categoryValue
-      );
+      const selectedCategory = categories.find(cat => typeof cat !== 'string' && cat.id === categoryValue);
       if (selectedCategory && typeof selectedCategory !== 'string') {
         categoryName = selectedCategory.name;
       }
       
-      // Update local state
+      // Update local state: include the new tags returned from the PATCH response
       setTransactions(prev => 
         prev.map(tx => {
           if (tx.lunchMoneyId === transactionId) {
@@ -300,44 +308,22 @@ export default function TransactionList() {
                 category_id: categoryValue === "none" ? null : categoryValue,
                 category_name: categoryValue === "none" ? null : categoryName
               },
-              // Remove the "Trained" tag if it exists
-              tags: hasTrainedTag ? filteredTags : tx.tags
+              // Use tags returned from API which should include 'tx-categorized'
+              tags: responseData.updatedTags?.map((tag: string) => ({ name: tag, id: `tag-${Date.now()}-${Math.random()}` })) || filteredTags 
             };
           }
           return tx;
         })
       );
       
-      // Show success indicator
-      setSuccessfulUpdates(prev => ({
-        ...prev,
-        [transactionId]: true
-      }));
+      setSuccessfulUpdates(prev => ({ ...prev, [transactionId]: true }));
+      setTimeout(() => setSuccessfulUpdates(prev => ({ ...prev, [transactionId]: false })), 3000);
       
-      // Clear success indicator after 3 seconds
-      setTimeout(() => {
-        setSuccessfulUpdates(prev => ({
-          ...prev,
-          [transactionId]: false
-        }));
-      }, 3000);
-      
-      // Show success toast
-      setToastMessage({
-        message: hasTrainedTag 
-          ? 'Category updated and "Trained" tag removed' 
-          : 'Category updated in Lunch Money',
-        type: 'success'
-      });
-      
-      // Close the dropdown after successful update
+      setToastMessage({ message: responseData.message || 'Category updated and tagged.', type: 'success' });
       setOpenDropdown(null);
     } catch (error) {
       console.error('Error updating category:', error);
-      setToastMessage({
-        message: error instanceof Error ? error.message : 'Failed to update category',
-        type: 'error'
-      });
+      setToastMessage({ message: error instanceof Error ? error.message : 'Failed to update category', type: 'error' });
     } finally {
       setUpdatingCategory(null);
     }
@@ -406,7 +392,7 @@ export default function TransactionList() {
     console.log("Applying date filter with:", pendingDateRange);
     setIsApplyingDates(true);
     setDateRange(pendingDateRange);
-    fetchTransactionsWithDates(pendingDateRange);
+    // fetchTransactionsWithDates(pendingDateRange, showOnlyNeedsReview); // No need to call here, useEffect handles it
   };
 
   const handleImportTransactions = async () => {
@@ -555,26 +541,35 @@ export default function TransactionList() {
     setOperationInProgress(true);
     setOperationType(type);
     setProgressPercent(5); 
-    setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} started...`);
+    setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} started, initializing...`);
+
+    // *** ADDED: Delay before starting the first poll ***
+    await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 second delay
+    // *** END ADDED DELAY ***
 
     while (pollCount < maxPolls) {
       try {
         pollCount++;
-        const progressValue = Math.min(80, Math.floor((pollCount / maxPolls) * 100));
+        // Update progress slightly differently now that initial delay is done
+        const progressValue = Math.max(10, Math.min(80, Math.floor((pollCount / maxPolls) * 100)));
+        // Set initial message only after delay
+        if (pollCount === 1) {
+            setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} job started, checking status...`);
+        }
         setProgressPercent(progressValue);
         
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        // Wait for the poll interval (only if not the very first actual poll after delay)
+        if (pollCount > 1) {
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
         
-        // *** Call the INTERNAL status API route ***
         console.log(`Checking ${type} status via internal proxy for prediction ID: ${predictionId} (attempt ${pollCount}/${maxPolls})`);
-        const response = await fetch(`/api/classify/status/${predictionId}`, { // Updated URL
+        const response = await fetch(`/api/classify/status/${predictionId}`, {
           headers: {
-            // 'X-API-Key': 'test_api_key_fixed', // *** REMOVED Header - Server handles it ***
             'Accept': 'application/json',
           },
         });
 
-        // Handle different response codes
         if (!response.ok) {
           const statusCode = response.status;
           console.log(`Internal proxy returned error code: ${statusCode} for prediction ID: ${predictionId}`);
@@ -591,39 +586,9 @@ export default function TransactionList() {
             continue;
           }
           
-          // Try to parse error from proxy response
-          let errorData: { 
-            error?: string; 
-            status?: string; 
-            message?: string; 
-            results?: any[];
-            code?: number;
-          } = { error: 'Unknown error from proxy' };
-          
-          try {
-            errorData = await response.json();
-          } catch (e) { /* Ignore json parse error */ }
+          let errorData: { error?: string; message?: string; } = { error: 'Unknown error from proxy' };
+          try { errorData = await response.json(); } catch (e) { /* Ignore */ }
 
-          // Special handling for the "job context missing" error which might indicate the job completed successfully
-          if (errorData.error && errorData.error.includes('Job context missing') || 
-              (errorData.status === 'completed' && errorData.message?.includes('context was cleaned up'))) {
-            console.log('Detected "job context missing" which might indicate successful completion');
-            
-            // If the error includes 'after prediction success', treat as success
-            if (errorData.error?.includes('after prediction success') || 
-                errorData.message?.includes('completed successfully')) {
-              setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} likely completed successfully.`);
-              setProgressPercent(100);
-              setTimeout(() => { setOperationInProgress(false); setOperationType('none'); }, 2000);
-              return { 
-                status: 'completed', 
-                results: errorData.results || [],
-                message: 'Process likely completed successfully but context was cleaned up'
-              };
-            }
-          }
-
-          // Handle 404 from proxy (could mean job completed and cleaned up, or job never existed)
           if (statusCode === 404) {
             if (pollCount < 5) {
               setProgressMessage('Waiting for job to start...');
@@ -635,24 +600,28 @@ export default function TransactionList() {
               setTimeout(() => { setOperationInProgress(false); setOperationType('none'); }, 2000);
               return { status: 'completed', message: 'Process completed (inferred from 404)' };
             }
-            // Continue polling for a bit longer if 404 is received early/mid polling
             continue; 
           }
           
-          // Handle other client/server errors from proxy (like 400, 401)
           setToastMessage({ message: `Error checking status: ${errorData.error || response.statusText}`, type: 'error' });
           setOperationInProgress(false);
           setOperationType('none');
           return { status: 'failed', error: errorData.error || `Proxy error ${statusCode}` };
         }
 
-        // Reset consecutive errors on successful response
         consecutiveErrors = 0;
-
         const result = await response.json();
-        console.log("Status response (from proxy):", result);
+        console.log("Status response (from proxy - OK):", result);
 
-        // Check for explicit 'error' status from our API route or 'failed' from external service
+        if (result.status === 'error' && result.code === 'RESULTS_UNAVAILABLE') {
+          console.error('Categorization completed, but results are unavailable from the service.');
+          setProgressMessage(result.message || 'Categorization complete, but results unavailable.');
+          setToastMessage({ message: result.message || 'Categorization results unavailable. Please try again.', type: 'error' });
+          setOperationInProgress(false);
+          setOperationType('none');
+          return { status: 'failed', error: result.error || 'Results unavailable' };
+        }
+
         if (result.status === "failed" || result.status === "error") {
           const errorMessage = result.error || result.message || 'Unknown error during categorization';
           setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} failed: ${errorMessage}`);
@@ -660,17 +629,17 @@ export default function TransactionList() {
           setOperationInProgress(false);
           setOperationType('none');
           return { status: 'failed', error: errorMessage };
-        } else if (result.status === "completed") {
+        } 
+        
+        if (result.status === "completed") {
           setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`);
           setProgressPercent(100);
           setToastMessage({ message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`, type: 'success' });
           setTimeout(() => { setOperationInProgress(false); setOperationType('none'); }, 2000);
-          // Ensure results are passed correctly, handling potential nested structure
           const classificationResults = result.results || result.config?.results || [];
           return { status: 'completed', results: classificationResults, message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!` };
         }
-        
-        // If status is still 'processing' or something else, update message and continue polling
+
         let statusMessage = `${type === 'training' ? 'Training' : 'Categorization'} in progress...`;
         if (result.message) statusMessage += ` ${result.message}`;
         setProgressMessage(statusMessage);
@@ -714,27 +683,39 @@ export default function TransactionList() {
       const trainingData = transactions
         .filter(tx => selectedTransactions.includes(tx.lunchMoneyId))
         .map(tx => {
-          // Use is_income flag directly from the transaction data
-          // This is explicitly set by Lunch Money
+          // *** CHANGE: Use category_id from originalData ***
+          const categoryId = tx.originalData?.category_id?.toString() || null; // Get the numeric ID as string or null
+          if (!categoryId) {
+            console.warn(`Transaction ${tx.lunchMoneyId} is missing a category ID. Skipping for training or using fallback.`);
+            // Decide: return null and filter out, or send a default like '0' or null
+            // For now, let's send null if uncategorized, the backend needs to handle this.
+          }
           return {
             description: tx.description,
-            Category: tx.lunchMoneyCategory || 'Uncategorized',
-            money_in: tx.is_income, // Directly use is_income flag
-            amount: tx.amount // Include amount for context only
+            // *** CHANGE: Use categoryId instead of Category name ***
+            categoryId: categoryId, // Send the numeric ID (or null)
+            money_in: tx.is_income, 
+            amount: tx.amount 
           };
-        });
+        })
+        // Optional: Filter out transactions without a category ID if the backend cannot handle null
+        // .filter(item => item.categoryId !== null); 
       
-      if (trainingData.length === 0) throw new Error('No valid transactions selected for training');
+      if (trainingData.length === 0) throw new Error('No valid transactions with category IDs selected for training');
 
+      // *** CHANGE: Ensure payload structure matches expected backend (check if backend expects 'categoryId') ***
       const payload = {
-        transactions: trainingData,
+        transactions: trainingData, // Contains description, categoryId, money_in, amount
+        // Assuming backend might expect these, adjust if necessary
         expenseSheetId: 'lunchmoney', 
-        spreadsheetId: 'lunchmoney'
+        spreadsheetId: 'lunchmoney' 
       };
 
       setProgressPercent(10);
       setProgressMessage('Sending training request...');
 
+      // *** Make sure the backend API '/api/classify/train' forwards this payload,
+      // and the *external* Flask service expects 'categoryId' ***
       const response = await fetch('/api/classify/train', {
         method: 'POST',
         headers: {
@@ -1169,21 +1150,38 @@ export default function TransactionList() {
 
   // Function to get filtered transactions
   const getFilteredTransactions = () => {
+    let result = transactions;
+
+    // Apply the primary server-side filter status (or show all if unchecked)
+    // The server already excluded 'tx-categorized' if showOnlyNeedsReview was true
+    // If showOnlyNeedsReview is false, we have *all* transactions here.
+
+    // Further client-side filtering for 'trained' tags
+    if (showOnlyNeedsReview) {
+        result = result.filter(tx => {
+            const hasTrainedTag = tx.tags?.some(tag => 
+                (typeof tag === 'string' && tag.toLowerCase() === 'trained') || 
+                (typeof tag === 'object' && tag.name?.toLowerCase() === 'trained')
+            );
+            return !hasTrainedTag; // Only show if NOT trained
+        });
+    }
+
+    // Apply secondary UI filters (Show Only Categorized / Uncategorized)
     if (showOnlyCategorized) {
-      return transactions.filter(tx => 
+      return result.filter(tx => 
         selectedTransactions.includes(tx.lunchMoneyId) && 
         Object.keys(pendingCategoryUpdates).includes(tx.lunchMoneyId)
       );
     }
-    
     if (showOnlyUncategorized) {
-      return transactions.filter(tx => 
+      return result.filter(tx => 
         !tx.originalData?.category_id && 
         !tx.lunchMoneyCategory
       );
     }
     
-    return transactions;
+    return result;
   };
 
   // *** NEW: Handler to cancel/discard pending categorization predictions ***
@@ -1233,7 +1231,7 @@ export default function TransactionList() {
       />
 
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        {/* Date filters */}
+        {/* Pass the new state and handler to TransactionFilters */}
         <TransactionFilters
           pendingDateRange={pendingDateRange}
           handleDateRangeChange={handleDateRangeChange}
@@ -1246,7 +1244,10 @@ export default function TransactionList() {
           pendingCategoryUpdates={pendingCategoryUpdates}
           trainedCount={transactionStats.trainedCount}
           uncategorizedCount={transactionStats.uncategorizedCount}
+          needsReviewCount={transactionStats.needsReviewCount} // Pass new count
           operationInProgress={operationInProgress}
+          showOnlyNeedsReview={showOnlyNeedsReview} // Pass state
+          setShowOnlyNeedsReview={setShowOnlyNeedsReview} // Pass setter
         />
 
         {/* Action buttons and categorization results */}

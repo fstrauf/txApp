@@ -12,14 +12,14 @@ export const preferredRegion = 'fra1';
 async function handler(request: NextRequest, payload: JwtPayload) {
   try {
     const userId = payload.id;
-
+    
     // Query user data and their latest subscription details
     const userResult = await db.query.users.findFirst({
       columns: {
         id: true,
         email: true,
         name: true,
-        image: true,
+        image: true, 
         stripeSubscriptionId: true,
       },
       where: eq(users.id, userId),
@@ -44,7 +44,7 @@ async function handler(request: NextRequest, payload: JwtPayload) {
         orderBy: (subscriptions, { desc }) => [desc(subscriptions.createdAt)],
       });
     }
-
+    
     // Combine user and subscription data
     const userProfile = {
       ...userResult,
@@ -52,7 +52,7 @@ async function handler(request: NextRequest, payload: JwtPayload) {
     };
 
     return NextResponse.json({ user: userProfile });
-
+    
   } catch (err) {
     const error = err instanceof Error ? err : new Error('Unknown error');
     console.error('Profile fetch error:', error.message);

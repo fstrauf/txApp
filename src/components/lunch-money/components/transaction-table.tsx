@@ -59,7 +59,7 @@ export default function TransactionTable({
                 <span className="ml-2 font-medium">Select</span>
               </label>
             </th>
-            <th className="px-4 py-3 text-left font-medium">Date</th>
+            <th className="px-4 py-3 text-left font-medium w-32">Date</th>
             <th className="px-4 py-3 text-left font-medium">Description</th>
             <th className="px-4 py-3 text-left font-medium">Amount</th>
             <th className="px-4 py-3 text-left font-medium">Category</th>
@@ -86,7 +86,7 @@ export default function TransactionTable({
                     className="h-4 w-4 accent-primary border-gray-300 rounded"
                   />
                 </td>
-                <td className="px-4 py-3 align-top text-gray-700">
+                <td className="px-4 py-3 align-top text-gray-700 w-32">
                   {typeof transaction.date === 'string' 
                     ? transaction.date 
                     : transaction.date instanceof Date 
@@ -95,7 +95,9 @@ export default function TransactionTable({
                   }
                   {transaction.tags && Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {transaction.tags?.map((tag: any, idx: number) => (
+                      {transaction.tags?.filter((tag: any) => 
+                        (typeof tag === 'string' ? tag : tag.name)?.toLowerCase() !== 'tx-categorized'
+                      ).map((tag: any, idx: number) => (
                         <span 
                           key={`${typeof tag === 'string' ? tag : tag.name || tag.id || idx}-${idx}`}
                           className="text-xs bg-primary text-white rounded-full px-2 py-0.5 font-medium">
