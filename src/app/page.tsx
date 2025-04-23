@@ -326,7 +326,7 @@ export default function Home() {
                     <div className="pt-2">
                       <button
                         onClick={() => setShowLunchMoneyEmailInput(true)}
-                        className="inline-flex items-center px-6 py-3 rounded-lg bg-themeSecondary text-white font-semibold hover:bg-themeSecondary-dark transition-all duration-200 shadow-md"
+                        className="inline-flex items-center px-6 py-3 rounded-lg bg-secondary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-md"
                       >
                         Join the Waitlist
                         <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
