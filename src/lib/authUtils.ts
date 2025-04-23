@@ -1,49 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as jose from 'jose';
+import { getToken } from 'next-auth/jwt'; // Import getToken
 
-// Define our JWT payload structure (ensure this matches the one used during signing)
-// Export the interface so it can be imported by other modules
+// Define our JWT payload structure 
+// Allow email and name to be potentially null, like NextAuth's token
 export interface JwtPayload extends jose.JWTPayload {
-  id: string; // Assuming 'id' is the user identifier in the payload
-  email: string;
-  // Add other claims if they exist
+  id: string;      // User ID 
+  sub?: string;     // Standard JWT subject (often user ID in NextAuth)
+  email?: string | null; // Allow null
+  name?: string | null;  // Allow null
+  // Add other claims if they exist in either token type
 }
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-key');
+const secret = new TextEncoder().encode(
+    process.env.NEXTAUTH_SECRET || // Use NEXTAUTH_SECRET as the primary source
+    process.env.JWT_SECRET || 
+    'fallback-secret-key'
+);
 
 /**
- * Verifies the JWT token from the Authorization header.
+ * Verifies authentication based on either Authorization header or NextAuth session cookie.
  * @param request - The NextRequest object.
  * @returns The verified JWT payload if valid, otherwise null.
  */
 export async function verifyAuth(request: NextRequest): Promise<JwtPayload | null> {
+  // 1. Try verifying Authorization Bearer token first
   const authHeader = request.headers.get('authorization');
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.error('Auth header missing or invalid');
-    return null;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7); // Remove 'Bearer '
+    try {
+      // Ensure the verified payload conforms to JwtPayload
+      const { payload } = await jose.jwtVerify<JwtPayload>(token, secret);
+      console.log('Authenticated via Bearer Token');
+      // Ensure payload has the id field we need
+      const userId = payload.id || payload.sub;
+      if (!userId) throw new Error('User ID (id or sub) missing in Bearer token payload');
+      // Return a consistent structure, ensuring id is set
+      return { ...payload, id: userId };
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Unknown JWT verification error');
+       if (error.name === 'JWTExpired') {
+            console.error('Auth Error (Bearer): JWT Expired');
+       } else {
+            console.error('Auth Error (Bearer): JWT Verification Failed:', error.message);
+       }
+      return null; 
+    }
   }
 
-  const token = authHeader.substring(7); // Remove 'Bearer '
-
+  // 2. If no valid Bearer token, try verifying NextAuth session cookie
   try {
-    const { payload } = await jose.jwtVerify<JwtPayload>(token, secret);
-    // console.log('JWT Verified Payload:', payload); // Optional: log payload for debugging
-    return payload;
+    const nextAuthToken = await getToken({ 
+        req: request, 
+        secret: process.env.NEXTAUTH_SECRET, 
+    });
+
+    if (nextAuthToken) {
+        console.log('Authenticated via NextAuth Session Cookie');
+        // Adapt NextAuth token structure to our expected JwtPayload
+        const userId = nextAuthToken.sub || nextAuthToken.id as string | undefined;
+        if (!userId) throw new Error('User ID (sub or id) missing in NextAuth token payload');
+        
+        // Create the payload, explicitly handling potential nulls from NextAuth
+        const payload: JwtPayload = {
+            ...nextAuthToken, 
+            id: userId,
+            email: nextAuthToken.email === null ? undefined : nextAuthToken.email, // Map null to undefined
+            name: nextAuthToken.name === null ? undefined : nextAuthToken.name,   // Map null to undefined
+        };
+        
+        return payload;
+    }
   } catch (err) {
-    const error = err instanceof Error ? err : new Error('Unknown JWT verification error');
-    // Log specific JWT errors for server-side debugging
-    if (error.name === 'JWTExpired') {
-        console.error('Auth Error: JWT Expired');
-    } else if (error.name === 'JWTClaimValidationFailed') {
-        console.error('Auth Error: JWT Claim Validation Failed', error.message);
-    } else if (error.name === 'JWSInvalid' || error.name === 'JWSVerificationFailed') {
-        console.error('Auth Error: JWT Invalid/Verification Failed');
-    } else {
-        console.error('Auth Error: JWT Verification Failed:', error.message);
-    }    
-    return null;
+      console.error('Auth Error (NextAuth): Failed to process session token:', err);
+      return null;
   }
+  
+  // 3. If neither method works, authentication fails
+  console.error('Auth Error: No valid Bearer token or NextAuth session found');
+  return null;
 }
 
 /**
