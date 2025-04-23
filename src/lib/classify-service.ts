@@ -9,6 +9,7 @@ export interface Transaction {
   description: string;
   amount: string | number;
   type: string;
+  is_income?: boolean;
   bankAccountId: string;
   categoryId: string | null;
   userId: string;
@@ -119,9 +120,16 @@ export class ClassifyServiceClient {
           }
         }
         
+        // Determine if this is income based on is_income flag first, then fall back to type or amount
+        const amount = typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount;
+        // Use is_income explicitly if available, otherwise fall back to type/amount
+        const isIncome = tx.is_income !== undefined ? tx.is_income : 
+                         tx.type === 'income' || amount > 0;
+        
         return {
           Narrative: tx.description,
           Category: categoryName || 'Uncategorized',
+          money_in: isIncome,
         };
       })
     );
@@ -154,9 +162,18 @@ export class ClassifyServiceClient {
     trainingId: string
   ): Promise<ClassificationResponse> {
     // Convert transactions to the format expected by the classification service
-    const formattedTransactions = transactions.map(tx => ({
-      Narrative: tx.description,
-    }));
+    const formattedTransactions = transactions.map(tx => {
+      // Determine if this is income based on is_income flag first, then fall back to type or amount
+      const amount = typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount;
+      // Use is_income explicitly if available, otherwise fall back to type/amount
+      const isIncome = tx.is_income !== undefined ? tx.is_income : 
+                      tx.type === 'income' || amount > 0;
+      
+      return {
+        Narrative: tx.description,
+        money_in: isIncome,
+      };
+    });
 
     const payload = {
       transactions: formattedTransactions,

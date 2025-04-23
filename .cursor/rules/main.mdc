@@ -3,16 +3,30 @@ description:
 globs: 
 alwaysApply: true
 ---
+# Main Development Guidelines
 
-# Your rule content
+- **Technology Stack:**
+  - Use Next.js for all web development.
+  - Use Tailwind CSS for styling.
+  - Use Hono for endpoints that need to be reusable between the webapp and mobile.
 
-- Use Nextjs for all development
-- Tailwind for styling
-- never store any keys in the codebase. All keys should live in .env files.
-- Always think from first principles. Let's solve the root cause of an issue and not apply fixes upon fixes.
-- Keep solutions as simple as possible. Let's not boil the ocean but instead get a simple fix for the problem presented.
-- no mock data! this is a production application and we can't just return dummy data if it doesn't work.
-- don't create documentation or README or .md files unless explicity tasked
-- pnpm is the package manager all commands should use pnpm
-- make sure that everything we create that is reusable between webapp and mobile is created as hono endpoint
+- **API Keys & Secrets:**
+  - Never store any keys or secrets directly in the codebase.
+  - All keys and secrets must live in `.env` files.
+
+- **Problem Solving:**
+  - Always think from first principles. Aim to solve the root cause of issues, not just symptoms.
+  - Keep solutions as simple as possible. Focus on providing a basic, working fix first.
+
+- **Data Handling:**
+  - No mock data. This is a production application; ensure real data handling is implemented.
+
+- **Documentation:**
+  - Do not create documentation, READMEs, or other `.md` files unless explicitly requested.
+
+- **Package Management:**
+  - Use `pnpm` as the package manager for all projects. Ensure all commands use `pnpm`.
+
+- **Code Reusability:**
+  - Ensure that any functionality intended for use by both web and mobile applications is created as a Hono endpoint.
 
