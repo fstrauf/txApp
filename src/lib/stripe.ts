@@ -80,6 +80,7 @@ export async function createCheckoutSession({
         },
       ],
       mode: 'subscription',
+      allow_promotion_codes: true,
       subscription_data: {
         trial_period_days: 14, // Free trial for 14 days
         metadata: {
