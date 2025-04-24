@@ -65,7 +65,7 @@ export function Sidebar() {
             href={item.href}
             className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
               pathname === item.href
-                ? "bg-themePrimary/10 text-themePrimary"
+                ? "bg-primary/10 text-primary"
                 : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
             }`}
           >
