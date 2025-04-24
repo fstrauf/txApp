@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { 
   Transaction, 
   Category, 
@@ -46,15 +46,14 @@ export default function TransactionList() {
   const [operationType, setOperationType] = useState<OperationType>('none');
   
   // Categorization workflow states
-  const [showOnlyCategorized, setShowOnlyCategorized] = useState<boolean>(false);
-  const [showOnlyUncategorized, setShowOnlyUncategorized] = useState<boolean>(false);
   const [categorizedTransactions, setCategorizedTransactions] = useState<Map<string, {category: string, score: number}>>(new Map());
-  const [pendingCategoryUpdates, setPendingCategoryUpdates] = useState<Record<string, {categoryId: string, score: number}>>({});
+  const [pendingCategoryUpdates, setPendingCategoryUpdates] = useState<Record<string, {categoryId: string | null, score: number}>>({});
   const [applyingAll, setApplyingAll] = useState<boolean>(false);
   const [applyingIndividual, setApplyingIndividual] = useState<string | null>(null);
+  const [lastTrainedTimestamp, setLastTrainedTimestamp] = useState<string | null>(null);
 
   // *** NEW: State for the primary filter ***
-  const [showOnlyNeedsReview, setShowOnlyNeedsReview] = useState<boolean>(true); // Default to true
+  const [showOnlyNeedsReview, setShowOnlyNeedsReview] = useState<boolean>(false); // Default to false
 
   // Calculate transaction stats
   const transactionStats = useMemo(() => {
@@ -95,6 +94,7 @@ export default function TransactionList() {
   useEffect(() => {
     fetchTransactions();
     fetchCategories();
+    fetchLastTrainedTimestamp();
   }, []);
 
   // Auto-hide toast after 3 seconds
@@ -692,8 +692,8 @@ export default function TransactionList() {
           }
           return {
             description: tx.description,
-            // *** CHANGE: Use categoryId instead of Category name ***
-            categoryId: categoryId, // Send the numeric ID (or null)
+            // *** Use Category (capital C) to match backend model ***
+            Category: categoryId, // Send the numeric ID (or null)
             money_in: tx.is_income, 
             amount: tx.amount 
           };
@@ -724,26 +724,51 @@ export default function TransactionList() {
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
+      // --- MODIFIED RESPONSE HANDLING FOR TRAINING ---
+      if (response.status === 200) {
+        // Synchronous Completion
+        const syncResult = await response.json();
+        console.log("Received synchronous training results:", syncResult);
 
-      if (!response.ok) {
+        if (syncResult.status === 'completed') {
+          setProgressMessage('Training completed successfully!');
+          setProgressPercent(100);
+          setToastMessage({ message: 'Training completed successfully!', type: 'success' });
+          await tagTransactionsAsTrained(selectedTransactions); // Tag transactions
+          fetchLastTrainedTimestamp(); // <-- Refresh timestamp
+          setOperationInProgress(false); // Close modal immediately
+          setOperationType('none');
+          setSelectedTransactions([]); // Optional: Clear selection after successful training
+          return { status: 'completed' }; // Indicate success
+        } else {
+          // Handle unexpected 200 response format
+          throw new Error('Received unexpected success response format from server during training.');
+        }
+      } else if (response.status === 202) {
+        // Asynchronous Processing Started
+        const asyncResult = await response.json();
+        console.log("Received asynchronous training start response:", asyncResult);
+        const predictionId = asyncResult.prediction_id || asyncResult.predictionId;
+        if (predictionId) {
+          localStorage.setItem('training_prediction_id', predictionId);
+          // Set progress message before polling
+          setProgressMessage('Training started, waiting for results...');
+          const pollResult = await pollForCompletion(predictionId, 'training');
+          if (pollResult.status === 'completed') {
+            await tagTransactionsAsTrained(selectedTransactions);
+            fetchLastTrainedTimestamp(); // <-- Refresh timestamp
+          }
+          return pollResult;
+        } else {
+          throw new Error('Server started training but did not return a prediction ID.');
+        }
+      } else {
+        // Handle other errors (4xx, 5xx)
+        const result = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
         throw new Error(result.error || `Training request failed with status ${response.status}`);
       }
+      // --- END MODIFIED RESPONSE HANDLING ---
 
-      console.log("Training response (from proxy):", result);
-
-      if (result.prediction_id || result.predictionId) {
-        const predictionId = result.prediction_id || result.predictionId;
-        localStorage.setItem('training_prediction_id', predictionId);
-        
-        const pollResult = await pollForCompletion(predictionId, 'training');
-        if (pollResult.status === 'completed') {
-          await tagTransactionsAsTrained(selectedTransactions);
-        }
-        return pollResult;
-      } else {
-        throw new Error('No prediction ID received from training service');
-      }
     } catch (error) {
       console.error('Error starting training:', error);
       setToastMessage({ message: error instanceof Error ? error.message : 'Failed to start training', type: 'error' });
@@ -755,76 +780,109 @@ export default function TransactionList() {
   // Update handleCategorizeSelected to use the internal API route
   const handleCategorizeSelected = async () => {
     if (selectedTransactions.length === 0) {
-      setToastMessage({ message: "Please select at least one transaction for categorization", type: "error" });
+      setToastMessage({ message: 'Please select transactions to categorize', type: 'warning' });
+      return;
+    }
+
+    // Filter out transactions that already have pending updates
+    const transactionsToCategorize = selectedTransactions.filter(
+      txId => !pendingCategoryUpdates[txId]
+    );
+
+    if (transactionsToCategorize.length === 0) {
+      setToastMessage({ 
+        message: 'All selected transactions already have pending category suggestions.', 
+        type: 'info' 
+      });
       return;
     }
 
     setOperationInProgress(true);
     setOperationType('categorizing');
+    setProgressMessage('Starting categorization...');
     setProgressPercent(0);
-    setProgressMessage('Preparing to categorize transactions...');
+    setError(null); // Clear previous errors
+    // Clear existing pending updates for newly selected items
+    setPendingCategoryUpdates(prev => {
+      const newPending = { ...prev };
+      transactionsToCategorize.forEach(txId => {
+        delete newPending[txId]; // Remove any old pending state if re-categorizing
+      });
+      return newPending;
+    });
 
     try {
-      const selectedTxs = transactions.filter(tx => selectedTransactions.includes(tx.lunchMoneyId));
-      if (selectedTxs.length === 0) throw new Error('No valid transactions selected for categorization');
-        
-      const transactionsToClassify = selectedTxs.map(tx => {
-        // Use is_income flag directly from Lunch Money
-        return {
-          description: tx.description,
-          Narrative: tx.description, // Add Narrative for compatibility
-          money_in: tx.is_income, // Directly use is_income flag
-          amount: tx.amount // Include amount for context only
-        };
-      });
-      
-      setProgressPercent(10);
-      setProgressMessage('Sending categorization request...');
-      
-      const payload = {
-        transactions: transactionsToClassify,
-        spreadsheetId: 'test-sheet-id'
-      };
+      console.log("Sending transactions for categorization:", transactionsToCategorize);
 
-      // *** Call the INTERNAL API route ***
+      // Find the full transaction objects for the selected IDs
+      const selectedTxObjects = transactions.filter(tx => 
+        transactionsToCategorize.includes(tx.lunchMoneyId)
+      ).map(tx => ({
+        description: typeof tx.description === 'object' ? JSON.stringify(tx.description) : tx.description,
+        // Send money_in status based on the transaction data
+        money_in: tx.is_income,
+        amount: typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount || 0)),
+      }));
+
+      console.log("Payload being sent:", selectedTxObjects);
+
+      setProgressMessage('Sending request to server...');
       const response = await fetch('/api/classify/classify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ transactions: selectedTxObjects }),
       });
 
-      const result = await response.json();
+      // --- MODIFIED RESPONSE HANDLING --- 
+      if (response.status === 200) {
+        // Synchronous Completion
+        const syncResult = await response.json();
+        console.log("Received synchronous classification results:", syncResult);
 
-      if (!response.ok) {
-        throw new Error(result.error || `Categorization request failed with status ${response.status}`);
-      }
-
-      console.log("Categorization response (from proxy):", result);
-
-      if (result.prediction_id) {
-        const predictionId = result.prediction_id;
-        localStorage.setItem('categorization_prediction_id', predictionId);
-        
-        setProgressPercent(15);
-        setProgressMessage('Waiting for categorization to initialize...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        
-        const pollResult = await pollForCompletion(predictionId, 'categorizing');
-        
-        if (pollResult.status === 'completed' && pollResult.results) {
-          updateTransactionsWithPredictions(pollResult.results);
+        if (syncResult.status === 'completed' && Array.isArray(syncResult.results)) {
+          setProgressMessage('Processing results...');
+          setProgressPercent(100);
+          updateTransactionsWithPredictions(syncResult.results);
+          setToastMessage({ message: 'Categorization completed successfully!', type: 'success' });
+          setOperationInProgress(false); // Close modal immediately
+          setSelectedTransactions([]); // Clear selection after successful sync categorization
+        } else {
+          // Handle unexpected 200 response format
+          throw new Error('Received unexpected success response format from server.');
         }
-        return pollResult;
+      } else if (response.status === 202) {
+        // Asynchronous Processing Started
+        const asyncResult = await response.json();
+        console.log("Received asynchronous start response:", asyncResult);
+        if (asyncResult.prediction_id) {
+          setProgressMessage('Classification started. Waiting for results...');
+          setProgressPercent(10); // Initial progress
+          await pollForCompletion(asyncResult.prediction_id, 'categorizing');
+          // Polling function handles setting final state (progress, message, modal close)
+        } else {
+          throw new Error('Server started processing but did not return a prediction ID.');
+        }
       } else {
-        throw new Error('No prediction ID received from categorization service');
+        // Handle other errors (4xx, 5xx)
+        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
+        console.error('Error during categorization:', errorData);
+        setError(errorData.error || `Request failed with status ${response.status}`);
+        setToastMessage({ message: errorData.error || `Categorization failed (Status: ${response.status})`, type: 'error' });
+        setOperationInProgress(false);
       }
+      // --- END MODIFIED RESPONSE HANDLING ---
+
     } catch (error) {
-      console.error('Error during categorization:', error);
-      setToastMessage({ message: error instanceof Error ? error.message : 'Failed to categorize transactions', type: 'error' });
+      console.error('Failed to categorize transactions:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      setError(errorMessage);
+      setToastMessage({ message: `Categorization failed: ${errorMessage}`, type: 'error' });
       setOperationInProgress(false);
       setOperationType('none');
+      setProgressPercent(0);
+      setProgressMessage('');
     }
   };
 
@@ -881,33 +939,48 @@ export default function TransactionList() {
     setPendingCategoryUpdates({});
     setCategorizedTransactions(newCategorizedTransactions);
     
-    // Enable the filter to show only categorized transactions
-    setShowOnlyCategorized(true);
-    
     // Create a mapping of transaction IDs to predicted categories and scores for easier access
-    const pendingUpdates: Record<string, {categoryId: string, score: number}> = {};
-    
+    const pendingUpdates: Record<string, {categoryId: string | null, score: number}> = {}; // Allow null categoryId
+
     // Map the predictions to transaction IDs
     selectedTransactions.forEach(txId => {
       const tx = transactions.find(t => t.lunchMoneyId === txId);
       if (tx && tx.description) {
         const prediction = newCategorizedTransactions.get(tx.description);
+        
         if (prediction) {
-          // Find the category ID for this predicted category name
-          const categoryObj = categories.find(cat => 
-            typeof cat !== 'string' && 
-            cat.name.toLowerCase() === prediction.category.toLowerCase()
-          );
-          
-          // Use the found category ID or the category name as fallback
-          const categoryId = categoryObj && typeof categoryObj !== 'string' 
-            ? categoryObj.id 
-            : prediction.category;
-          
-          pendingUpdates[txId] = {
-            categoryId,
-            score: prediction.score
-          };
+          // Handle case where prediction is explicitly 'Uncategorized' (our fallback for 'None')
+          if (prediction.category === 'Uncategorized') {
+            pendingUpdates[txId] = {
+              categoryId: null, // Use null to signify 'Needs Review' or 'Uncategorized'
+              score: prediction.score
+            };
+          } else {
+            // Find the category ID for this predicted category name
+            const categoryObj = categories.find(cat => 
+              typeof cat !== 'string' && 
+              cat.name.toLowerCase() === prediction.category.toLowerCase()
+            );
+            
+            // Use the found category ID or the category name as fallback if ID not found
+            const categoryId = categoryObj && typeof categoryObj !== 'string' 
+              ? categoryObj.id 
+              : prediction.category; // Keep original prediction if ID mapping fails
+            
+            pendingUpdates[txId] = {
+              categoryId,
+              score: prediction.score
+            };
+          }
+        } else {
+            // Handle cases where a transaction was selected but received no prediction (e.g., API error for just that item)
+            // Or if the 'None' category was filtered out earlier (ensure it's handled)
+            // We might want to explicitly mark these for review as well
+            console.log(`No prediction found for txId ${txId} with description "${tx.description}". Marking for review.`);
+            pendingUpdates[txId] = {
+              categoryId: null, // Mark as needing review
+              score: 0 // Assign a zero score
+            };
         }
       }
     });
@@ -1167,20 +1240,6 @@ export default function TransactionList() {
         });
     }
 
-    // Apply secondary UI filters (Show Only Categorized / Uncategorized)
-    if (showOnlyCategorized) {
-      return result.filter(tx => 
-        selectedTransactions.includes(tx.lunchMoneyId) && 
-        Object.keys(pendingCategoryUpdates).includes(tx.lunchMoneyId)
-      );
-    }
-    if (showOnlyUncategorized) {
-      return result.filter(tx => 
-        !tx.originalData?.category_id && 
-        !tx.lunchMoneyCategory
-      );
-    }
-    
     return result;
   };
 
@@ -1189,9 +1248,31 @@ export default function TransactionList() {
     console.log("Cancelling pending categorization updates.");
     setPendingCategoryUpdates({});
     setCategorizedTransactions(new Map()); // Clear the map holding prediction details
-    setShowOnlyCategorized(false); // Turn off the "show predictions" filter
     // Optionally reset other filters or show a toast
     setToastMessage({ message: 'Discarded pending category predictions.', type: 'success' }); 
+  };
+
+  // Fetch the last trained timestamp
+  const fetchLastTrainedTimestamp = async () => {
+    try {
+      const response = await fetch('/api/classify/last-trained');
+      if (!response.ok) {
+        // Don't throw an error, just log it, maybe the user hasn't trained yet
+        console.warn(`Failed to fetch last trained timestamp: ${response.status}`);
+        setLastTrainedTimestamp(null);
+        return;
+      }
+      const data = await response.json();
+      setLastTrainedTimestamp(data.lastTrainedAt || null);
+      if (data.lastTrainedAt) {
+        console.log('Successfully fetched last trained timestamp:', data.lastTrainedAt);
+      } else {
+        console.log('No last trained timestamp found for user.');
+      }
+    } catch (error) {
+      console.error('Error fetching last trained timestamp:', error);
+      setLastTrainedTimestamp(null); // Set to null on error
+    }
   };
 
   // Handle error state
@@ -1237,17 +1318,13 @@ export default function TransactionList() {
           handleDateRangeChange={handleDateRangeChange}
           applyDateFilter={applyDateFilter}
           isApplying={isApplyingDates}
-          showOnlyCategorized={showOnlyCategorized}
-          setShowOnlyCategorized={setShowOnlyCategorized}
-          showOnlyUncategorized={showOnlyUncategorized}
-          setShowOnlyUncategorized={setShowOnlyUncategorized}
           pendingCategoryUpdates={pendingCategoryUpdates}
           trainedCount={transactionStats.trainedCount}
-          uncategorizedCount={transactionStats.uncategorizedCount}
           needsReviewCount={transactionStats.needsReviewCount} // Pass new count
           operationInProgress={operationInProgress}
           showOnlyNeedsReview={showOnlyNeedsReview} // Pass state
           setShowOnlyNeedsReview={setShowOnlyNeedsReview} // Pass setter
+          lastTrainedTimestamp={lastTrainedTimestamp} // <-- Pass timestamp
         />
 
         {/* Action buttons and categorization results */}
@@ -1264,6 +1341,7 @@ export default function TransactionList() {
           importStatus={importStatus}
           importMessage={importMessage}
           handleCancelCategorization={handleCancelCategorization}
+          lastTrainedTimestamp={lastTrainedTimestamp} // <-- Pass timestamp
         />
       </div>
 

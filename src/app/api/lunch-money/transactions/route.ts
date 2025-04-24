@@ -67,12 +67,7 @@ async function fetchLunchMoneyTransactions(apiKey: string, startDate: string, en
 }
 
 // Function to format transactions for our application
-function formatTransactions(transactions: LunchMoneyTransaction[]): FormattedTransaction[] {
-  // Log first transaction to see the format
-  if (transactions.length > 0) {
-    console.log('Sample Lunch Money transaction:', JSON.stringify(transactions[0], null, 2));
-  }
-  
+function formatTransactions(transactions: LunchMoneyTransaction[]): FormattedTransaction[] {  
   return transactions.map(tx => {
     const lunchMoneyCategory = tx.category_name || null;
     const isIncome = tx.is_income === true;

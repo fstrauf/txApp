@@ -1,5 +1,6 @@
-import React, { Dispatch, SetStateAction } from 'react';
+import React, { Dispatch, SetStateAction, useMemo } from 'react';
 import { DateRange } from '../types';
+import { format } from 'date-fns';
 
 type TransactionFiltersProps = {
   pendingDateRange: DateRange;
@@ -7,16 +8,12 @@ type TransactionFiltersProps = {
   applyDateFilter: () => void;
   operationInProgress: boolean;
   isApplying: boolean;
-  showOnlyUncategorized: boolean;
-  setShowOnlyUncategorized: (value: boolean) => void;
-  showOnlyCategorized: boolean;
-  setShowOnlyCategorized: (value: boolean) => void;
-  pendingCategoryUpdates: Record<string, {categoryId: string, score: number}>;
-  trainedCount: number;
-  uncategorizedCount: number;
-  needsReviewCount: number;
   showOnlyNeedsReview: boolean;
   setShowOnlyNeedsReview: Dispatch<SetStateAction<boolean>>;
+  needsReviewCount: number;
+  trainedCount: number;
+  pendingCategoryUpdates: Record<string, {categoryId: string | null, score: number}>;
+  lastTrainedTimestamp?: string | null;
 };
 
 export default function TransactionFilters({
@@ -28,14 +25,20 @@ export default function TransactionFilters({
   showOnlyNeedsReview,
   setShowOnlyNeedsReview,
   needsReviewCount,
-  showOnlyCategorized,
-  setShowOnlyCategorized,
-  showOnlyUncategorized,
-  setShowOnlyUncategorized,
   trainedCount,
-  uncategorizedCount,
-  pendingCategoryUpdates
+  pendingCategoryUpdates,
+  lastTrainedTimestamp
 }: TransactionFiltersProps) {
+  const formattedTimestamp = useMemo(() => {
+    if (!lastTrainedTimestamp) return 'Never';
+    try {
+      return format(new Date(lastTrainedTimestamp), 'yyyy-MM-dd HH:mm');
+    } catch (e) {
+      console.error("Error formatting timestamp:", e);
+      return 'Invalid Date';
+    }
+  }, [lastTrainedTimestamp]);
+
   return (
     <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
       <div className="flex flex-wrap items-end gap-4 mb-4">
@@ -92,6 +95,12 @@ export default function TransactionFilters({
           />
           <span className="text-sm text-gray-700">Show only transactions needing review ({needsReviewCount})</span>
         </label>
+      </div>
+      <div className="mt-2">
+        <span className="text-sm text-gray-500">Trained: {trainedCount}</span>
+      </div>
+      <div className="mt-2">
+        <span className="text-sm text-gray-500">Last Trained: {formattedTimestamp}</span>
       </div>
     </div>
   );
