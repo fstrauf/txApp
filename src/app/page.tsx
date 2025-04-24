@@ -321,7 +321,7 @@ export default function Home() {
                 {!showLunchMoneyEmailInput ? (
                   <>
                     <p className="text-lg text-gray-700">
-                      Love <a href="https://lunchmoney.app/" target="_blank" rel="noopener noreferrer" className="font-semibold text-themeSecondary hover:underline">Lunch Money</a>? Soon you'll be able to supercharge it with Expense Sorted's AI categorization.
+                      Love <a href="https://lunchmoney.app/" target="_blank" rel="noopener noreferrer" className="font-semibold text-secondary hover:underline">Lunch Money</a>? Soon you'll be able to supercharge it with Expense Sorted's AI categorization.
                     </p>
                     <div className="pt-2">
                       <button
@@ -348,7 +348,7 @@ export default function Home() {
                         placeholder="your.email@example.com"
                         required
                         disabled={isSubmittingLunchMoneyEmail}
-                        className="max-w-sm p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-themePrimary focus:border-themePrimary text-sm"
+                        className="max-w-sm p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm"
                       />
                       {lunchMoneyEmailError && <p className="text-red-500 text-sm mt-1">{lunchMoneyEmailError}</p>}
                     </div>
@@ -356,7 +356,7 @@ export default function Home() {
                       <button
                         type="submit"
                         disabled={isSubmittingLunchMoneyEmail}
-                         className="bg-themeSecondary text-white font-semibold hover:bg-themeSecondary-dark px-4 py-2 rounded-lg disabled:bg-gray-400"
+                         className="bg-secondary text-white font-semibold hover:bg-secondary-dark px-4 py-2 rounded-lg disabled:bg-gray-400"
                       >
                         {isSubmittingLunchMoneyEmail ? 'Submitting...' : 'Notify Me'}
                       </button>
