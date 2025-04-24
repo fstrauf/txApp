@@ -1,49 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authConfig } from '@/lib/auth';
-import { db } from '@/db';
-import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
 
-const EXTERNAL_TRAIN_URL = 'https://txclassify.onrender.com/train';
+const EXTERNAL_TRAIN_URL = process.env.EXPENSE_SORTED_API + '/train';
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authConfig);
+
+  // Add type assertion for session to include apiKey
+  const typedSession = session as (typeof session & { apiKey?: string });
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const userId = session.user.id;
+  const userApiKey = typedSession?.apiKey;
 
+  if (!userApiKey) {
+    // If key is not in session, it means it wasn't fetched/added during JWT callback
+    console.warn(`User ${userId} does not have an API key configured or it's missing from session.`);
+    return NextResponse.json({ error: 'API key not configured or unavailable in session.' }, { status: 400 });
+  }
+
+  // 2. Get the payload from the incoming request
+  const payload = await request.json();
+
+  // 3. Call the external training service with the API key from session
+  console.log(`Proxying training request for user ${userId} to ${EXTERNAL_TRAIN_URL}`);
   try {
-    // 1. Get the user's *correct* API key (api_key)
-    const userResult = await db
-      .select({ apiKey: users.api_key })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    const userApiKey = userResult[0]?.apiKey;
-
-    if (!userApiKey) {
-      // Use the hardcoded key as a fallback *only if intended for testing/demo*
-      // Or return an error if a real key is always required
-      // userApiKey = 'test_api_key_fixed';
-      console.warn(`User ${userId} does not have an API key configured.`);
-      return NextResponse.json({ error: 'API key not configured for this user.' }, { status: 400 });
-    }
-
-    // 2. Get the payload from the incoming request
-    const payload = await request.json();
-
-    // 3. Call the external training service with the user's API key
-    console.log(`Proxying training request for user ${userId} to ${EXTERNAL_TRAIN_URL}`);
     const externalResponse = await fetch(EXTERNAL_TRAIN_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': userApiKey,
+        'X-API-Key': userApiKey, // Use key from session
         'Accept': 'application/json',
       },
       body: JSON.stringify(payload),
@@ -54,7 +44,6 @@ export async function POST(request: NextRequest) {
 
     if (!externalResponse.ok) {
        console.error(`External training service error for user ${userId}:`, externalResponse.status, responseData);
-       // Forward the status code and error message from the external service
        return NextResponse.json(responseData, { status: externalResponse.status });
     }
 
@@ -63,6 +52,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error(`Error in /api/classify/train proxy for user ${userId}:`, error);
+    // Check if it's a fetch error (e.g., network issue)
+    if (error instanceof Error && (error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED'))) {
+        return NextResponse.json({ error: 'Failed to connect to the external training service.' }, { status: 502 }); // Bad Gateway
+    }
     return NextResponse.json({ error: 'Internal Server Error during training proxy' }, { status: 500 });
   }
 } 

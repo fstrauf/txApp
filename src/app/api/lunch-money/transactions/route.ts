@@ -7,6 +7,7 @@ import { users, bankAccounts, transactions, categories } from '@/db/schema';
 import { findUserByEmail, createId } from '@/db/utils';
 
 const LUNCH_MONEY_API_URL = 'https://dev.lunchmoney.app/v1/transactions';
+const CATEGORIZED_TAG_NAME = 'tx-categorized'; // Define the tag name
 
 // Define interfaces for better type safety
 interface LunchMoneyTransaction {
@@ -66,12 +67,7 @@ async function fetchLunchMoneyTransactions(apiKey: string, startDate: string, en
 }
 
 // Function to format transactions for our application
-function formatTransactions(transactions: LunchMoneyTransaction[]): FormattedTransaction[] {
-  // Log first transaction to see the format
-  if (transactions.length > 0) {
-    console.log('Sample Lunch Money transaction:', JSON.stringify(transactions[0], null, 2));
-  }
-  
+function formatTransactions(transactions: LunchMoneyTransaction[]): FormattedTransaction[] {  
   return transactions.map(tx => {
     const lunchMoneyCategory = tx.category_name || null;
     const isIncome = tx.is_income === true;
@@ -131,19 +127,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Lunch Money API key not configured.' }, { status: 400 });
     }
 
-    // 2. Get Date Parameters from Request URL
+    // 2. Get Date & Filter Parameters from Request URL
     const searchParams = request.nextUrl.searchParams;
     const endDate = searchParams.get('end_date') || getDateString(new Date());
     const defaultStartDate = new Date();
     defaultStartDate.setDate(defaultStartDate.getDate() - 90); // Default to last 90 days
     const startDate = searchParams.get('start_date') || getDateString(defaultStartDate);
+    const filter = searchParams.get('filter'); // Get the new filter parameter
 
     // 3. Construct URL with Parameters for Lunch Money API
     const url = new URL(LUNCH_MONEY_API_URL);
     url.searchParams.append('start_date', startDate);
     url.searchParams.append('end_date', endDate);
-    // Add other parameters like limit, offset, debit_as_negative if needed
-    // url.searchParams.append('limit', '500'); 
+
+    // Add tag exclusion if filter=needs_review
+    if (filter === 'needs_review') {
+      console.log(`Applying filter: Excluding tag '${CATEGORIZED_TAG_NAME}'`);
+      // *** IMPORTANT: Verify the correct parameter name in Lunch Money API docs ***
+      // Assuming it's 'exclude_tag_name' for now.
+      url.searchParams.append('exclude_tag_name', CATEGORIZED_TAG_NAME);
+      // If you also want to exclude trained tags server-side (requires knowing tag ID or pattern):
+      // url.searchParams.append('exclude_tag_pattern', 'trained-*'); // Example
+    }
 
     console.log(`Fetching from Lunch Money API: ${url.toString()}`);
 
@@ -333,7 +338,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Lunch Money API key not found' }, { status: 400 });
     }
     
-    const { transactionId, categoryId, tags } = await request.json();
+    const { transactionId, categoryId, tags: existingTags } = await request.json();
     
     if (!transactionId) {
       return NextResponse.json({ error: 'Transaction ID is required' }, { status: 400 });
@@ -342,35 +347,42 @@ export async function PATCH(request: NextRequest) {
     // Update the transaction directly using the official Lunch Money API
     const url = `https://dev.lunchmoney.app/v1/transactions/${transactionId}`;
     
-    // Build the update object based on what was provided
+    // Build the update object
     const updateObject: any = {};
     
-    // Add category_id if provided
+    // --- Add Category ID if provided --- 
     if (categoryId !== undefined) {
-      // Convert categoryId to number or null for Lunch Money API
       const lunchMoneyCategoryId = categoryId === "none" ? null : Number(categoryId);
       updateObject.category_id = lunchMoneyCategoryId;
     }
     
-    // Add tags if provided
-    if (tags) {
-      updateObject.tags = tags;
+    // --- Add Tags: Include existing tags + the new 'tx-categorized' tag --- 
+    // Get existing tag *names* for the API call
+    let currentTagNames = Array.isArray(existingTags) 
+        ? existingTags.map(tag => typeof tag === 'string' ? tag : tag.name).filter(Boolean) 
+        : [];
+
+    // Ensure 'tx-categorized' is added only once
+    if (!currentTagNames.includes(CATEGORIZED_TAG_NAME)) {
+        currentTagNames.push(CATEGORIZED_TAG_NAME);
     }
     
-    // Format the request body according to the API documentation
+    // Update the 'tags' field in the object sent to Lunch Money
+    updateObject.tags = currentTagNames;
+    
     const updateBody = {
       transaction: updateObject
     };
     
-    console.log('Making request to Lunch Money:', {
+    console.log('Making PUT request to Lunch Money:', {
       url,
       method: 'PUT',
-      body: updateBody
+      body: JSON.stringify(updateBody, null, 2) // Log the body being sent
     });
     
     // Make the API call to Lunch Money
     const response = await fetch(url, {
-      method: 'PUT',
+      method: 'PUT', // Use PUT as per Lunch Money docs for updating
       headers: {
         'Authorization': `Bearer ${user.lunchMoneyApiKey}`,
         'Content-Type': 'application/json'
@@ -378,23 +390,25 @@ export async function PATCH(request: NextRequest) {
       body: JSON.stringify(updateBody)
     });
 
-    // Get the response data
     const responseData = await response.json();
     
-    // Check for errors
     if (!response.ok || responseData.error) {
       const errorMessage = responseData.error ? 
-        (Array.isArray(responseData.error) ? responseData.error.join(', ') : responseData.error) : 
-        'Failed to update transaction in Lunch Money';
+        (Array.isArray(responseData.error) ? responseData.error.join(', ') : String(responseData.error)) : 
+        `Failed to update transaction ${transactionId} in Lunch Money`;
       
-      console.error('Lunch Money API error:', responseData);
+      console.error('Lunch Money API error during PATCH:', response.status, responseData);
       return NextResponse.json({ error: errorMessage }, { status: response.status || 500 });
     }
     
+    // Important: Lunch Money PUT response might be just { updated: true } or the updated transaction array
+    // Let's return a success message and the potentially updated tags
     return NextResponse.json({ 
       success: true, 
-      transaction: responseData
+      message: `Transaction ${transactionId} updated and tagged as categorized.`,
+      updatedTags: currentTagNames // Return the tags we *tried* to set
     });
+
   } catch (error) {
     console.error('Error in PATCH /api/lunch-money/transactions:', error);
     return NextResponse.json(

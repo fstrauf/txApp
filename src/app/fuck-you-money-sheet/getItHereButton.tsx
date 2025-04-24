@@ -96,21 +96,21 @@ export default function GetItHereButton() {
           <p className="text-green-600 mb-4">Welcome back! Here's your spreadsheet:</p>
           {/* Replaced Button asChild with styled Link */}
           <Link
-            href="https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983"
-            target="_blank"
-            rel="noopener noreferrer"
+              href="https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983"
+              target="_blank"
+              rel="noopener noreferrer"
             className={primaryButtonClasses} // Apply button styles
-          >
-            Access Spreadsheet
+            >
+              Access Spreadsheet
           </Link>
           <div className="mt-4">
             {/* Replaced Button asChild with styled Link */}
             <Link
-              href="/api-key"
-              rel="noopener noreferrer"
+                href="/api-key"
+                rel="noopener noreferrer"
               className={primaryButtonClasses} // Apply button styles
-            >
-              Get API Key
+              >
+                Get API Key
             </Link>
           </div>
         </div>
@@ -127,27 +127,27 @@ export default function GetItHereButton() {
           <p className="text-green-600 mb-4">Thanks! Here's your spreadsheet:</p>
           {/* Replaced Button asChild with styled Link */}
           <Link
-            href="https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983"
-            target="_blank"
-            rel="noopener noreferrer"
+              href="https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983"
+              target="_blank"
+              rel="noopener noreferrer"
             className={primaryButtonClasses} // Apply button styles
-          >
-            Access Spreadsheet
-            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+            >
+              Access Spreadsheet
+              <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
           </Link>
           <div className="mt-4">
             {/* Replaced Button asChild with styled Link */}
             <Link
-              href="/api-key"
-              rel="noopener noreferrer"
+                href="/api-key"
+                rel="noopener noreferrer"
               className={primaryButtonClasses} // Apply button styles
-            >
-              Get API Key
-              <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              >
+                Get API Key
+                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
             </Link>
           </div>
         </div>

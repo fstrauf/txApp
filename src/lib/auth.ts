@@ -4,7 +4,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { compare } from "bcryptjs";
 import { db } from "@/db";
 import * as schema from "@/db/schema"; // Import all schemas
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import * as bcrypt from 'bcryptjs';
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 
@@ -87,18 +87,43 @@ export const authConfig: NextAuthOptions = {
     signIn: "/auth/signin",
   },
   callbacks: {
-    // Simplify session callback: Just add user ID
+    // Modify session callback to include apiKey
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
       }
-      // Removed accessToken logic
+      // Add apiKey from token to session
+      if (token.apiKey) {
+         // Define a type for the session object or use type assertion
+         (session as any).apiKey = token.apiKey as string;
+      }
       console.log("[Session Callback] Returning session:", session);
       return session;
     },
-    // Simplify jwt callback: No need to handle accessToken
-    async jwt({ token, user }) {
-      // Basic JWT logic (sub is added automatically)
+    // Modify jwt callback to fetch and include apiKey
+    async jwt({ token, user, account, profile, isNewUser }) {
+      // On successful sign-in (user object is present), fetch and add apiKey
+      if (user?.id) { // Check if user object exists and has an id
+        try {
+          console.log(`[JWT Callback] Fetching API key for user ID: ${user.id}`);
+          const userResult = await db
+            .select({ apiKey: schema.users.api_key })
+            .from(schema.users)
+            .where(eq(schema.users.id, user.id))
+            .limit(1);
+            
+          const userApiKey = userResult[0]?.apiKey;
+          if (userApiKey) {
+            token.apiKey = userApiKey;
+            console.log(`[JWT Callback] Added API key to token for user ${user.id}`);
+          } else {
+            console.warn(`[JWT Callback] No API key found for user ${user.id}`);
+          }
+        } catch (error) {
+          console.error(`[JWT Callback] Error fetching API key for user ${user.id}:`, error);
+          // Decide if you want to prevent token generation or just log error
+        }
+      }
       console.log("[JWT Callback] Returning token:", token);
       return token;
     },

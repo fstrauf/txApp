@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { 
   Transaction, 
   Category, 
@@ -46,20 +46,22 @@ export default function TransactionList() {
   const [operationType, setOperationType] = useState<OperationType>('none');
   
   // Categorization workflow states
-  const [showOnlyCategorized, setShowOnlyCategorized] = useState<boolean>(false);
-  const [showOnlyUncategorized, setShowOnlyUncategorized] = useState<boolean>(false);
   const [categorizedTransactions, setCategorizedTransactions] = useState<Map<string, {category: string, score: number}>>(new Map());
-  const [pendingCategoryUpdates, setPendingCategoryUpdates] = useState<Record<string, {categoryId: string, score: number}>>({});
+  const [pendingCategoryUpdates, setPendingCategoryUpdates] = useState<Record<string, {categoryId: string | null, score: number}>>({});
   const [applyingAll, setApplyingAll] = useState<boolean>(false);
   const [applyingIndividual, setApplyingIndividual] = useState<string | null>(null);
+  const [lastTrainedTimestamp, setLastTrainedTimestamp] = useState<string | null>(null);
+
+  // *** NEW: State for the primary filter ***
+  const [showOnlyNeedsReview, setShowOnlyNeedsReview] = useState<boolean>(false); // Default to false
 
   // Calculate transaction stats
   const transactionStats = useMemo(() => {
     let trainedCount = 0;
     let uncategorizedCount = 0;
+    let needsReviewCount = 0; // Add count for the new filter
 
     transactions.forEach(tx => {
-      // Check for 'Trained' tag
       const hasTrainedTag = tx.tags?.some(tag => 
         (typeof tag === 'string' && tag.toLowerCase() === 'trained') || 
         (typeof tag === 'object' && tag.name?.toLowerCase() === 'trained')
@@ -69,18 +71,30 @@ export default function TransactionList() {
       }
 
       // Check if uncategorized (using originalData as the source of truth)
-      if (!tx.originalData?.category_id) { // Check if Lunch Money category ID is missing
+      const isUncategorized = !tx.originalData?.category_id;
+      if (isUncategorized) {
         uncategorizedCount++;
+      }
+      
+      // Check if needs review (not trained AND not manually categorized)
+      const hasCategorizedTag = tx.tags?.some(tag => 
+        (typeof tag === 'string' && tag === 'tx-categorized') ||
+        (typeof tag === 'object' && tag.name === 'tx-categorized')
+      );
+
+      if (!hasTrainedTag && !hasCategorizedTag) {
+          needsReviewCount++;
       }
     });
 
-    return { trainedCount, uncategorizedCount };
+    return { trainedCount, uncategorizedCount, needsReviewCount }; // Include new count
   }, [transactions]);
 
   // Fetch transactions when component mounts
   useEffect(() => {
     fetchTransactions();
     fetchCategories();
+    fetchLastTrainedTimestamp();
   }, []);
 
   // Auto-hide toast after 3 seconds
@@ -146,16 +160,22 @@ export default function TransactionList() {
     }
   };
   
-  const fetchTransactionsWithDates = async (dates: { startDate: string; endDate: string }) => {
+  const fetchTransactionsWithDates = async (dates: { startDate: string; endDate: string }, filterNeedsReview: boolean) => {
+    setLoading(true);
     setError(null);
     
-    console.log('Fetching with specific date range:', dates);
+    console.log('Fetching with date range:', dates, 'Filter Needs Review:', filterNeedsReview);
 
     try {
       const params = new URLSearchParams({
         start_date: dates.startDate,
         end_date: dates.endDate,
       });
+
+      // Add the filter parameter if needed
+      if (filterNeedsReview) {
+        params.append('filter', 'needs_review');
+      }
 
       const response = await fetch(`/api/lunch-money/transactions?${params}`);
       
@@ -191,7 +211,7 @@ export default function TransactionList() {
             tx.predictedCategory?.name || null : (tx.predictedCategory || null),
           // Ensure tags is an array of objects with name/id properties
           tags: Array.isArray(tx.tags) ? tx.tags.map((tag: any) => 
-            typeof tag === 'object' ? tag : { name: tag, id: `tag-${Date.now()}-${Math.random()}` }
+            typeof tag === 'object' ? tag : { name: tag, id: `tag-${Date.now()}-${Math.random()}` } // Ensure objects
           ) : []
         };
         return sanitized;
@@ -212,7 +232,8 @@ export default function TransactionList() {
       setSelectedTransactions([]);
       
       // After loading transactions, refresh categories from them
-      await fetchCategories();
+      await fetchCategories(); // Keep this
+
     } catch (error) {
       console.error('Error fetching transactions:', error);
       setError(error instanceof Error ? error.message : 'An error occurred while fetching transactions');
@@ -223,7 +244,7 @@ export default function TransactionList() {
   };
 
   const fetchTransactions = async () => {
-    fetchTransactionsWithDates(dateRange);
+    fetchTransactionsWithDates(dateRange, showOnlyNeedsReview);
   };
 
   const startEditing = (id: string) => {
@@ -231,7 +252,6 @@ export default function TransactionList() {
   };
 
   const handleCategoryChange = async (transactionId: string, categoryValue: string) => {
-    // Don't close the dropdown immediately
     setUpdatingCategory(transactionId);
     
     const transaction = transactions.find(tx => tx.lunchMoneyId === transactionId);
@@ -240,10 +260,7 @@ export default function TransactionList() {
       return;
     }
     
-    console.log(`Updating transaction ${transactionId} with category: "${categoryValue}"`);
-    
     try {
-      // Check if transaction has a "Trained" tag that needs to be removed
       const txTags = transaction.tags || [];
       let hasTrainedTag = false;
       const filteredTags = txTags.filter(tag => {
@@ -253,12 +270,7 @@ export default function TransactionList() {
         return !isTrainedTag;
       });
       
-      // Prepare tag names for API request
-      const tagNames = hasTrainedTag 
-        ? filteredTags.map(tag => typeof tag === 'string' ? tag : tag.name) 
-        : undefined;
-      
-      // Send update to the API
+      // Send update to the API, now includes existing tags for merging on backend
       const response = await fetch('/api/lunch-money/transactions', {
         method: 'PATCH',
         headers: {
@@ -267,8 +279,7 @@ export default function TransactionList() {
         body: JSON.stringify({
           transactionId: transaction.lunchMoneyId,
           categoryId: categoryValue === "none" ? null : categoryValue,
-          // Remove the "Trained" tag if it exists
-          tags: tagNames
+          tags: filteredTags // Send the *current* tags (backend will add 'tx-categorized')
         })
       });
       
@@ -278,16 +289,13 @@ export default function TransactionList() {
         throw new Error(responseData.error || 'Failed to update category');
       }
       
-      // Find category name for display
       let categoryName = categoryValue;
-      const selectedCategory = categories.find(cat => 
-        typeof cat !== 'string' && cat.id === categoryValue
-      );
+      const selectedCategory = categories.find(cat => typeof cat !== 'string' && cat.id === categoryValue);
       if (selectedCategory && typeof selectedCategory !== 'string') {
         categoryName = selectedCategory.name;
       }
       
-      // Update local state
+      // Update local state: include the new tags returned from the PATCH response
       setTransactions(prev => 
         prev.map(tx => {
           if (tx.lunchMoneyId === transactionId) {
@@ -300,44 +308,22 @@ export default function TransactionList() {
                 category_id: categoryValue === "none" ? null : categoryValue,
                 category_name: categoryValue === "none" ? null : categoryName
               },
-              // Remove the "Trained" tag if it exists
-              tags: hasTrainedTag ? filteredTags : tx.tags
+              // Use tags returned from API which should include 'tx-categorized'
+              tags: responseData.updatedTags?.map((tag: string) => ({ name: tag, id: `tag-${Date.now()}-${Math.random()}` })) || filteredTags 
             };
           }
           return tx;
         })
       );
       
-      // Show success indicator
-      setSuccessfulUpdates(prev => ({
-        ...prev,
-        [transactionId]: true
-      }));
+      setSuccessfulUpdates(prev => ({ ...prev, [transactionId]: true }));
+      setTimeout(() => setSuccessfulUpdates(prev => ({ ...prev, [transactionId]: false })), 3000);
       
-      // Clear success indicator after 3 seconds
-      setTimeout(() => {
-        setSuccessfulUpdates(prev => ({
-          ...prev,
-          [transactionId]: false
-        }));
-      }, 3000);
-      
-      // Show success toast
-      setToastMessage({
-        message: hasTrainedTag 
-          ? 'Category updated and "Trained" tag removed' 
-          : 'Category updated in Lunch Money',
-        type: 'success'
-      });
-      
-      // Close the dropdown after successful update
+      setToastMessage({ message: responseData.message || 'Category updated and tagged.', type: 'success' });
       setOpenDropdown(null);
     } catch (error) {
       console.error('Error updating category:', error);
-      setToastMessage({
-        message: error instanceof Error ? error.message : 'Failed to update category',
-        type: 'error'
-      });
+      setToastMessage({ message: error instanceof Error ? error.message : 'Failed to update category', type: 'error' });
     } finally {
       setUpdatingCategory(null);
     }
@@ -406,7 +392,7 @@ export default function TransactionList() {
     console.log("Applying date filter with:", pendingDateRange);
     setIsApplyingDates(true);
     setDateRange(pendingDateRange);
-    fetchTransactionsWithDates(pendingDateRange);
+    // fetchTransactionsWithDates(pendingDateRange, showOnlyNeedsReview); // No need to call here, useEffect handles it
   };
 
   const handleImportTransactions = async () => {
@@ -555,26 +541,35 @@ export default function TransactionList() {
     setOperationInProgress(true);
     setOperationType(type);
     setProgressPercent(5); 
-    setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} started...`);
+    setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} started, initializing...`);
+
+    // *** ADDED: Delay before starting the first poll ***
+    await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 second delay
+    // *** END ADDED DELAY ***
 
     while (pollCount < maxPolls) {
       try {
         pollCount++;
-        const progressValue = Math.min(80, Math.floor((pollCount / maxPolls) * 100));
+        // Update progress slightly differently now that initial delay is done
+        const progressValue = Math.max(10, Math.min(80, Math.floor((pollCount / maxPolls) * 100)));
+        // Set initial message only after delay
+        if (pollCount === 1) {
+            setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} job started, checking status...`);
+        }
         setProgressPercent(progressValue);
         
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        // Wait for the poll interval (only if not the very first actual poll after delay)
+        if (pollCount > 1) {
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
         
-        // *** Call the INTERNAL status API route ***
         console.log(`Checking ${type} status via internal proxy for prediction ID: ${predictionId} (attempt ${pollCount}/${maxPolls})`);
-        const response = await fetch(`/api/classify/status/${predictionId}`, { // Updated URL
+        const response = await fetch(`/api/classify/status/${predictionId}`, {
           headers: {
-            // 'X-API-Key': 'test_api_key_fixed', // *** REMOVED Header - Server handles it ***
             'Accept': 'application/json',
           },
         });
 
-        // Handle different response codes
         if (!response.ok) {
           const statusCode = response.status;
           console.log(`Internal proxy returned error code: ${statusCode} for prediction ID: ${predictionId}`);
@@ -591,39 +586,9 @@ export default function TransactionList() {
             continue;
           }
           
-          // Try to parse error from proxy response
-          let errorData: { 
-            error?: string; 
-            status?: string; 
-            message?: string; 
-            results?: any[];
-            code?: number;
-          } = { error: 'Unknown error from proxy' };
-          
-          try {
-            errorData = await response.json();
-          } catch (e) { /* Ignore json parse error */ }
+          let errorData: { error?: string; message?: string; } = { error: 'Unknown error from proxy' };
+          try { errorData = await response.json(); } catch (e) { /* Ignore */ }
 
-          // Special handling for the "job context missing" error which might indicate the job completed successfully
-          if (errorData.error && errorData.error.includes('Job context missing') || 
-              (errorData.status === 'completed' && errorData.message?.includes('context was cleaned up'))) {
-            console.log('Detected "job context missing" which might indicate successful completion');
-            
-            // If the error includes 'after prediction success', treat as success
-            if (errorData.error?.includes('after prediction success') || 
-                errorData.message?.includes('completed successfully')) {
-              setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} likely completed successfully.`);
-              setProgressPercent(100);
-              setTimeout(() => { setOperationInProgress(false); setOperationType('none'); }, 2000);
-              return { 
-                status: 'completed', 
-                results: errorData.results || [],
-                message: 'Process likely completed successfully but context was cleaned up'
-              };
-            }
-          }
-
-          // Handle 404 from proxy (could mean job completed and cleaned up, or job never existed)
           if (statusCode === 404) {
             if (pollCount < 5) {
               setProgressMessage('Waiting for job to start...');
@@ -635,24 +600,28 @@ export default function TransactionList() {
               setTimeout(() => { setOperationInProgress(false); setOperationType('none'); }, 2000);
               return { status: 'completed', message: 'Process completed (inferred from 404)' };
             }
-            // Continue polling for a bit longer if 404 is received early/mid polling
             continue; 
           }
           
-          // Handle other client/server errors from proxy (like 400, 401)
           setToastMessage({ message: `Error checking status: ${errorData.error || response.statusText}`, type: 'error' });
           setOperationInProgress(false);
           setOperationType('none');
           return { status: 'failed', error: errorData.error || `Proxy error ${statusCode}` };
         }
 
-        // Reset consecutive errors on successful response
         consecutiveErrors = 0;
-
         const result = await response.json();
-        console.log("Status response (from proxy):", result);
+        console.log("Status response (from proxy - OK):", result);
 
-        // Check for explicit 'error' status from our API route or 'failed' from external service
+        if (result.status === 'error' && result.code === 'RESULTS_UNAVAILABLE') {
+          console.error('Categorization completed, but results are unavailable from the service.');
+          setProgressMessage(result.message || 'Categorization complete, but results unavailable.');
+          setToastMessage({ message: result.message || 'Categorization results unavailable. Please try again.', type: 'error' });
+          setOperationInProgress(false);
+          setOperationType('none');
+          return { status: 'failed', error: result.error || 'Results unavailable' };
+        }
+
         if (result.status === "failed" || result.status === "error") {
           const errorMessage = result.error || result.message || 'Unknown error during categorization';
           setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} failed: ${errorMessage}`);
@@ -660,17 +629,17 @@ export default function TransactionList() {
           setOperationInProgress(false);
           setOperationType('none');
           return { status: 'failed', error: errorMessage };
-        } else if (result.status === "completed") {
+        } 
+        
+        if (result.status === "completed") {
           setProgressMessage(`${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`);
           setProgressPercent(100);
           setToastMessage({ message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`, type: 'success' });
           setTimeout(() => { setOperationInProgress(false); setOperationType('none'); }, 2000);
-          // Ensure results are passed correctly, handling potential nested structure
           const classificationResults = result.results || result.config?.results || [];
           return { status: 'completed', results: classificationResults, message: `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!` };
         }
-        
-        // If status is still 'processing' or something else, update message and continue polling
+
         let statusMessage = `${type === 'training' ? 'Training' : 'Categorization'} in progress...`;
         if (result.message) statusMessage += ` ${result.message}`;
         setProgressMessage(statusMessage);
@@ -714,27 +683,39 @@ export default function TransactionList() {
       const trainingData = transactions
         .filter(tx => selectedTransactions.includes(tx.lunchMoneyId))
         .map(tx => {
-          // Use is_income flag directly from the transaction data
-          // This is explicitly set by Lunch Money
+          // *** CHANGE: Use category_id from originalData ***
+          const categoryId = tx.originalData?.category_id?.toString() || null; // Get the numeric ID as string or null
+          if (!categoryId) {
+            console.warn(`Transaction ${tx.lunchMoneyId} is missing a category ID. Skipping for training or using fallback.`);
+            // Decide: return null and filter out, or send a default like '0' or null
+            // For now, let's send null if uncategorized, the backend needs to handle this.
+          }
           return {
             description: tx.description,
-            Category: tx.lunchMoneyCategory || 'Uncategorized',
-            money_in: tx.is_income, // Directly use is_income flag
-            amount: tx.amount // Include amount for context only
+            // *** Use Category (capital C) to match backend model ***
+            Category: categoryId, // Send the numeric ID (or null)
+            money_in: tx.is_income, 
+            amount: tx.amount 
           };
-        });
+        })
+        // Optional: Filter out transactions without a category ID if the backend cannot handle null
+        // .filter(item => item.categoryId !== null); 
       
-      if (trainingData.length === 0) throw new Error('No valid transactions selected for training');
+      if (trainingData.length === 0) throw new Error('No valid transactions with category IDs selected for training');
 
+      // *** CHANGE: Ensure payload structure matches expected backend (check if backend expects 'categoryId') ***
       const payload = {
-        transactions: trainingData,
+        transactions: trainingData, // Contains description, categoryId, money_in, amount
+        // Assuming backend might expect these, adjust if necessary
         expenseSheetId: 'lunchmoney', 
-        spreadsheetId: 'lunchmoney'
+        spreadsheetId: 'lunchmoney' 
       };
 
       setProgressPercent(10);
       setProgressMessage('Sending training request...');
 
+      // *** Make sure the backend API '/api/classify/train' forwards this payload,
+      // and the *external* Flask service expects 'categoryId' ***
       const response = await fetch('/api/classify/train', {
         method: 'POST',
         headers: {
@@ -743,26 +724,51 @@ export default function TransactionList() {
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
+      // --- MODIFIED RESPONSE HANDLING FOR TRAINING ---
+      if (response.status === 200) {
+        // Synchronous Completion
+        const syncResult = await response.json();
+        console.log("Received synchronous training results:", syncResult);
 
-      if (!response.ok) {
+        if (syncResult.status === 'completed') {
+          setProgressMessage('Training completed successfully!');
+          setProgressPercent(100);
+          setToastMessage({ message: 'Training completed successfully!', type: 'success' });
+          await tagTransactionsAsTrained(selectedTransactions); // Tag transactions
+          fetchLastTrainedTimestamp(); // <-- Refresh timestamp
+          setOperationInProgress(false); // Close modal immediately
+          setOperationType('none');
+          setSelectedTransactions([]); // Optional: Clear selection after successful training
+          return { status: 'completed' }; // Indicate success
+        } else {
+          // Handle unexpected 200 response format
+          throw new Error('Received unexpected success response format from server during training.');
+        }
+      } else if (response.status === 202) {
+        // Asynchronous Processing Started
+        const asyncResult = await response.json();
+        console.log("Received asynchronous training start response:", asyncResult);
+        const predictionId = asyncResult.prediction_id || asyncResult.predictionId;
+        if (predictionId) {
+          localStorage.setItem('training_prediction_id', predictionId);
+          // Set progress message before polling
+          setProgressMessage('Training started, waiting for results...');
+          const pollResult = await pollForCompletion(predictionId, 'training');
+          if (pollResult.status === 'completed') {
+            await tagTransactionsAsTrained(selectedTransactions);
+            fetchLastTrainedTimestamp(); // <-- Refresh timestamp
+          }
+          return pollResult;
+        } else {
+          throw new Error('Server started training but did not return a prediction ID.');
+        }
+      } else {
+        // Handle other errors (4xx, 5xx)
+        const result = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
         throw new Error(result.error || `Training request failed with status ${response.status}`);
       }
+      // --- END MODIFIED RESPONSE HANDLING ---
 
-      console.log("Training response (from proxy):", result);
-
-      if (result.prediction_id || result.predictionId) {
-        const predictionId = result.prediction_id || result.predictionId;
-        localStorage.setItem('training_prediction_id', predictionId);
-        
-        const pollResult = await pollForCompletion(predictionId, 'training');
-        if (pollResult.status === 'completed') {
-          await tagTransactionsAsTrained(selectedTransactions);
-        }
-        return pollResult;
-      } else {
-        throw new Error('No prediction ID received from training service');
-      }
     } catch (error) {
       console.error('Error starting training:', error);
       setToastMessage({ message: error instanceof Error ? error.message : 'Failed to start training', type: 'error' });
@@ -774,76 +780,109 @@ export default function TransactionList() {
   // Update handleCategorizeSelected to use the internal API route
   const handleCategorizeSelected = async () => {
     if (selectedTransactions.length === 0) {
-      setToastMessage({ message: "Please select at least one transaction for categorization", type: "error" });
+      setToastMessage({ message: 'Please select transactions to categorize', type: 'warning' });
+      return;
+    }
+
+    // Filter out transactions that already have pending updates
+    const transactionsToCategorize = selectedTransactions.filter(
+      txId => !pendingCategoryUpdates[txId]
+    );
+
+    if (transactionsToCategorize.length === 0) {
+      setToastMessage({ 
+        message: 'All selected transactions already have pending category suggestions.', 
+        type: 'info' 
+      });
       return;
     }
 
     setOperationInProgress(true);
     setOperationType('categorizing');
+    setProgressMessage('Starting categorization...');
     setProgressPercent(0);
-    setProgressMessage('Preparing to categorize transactions...');
+    setError(null); // Clear previous errors
+    // Clear existing pending updates for newly selected items
+    setPendingCategoryUpdates(prev => {
+      const newPending = { ...prev };
+      transactionsToCategorize.forEach(txId => {
+        delete newPending[txId]; // Remove any old pending state if re-categorizing
+      });
+      return newPending;
+    });
 
     try {
-      const selectedTxs = transactions.filter(tx => selectedTransactions.includes(tx.lunchMoneyId));
-      if (selectedTxs.length === 0) throw new Error('No valid transactions selected for categorization');
-        
-      const transactionsToClassify = selectedTxs.map(tx => {
-        // Use is_income flag directly from Lunch Money
-        return {
-          description: tx.description,
-          Narrative: tx.description, // Add Narrative for compatibility
-          money_in: tx.is_income, // Directly use is_income flag
-          amount: tx.amount // Include amount for context only
-        };
-      });
-      
-      setProgressPercent(10);
-      setProgressMessage('Sending categorization request...');
-      
-      const payload = {
-        transactions: transactionsToClassify,
-        spreadsheetId: 'test-sheet-id'
-      };
+      console.log("Sending transactions for categorization:", transactionsToCategorize);
 
-      // *** Call the INTERNAL API route ***
+      // Find the full transaction objects for the selected IDs
+      const selectedTxObjects = transactions.filter(tx => 
+        transactionsToCategorize.includes(tx.lunchMoneyId)
+      ).map(tx => ({
+        description: typeof tx.description === 'object' ? JSON.stringify(tx.description) : tx.description,
+        // Send money_in status based on the transaction data
+        money_in: tx.is_income,
+        amount: typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount || 0)),
+      }));
+
+      console.log("Payload being sent:", selectedTxObjects);
+
+      setProgressMessage('Sending request to server...');
       const response = await fetch('/api/classify/classify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ transactions: selectedTxObjects }),
       });
 
-      const result = await response.json();
+      // --- MODIFIED RESPONSE HANDLING --- 
+      if (response.status === 200) {
+        // Synchronous Completion
+        const syncResult = await response.json();
+        console.log("Received synchronous classification results:", syncResult);
 
-      if (!response.ok) {
-        throw new Error(result.error || `Categorization request failed with status ${response.status}`);
-      }
-
-      console.log("Categorization response (from proxy):", result);
-
-      if (result.prediction_id) {
-        const predictionId = result.prediction_id;
-        localStorage.setItem('categorization_prediction_id', predictionId);
-        
-        setProgressPercent(15);
-        setProgressMessage('Waiting for categorization to initialize...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        
-        const pollResult = await pollForCompletion(predictionId, 'categorizing');
-        
-        if (pollResult.status === 'completed' && pollResult.results) {
-          updateTransactionsWithPredictions(pollResult.results);
+        if (syncResult.status === 'completed' && Array.isArray(syncResult.results)) {
+          setProgressMessage('Processing results...');
+          setProgressPercent(100);
+          updateTransactionsWithPredictions(syncResult.results);
+          setToastMessage({ message: 'Categorization completed successfully!', type: 'success' });
+          setOperationInProgress(false); // Close modal immediately
+          setSelectedTransactions([]); // Clear selection after successful sync categorization
+        } else {
+          // Handle unexpected 200 response format
+          throw new Error('Received unexpected success response format from server.');
         }
-        return pollResult;
+      } else if (response.status === 202) {
+        // Asynchronous Processing Started
+        const asyncResult = await response.json();
+        console.log("Received asynchronous start response:", asyncResult);
+        if (asyncResult.prediction_id) {
+          setProgressMessage('Classification started. Waiting for results...');
+          setProgressPercent(10); // Initial progress
+          await pollForCompletion(asyncResult.prediction_id, 'categorizing');
+          // Polling function handles setting final state (progress, message, modal close)
+        } else {
+          throw new Error('Server started processing but did not return a prediction ID.');
+        }
       } else {
-        throw new Error('No prediction ID received from categorization service');
+        // Handle other errors (4xx, 5xx)
+        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
+        console.error('Error during categorization:', errorData);
+        setError(errorData.error || `Request failed with status ${response.status}`);
+        setToastMessage({ message: errorData.error || `Categorization failed (Status: ${response.status})`, type: 'error' });
+        setOperationInProgress(false);
       }
+      // --- END MODIFIED RESPONSE HANDLING ---
+
     } catch (error) {
-      console.error('Error during categorization:', error);
-      setToastMessage({ message: error instanceof Error ? error.message : 'Failed to categorize transactions', type: 'error' });
+      console.error('Failed to categorize transactions:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      setError(errorMessage);
+      setToastMessage({ message: `Categorization failed: ${errorMessage}`, type: 'error' });
       setOperationInProgress(false);
       setOperationType('none');
+      setProgressPercent(0);
+      setProgressMessage('');
     }
   };
 
@@ -900,33 +939,48 @@ export default function TransactionList() {
     setPendingCategoryUpdates({});
     setCategorizedTransactions(newCategorizedTransactions);
     
-    // Enable the filter to show only categorized transactions
-    setShowOnlyCategorized(true);
-    
     // Create a mapping of transaction IDs to predicted categories and scores for easier access
-    const pendingUpdates: Record<string, {categoryId: string, score: number}> = {};
-    
+    const pendingUpdates: Record<string, {categoryId: string | null, score: number}> = {}; // Allow null categoryId
+
     // Map the predictions to transaction IDs
     selectedTransactions.forEach(txId => {
       const tx = transactions.find(t => t.lunchMoneyId === txId);
       if (tx && tx.description) {
         const prediction = newCategorizedTransactions.get(tx.description);
+        
         if (prediction) {
-          // Find the category ID for this predicted category name
-          const categoryObj = categories.find(cat => 
-            typeof cat !== 'string' && 
-            cat.name.toLowerCase() === prediction.category.toLowerCase()
-          );
-          
-          // Use the found category ID or the category name as fallback
-          const categoryId = categoryObj && typeof categoryObj !== 'string' 
-            ? categoryObj.id 
-            : prediction.category;
-          
-          pendingUpdates[txId] = {
-            categoryId,
-            score: prediction.score
-          };
+          // Handle case where prediction is explicitly 'Uncategorized' (our fallback for 'None')
+          if (prediction.category === 'Uncategorized') {
+            pendingUpdates[txId] = {
+              categoryId: null, // Use null to signify 'Needs Review' or 'Uncategorized'
+              score: prediction.score
+            };
+          } else {
+            // Find the category ID for this predicted category name
+            const categoryObj = categories.find(cat => 
+              typeof cat !== 'string' && 
+              cat.name.toLowerCase() === prediction.category.toLowerCase()
+            );
+            
+            // Use the found category ID or the category name as fallback if ID not found
+            const categoryId = categoryObj && typeof categoryObj !== 'string' 
+              ? categoryObj.id 
+              : prediction.category; // Keep original prediction if ID mapping fails
+            
+            pendingUpdates[txId] = {
+              categoryId,
+              score: prediction.score
+            };
+          }
+        } else {
+            // Handle cases where a transaction was selected but received no prediction (e.g., API error for just that item)
+            // Or if the 'None' category was filtered out earlier (ensure it's handled)
+            // We might want to explicitly mark these for review as well
+            console.log(`No prediction found for txId ${txId} with description "${tx.description}". Marking for review.`);
+            pendingUpdates[txId] = {
+              categoryId: null, // Mark as needing review
+              score: 0 // Assign a zero score
+            };
         }
       }
     });
@@ -1169,21 +1223,24 @@ export default function TransactionList() {
 
   // Function to get filtered transactions
   const getFilteredTransactions = () => {
-    if (showOnlyCategorized) {
-      return transactions.filter(tx => 
-        selectedTransactions.includes(tx.lunchMoneyId) && 
-        Object.keys(pendingCategoryUpdates).includes(tx.lunchMoneyId)
-      );
+    let result = transactions;
+
+    // Apply the primary server-side filter status (or show all if unchecked)
+    // The server already excluded 'tx-categorized' if showOnlyNeedsReview was true
+    // If showOnlyNeedsReview is false, we have *all* transactions here.
+
+    // Further client-side filtering for 'trained' tags
+    if (showOnlyNeedsReview) {
+        result = result.filter(tx => {
+            const hasTrainedTag = tx.tags?.some(tag => 
+                (typeof tag === 'string' && tag.toLowerCase() === 'trained') || 
+                (typeof tag === 'object' && tag.name?.toLowerCase() === 'trained')
+            );
+            return !hasTrainedTag; // Only show if NOT trained
+        });
     }
-    
-    if (showOnlyUncategorized) {
-      return transactions.filter(tx => 
-        !tx.originalData?.category_id && 
-        !tx.lunchMoneyCategory
-      );
-    }
-    
-    return transactions;
+
+    return result;
   };
 
   // *** NEW: Handler to cancel/discard pending categorization predictions ***
@@ -1191,9 +1248,31 @@ export default function TransactionList() {
     console.log("Cancelling pending categorization updates.");
     setPendingCategoryUpdates({});
     setCategorizedTransactions(new Map()); // Clear the map holding prediction details
-    setShowOnlyCategorized(false); // Turn off the "show predictions" filter
     // Optionally reset other filters or show a toast
     setToastMessage({ message: 'Discarded pending category predictions.', type: 'success' }); 
+  };
+
+  // Fetch the last trained timestamp
+  const fetchLastTrainedTimestamp = async () => {
+    try {
+      const response = await fetch('/api/classify/last-trained');
+      if (!response.ok) {
+        // Don't throw an error, just log it, maybe the user hasn't trained yet
+        console.warn(`Failed to fetch last trained timestamp: ${response.status}`);
+        setLastTrainedTimestamp(null);
+        return;
+      }
+      const data = await response.json();
+      setLastTrainedTimestamp(data.lastTrainedAt || null);
+      if (data.lastTrainedAt) {
+        console.log('Successfully fetched last trained timestamp:', data.lastTrainedAt);
+      } else {
+        console.log('No last trained timestamp found for user.');
+      }
+    } catch (error) {
+      console.error('Error fetching last trained timestamp:', error);
+      setLastTrainedTimestamp(null); // Set to null on error
+    }
   };
 
   // Handle error state
@@ -1233,20 +1312,19 @@ export default function TransactionList() {
       />
 
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        {/* Date filters */}
+        {/* Pass the new state and handler to TransactionFilters */}
         <TransactionFilters
           pendingDateRange={pendingDateRange}
           handleDateRangeChange={handleDateRangeChange}
           applyDateFilter={applyDateFilter}
           isApplying={isApplyingDates}
-          showOnlyCategorized={showOnlyCategorized}
-          setShowOnlyCategorized={setShowOnlyCategorized}
-          showOnlyUncategorized={showOnlyUncategorized}
-          setShowOnlyUncategorized={setShowOnlyUncategorized}
           pendingCategoryUpdates={pendingCategoryUpdates}
           trainedCount={transactionStats.trainedCount}
-          uncategorizedCount={transactionStats.uncategorizedCount}
+          needsReviewCount={transactionStats.needsReviewCount} // Pass new count
           operationInProgress={operationInProgress}
+          showOnlyNeedsReview={showOnlyNeedsReview} // Pass state
+          setShowOnlyNeedsReview={setShowOnlyNeedsReview} // Pass setter
+          lastTrainedTimestamp={lastTrainedTimestamp} // <-- Pass timestamp
         />
 
         {/* Action buttons and categorization results */}
@@ -1263,6 +1341,7 @@ export default function TransactionList() {
           importStatus={importStatus}
           importMessage={importMessage}
           handleCancelCategorization={handleCancelCategorization}
+          lastTrainedTimestamp={lastTrainedTimestamp} // <-- Pass timestamp
         />
       </div>
 

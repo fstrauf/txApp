@@ -38,7 +38,7 @@ export type DateRange = {
 // Toast notification message type
 export type ToastMessage = {
   message: string;
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'warning' | 'info';
 };
 
 // Import status type
