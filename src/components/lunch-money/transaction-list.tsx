@@ -42,7 +42,10 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     startDate: format(new Date(new Date().getFullYear(), new Date().getMonth()-5, 1), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
   });
-  const [dateRange, setDateRange] = useState(pendingDateRange);
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: format(new Date(new Date().getFullYear(), new Date().getMonth()-5, 1), 'yyyy-MM-dd'),
+    endDate: format(new Date(), 'yyyy-MM-dd'),
+  });
   const [importStatus, setImportStatus] = useState<ImportStatus>('idle');
   const [importMessage, setImportMessage] = useState('');
   const [categories, setCategories] = useState<(string | Category)[]>([]);
@@ -241,7 +244,6 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       setError(error instanceof Error ? error.message : 'An error occurred while fetching transactions');
     } finally {
       setLoading(false);
-      setIsApplyingDates(false);
     }
   };
 
@@ -373,21 +375,21 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     }
   }, [transactions, categories]); // Add dependencies
 
-  // Memoize handleDateRangeChange
+  // Modify handleDateRangeChange to set dateRange directly
   const handleDateRangeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setPendingDateRange(prev => ({
+    setDateRange(prev => ({
       ...prev,
       [name]: value
     }));
+    // No need to set pending state
   }, []); // No dependencies needed
 
-  // Memoize applyDateFilter
+  // Re-add memoized applyDateFilter function
   const applyDateFilter = useCallback(() => {
     console.log("Applying date filter with:", pendingDateRange);
-    setIsApplyingDates(true);
-    setDateRange(pendingDateRange);
-    // The useEffect hook handles the fetch call
+    setIsApplyingDates(true); // Set loading state for button
+    setDateRange(pendingDateRange); // Update main dateRange to trigger fetch effect
   }, [pendingDateRange]); // Dependency on pendingDateRange
 
   // Memoize handleImportTransactions
@@ -532,7 +534,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
 
     const poll = async () => {
       if (pollCount >= maxPolls) return result;
-      pollCount++;
+        pollCount++;
 
       try {
         const response = await fetch('/api/classify/poll', {
@@ -1137,26 +1139,6 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     // Ensure getCategoryNameById is included in dependencies
   }, [pendingCategoryUpdates, getCategoryNameById]); 
 
-  // Handle error state
-  if (loading) {
-    return <div>Loading transactions...</div>;
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 text-red-700 p-4 rounded-lg">
-        <p className="font-bold">Error:</p>
-        <p>{error}</p>
-        <button 
-          onClick={() => fetchTransactionsWithDates(dateRange, statusFilter)}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-        >
-          Try Again
-        </button>
-      </div>
-    );
-  }
-
   // Get the transactions to display based on filters
   const filteredTransactions = getFilteredTransactions();
 
@@ -1182,11 +1164,9 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
           handleDateRangeChange={handleDateRangeChange}
           applyDateFilter={applyDateFilter}
           isApplying={isApplyingDates}
-          pendingCategoryUpdates={pendingCategoryUpdates}
           trainedCount={transactionStats.trainedCount}
           operationInProgress={operationInProgress}
           lastTrainedTimestamp={lastTrainedTimestamp}
-          // Add props for status filter
           statusFilter={statusFilter}
           setStatusFilter={setStatusFilter}
         />
@@ -1223,6 +1203,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         applyPredictedCategory={applyPredictedCategory}
         applyingIndividual={applyingIndividual}
         getCategoryNameById={getCategoryNameById}
+        loading={loading}
       />
     </div>
   );

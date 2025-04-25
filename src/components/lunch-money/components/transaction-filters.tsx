@@ -10,13 +10,12 @@ type TransactionFiltersProps = {
   operationInProgress: boolean;
   isApplying: boolean;
   trainedCount: number;
-  pendingCategoryUpdates: Record<string, {categoryId: string | null, score: number}>;
   lastTrainedTimestamp?: string | null;
   statusFilter: 'uncleared' | 'cleared';
   setStatusFilter: (filter: 'uncleared' | 'cleared') => void;
 };
 
-const TransactionFilters = ({
+const TransactionFilters = React.memo(({
   pendingDateRange,
   handleDateRangeChange,
   applyDateFilter,
@@ -101,7 +100,7 @@ const TransactionFilters = ({
       </Field>
     </div>
   );
-};
+});
 
 TransactionFilters.displayName = 'TransactionFilters';
 
