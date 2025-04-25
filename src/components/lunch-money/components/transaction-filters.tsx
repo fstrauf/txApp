@@ -1,6 +1,7 @@
 import React, { Dispatch, SetStateAction, useMemo } from 'react';
 import { DateRange } from '../types';
 import { format } from 'date-fns';
+import { Switch, Field, Label } from '@headlessui/react';
 
 type TransactionFiltersProps = {
   pendingDateRange: DateRange;
@@ -8,27 +9,24 @@ type TransactionFiltersProps = {
   applyDateFilter: () => void;
   operationInProgress: boolean;
   isApplying: boolean;
-  showOnlyNeedsReview: boolean;
-  setShowOnlyNeedsReview: Dispatch<SetStateAction<boolean>>;
-  needsReviewCount: number;
   trainedCount: number;
   pendingCategoryUpdates: Record<string, {categoryId: string | null, score: number}>;
   lastTrainedTimestamp?: string | null;
+  statusFilter: 'uncleared' | 'cleared';
+  setStatusFilter: (filter: 'uncleared' | 'cleared') => void;
 };
 
-export default function TransactionFilters({
+const TransactionFilters = ({
   pendingDateRange,
   handleDateRangeChange,
   applyDateFilter,
   operationInProgress,
   isApplying,
-  showOnlyNeedsReview,
-  setShowOnlyNeedsReview,
-  needsReviewCount,
   trainedCount,
-  pendingCategoryUpdates,
-  lastTrainedTimestamp
-}: TransactionFiltersProps) {
+  lastTrainedTimestamp,
+  statusFilter,
+  setStatusFilter
+}: TransactionFiltersProps) => {
   const formattedTimestamp = useMemo(() => {
     if (!lastTrainedTimestamp) return 'Never';
     try {
@@ -83,25 +81,28 @@ export default function TransactionFilters({
             'Apply Dates'
           )}
         </button>
+
+        <div className="flex flex-col ml-auto pl-4 border-l border-gray-300">
+          <span className="text-sm text-gray-600 font-medium">Trained: {trainedCount}</span>
+          <span className="text-sm text-gray-500 mt-1">Last Trained: {formattedTimestamp}</span>
+        </div>
       </div>
-      <div className="mt-2">
-        <label className="flex items-center space-x-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showOnlyNeedsReview} 
-            onChange={(e) => setShowOnlyNeedsReview(e.target.checked)} 
-            className="rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
-            disabled={operationInProgress || isApplying}
-          />
-          <span className="text-sm text-gray-700">Show only transactions needing review ({needsReviewCount})</span>
-        </label>
-      </div>
-      <div className="mt-2">
-        <span className="text-sm text-gray-500">Trained: {trainedCount}</span>
-      </div>
-      <div className="mt-2">
-        <span className="text-sm text-gray-500">Last Trained: {formattedTimestamp}</span>
-      </div>
+
+      <Field as="div" className="flex items-center gap-2 mt-4">
+        <Switch
+          checked={statusFilter === 'cleared'}
+          onChange={(checked) => setStatusFilter(checked ? 'cleared' : 'uncleared')}
+          className="group inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition data-checked:bg-blue-600 data-disabled:cursor-not-allowed data-disabled:opacity-50"
+          disabled={operationInProgress}
+        >
+          <span className="size-4 translate-x-1 rounded-full bg-white transition group-data-checked:translate-x-6" />
+        </Switch>
+        <Label className="text-sm font-medium text-gray-700 cursor-pointer">Show Cleared Transactions</Label>
+      </Field>
     </div>
   );
-} 
+};
+
+TransactionFilters.displayName = 'TransactionFilters';
+
+export default TransactionFilters; 

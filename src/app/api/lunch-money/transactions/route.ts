@@ -127,32 +127,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Lunch Money API key not configured.' }, { status: 400 });
     }
 
-    // 2. Get Date & Filter Parameters from Request URL
+    // 2. Get Date & Status Parameters from Request URL
     const searchParams = request.nextUrl.searchParams;
     const endDate = searchParams.get('end_date') || getDateString(new Date());
     const defaultStartDate = new Date();
     defaultStartDate.setDate(defaultStartDate.getDate() - 90); // Default to last 90 days
     const startDate = searchParams.get('start_date') || getDateString(defaultStartDate);
-    const filter = searchParams.get('filter'); // Get the new filter parameter
+    const statusFilter = searchParams.get('status') as 'cleared' | 'uncleared' | null; // Get the status filter
 
-    // 3. Construct URL with Parameters for Lunch Money API
+    // 3. Fetch ALL transactions for the date range from Lunch Money API
+    // We will filter by status *after* fetching
     const url = new URL(LUNCH_MONEY_API_URL);
     url.searchParams.append('start_date', startDate);
     url.searchParams.append('end_date', endDate);
 
-    // Add tag exclusion if filter=needs_review
-    if (filter === 'needs_review') {
-      console.log(`Applying filter: Excluding tag '${CATEGORIZED_TAG_NAME}'`);
-      // *** IMPORTANT: Verify the correct parameter name in Lunch Money API docs ***
-      // Assuming it's 'exclude_tag_name' for now.
-      url.searchParams.append('exclude_tag_name', CATEGORIZED_TAG_NAME);
-      // If you also want to exclude trained tags server-side (requires knowing tag ID or pattern):
-      // url.searchParams.append('exclude_tag_pattern', 'trained-*'); // Example
-    }
-
     console.log(`Fetching from Lunch Money API: ${url.toString()}`);
 
-    // 4. Fetch transactions from Lunch Money API using the constructed URL
+    // 4. Fetch transactions
     const response = await fetch(url.toString(), { 
       method: 'GET',
       headers: {
@@ -178,9 +169,35 @@ export async function GET(request: NextRequest) {
     const rawData = await response.json();
 
     // *** Format the transactions using the helper defined in *this* file ***
-    const formattedData = formatTransactions(rawData.transactions || []);
+    let formattedData = formatTransactions(rawData.transactions || []);
 
-    // *** Return the formatted transactions in the expected structure ***
+    // *** Filter based on the status parameter ***
+    console.log(`Applying status filter: ${statusFilter}`);
+    formattedData = formattedData.filter(tx => {
+      const txStatus = tx.originalData?.status;
+
+      // Always exclude 'pending' status
+      if (txStatus === 'pending') {
+        return false;
+      }
+
+      // Apply the specific filter if provided
+      if (statusFilter === 'cleared') {
+        return txStatus === 'cleared';
+      }
+      if (statusFilter === 'uncleared') {
+        // Keep if status is not 'cleared' (which includes 'uncleared' and potentially null/undefined)
+        return txStatus !== 'cleared'; 
+      }
+      
+      // If no status filter, keep everything (that isn't 'pending')
+      // This case shouldn't happen with current frontend logic, but good to handle.
+      return true; 
+    });
+
+    console.log(`Returning ${formattedData.length} transactions after filtering.`);
+
+    // *** Return the filtered and formatted transactions ***
     return NextResponse.json({ transactions: formattedData }); 
 
   } catch (error) {

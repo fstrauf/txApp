@@ -8,7 +8,7 @@ type TransactionTableProps = {
   selectedTransactions: string[];
   handleSelectTransaction: (txId: string) => void;
   handleSelectAll: () => void;
-  pendingCategoryUpdates: Record<string, {categoryId: string, score: number}>;
+  pendingCategoryUpdates: Record<string, {categoryId: string | null, score: number}>;
   categories: (string | Category)[];
   handleCategoryChange: (transactionId: string, categoryValue: string) => void;
   updatingCategory: string | null;
@@ -18,7 +18,7 @@ type TransactionTableProps = {
   getCategoryNameById: (categoryId: string | null) => string | null;
 };
 
-export default function TransactionTable({
+const TransactionTable = React.memo(({
   filteredTransactions,
   selectedTransactions,
   handleSelectTransaction,
@@ -31,7 +31,7 @@ export default function TransactionTable({
   applyPredictedCategory,
   applyingIndividual,
   getCategoryNameById
-}: TransactionTableProps) {
+}: TransactionTableProps) => {
   if (filteredTransactions.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500 bg-surface rounded-lg border border-gray-100 shadow-sm">
@@ -191,4 +191,8 @@ export default function TransactionTable({
       </table>
     </div>
   );
-}
+});
+
+TransactionTable.displayName = 'TransactionTable';
+
+export default TransactionTable;
