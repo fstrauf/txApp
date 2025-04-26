@@ -18,7 +18,7 @@ type CategorizationControlsProps = {
   lastTrainedTimestamp?: string | null;
 };
 
-export default function CategorizationControls({
+const CategorizationControls = React.memo(({
   pendingCategoryUpdates,
   applyingAll,
   applyAllPredictedCategories,
@@ -30,7 +30,7 @@ export default function CategorizationControls({
   importMessage,
   handleCancelCategorization,
   lastTrainedTimestamp
-}: CategorizationControlsProps) {
+}: CategorizationControlsProps) => {
   const hasPendingUpdates = Object.keys(pendingCategoryUpdates).length > 0;
 
   return (
@@ -83,4 +83,8 @@ export default function CategorizationControls({
       )}
     </div>
   );
-} 
+});
+
+CategorizationControls.displayName = 'CategorizationControls';
+
+export default CategorizationControls; 
