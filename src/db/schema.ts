@@ -53,6 +53,8 @@ export const users = pgTable('users', {
   currentPeriodEndsAt: timestamp('currentPeriodEndsAt', { mode: 'date', withTimezone: true }),
   monthlyCategorizations: integer('monthlyCategorizations').default(0),
   categoriesResetDate: timestamp('categoriesResetDate', { mode: 'date', withTimezone: true }),
+  // Add beta opt-in status directly to users table
+  appBetaOptIn: appBetaOptInStatusEnum('appBetaOptIn'),
 });
 
 // Email subscribers table
@@ -92,7 +94,6 @@ export const accounts = pgTable(
     created_at: timestamp('created_at', { mode: 'date', withTimezone: true }),
     lastUsed: timestamp('lastUsed', { mode: 'date', withTimezone: true }),
     requestsCount: integer('requestsCount').default(0),
-    appBetaOptIn: appBetaOptInStatusEnum('appBetaOptIn'),
     // Note: Subscription fields moved to users table
   },
   (account) => ({

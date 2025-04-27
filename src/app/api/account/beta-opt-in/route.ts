@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next'; // Use getServerSession
 import { authConfig } from '@/lib/auth'; // Import authConfig
 import { db } from '@/db';
-import { accounts, appBetaOptInStatusEnum } from '@/db/schema';
+import { accounts, appBetaOptInStatusEnum, users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function PATCH(request: Request) {
@@ -28,25 +28,26 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const updatedAccounts = await db
-      .update(accounts)
+    // Update the USERS table now
+    const updatedUsers = await db
+      .update(users) // Target the users table
       .set({ appBetaOptIn: status })
-      .where(eq(accounts.userId, userId))
-      .returning({ accountId: accounts.id, appBetaOptIn: accounts.appBetaOptIn });
+      .where(eq(users.id, userId))
+      .returning({ userId: users.id, appBetaOptIn: users.appBetaOptIn });
 
-    if (updatedAccounts.length === 0) {
-      // This case should ideally not happen for a logged-in user unless their account record is missing
-      console.warn(`No accounts found for user ${userId} to update beta opt-in status.`);
-      // Depending on requirements, you might return an error or just an empty success
-      return NextResponse.json({ message: 'No accounts found for user to update.' }, { status: 404 }); 
+    // Check if the user record itself was found and updated
+    if (updatedUsers.length === 0) {
+      console.warn(`User record not found for user ${userId} to update beta opt-in status to ${status}.`);
+      // It's unlikely a logged-in user wouldn't have a user record, so 404 is appropriate here.
+      return NextResponse.json({ message: 'User record not found.' }, { status: 404 }); 
     }
 
-    console.log(`Updated appBetaOptIn status to ${status} for user ${userId}, accounts: ${updatedAccounts.map(a => a.accountId).join(', ')}`);
+    console.log(`Updated appBetaOptIn status to ${status} for user ${userId}`);
 
-    // Return the status of the first updated account as confirmation, or a generic success message
+    // Return the status of the updated user
     return NextResponse.json({ 
       message: 'Beta opt-in status updated successfully',
-      updatedStatus: updatedAccounts[0]?.appBetaOptIn 
+      updatedStatus: updatedUsers[0]?.appBetaOptIn 
     }, { status: 200 });
 
   } catch (error) {
