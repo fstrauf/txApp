@@ -65,8 +65,6 @@ export async function POST(request: NextRequest) {
       .set({ api_key })
       .where(eq(users.id, userId))
       .returning();
-
-    console.log(`Operation result:`, result);
     
     return NextResponse.json(result.length > 0 ? result[0] : { error: 'No result returned' });
   } catch (error) {

@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const plan = searchParams.get('plan')?.toLowerCase();
     const billingCycle = searchParams.get('billing')?.toLowerCase();
+    const redirectPath = searchParams.get('redirect');
 
     if (!plan || !['silver', 'gold'].includes(plan)) {
       return NextResponse.json(
@@ -63,12 +64,21 @@ export async function GET(request: NextRequest) {
         .where(eq(users.id, userId));
     }
     
-    // Create a checkout session
+    // --- Construct the success URL based on the redirect parameter --- 
+    let successUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api-key`; // Default
+    if (redirectPath && redirectPath.startsWith('/')) { // Basic validation: ensure it's a relative path
+      successUrl = `${process.env.NEXT_PUBLIC_APP_URL}${redirectPath}`;
+    }
+    // --- End URL construction --- 
+    
+    // Create a checkout session, passing the constructed successUrl
     const { sessionId, url } = await createCheckoutSession({
       customerId: stripeCustomerId,
       plan: plan as 'silver' | 'gold',
       billingCycle: billingCycle as 'monthly' | 'annual',
       userId: session.user.id,
+      successUrl: successUrl, // Pass the determined success URL
+      // cancelUrl could also be made dynamic if needed
     });
 
     if (!sessionId || !url) {
