@@ -44,7 +44,6 @@ export async function POST(request: Request) {
     }
 
     if (!user) {
-      console.log(`No user found with email: ${email}`);
       return NextResponse.json(
         { success: false, message: "Invalid credentials" },
         { status: 401 }

@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PATCH endpoint to update a transaction's category
+// PATCH endpoint to update a transaction's category and/or tags
 export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authConfig);
@@ -220,14 +220,14 @@ export async function PATCH(request: NextRequest) {
       updateObject.status = status; // Add status to the update object
     }
     
-    // --- Add Tags: Only include existing tags passed from frontend --- 
-    // (We no longer automatically add 'tx-categorized')
-    let currentTagNames = Array.isArray(existingTags) 
-        ? existingTags.map(tag => typeof tag === 'string' ? tag : tag.name).filter(Boolean) 
+    // --- Add Tags: Use the exact tags passed from the frontend request --- 
+    // The frontend will determine which tags should be set (e.g., just the trained tag)
+    let tagsToSet = Array.isArray(existingTags) 
+        ? existingTags.map(tag => typeof tag === 'string' ? tag : tag.name).filter(Boolean)
         : [];
 
-    // Update the 'tags' field in the object sent to Lunch Money
-    updateObject.tags = currentTagNames; // Send only the tags provided (or determined by frontend)
+    // Set the 'tags' field in the object sent to Lunch Money
+    updateObject.tags = tagsToSet; 
     
     const updateBody = {
       transaction: updateObject
@@ -263,8 +263,8 @@ export async function PATCH(request: NextRequest) {
     // Let's return a success message and the tags that were actually set
     return NextResponse.json({ 
       success: true, 
-      message: `Transaction ${transactionId} updated.`, // Simplified message
-      updatedTags: currentTagNames // Return the tags that were set
+      message: `Transaction ${transactionId} updated.`, 
+      updatedTags: tagsToSet // Return the tags that were set
     });
 
   } catch (error) {

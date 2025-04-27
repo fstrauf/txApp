@@ -104,13 +104,20 @@ const TransactionTable = React.memo(({
                   }
                   {transaction.tags && Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {transaction.tags?.map((tag: any, idx: number) => (
-                        <span 
-                          key={`${typeof tag === 'string' ? tag : tag.name || tag.id || idx}-${idx}`}
-                          className="text-xs bg-primary text-white rounded-full px-2 py-0.5 font-medium">
-                          {typeof tag === 'string' ? tag : tag.name || 'Tag'}
-                        </span>
-                      ))}
+                      {transaction.tags?.map((tag: any, idx: number) => {
+                        const tagName = typeof tag === 'string' ? tag : tag.name || 'Tag';
+                        // Determine the text to display
+                        const displayTag = tagName.toLowerCase() === 'expense-sorted-trained' ? 'trained' : tagName;
+                        
+                        return (
+                          <span 
+                            key={`${tagName}-${idx}`}
+                            // Adjusted classes for smaller size
+                            className="text-[10px] leading-none bg-blue-600 text-white rounded-full px-1.5 py-0.5 font-medium">
+                            {displayTag}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                 </td>

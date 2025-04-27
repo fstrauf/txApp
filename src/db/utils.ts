@@ -10,7 +10,6 @@ import {
   monthlyAggregates,
   categoryExpenses,
 } from './schema';
-import { sql } from 'drizzle-orm';
 
 // User queries
 export async function findUniqueUser(id: string) {
@@ -26,11 +25,9 @@ export async function findUserByEmail(email: string) {
     const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
     
     if (result.length > 0) {
-      console.log(`User found with email ${email}`);
       return result[0];
     }
-    
-    console.log(`No user found with email ${email}`);
+  
     return null;
   } catch (error) {
     console.error(`Error finding user by email ${email}:`, error);

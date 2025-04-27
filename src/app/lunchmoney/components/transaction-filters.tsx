@@ -10,6 +10,8 @@ type TransactionFiltersProps = {
   operationInProgress: boolean;
   isApplying: boolean;
   trainedCount: number;
+  clearedCount: number;
+  unclearedCount: number;
   lastTrainedTimestamp?: string | null;
   statusFilter: 'uncleared' | 'cleared';
   setStatusFilter: (filter: 'uncleared' | 'cleared') => void;
@@ -22,6 +24,8 @@ const TransactionFilters = React.memo(({
   operationInProgress,
   isApplying,
   trainedCount,
+  clearedCount,
+  unclearedCount,
   lastTrainedTimestamp,
   statusFilter,
   setStatusFilter
@@ -81,9 +85,14 @@ const TransactionFilters = React.memo(({
           )}
         </button>
 
-        <div className="flex flex-col ml-auto pl-4 border-l border-gray-300">
+        <div className="flex flex-col ml-auto pl-4 border-l border-gray-300 text-right">
           <span className="text-sm text-gray-600 font-medium">Trained: {trainedCount}</span>
-          <span className="text-sm text-gray-500 mt-1">Last Trained: {formattedTimestamp}</span>
+          {statusFilter === 'cleared' ? (
+            <span className="text-sm text-gray-500 mt-1">Cleared: {clearedCount}</span>
+          ) : (
+            <span className="text-sm text-gray-500 mt-1">Uncleared: {unclearedCount}</span>
+          )}
+          <span className="text-xs text-gray-400 mt-1">Last Trained: {formattedTimestamp}</span>
       </div>
       </div>
 
