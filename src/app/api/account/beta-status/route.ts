@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authConfig } from '@/lib/auth';
 import { db } from '@/db';
-import { accounts } from '@/db/schema';
+import { accounts, users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function GET(request: Request) {
@@ -17,17 +17,18 @@ export async function GET(request: Request) {
   const userId = session.user.id;
 
   try {
-    // Find the first account for the user to check the status
-    // Assuming the status is consistent across a user's accounts or the first is representative
-    const userAccount = await db.query.accounts.findFirst({
-      where: eq(accounts.userId, userId),
+    // Find the user record directly
+    const user = await db.query.users.findFirst({
+      // Use users.id for the where clause
+      where: eq(users.id, userId),
       columns: {
+        // Select the appBetaOptIn column from the users table
         appBetaOptIn: true,
       },
     });
 
-    // Return the status, which could be 'OPTED_IN', 'DISMISSED', or null
-    return NextResponse.json({ appBetaOptIn: userAccount?.appBetaOptIn || null });
+    // Return the status from the user record
+    return NextResponse.json({ appBetaOptIn: user?.appBetaOptIn || null });
 
   } catch (error) {
     console.error('Error fetching appBetaOptIn status:', error);

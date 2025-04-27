@@ -50,6 +50,7 @@ export async function createCheckoutSession({
   priceId,
   plan,
   billingCycle,
+  userId,
   successUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api-key`,
   cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/pricing`
 }: {
@@ -57,6 +58,7 @@ export async function createCheckoutSession({
   priceId?: string;
   plan: SubscriptionPlan;
   billingCycle: BillingCycle;
+  userId: string;
   successUrl?: string;
   cancelUrl?: string;
 }) {
@@ -90,6 +92,7 @@ export async function createCheckoutSession({
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
+      client_reference_id: userId,
       metadata: {
         plan,
         billingCycle,

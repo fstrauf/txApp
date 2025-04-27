@@ -84,7 +84,7 @@ const TransactionFilters = React.memo(({
         <div className="flex flex-col ml-auto pl-4 border-l border-gray-300">
           <span className="text-sm text-gray-600 font-medium">Trained: {trainedCount}</span>
           <span className="text-sm text-gray-500 mt-1">Last Trained: {formattedTimestamp}</span>
-        </div>
+      </div>
       </div>
 
       <Field as="div" className="flex items-center gap-2 mt-4">

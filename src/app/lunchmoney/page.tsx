@@ -32,7 +32,6 @@ export default function LunchMoneyPage() {
         </div>
       </div>
 
-      {/* Remove props from TransactionList invocation */}
       <TransactionList />
 
       <HelpDrawer

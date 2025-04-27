@@ -39,6 +39,14 @@ export async function POST(request: NextRequest) {
         const plan = (session.metadata?.plan || 'silver').toUpperCase();
         const billingCycle = (session.metadata?.billingCycle || 'monthly').toUpperCase();
         
+        // Extract the userId from client_reference_id
+        const userId = session.client_reference_id;
+
+        if (!userId) {
+          console.error("Missing userId in checkout.session.completed event");
+          return NextResponse.json({ error: "Missing user ID" }, { status: 400 });
+        }
+        
         // First find user with this Stripe customer ID
         let userToUpdate = await db.query.users.findFirst({
           where: eq(users.stripeCustomerId, customerId)

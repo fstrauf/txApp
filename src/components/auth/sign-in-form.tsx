@@ -1,47 +1,62 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { signIn, useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-// Add callbackUrl to props
-interface SignInFormProps {
-  callbackUrl?: string;
-}
+// Remove props interface if no props are needed
+interface SignInFormProps {}
 
-export function SignInForm({ callbackUrl = "/" }: SignInFormProps) { // Use default if not provided
+// Remove props from signature
+export function SignInForm({}: SignInFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Extract callbackUrl using the hook's result
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
-    setError(null);
+    setError(null); 
 
     const formData = new FormData(event.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
+    let signInSuccess = false; // Flag to track success for manual redirect
+
     try {
       const result = await signIn("credentials", {
         email,
         password,
-        callbackUrl: callbackUrl,
+        redirect: false, // Prevent automatic redirect
       });
 
       if (result?.error) {
         console.error("[SignInForm] signIn error:", result.error);
         setError("Invalid email or password");
+        signInSuccess = false;
       } else if (!result?.ok) {
         setError("Sign in failed. Please try again.");
+        signInSuccess = false;
+      } else {
+        // Sign in was successful according to next-auth
+        signInSuccess = true;
       }
     } catch (error) {
       console.error("[SignInForm] onSubmit error:", error);
       setError("Something went wrong. Please try again.");
+      signInSuccess = false;
     } finally {
       setIsLoading(false);
+      // Manual redirect only if signIn was successful
+      if (signInSuccess) {
+        router.push(callbackUrl); 
+      }
     }
   }
 

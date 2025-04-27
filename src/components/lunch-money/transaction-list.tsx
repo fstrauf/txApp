@@ -951,6 +951,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       const batchSize = 5;
       let successCount = 0;
       let failCount = 0;
+      const successfulTxIds: string[] = []; // Store successful IDs
       
       for (let i = 0; i < transactionIds.length; i += batchSize) {
         const batch = transactionIds.slice(i, i + batchSize);
@@ -966,7 +967,8 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
               },
               body: JSON.stringify({
                 transactionId: txId,
-                categoryId: update.categoryId === "none" ? null : update.categoryId
+                categoryId: update.categoryId === "none" ? null : update.categoryId,
+                status: 'cleared'
               })
             });
             
@@ -986,42 +988,48 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         results.forEach(result => {
           if (result.success) {
             successCount++;
+            successfulTxIds.push(result.txId); // Add successful ID to the list
             
             setSuccessfulUpdates(prev => ({
               ...prev,
               [result.txId]: true
             }));
-            
-            const update = pendingCategoryUpdates[result.txId];
-            let categoryName = update.categoryId;
-            const selectedCategory = categories.find(cat => 
-              typeof cat !== 'string' && cat.id === update.categoryId
-            );
-            if (selectedCategory && typeof selectedCategory !== 'string') {
-              categoryName = selectedCategory.name;
-            }
-            
-            setTransactions(prev => 
-              prev.map(tx => {
-                if (tx.lunchMoneyId === result.txId) {
-                  return {
-                    ...tx,
-                    category: update.categoryId === "none" ? null : update.categoryId,
-                    lunchMoneyCategory: update.categoryId === "none" ? null : categoryName,
-                    originalData: {
-                      ...tx.originalData,
-                      category_id: update.categoryId === "none" ? null : update.categoryId,
-                      category_name: update.categoryId === "none" ? null : categoryName
-                    }
-                  };
-                }
-                return tx;
-              })
-            );
           } else {
             failCount++;
           }
         });
+      }
+      
+      // Update local state for all successful transactions AFTER the loop
+      if (successfulTxIds.length > 0) {
+        setTransactions(prev => 
+          prev.map(tx => {
+            if (successfulTxIds.includes(tx.lunchMoneyId)) {
+              const update = pendingCategoryUpdates[tx.lunchMoneyId];
+              let categoryName = update.categoryId;
+              const selectedCategory = categories.find(cat => 
+                typeof cat !== 'string' && cat.id === update.categoryId
+              );
+              if (selectedCategory && typeof selectedCategory !== 'string') {
+                categoryName = selectedCategory.name;
+              }
+              
+              return {
+                ...tx,
+                category: update.categoryId === "none" ? null : update.categoryId,
+                lunchMoneyCategory: update.categoryId === "none" ? null : categoryName,
+                originalData: {
+                  ...tx.originalData,
+                  category_id: update.categoryId === "none" ? null : update.categoryId,
+                  category_name: update.categoryId === "none" ? null : categoryName,
+                  status: 'cleared'
+                },
+                status: 'cleared'
+              };
+            }
+            return tx;
+          })
+        );
       }
       
       setPendingCategoryUpdates({});
@@ -1076,7 +1084,8 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         },
         body: JSON.stringify({
           transactionId,
-          categoryId: update.categoryId === "none" ? null : update.categoryId
+          categoryId: update.categoryId === "none" ? null : update.categoryId,
+          status: 'cleared'
         })
       });
       
@@ -1103,8 +1112,10 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
               originalData: {
                 ...tx.originalData,
                 category_id: update.categoryId === "none" ? null : update.categoryId,
-                category_name: update.categoryId === "none" ? null : categoryName
-              }
+                category_name: update.categoryId === "none" ? null : categoryName,
+                status: 'cleared'
+              },
+              status: 'cleared'
             };
           }
           return tx;

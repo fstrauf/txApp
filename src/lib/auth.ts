@@ -97,11 +97,10 @@ export const authConfig: NextAuthOptions = {
          // Define a type for the session object or use type assertion
          (session as any).apiKey = token.apiKey as string;
       }
-      console.log("[Session Callback] Returning session:", session);
       return session;
     },
     // Modify jwt callback to fetch and include apiKey
-    async jwt({ token, user, account, profile, isNewUser }) {
+    async jwt({ token, user}) {
       // On successful sign-in (user object is present), fetch and add apiKey
       if (user?.id) { // Check if user object exists and has an id
         try {
@@ -124,7 +123,6 @@ export const authConfig: NextAuthOptions = {
           // Decide if you want to prevent token generation or just log error
         }
       }
-      console.log("[JWT Callback] Returning token:", token);
       return token;
     },
   },

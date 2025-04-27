@@ -64,13 +64,14 @@ export async function GET(request: NextRequest) {
     }
     
     // Create a checkout session
-    const { url } = await createCheckoutSession({
+    const { sessionId, url } = await createCheckoutSession({
       customerId: stripeCustomerId,
       plan: plan as 'silver' | 'gold',
       billingCycle: billingCycle as 'monthly' | 'annual',
+      userId: session.user.id,
     });
 
-    if (!url) {
+    if (!sessionId || !url) {
       return NextResponse.json(
         { error: 'Failed to create checkout session' },
         { status: 500 }

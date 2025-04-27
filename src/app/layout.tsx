@@ -5,7 +5,7 @@ import Footer from "./components/Footer.js";
 import { SessionProvider } from "@/app/providers";
 import { getServerSession } from "next-auth/next";
 import { authConfig } from "@/lib/auth";
-import { Sidebar } from "./components/Sidebar";
+import { ClientSidebarWrapper } from "./components/ClientSidebarWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +20,8 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession(authConfig);
+  // Keep server session check if needed elsewhere, but not for Sidebar rendering
+  // const session = await getServerSession(authConfig);
 
   return (
     <html lang="en">
@@ -28,7 +29,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SessionProvider>
           <Header />
           <div className="flex flex-1">
-            {session && <Sidebar />}
+            {/* Render the client wrapper unconditionally */}
+            {/* It will handle showing/hiding the Sidebar based on client session */}
+            <ClientSidebarWrapper />
             <main className="flex-grow">{children}</main>
           </div>
           <Footer />
