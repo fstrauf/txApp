@@ -37,7 +37,7 @@ const TransactionTable = React.memo(({
   if (!loading && filteredTransactions.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500 bg-surface rounded-lg border border-gray-100 shadow-sm">
-        No transactions found for the selected criteria.
+        No transactions found for the selected criteria, have you added your API key in Settings?
       </div>
     );
   }

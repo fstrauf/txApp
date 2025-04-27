@@ -3,7 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function LunchMoneySettingsForm() {
+// Define props for the component
+interface LunchMoneySettingsFormProps {
+  initialApiKey: string | null;
+}
+
+export default function LunchMoneySettingsForm({ initialApiKey }: LunchMoneySettingsFormProps) {
   const router = useRouter();
   const [lunchMoneyApiKey, setLunchMoneyApiKey] = useState('');
   const [lunchMoneyStatus, setLunchMoneyStatus] = useState<'loading' | 'valid' | 'invalid' | null>(null);
@@ -11,25 +16,12 @@ export default function LunchMoneySettingsForm() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Fetch existing API keys on component mount
+  // Set initial API key from props
   useEffect(() => {
-    async function fetchApiKeys() {
-      try {
-        // Fetch Lunch Money API key status
-        const lmResponse = await fetch('/api/lunch-money/credentials');
-        if (lmResponse.ok) {
-          const data = await lmResponse.json();
-          setLunchMoneyStatus(data.hasApiKey ? (data.isValid ? 'valid' : 'invalid') : null);
-        }
-
-      } catch (error) {
-        console.error('Error fetching API keys:', error);
-        setError('Failed to load API key information');
-      }
+    if (initialApiKey) {
+      setLunchMoneyApiKey(initialApiKey);
     }
-
-    fetchApiKeys();
-  }, []);
+  }, [initialApiKey]); // Run when initialApiKey changes
 
   // Save Lunch Money API key
   const saveLunchMoneyApiKey = async (e: React.FormEvent) => {
@@ -93,8 +85,8 @@ export default function LunchMoneySettingsForm() {
             <div className="flex gap-2">
               <input
                 id="lunchMoneyApiKey"
-                type="password"
-                value={lunchMoneyApiKey}
+                type="text"
+                value={lunchMoneyApiKey ? `${lunchMoneyApiKey.substring(0, 10)}...` : ''}
                 onChange={(e) => setLunchMoneyApiKey(e.target.value)}
                 className="flex-1 p-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter your Lunch Money API key"

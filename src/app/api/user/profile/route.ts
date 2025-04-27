@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { users, subscriptions } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { withAuth } from '@/lib/authUtils';
-import type { JwtPayload } from '@/lib/authUtils'; // Import the payload type
+import type { JwtPayload } from '@/lib/authUtils';
 
 export const runtime = 'edge';
 export const preferredRegion = 'fra1';
@@ -21,6 +21,11 @@ async function handler(request: NextRequest, payload: JwtPayload) {
         name: true,
         image: true, 
         stripeSubscriptionId: true,
+        api_key: true,
+        lunchMoneyApiKey: true,
+        subscriptionPlan: true,
+        subscriptionStatus: true,
+        appBetaOptIn: true,
       },
       where: eq(users.id, userId),
     });

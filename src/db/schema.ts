@@ -36,7 +36,6 @@ export const users = pgTable('users', {
   emailVerified: timestamp('emailVerified', { mode: 'date', withTimezone: true }),
   image: text('image'),
   password: text('password'),
-  classifyApiKey: text('classifyApiKey'),
   lunchMoneyApiKey: text('lunchMoneyApiKey'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   passwordUpdatedAt: timestamp('password_updated_at', { withTimezone: true }),
