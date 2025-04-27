@@ -12,12 +12,12 @@ import {
   OperationType 
 } from './types';
 
-// Import components
-import ProgressModal from './components/progress-modal';
-import TransactionFilters from './components/transaction-filters';
-import CategorizationControls from './components/categorization-controls';
-import TransactionTable from './components/transaction-table';
-import ToastNotification from './components/toast-notification';
+// Import components (Reverted paths)
+import ProgressModal from './progress-modal';
+import TransactionFilters from './transaction-filters';
+import CategorizationControls from './categorization-controls';
+import TransactionTable from './transaction-table';
+import ToastNotification from './toast-notification';
 
 // Define type here now
 type TransactionStatusFilter = 'uncleared' | 'cleared';

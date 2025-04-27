@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import TransactionList from '@/components/lunch-money/transaction-list';
+import TransactionList from './components/transaction-list';
 import { useState } from 'react';
 import HelpTooltip from '@/components/shared/HelpTooltip';
 import HelpDrawer from '@/components/shared/HelpDrawer';

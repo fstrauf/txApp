@@ -1,5 +1,5 @@
 import React from 'react';
-import { ImportStatus, OperationType } from '../types';
+import { ImportStatus, OperationType } from './types';
 import HelpTooltip from '@/components/shared/HelpTooltip';
 
 type CategorizationControlsProps = {

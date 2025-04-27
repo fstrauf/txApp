@@ -1,7 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import CategorySelect from './category-select';
-import { Transaction, Category } from '../types';
+import { Transaction, Category } from './types';
 
 type TransactionTableProps = {
   filteredTransactions: Transaction[];
@@ -104,9 +104,7 @@ const TransactionTable = React.memo(({
                   }
                   {transaction.tags && Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {transaction.tags?.filter((tag: any) => 
-                        (typeof tag === 'string' ? tag : tag.name)?.toLowerCase() !== 'tx-categorized'
-                      ).map((tag: any, idx: number) => (
+                      {transaction.tags?.map((tag: any, idx: number) => (
                         <span 
                           key={`${typeof tag === 'string' ? tag : tag.name || tag.id || idx}-${idx}`}
                           className="text-xs bg-primary text-white rounded-full px-2 py-0.5 font-medium">

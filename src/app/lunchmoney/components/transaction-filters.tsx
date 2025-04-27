@@ -1,5 +1,5 @@
 import React, { Dispatch, SetStateAction, useMemo } from 'react';
-import { DateRange } from '../types';
+import { DateRange } from './types';
 import { format } from 'date-fns';
 import { Switch, Field, Label } from '@headlessui/react';
 
