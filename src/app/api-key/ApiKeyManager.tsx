@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast, Toaster } from 'react-hot-toast';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 interface Account {
   id: string;
@@ -29,7 +29,7 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
   const [accountInfo, setAccountInfo] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
   const [startingTrial, setStartingTrial] = useState(false);
-  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     fetchApiKey();
@@ -56,12 +56,6 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Force refresh of account data
-  const refreshAccountData = () => {
-    setLoading(true);
-    fetchApiKey();
   };
 
   const generateApiKey = async () => {
@@ -102,7 +96,17 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
   const startFreeTrial = async () => {
     try {
       setStartingTrial(true);
-      const response = await fetch(`/api/stripe/checkout?plan=gold&billing=monthly`);
+      
+      // Construct base URL
+      const checkoutUrl = new URLSearchParams({plan: 'gold', billing: 'monthly'});
+      
+      // Check if we are on the lunch money settings page
+      if (pathname === '/lunchmoney/settings') {
+        checkoutUrl.append('redirect', '/lunchmoney/settings'); // Add redirect parameter
+      }
+      
+      // Fetch with potentially added redirect param
+      const response = await fetch(`/api/stripe/checkout?${checkoutUrl.toString()}`);
       const data = await response.json();
       
       if (data.url) {
