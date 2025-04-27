@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authConfig } from '@/lib/auth';
 import { db } from '@/db';
-import { and, eq, inArray, sql } from 'drizzle-orm';
-import { users, bankAccounts, transactions, categories } from '@/db/schema';
-import { findUserByEmail, createId } from '@/db/utils';
+import { eq } from 'drizzle-orm';
+import { users } from '@/db/schema';
+import { findUserByEmail } from '@/db/utils';
 
 const LUNCH_MONEY_API_URL = 'https://dev.lunchmoney.app/v1/transactions';
 const CATEGORIZED_TAG_NAME = 'tx-categorized'; // Define the tag name
@@ -41,30 +41,6 @@ interface FormattedTransaction {
 const getDateString = (date: Date): string => {
   return date.toISOString().split('T')[0];
 };
-
-// This function fetches transactions from the Lunch Money API
-async function fetchLunchMoneyTransactions(apiKey: string, startDate: string, endDate: string): Promise<LunchMoneyTransaction[]> {
-  try {
-    const url = `https://dev.lunchmoney.app/v1/transactions?start_date=${startDate}&end_date=${endDate}`;
-    
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Failed to fetch transactions from Lunch Money');
-    }
-
-    const data = await response.json();
-    return data.transactions || [];
-  } catch (error) {
-    console.error('Error fetching transactions from Lunch Money:', error);
-    throw error;
-  }
-}
 
 // Function to format transactions for our application
 function formatTransactions(transactions: LunchMoneyTransaction[]): FormattedTransaction[] {  
@@ -206,139 +182,139 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST handler to import transactions to our database
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authConfig);
+// // POST handler to import transactions to our database
+// export async function POST(request: NextRequest) {
+//   try {
+//     const session = await getServerSession(authConfig);
     
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
+//     if (!session?.user) {
+//       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+//     }
     
-    const user = await findUserByEmail(session.user.email!);
+//     const user = await findUserByEmail(session.user.email!);
     
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+//     if (!user) {
+//       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+//     }
     
-    const userId = user.id as string;
-    const { transactions: transactionsToImport } = await request.json();
+//     const userId = user.id as string;
+//     const { transactions: transactionsToImport } = await request.json();
     
-    if (!Array.isArray(transactionsToImport) || transactionsToImport.length === 0) {
-      return NextResponse.json({ error: 'No valid transactions provided' }, { status: 400 });
-    }
+//     if (!Array.isArray(transactionsToImport) || transactionsToImport.length === 0) {
+//       return NextResponse.json({ error: 'No valid transactions provided' }, { status: 400 });
+//     }
     
-    // Get or create a default bank account for this user using Drizzle ORM
-    const bankAccountQuery = db.select()
-      .from(bankAccounts)
-      .where(
-        and(
-          eq(bankAccounts.userId, userId as string),
-          eq(bankAccounts.name, 'Lunch Money')
-        )
-      )
-      .limit(1);
+//     // Get or create a default bank account for this user using Drizzle ORM
+//     const bankAccountQuery = db.select()
+//       .from(bankAccounts)
+//       .where(
+//         and(
+//           eq(bankAccounts.userId, userId as string),
+//           eq(bankAccounts.name, 'Lunch Money')
+//         )
+//       )
+//       .limit(1);
 
-    const bankAccountResult = await bankAccountQuery;
-    let bankAccount = bankAccountResult[0];
+//     const bankAccountResult = await bankAccountQuery;
+//     let bankAccount = bankAccountResult[0];
 
-    if (!bankAccount) {
-      // Create a new bank account using Drizzle
-      const newBankAccountId = createId();
-      const insertedAccounts = await db.insert(bankAccounts)
-        .values({
-          id: newBankAccountId,
-          name: 'Lunch Money',
-          type: 'Checking',
-          userId: userId as string,
-          balance: '0',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
-        .returning();
+//     if (!bankAccount) {
+//       // Create a new bank account using Drizzle
+//       const newBankAccountId = createId();
+//       const insertedAccounts = await db.insert(bankAccounts)
+//         .values({
+//           id: newBankAccountId,
+//           name: 'Lunch Money',
+//           type: 'Checking',
+//           userId: userId as string,
+//           balance: '0',
+//           createdAt: new Date(),
+//           updatedAt: new Date()
+//         })
+//         .returning();
       
-      bankAccount = insertedAccounts[0];
-    }
+//       bankAccount = insertedAccounts[0];
+//     }
 
-    // Batch upsert transactions
-    const results = [];
+//     // Batch upsert transactions
+//     const results = [];
 
-    for (const tx of transactionsToImport as FormattedTransaction[]) {
-      // Handle lunchMoneyCategory properly
-      let lunchMoneyCategory = null;
-      if (typeof tx.lunchMoneyCategory === 'string' && tx.lunchMoneyCategory.trim() !== '') {
-        lunchMoneyCategory = tx.lunchMoneyCategory;
-      }
+//     for (const tx of transactionsToImport as FormattedTransaction[]) {
+//       // Handle lunchMoneyCategory properly
+//       let lunchMoneyCategory = null;
+//       if (typeof tx.lunchMoneyCategory === 'string' && tx.lunchMoneyCategory.trim() !== '') {
+//         lunchMoneyCategory = tx.lunchMoneyCategory;
+//       }
       
-      // Check if transaction exists
-      const existingTxQuery = db.select()
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.userId, userId as string),
-            eq(transactions.lunchMoneyId, tx.lunchMoneyId)
-          )
-        )
-        .limit(1);
+//       // Check if transaction exists
+//       const existingTxQuery = db.select()
+//         .from(transactions)
+//         .where(
+//           and(
+//             eq(transactions.userId, userId as string),
+//             eq(transactions.lunchMoneyId, tx.lunchMoneyId)
+//           )
+//         )
+//         .limit(1);
       
-      const existingTxResult = await existingTxQuery;
+//       const existingTxResult = await existingTxQuery;
       
-      if (existingTxResult.length > 0) {
-        // Update existing transaction with Drizzle
-        const existingTx = existingTxResult[0];
-        const updatedTx = await db.update(transactions)
-          .set({
-            description: tx.description,
-            amount: tx.amount.toString(),
-            date: new Date(tx.date),
-            type: tx.type,
-            notes: tx.notes || '',
-            lunchMoneyCategory: lunchMoneyCategory,
-            updatedAt: new Date()
-          })
-          .where(eq(transactions.id, existingTx.id))
-          .returning();
+//       if (existingTxResult.length > 0) {
+//         // Update existing transaction with Drizzle
+//         const existingTx = existingTxResult[0];
+//         const updatedTx = await db.update(transactions)
+//           .set({
+//             description: tx.description,
+//             amount: tx.amount.toString(),
+//             date: new Date(tx.date),
+//             type: tx.type,
+//             notes: tx.notes || '',
+//             lunchMoneyCategory: lunchMoneyCategory,
+//             updatedAt: new Date()
+//           })
+//           .where(eq(transactions.id, existingTx.id))
+//           .returning();
         
-        if (updatedTx.length > 0) {
-          results.push(updatedTx[0]);
-        }
-      } else {
-        // Create new transaction with Drizzle
-        const newTransactionId = createId();
-        const insertedTx = await db.insert(transactions)
-          .values({
-            id: newTransactionId,
-            userId: userId as string,
-            lunchMoneyId: tx.lunchMoneyId,
-            description: tx.description,
-            amount: tx.amount.toString(),
-            date: new Date(tx.date),
-            type: tx.type,
-            notes: tx.notes || '',
-            lunchMoneyCategory: lunchMoneyCategory,
-            bankAccountId: bankAccount.id,
-            isReconciled: false,
-            isTrainingData: false,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          })
-          .returning();
+//         if (updatedTx.length > 0) {
+//           results.push(updatedTx[0]);
+//         }
+//       } else {
+//         // Create new transaction with Drizzle
+//         const newTransactionId = createId();
+//         const insertedTx = await db.insert(transactions)
+//           .values({
+//             id: newTransactionId,
+//             userId: userId as string,
+//             lunchMoneyId: tx.lunchMoneyId,
+//             description: tx.description,
+//             amount: tx.amount.toString(),
+//             date: new Date(tx.date),
+//             type: tx.type,
+//             notes: tx.notes || '',
+//             lunchMoneyCategory: lunchMoneyCategory,
+//             bankAccountId: bankAccount.id,
+//             isReconciled: false,
+//             isTrainingData: false,
+//             createdAt: new Date(),
+//             updatedAt: new Date()
+//           })
+//           .returning();
         
-        if (insertedTx.length > 0) {
-          results.push(insertedTx[0]);
-        }
-      }
-    }
+//         if (insertedTx.length > 0) {
+//           results.push(insertedTx[0]);
+//         }
+//       }
+//     }
     
-    return NextResponse.json({ success: true, count: results.length });
-  } catch (error) {
-    console.error('Error in POST /api/lunch-money/transactions:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'An error occurred while importing transactions' },
-      { status: 500 }
-    );
-  }
-}
+//     return NextResponse.json({ success: true, count: results.length });
+//   } catch (error) {
+//     console.error('Error in POST /api/lunch-money/transactions:', error);
+//     return NextResponse.json(
+//       { error: error instanceof Error ? error.message : 'An error occurred while importing transactions' },
+//       { status: 500 }
+//     );
+//   }
+// }
 
 // PATCH endpoint to update a transaction's category
 export async function PATCH(request: NextRequest) {
@@ -355,7 +331,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Lunch Money API key not found' }, { status: 400 });
     }
     
-    const { transactionId, categoryId, tags: existingTags } = await request.json();
+    // Read transactionId, categoryId, tags, AND status from the request body
+    const { transactionId, categoryId, tags: existingTags, status } = await request.json();
     
     if (!transactionId) {
       return NextResponse.json({ error: 'Transaction ID is required' }, { status: 400 });
@@ -371,6 +348,11 @@ export async function PATCH(request: NextRequest) {
     if (categoryId !== undefined) {
       const lunchMoneyCategoryId = categoryId === "none" ? null : Number(categoryId);
       updateObject.category_id = lunchMoneyCategoryId;
+    }
+    
+    // --- Add Status if provided --- 
+    if (status) {
+      updateObject.status = status; // Add status to the update object
     }
     
     // --- Add Tags: Include existing tags + the new 'tx-categorized' tag --- 

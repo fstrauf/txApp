@@ -16,6 +16,7 @@ export type Transaction = {
   similarityScore?: number;
   originalData?: any;
   tags?: Array<string | { name: string; id: string }>;
+  status?: 'cleared' | 'uncleared' | string;
 };
 
 // Category type definition
