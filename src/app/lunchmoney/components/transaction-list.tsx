@@ -68,6 +68,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
   const [applyingAll, setApplyingAll] = useState<boolean>(false);
   const [applyingIndividual, setApplyingIndividual] = useState<string | null>(null);
   const [lastTrainedTimestamp, setLastTrainedTimestamp] = useState<string | null>(null);
+  const [updatingNoteId, setUpdatingNoteId] = useState<string | null>(null); // Add state for note updates
 
   // Calculate transaction stats (Only uncategorized needed now)
   const transactionStats = useMemo(() => {
@@ -1470,6 +1471,55 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
   }, [pollForCompletion, fetchLastTrainedTimestamp, tagTransactionsAsTrained, transactions]); // Add local transactions dependency for handleTrainSelected path
   // *** END NEW FUNCTION ***
 
+  // *** START NEW FUNCTION: handleNoteChange ***
+  const handleNoteChange = useCallback(async (transactionId: string, newNote: string) => {
+    console.log(`Attempting to save note for tx ${transactionId}: "${newNote}"`);
+    setUpdatingNoteId(transactionId); // Set loading state
+    setToastMessage(null); // Clear previous toasts
+
+    try {
+      const response = await fetch('/api/lunch-money/transactions', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transactionId: transactionId,
+          notes: newNote,
+          // IMPORTANT: Do NOT include status or categoryId here!
+        }),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        // Throw an error to be caught below
+        throw new Error(responseData.error || 'Failed to update note');
+      }
+
+      // Update local transaction state on success
+      setTransactions(prev =>
+        prev.map(tx =>
+          tx.lunchMoneyId === transactionId ? { ...tx, notes: newNote } : tx
+        )
+      );
+
+      // Show success toast
+      setToastMessage({ message: 'Note updated successfully.', type: 'success' });
+
+    } catch (error) {
+      console.error(`Error saving note for tx ${transactionId}:`, error);
+      const message = error instanceof Error ? error.message : 'Failed to save note';
+      setError(message); // Set general error state if needed
+      setToastMessage({ message, type: 'error' });
+      // Re-throw the error if you want the NoteInput component to catch it too
+      throw error;
+    } finally {
+      setUpdatingNoteId(null); // Clear loading state
+    }
+  }, [setTransactions, setToastMessage, setError]); // Add dependencies
+  // *** END NEW FUNCTION ***
+
   return (
     <div className="text-gray-900 text-sm bg-white min-h-screen p-4">
       {/* Toast notification */}
@@ -1539,6 +1589,8 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         cancelSinglePrediction={cancelSinglePrediction}
         getCategoryNameById={getCategoryNameById}
         loading={loading}
+        handleNoteChange={handleNoteChange} // Pass the new handler
+        updatingNoteId={updatingNoteId}   // Pass the loading state
       />
     </div>
   );

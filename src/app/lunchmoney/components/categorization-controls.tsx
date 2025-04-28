@@ -38,13 +38,21 @@ const CategorizationControls = React.memo(({
     <div className="flex flex-col gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 shadow-sm h-full">
       <div className="flex items-start gap-4">
         <div className="flex flex-col items-start gap-2 flex-shrink-0">
-          <button
+          {/* <button
             onClick={handleTrainSelected}
             disabled={selectedTransactionsCount === 0 || operationInProgress}
             className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left whitespace-nowrap"
             title="Train model using only the currently selected transactions."
           >
             Train Selected ({selectedTransactionsCount})
+          </button> */}
+          <button 
+            onClick={handleTrainAllReviewed}
+            disabled={operationInProgress}
+            className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left whitespace-nowrap"
+            title="Train model using all your transactions that have a category assigned (fetched from Lunch Money)."
+          >
+            Train All Reviewed
           </button>
           <button
             onClick={handleCategorizeSelected}
@@ -54,14 +62,7 @@ const CategorizationControls = React.memo(({
           >
             Categorize Selected ({selectedTransactionsCount})
           </button>
-          <button 
-            onClick={handleTrainAllReviewed}
-            disabled={operationInProgress}
-            className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left whitespace-nowrap"
-            title="Train model using all your transactions that have a category assigned (fetched from Lunch Money)."
-          >
-            Train All Reviewed
-          </button>
+
         </div>
         <div className="text-sm text-gray-600 flex-grow mt-1">
           Use reviewed transactions to Train your model. Categorise transactions that need review.

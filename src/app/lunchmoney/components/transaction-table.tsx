@@ -2,6 +2,7 @@ import React from 'react';
 import { format } from 'date-fns';
 import CategorySelect from './category-select';
 import { Transaction, Category } from './types';
+import NoteInput from './note-input'; // Import the new component
 
 type TransactionTableProps = {
   filteredTransactions: Transaction[];
@@ -18,6 +19,8 @@ type TransactionTableProps = {
   cancelSinglePrediction: (transactionId: string) => void;
   getCategoryNameById: (categoryId: string | null) => string | null;
   loading: boolean;
+  handleNoteChange: (transactionId: string, newNote: string) => Promise<void>; // Add prop for handling note changes
+  updatingNoteId: string | null; // Add prop for loading state
 };
 
 const TransactionTable = React.memo(({
@@ -34,7 +37,9 @@ const TransactionTable = React.memo(({
   applyingIndividual,
   cancelSinglePrediction,
   getCategoryNameById,
-  loading
+  loading,
+  handleNoteChange, // Destructure new prop
+  updatingNoteId,  // Destructure new prop
 }: TransactionTableProps) => {
   if (!loading && filteredTransactions.length === 0) {
     return (
@@ -66,6 +71,7 @@ const TransactionTable = React.memo(({
             <th className="px-4 py-3 text-left font-medium w-32">Date</th>
             <th className="px-4 py-3 text-left font-medium">Description</th>
             <th className="px-4 py-3 text-left font-medium">Amount</th>
+            <th className="px-4 py-3 text-left font-medium">Notes</th>
             <th className="px-4 py-3 text-left font-medium">Category</th>
             <th className="px-4 py-3 text-left font-medium">Predicted Category</th>
             {Object.keys(pendingCategoryUpdates).length > 0 && (
@@ -76,7 +82,7 @@ const TransactionTable = React.memo(({
         <tbody className="divide-y divide-gray-100">
           {loading ? (
             <tr>
-              <td colSpan={7} className="text-center py-12 text-gray-500">
+              <td colSpan={8} className="text-center py-12 text-gray-500">
                 Loading transactions...
               </td>
             </tr>
@@ -124,11 +130,13 @@ const TransactionTable = React.memo(({
                   )}
                 </td>
                 <td className="px-4 py-3 align-top text-gray-800">
+                  {/* Description */}
                   {typeof transaction.description === 'object' 
                     ? JSON.stringify(transaction.description) 
                     : transaction.description}
                 </td>
                 <td className={`px-4 py-3 align-top font-medium ${transaction.is_income ? 'text-green-600' : 'text-red-600'}`}>
+                  {/* Amount */}
                   {transaction.is_income ? '+' : '-'}
                   {typeof transaction.amount === 'number' 
                     ? Math.abs(transaction.amount).toFixed(2) 
@@ -136,6 +144,14 @@ const TransactionTable = React.memo(({
                   <div className="text-xs text-gray-500 mt-1">
                     {transaction.is_income ? 'Income' : 'Expense'}
                   </div>
+                </td>
+                <td className="px-4 py-3 align-top">
+                  {/* Notes Input */}
+                  <NoteInput
+                    transaction={transaction}
+                    handleNoteChange={handleNoteChange}
+                    updatingNoteId={updatingNoteId}
+                  />
                 </td>
                 <td className="px-4 py-3 align-top">
                   <CategorySelect
