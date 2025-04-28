@@ -1,7 +1,12 @@
 // Import the new client component wrapper
 import LunchMoneySettingsClientPage from './LunchMoneySettingsClientPage';
+import SettingsQueryProvider from './SettingsQueryProvider'; // Import the provider
 
 export default function LunchMoneySettingsPage() {
-  // Render the client component which handles fetching and conditional UI
-  return <LunchMoneySettingsClientPage />;
+  // Wrap the client component with the query provider
+  return (
+    <SettingsQueryProvider>
+      <LunchMoneySettingsClientPage />
+    </SettingsQueryProvider>
+  );
 } 

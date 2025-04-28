@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as jose from 'jose';
 import { getToken } from 'next-auth/jwt'; // Import getToken
+import { users, subscriptionStatusEnum } from '@/db/schema';
+import type { InferSelectModel } from 'drizzle-orm';
 
 // Define our JWT payload structure 
 // Allow email and name to be potentially null, like NextAuth's token
@@ -102,4 +104,43 @@ export function withAuth<T extends (request: NextRequest, payload: JwtPayload) =
     // Call the original handler with the request and the verified payload
     return handler(request, payload);
   };
+}
+
+// Define the input type manually, explicitly handling nulls
+export type UserSubscriptionData = {
+  subscriptionStatus: typeof subscriptionStatusEnum.enumValues[number] | null;
+  currentPeriodEndsAt: Date | null;
+  trialEndsAt: Date | null;
+};
+
+/**
+ * Checks if a user has an active subscription (paid or trial) using simplified logic.
+ * @param userData Object containing user's subscription status, current period end, and trial end.
+ * @returns True if the user has an active subscription or trial, false otherwise.
+ */
+export function hasActiveSubscriptionOrTrial(userData: UserSubscriptionData | null | undefined): boolean {
+  if (!userData) {
+    return false;
+  }
+
+  // Check 1: Active Stripe Subscription ('ACTIVE' or 'TRIALING' status + valid date)
+  const isStripeStatusActive =
+    userData.subscriptionStatus === 'ACTIVE' ||
+    userData.subscriptionStatus === 'TRIALING';
+
+  const isStripeDateValid =
+    !!userData.currentPeriodEndsAt && // Check if date exists
+    userData.currentPeriodEndsAt.getTime() > Date.now(); // Check if it's in the future
+
+  if (isStripeStatusActive && isStripeDateValid) {
+    return true; // Has active Stripe sub (paid or trial)
+  }
+
+  // Check 2: Active App-Managed Trial (non-Stripe trial)
+  const isAppTrialDateValid =
+    !!userData.trialEndsAt && // Check if date exists
+    userData.trialEndsAt.getTime() > Date.now(); // Check if it's in the future
+
+  // Return true if the app trial is valid (covers cases where Stripe sub wasn't active)
+  return isAppTrialDateValid;
 } 

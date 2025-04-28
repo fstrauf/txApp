@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { findUserByEmail } from '@/db/utils';
+import { encryptApiKey } from '@/lib/encryption';
 
 // GET handler to check if the user has Lunch Money credentials
 export async function GET(request: NextRequest) {
@@ -71,9 +72,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to validate Lunch Money API key' }, { status: 400 });
     }
     
-    // Save the API key
+    // --- Encrypt the API key before saving ---
+    let encryptedApiKey: string;
+    try {
+      encryptedApiKey = encryptApiKey(apiKey);
+    } catch (encError) {
+      console.error('Failed to encrypt API key for user:', user.id, encError);
+      return NextResponse.json({ error: 'Could not process API key.' }, { status: 500 });
+    }
+    // --- End Encryption ---
+
+    // Save the ENCRYPTED API key
     await db.update(users)
-      .set({ lunchMoneyApiKey: apiKey })
+      .set({ lunchMoneyApiKey: encryptedApiKey })
       .where(eq(users.id, user.id as string));
     
     return NextResponse.json({ success: true });

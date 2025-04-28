@@ -4,27 +4,30 @@ import { useState, useEffect } from 'react';
 import { toast, Toaster } from 'react-hot-toast';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { hasActiveSubscriptionOrTrial, type UserSubscriptionData } from '@/lib/authUtils'; // Import the utility function and its input type
 
+// Update the Account interface to align with UserSubscriptionData for relevant fields
 interface Account {
   id: string;
   api_key: string | null;
   email: string | null;
   name: string | null;
-  subscriptionPlan: string;
-  subscriptionStatus: string;
-  billingCycle: string;
-  currentPeriodEndsAt: string | null;
+  subscriptionPlan: string; // Keep as string if only used for display logic here
+  subscriptionStatus: UserSubscriptionData['subscriptionStatus']; // Use the precise type
+  billingCycle: string | null; // Keep as string if only used for display logic here
+  currentPeriodEndsAt: Date | null; // Expect Date or null
+  trialEndsAt: Date | null; // Expect Date or null
   monthlyCategorizations: number;
-  trialEndsAt: string | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
 }
 
 interface ApiKeyManagerProps {
   userId: string;
+  onSuccess?: () => void; // Add optional onSuccess callback prop
 }
 
-export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
+export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps) {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [accountInfo, setAccountInfo] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,7 +52,16 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
       const data = await response.json();
       console.log('Account data:', data); // Debug subscription status
       setApiKey(data?.api_key || null);
-      setAccountInfo(data || null);
+      // Ensure dates are converted to Date objects if they are strings from JSON
+      const accountData: Account = {
+        ...data,
+        // Map potentially null/string dates to Date | null
+        currentPeriodEndsAt: data.currentPeriodEndsAt ? new Date(data.currentPeriodEndsAt) : null,
+        trialEndsAt: data.trialEndsAt ? new Date(data.trialEndsAt) : null,
+        // Ensure subscriptionStatus is correctly typed (might need explicit casting if API returns plain string)
+        subscriptionStatus: data.subscriptionStatus as UserSubscriptionData['subscriptionStatus'],
+      };
+      setAccountInfo(accountData || null);
     } catch (error) {
       console.error('Error fetching API key:', error);
       toast.error('Failed to fetch API key');
@@ -77,6 +89,7 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
       
       setApiKey(newApiKey);
       toast.success('API key generated successfully');
+      onSuccess?.(); // Call onSuccess if provided
     } catch (error) {
       console.error('Error generating API key:', error);
       toast.error('Failed to generate API key');
@@ -192,22 +205,15 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
     );
   };
 
-  // Check if the user has an active subscription
-  const hasActiveSubscription = () => {
-    if (!accountInfo) return false;
-    
-    console.log('Checking subscription status:', accountInfo.subscriptionStatus); // Debug
-    
-    // Check if we have a valid subscription status that indicates active subscription
-    return ['ACTIVE', 'TRIALING'].includes(accountInfo.subscriptionStatus || '');
-  };
+  // Check if the user has an active subscription using the utility function
+  // Now accountInfo should match the expected type UserSubscriptionData
+  const isActiveOrTrial = hasActiveSubscriptionOrTrial(accountInfo);
 
   if (loading) {
     return <div className="text-gray-700 text-center">Loading...</div>;
   }
 
   const usageInfo = getUsageInfo();
-  const isActiveOrTrial = hasActiveSubscription();
 
   return (
     <div className="space-y-8">
@@ -253,14 +259,16 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
               <span className="font-medium">Plan:</span> {accountInfo?.subscriptionPlan}{' '}
               ({accountInfo?.billingCycle === 'ANNUAL' ? 'Annual' : 'Monthly'})
             </p>
-            {accountInfo?.trialEndsAt && (
+            {/* Always show trial end date if it's set and in the future */}
+            {accountInfo?.trialEndsAt && accountInfo.trialEndsAt.getTime() > Date.now() && (
               <p className="text-gray-700">
-                <span className="font-medium">Trial ends:</span> {formatDate(accountInfo.trialEndsAt)}
+                <span className="font-medium">Trial ends:</span> {formatDate(accountInfo.trialEndsAt.toISOString())}
               </p>
             )}
-            {accountInfo?.currentPeriodEndsAt && (
+            {/* Show next billing date only for active, non-trialing Stripe subscriptions */}
+            {accountInfo?.subscriptionStatus === 'ACTIVE' && accountInfo?.currentPeriodEndsAt && (
               <p className="text-gray-700">
-                <span className="font-medium">Next billing date:</span> {formatDate(accountInfo.currentPeriodEndsAt)}
+                <span className="font-medium">Next billing date:</span> {formatDate(accountInfo.currentPeriodEndsAt.toISOString())}
               </p>
             )}
             <div className="mt-4">

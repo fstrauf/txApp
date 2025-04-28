@@ -817,6 +817,20 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         body: JSON.stringify(payload),
       });
 
+      // === START 403 HANDLING ===
+      if (response.status === 403) {
+        const errorData = await response.json().catch(() => ({ error: 'Subscription check failed' }));
+        console.error('Training failed due to inactive subscription:', errorData);
+        setToastMessage({ message: errorData.error || 'Training failed: Subscription inactive or trial expired.', type: 'error' });
+        setError(errorData.error || 'Subscription inactive or trial expired.');
+        setOperationInProgress(false);
+        setOperationType('none');
+        setProgressPercent(0); // Reset progress
+        setProgressMessage('');
+        return; // Stop further processing
+      }
+      // === END 403 HANDLING ===
+
       // --- MODIFIED RESPONSE HANDLING FOR TRAINING --- 
       let pollResult: { status: string; message?: string } = { status: 'unknown', message: 'Polling did not complete' }; 
       if (response.status === 200) {
@@ -949,6 +963,20 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         },
         body: JSON.stringify({ transactions: selectedTxObjects }),
       });
+
+      // === START 403 HANDLING ===
+      if (response.status === 403) {
+        const errorData = await response.json().catch(() => ({ error: 'Subscription check failed' }));
+        console.error('Categorization failed due to inactive subscription:', errorData);
+        setToastMessage({ message: errorData.error || 'Categorization failed: Subscription inactive or trial expired.', type: 'error' });
+        setError(errorData.error || 'Subscription inactive or trial expired.');
+        setOperationInProgress(false);
+        setOperationType('none');
+        setProgressPercent(0); // Reset progress
+        setProgressMessage('');
+        return; // Stop further processing
+      }
+      // === END 403 HANDLING ===
 
       // --- MODIFIED RESPONSE HANDLING --- 
       if (response.status === 200) {

@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import { users } from '@/db/schema';
 import { findUserByEmail } from '@/db/utils';
+import { decryptApiKey } from '@/lib/encryption';
 
 const LUNCH_MONEY_API_URL = 'https://dev.lunchmoney.app/v1/transactions';
 
@@ -100,11 +101,22 @@ export async function GET(request: NextRequest) {
       .where(eq(users.id, userId))
       .limit(1);
 
-    const apiKey = userResult[0]?.lunchMoneyApiKey;
+    const encryptedApiKey = userResult[0]?.lunchMoneyApiKey;
 
-    if (!apiKey) {
+    if (!encryptedApiKey) {
       return NextResponse.json({ error: 'Lunch Money API key not configured.' }, { status: 400 });
     }
+
+    // --- Decrypt the API key ---
+    let apiKey: string;
+    try {
+      apiKey = decryptApiKey(encryptedApiKey);
+    } catch (decError) {
+      console.error('Failed to decrypt API key for user:', userId, decError);
+      // Return a generic error to avoid leaking details
+      return NextResponse.json({ error: 'Could not process API key.' }, { status: 500 }); 
+    }
+    // --- End Decryption ---
 
     // 2. Get Date & Status Parameters from Request URL
     const searchParams = request.nextUrl.searchParams;
@@ -200,10 +212,20 @@ export async function PATCH(request: NextRequest) {
     
     const user = await findUserByEmail(session.user.email!);
     
-    if (!user?.lunchMoneyApiKey) {
-      return NextResponse.json({ error: 'Lunch Money API key not found' }, { status: 400 });
+    // --- Decrypt API Key --- 
+    const encryptedApiKey = user?.lunchMoneyApiKey;
+    if (!encryptedApiKey) {
+      return NextResponse.json({ error: 'Lunch Money API key not found or not configured.' }, { status: 400 });
     }
-    
+    let apiKey: string;
+    try {
+      apiKey = decryptApiKey(encryptedApiKey);
+    } catch (decError) {
+      console.error('Failed to decrypt API key for user:', user.id, decError);
+      return NextResponse.json({ error: 'Could not process API key.' }, { status: 500 }); 
+    }
+    // --- End Decryption ---
+
     // Read transactionId, categoryId, tags, AND status from the request body
     const { transactionId, categoryId, tags: existingTags, status } = await request.json();
     
@@ -251,7 +273,7 @@ export async function PATCH(request: NextRequest) {
     const response = await fetch(url, {
       method: 'PUT', // Use PUT as per Lunch Money docs for updating
       headers: {
-        'Authorization': `Bearer ${user.lunchMoneyApiKey}`,
+        'Authorization': `Bearer ${apiKey}`, // Use DECRYPTED key
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(updateBody)
