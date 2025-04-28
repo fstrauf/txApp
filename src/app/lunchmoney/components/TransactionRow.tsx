@@ -22,6 +22,7 @@ type TransactionRowProps = {
   getCategoryNameById: (categoryId: string | null) => string | null;
   handleNoteChange: (transactionId: string, newNote: string) => Promise<void>;
   updatingNoteId: string | null;
+  showActionsColumn: boolean;
 };
 
 // Create the memoized Row component
@@ -40,7 +41,8 @@ const TransactionRow = React.memo((
     cancelSinglePrediction, 
     getCategoryNameById, 
     handleNoteChange, 
-    updatingNoteId 
+    updatingNoteId, 
+    showActionsColumn 
   }: TransactionRowProps
 ) => {
   const hasPendingUpdate = !!pendingUpdate;
@@ -139,55 +141,57 @@ const TransactionRow = React.memo((
       
       {/* Actions column for Apply/Cancel buttons */}
       {/* Render actions column placeholder even if no pending updates, to keep layout consistent */}
-      <td className="px-4 py-3 align-top min-w-[120px]">
-        {hasPendingUpdate && pendingUpdate && (
-          <div className="flex items-center gap-x-2">
-            <button
-              onClick={() => applyPredictedCategory(transaction.lunchMoneyId)}
-              disabled={applyingIndividual === transaction.lunchMoneyId || successfulUpdates[transaction.lunchMoneyId]}
-              className={`px-3 py-1 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 ${ 
-                /* ... styling ... */
-                successfulUpdates[transaction.lunchMoneyId]
-                  ? 'bg-green-50 text-green-700 border border-green-200 cursor-default'
-                  : 'bg-secondary text-white hover:bg-secondary-dark disabled:bg-gray-400 disabled:cursor-not-allowed'
-              }`}
-            >
-              {/* ... Apply button content ... */}
-               {applyingIndividual === transaction.lunchMoneyId ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Applying
-                </span>
-              ) : successfulUpdates[transaction.lunchMoneyId] ? (
-                <span className="flex items-center">
-                  <svg className="h-3 w-3 mr-1 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Applied
-                </span>
-              ) : (
-                "Apply"
-              )}
-            </button>
-            
-            {!successfulUpdates[transaction.lunchMoneyId] && (
+      {showActionsColumn && (
+        <td className="px-4 py-3 align-top min-w-[120px]">
+          {hasPendingUpdate && pendingUpdate && (
+            <div className="flex items-center gap-x-2">
               <button
-                onClick={() => cancelSinglePrediction(transaction.lunchMoneyId)}
-                disabled={applyingIndividual === transaction.lunchMoneyId}
-                className="p-1 text-gray-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
-                aria-label="Cancel prediction"
+                onClick={() => applyPredictedCategory(transaction.lunchMoneyId)}
+                disabled={applyingIndividual === transaction.lunchMoneyId || successfulUpdates[transaction.lunchMoneyId]}
+                className={`px-3 py-1 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 ${ 
+                  /* ... styling ... */
+                  successfulUpdates[transaction.lunchMoneyId]
+                    ? 'bg-green-50 text-green-700 border border-green-200 cursor-default'
+                    : 'bg-secondary text-white hover:bg-secondary-dark disabled:bg-gray-400 disabled:cursor-not-allowed'
+                }`}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                {/* ... Apply button content ... */}
+                {applyingIndividual === transaction.lunchMoneyId ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Applying
+                  </span>
+                ) : successfulUpdates[transaction.lunchMoneyId] ? (
+                  <span className="flex items-center">
+                    <svg className="h-3 w-3 mr-1 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Applied
+                  </span>
+                ) : (
+                  "Apply"
+                )}
               </button>
-            )}
-          </div>
-        )}
-      </td>
+              
+              {!successfulUpdates[transaction.lunchMoneyId] && (
+                <button
+                  onClick={() => cancelSinglePrediction(transaction.lunchMoneyId)}
+                  disabled={applyingIndividual === transaction.lunchMoneyId}
+                  className="p-1 text-gray-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                  aria-label="Cancel prediction"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
+        </td>
+      )}
     </tr>
   );
 });
