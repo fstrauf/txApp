@@ -54,11 +54,13 @@ export default function LunchMoneySettingsClientPage() {
     refetchOnWindowFocus: false, // Optional: prevent refetch on focus
   });
 
-  // Callback to invalidate the query
-  const invalidateUserProfileQuery = useCallback(() => {
-    console.log('Invalidating userProfile query...');
+  // Callback to invalidate the queries
+  const invalidateUserDataQueries = useCallback(() => {
+    if (!userProfile?.id) return; // Need user ID to invalidate accountInfo
+    console.log('Invalidating userProfile and accountInfo queries...');
     queryClient.invalidateQueries({ queryKey: ['userProfile'] });
-  }, [queryClient]);
+    queryClient.invalidateQueries({ queryKey: ['accountInfo', userProfile.id] });
+  }, [queryClient, userProfile?.id]); // Depend on userProfile.id
 
   // Define tab content conditionally based on userProfile from useQuery
   const getTabs = () => {
@@ -79,7 +81,7 @@ export default function LunchMoneySettingsClientPage() {
           <div className="ml-9">
             <LunchMoneySettingsForm 
               initialApiKey={userProfile.lunchMoneyApiKey} 
-              onSuccess={invalidateUserProfileQuery} // Pass invalidation callback
+              onSuccess={invalidateUserDataQueries} // Pass combined invalidation callback
             />
           </div>
         </section>
@@ -96,7 +98,7 @@ export default function LunchMoneySettingsClientPage() {
           <div className="ml-9">
             <ApiKeyManager 
               userId={userProfile.id} 
-              onSuccess={invalidateUserProfileQuery} // Pass invalidation callback
+              onSuccess={invalidateUserDataQueries} // Pass combined invalidation callback
             />
           </div>
         </section>
