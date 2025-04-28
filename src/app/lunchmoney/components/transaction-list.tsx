@@ -58,28 +58,32 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
   const [isOperationComplete, setIsOperationComplete] = useState(false); // State for modal completion button
   const [isTagging, setIsTagging] = useState(false); // State to indicate tagging phase
   
+  // State for total counts (independent of filtering)
+  const [totalReviewedCount, setTotalReviewedCount] = useState<number>(0);
+  const [totalUnreviewedCount, setTotalUnreviewedCount] = useState<number>(0);
+  const [totalTrainedCount, setTotalTrainedCount] = useState<number>(0); // Add state for trained count
+  
   // Categorization workflow states
   const [pendingCategoryUpdates, setPendingCategoryUpdates] = useState<Record<string, {categoryId: string | null, score: number}>>({});
   const [applyingAll, setApplyingAll] = useState<boolean>(false);
   const [applyingIndividual, setApplyingIndividual] = useState<string | null>(null);
   const [lastTrainedTimestamp, setLastTrainedTimestamp] = useState<string | null>(null);
 
-  // Calculate transaction stats
+  // Calculate transaction stats (Only uncategorized needed now)
   const transactionStats = useMemo(() => {
-    let trainedCount = 0;
+    // let trainedCount = 0; // Removed - using separate state now
     let uncategorizedCount = 0;
-    let clearedCount = 0;
-    let unclearedCount = 0;
+    // let clearedCount = 0; // Removed - using separate state now
+    // let unclearedCount = 0; // Removed - using separate state now
 
     transactions.forEach(tx => {
-      // Use the new tag name for checking
-      const hasTrainedTag = tx.tags?.some(tag => 
-        (typeof tag === 'string' && tag.toLowerCase() === EXPENSE_SORTED_TRAINED_TAG) || 
-        (typeof tag === 'object' && tag.name?.toLowerCase() === EXPENSE_SORTED_TRAINED_TAG)
-      );
-      if (hasTrainedTag) {
-        trainedCount++;
-      }
+      // Trained tag check removed - using API count
+      // const hasTrainedTag = tx.tags?.some(tag => 
+      //  ...
+      // );
+      // if (hasTrainedTag) {
+      //   trainedCount++;
+      // }
 
       // Check if uncategorized (using originalData as the source of truth)
       const isUncategorized = !tx.originalData?.category_id;
@@ -87,23 +91,22 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         uncategorizedCount++;
       }
 
-      // Cleared/Uncleared Check (based on currently filtered list)
-      if (tx.originalData?.status === 'cleared') {
-        clearedCount++;
-      } else {
-        // Assuming anything not explicitly 'cleared' is treated as 'uncleared' in the current view
-        unclearedCount++; 
-      }
+      // Cleared/Uncleared Check (based on currently filtered list) - No longer needed for stats display here
+      // if (tx.originalData?.status === 'cleared') {
+      //   clearedCount++;
+      // } else {
+      //   unclearedCount++; 
+      // }
     });
 
-    // Return all counts
-    return { trainedCount, uncategorizedCount, clearedCount, unclearedCount };
+    // Return only relevant counts
+    // return { trainedCount, uncategorizedCount }; // Removed trained
+    return { uncategorizedCount }; // Only uncategorized needed from this calculation
   }, [transactions]);
 
-  // Fetch initial data when component mounts
+  // Fetch initial data when component mounts (Categories and Timestamp only)
   useEffect(() => {
-    // Call fetchTransactionsWithDates directly for initial load
-    fetchTransactionsWithDates(dateRange, statusFilter);
+    // fetchTransactionsWithDates(dateRange, statusFilter); // Removed - Handled by the effect below
     fetchCategories();
     fetchLastTrainedTimestamp();
   }, []); // Keep dependency array empty for mount only
@@ -125,11 +128,44 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     }
   }, [transactions]);
 
-  // Refetch transactions when the status filter or date range changes
+  // Fetch transactions when the status filter or date range changes (Handles initial load too)
   useEffect(() => {
-    // Call fetchTransactionsWithDates directly, passing the current state
     fetchTransactionsWithDates(dateRange, statusFilter);
+    // Don't fetch counts here, use the separate effect below
   }, [statusFilter, dateRange]); 
+
+  // *** NEW: Function to fetch total counts ***
+  const fetchTotalCounts = useCallback(async (dates: DateRange) => {
+    console.log("[Counts] Fetching total counts for date range:", dates);
+    try {
+      const params = new URLSearchParams({
+        start_date: dates.startDate,
+        end_date: dates.endDate,
+      });
+      const response = await fetch(`/api/lunch-money/transaction-counts?${params}`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Failed to fetch counts (${response.status})`);
+      }
+      const data = await response.json();
+      setTotalReviewedCount(data.clearedCount || 0);
+      setTotalUnreviewedCount(data.unclearedCount || 0);
+      setTotalTrainedCount(data.trainedCount || 0); // Set the trained count state
+      console.log("[Counts] Fetched totals - Reviewed:", data.clearedCount, "Unreviewed:", data.unclearedCount);
+    } catch (error) {
+      console.error("[Counts] Error fetching total counts:", error);
+      // Optionally show a toast or set an error state specific to counts
+      // setToastMessage({ message: "Could not load transaction counts.", type: "error" });
+      setTotalReviewedCount(0); // Reset on error
+      setTotalUnreviewedCount(0);
+      setTotalTrainedCount(0); // Reset trained count on error
+    }
+  }, []); // Empty dependency array initially, called manually by effect
+
+  // *** NEW: Effect to fetch counts when dateRange changes ***
+  useEffect(() => {
+    fetchTotalCounts(dateRange);
+  }, [dateRange, fetchTotalCounts]); // Run when dateRange changes
 
   const fetchCategories = async () => {
     try {
@@ -419,18 +455,17 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
   }, [pendingDateRange]); // Dependency on pendingDateRange
 
   // Memoize tagTransactionsAsTrained (Robust Filtering + Batching)
-  const tagTransactionsAsTrained = useCallback(async (transactionIds: string[]) => {
-    if (!transactionIds.length) {
-      console.log("[Tagging] No transaction IDs provided.");
+  const tagTransactionsAsTrained = useCallback(async (transactionsToPotentiallyTag: Transaction[]) => {
+    if (!transactionsToPotentiallyTag.length) {
+      console.log("[Tagging] No transaction objects provided.");
       return { successCount: 0, failCount: 0 };
     }
-    console.log("[Tagging] Received IDs for potential tagging:", transactionIds);
+    console.log("[Tagging] Received transaction objects for potential tagging:", transactionsToPotentiallyTag);
 
     // 1. Filter based on current state BEFORE starting any API calls
-    const transactionsToTag = transactionIds.filter(txId => {
-      const tx = transactions.find(t => t.lunchMoneyId === txId);
+    const filteredTransactionsForTagging = transactionsToPotentiallyTag.filter(tx => {
       if (!tx) {
-        console.warn(`[Tagging] Filter: Transaction ${txId} not found in current local state. Skipping.`);
+        console.warn(`[Tagging] Filter: Received an undefined transaction object. Skipping.`); // Should ideally not happen
         return false; 
       }
       const txTags = tx.tags || [];
@@ -445,9 +480,11 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       return !hasTrainedTag; // Keep only those needing the tag
     });
 
-    console.log(`[Tagging] After filtering: ${transactionsToTag.length} transactions actually need tagging.`, transactionsToTag);
+    // Extract the IDs from the filtered transactions
+    const transactionsToTagIds = filteredTransactionsForTagging.map(tx => tx.lunchMoneyId).filter(id => !!id);
+    console.log(`[Tagging] After filtering: ${transactionsToTagIds.length} transactions actually need tagging.`, transactionsToTagIds);
 
-    if (transactionsToTag.length === 0) {
+    if (transactionsToTagIds.length === 0) {
       console.log(`[Tagging] No transactions require tagging.`);
       return { successCount: 0, failCount: 0 }; 
     }
@@ -460,8 +497,8 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       const successfulTxIds: string[] = [];
       
       console.log(`[Tagging] Starting batch processing (Size: ${batchSize})...`);
-      for (let i = 0; i < transactionsToTag.length; i += batchSize) {
-        const batchIds = transactionsToTag.slice(i, i + batchSize);
+      for (let i = 0; i < transactionsToTagIds.length; i += batchSize) {
+        const batchIds = transactionsToTagIds.slice(i, i + batchSize);
         const batchNumber = i / batchSize + 1;
         console.log(`[Tagging] Preparing Batch ${batchNumber} (IDs: ${batchIds.join(', ')})`);
 
@@ -539,9 +576,9 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
 
     } catch (error) {
       console.error('[Tagging] Error during batch processing loop:', error);
-      return { successCount: 0, failCount: transactionsToTag.length }; 
+      return { successCount: 0, failCount: transactionsToTagIds.length }; // Use the count of IDs we attempted to tag
     }
-  }, [transactions, setTransactions]); 
+  }, [transactions, setTransactions]); // Keep local transactions dependency for updating state
 
   // Memoize pollForCompletion
   const pollForCompletion = useCallback(async (predictionId: string, type: 'training' | 'categorizing'): Promise<{ status: string; message?: string }> => {
@@ -769,7 +806,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       const trainingData = transactions
         .filter(tx => selectedTransactions.includes(tx.lunchMoneyId))
         .map(tx => {
-          // *** CHANGE: Use category_id from originalData ***
+          // Use category_id from originalData
           const categoryId = tx.originalData?.category_id?.toString() || null; // Get the numeric ID as string or null
           if (!categoryId) {
             console.warn(`Transaction ${tx.lunchMoneyId} is missing a category ID. Skipping for training or using fallback.`);
@@ -778,7 +815,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
           }
           return {
             description: tx.description,
-            // *** Use Category (capital C) to match backend model ***
+            // Use Category (capital C) to match backend model
             Category: categoryId, // Send the numeric ID (or null)
             money_in: tx.is_income, 
             amount: tx.amount 
@@ -789,7 +826,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       
       if (trainingData.length === 0) throw new Error('No valid transactions with category IDs selected for training');
 
-      // *** CHANGE: Ensure payload structure matches expected backend (check if backend expects 'categoryId') ***
+      // Ensure payload structure matches expected backend (check if backend expects 'categoryId')
       const payload = {
         transactions: trainingData, // Contains description, categoryId, money_in, amount
         // Assuming backend might expect these, adjust if necessary
@@ -800,8 +837,8 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       setProgressPercent(10);
       setProgressMessage('Sending training request...');
 
-      // *** Make sure the backend API '/api/classify/train' forwards this payload,
-      // and the *external* Flask service expects 'categoryId' ***
+      // Make sure the backend API '/api/classify/train' forwards this payload,
+      // and the *external* Flask service expects 'categoryId'
       const response = await fetch('/api/classify/train', {
         method: 'POST',
         headers: {
@@ -841,19 +878,19 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
 
           // *** ADD PRE-FILTER LOGGING HERE ***
           console.log("[handleTrainSelected] Preparing for background tagging...");
-          const selectedIdsForTagging = [...selectedTransactions]; // Capture IDs before clearing
+          // Get the full transaction objects for tagging
+          const selectedTxObjectsForTagging = transactions.filter(tx => selectedTransactions.includes(tx.lunchMoneyId));
           // Log details of first few selected transactions before filtering
-          if (selectedIdsForTagging.length > 0) {
-            console.log(`[handleTrainSelected] Checking tags for ${selectedIdsForTagging.length} selected IDs. Sample:`);
-            selectedIdsForTagging.slice(0, 3).forEach(id => {
-              const tx = transactions.find(t => t.lunchMoneyId === id);
-              console.log(` - ID: ${id}, Tags:`, tx?.tags);
+          if (selectedTxObjectsForTagging.length > 0) {
+            console.log(`[handleTrainSelected] Checking tags for ${selectedTxObjectsForTagging.length} selected transactions. Sample:`);
+            selectedTxObjectsForTagging.slice(0, 3).forEach(tx => {
+              console.log(` - ID: ${tx.lunchMoneyId}, Tags:`, tx?.tags);
             });
           }
           // *** END PRE-FILTER LOGGING ***
 
           // 2. Perform tagging in background (fire and forget style, but handle result with toast)
-          tagTransactionsAsTrained(selectedIdsForTagging).then(tagResult => {
+          tagTransactionsAsTrained(selectedTxObjectsForTagging).then(tagResult => {
             // This runs after tagging attempt finishes
             fetchLastTrainedTimestamp(); // Update timestamp
             setToastMessage({ 
@@ -908,18 +945,18 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         
         // *** ADD PRE-FILTER LOGGING HERE (Polling Path) ***
         console.log("[handleTrainSelected - Polling Path] Preparing for background tagging...");
-        const selectedIdsForTagging = [...selectedTransactions]; // Capture IDs
-        if (selectedIdsForTagging.length > 0) {
-            console.log(`[handleTrainSelected - Polling Path] Checking tags for ${selectedIdsForTagging.length} selected IDs. Sample:`);
-            selectedIdsForTagging.slice(0, 3).forEach(id => {
-              const tx = transactions.find(t => t.lunchMoneyId === id);
-              console.log(` - ID: ${id}, Tags:`, tx?.tags);
+        // Get the full transaction objects for tagging
+        const selectedTxObjectsForTagging = transactions.filter(tx => selectedTransactions.includes(tx.lunchMoneyId));
+        if (selectedTxObjectsForTagging.length > 0) {
+            console.log(`[handleTrainSelected - Polling Path] Checking tags for ${selectedTxObjectsForTagging.length} selected transactions. Sample:`);
+            selectedTxObjectsForTagging.slice(0, 3).forEach(tx => {
+              console.log(` - ID: ${tx.lunchMoneyId}, Tags:`, tx?.tags);
             });
         }
         // *** END PRE-FILTER LOGGING ***
 
         // 2. Perform tagging in background
-        tagTransactionsAsTrained(selectedIdsForTagging).then(tagResult => {
+        tagTransactionsAsTrained(selectedTxObjectsForTagging).then(tagResult => {
           fetchLastTrainedTimestamp(); 
           setToastMessage({ 
             message: `Tagging complete: ${tagResult?.successCount || 0} updated${(tagResult?.failCount || 0) > 0 ? `, ${tagResult?.failCount} failed` : ''}.`,
@@ -1350,6 +1387,10 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         amount: typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount || 0)),
       }));
       
+      // *** Calculate IDs that were sent for training ***
+      const idsToSend = reviewedTransactions.map((tx: any) => tx.lunchMoneyId).filter((id: string | number | undefined): id is string => !!id);
+      console.log(`[Train All] Calculated ${idsToSend.length} IDs from reviewed transactions for potential tagging.`);
+
       const payload = { transactions: trainingData }; // Simplify payload if backend allows
       
       setProgressPercent(10);
@@ -1392,13 +1433,26 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         throw new Error(result.error || `Training request failed with status ${trainResponse.status}`);
       }
       
-      // 6. Update UI on Completion (No Tagging)
+      // 6. Update UI on Completion & Trigger Tagging
       if (pollResult.status === 'completed') {
         setProgressMessage(pollResult.message || 'Training completed successfully!');
         setProgressPercent(100);
-        fetchLastTrainedTimestamp();
-        setToastMessage({ message: pollResult.message || 'Training completed successfully!', type: 'success' });
-        setIsOperationComplete(true); // Allow modal close
+        setIsOperationComplete(true); // Allow modal close immediately
+        // No tagging state needed visually for modal
+
+        // Trigger background tagging using the fetched reviewed transaction *objects*
+        console.log(`[Train All] Training complete. Triggering background tagging for ${reviewedTransactions.length} fetched transactions...`);
+        tagTransactionsAsTrained(reviewedTransactions).then(tagResult => { // Pass full objects
+            fetchLastTrainedTimestamp(); // Update timestamp after tagging
+            setToastMessage({ 
+              message: `Tagging complete: ${tagResult?.successCount || 0} updated${(tagResult?.failCount || 0) > 0 ? `, ${tagResult?.failCount} failed` : ''}.`,
+              type: (tagResult?.failCount ?? 0) > 0 ? 'error' : 'success' 
+            });
+        }).catch(taggingError => {
+            console.error("[Tagging] Error after Train All completion:", taggingError);
+            setToastMessage({ message: 'Error occurred during background tagging.', type: 'error' });
+        });
+
       } else {
         throw new Error(pollResult.message || 'Training polling failed or timed out.');
       }
@@ -1413,7 +1467,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       setProgressMessage('Training failed.'); 
     }
     // Note: operationInProgress is reset by the modal's onClose handler
-  }, [pollForCompletion, fetchLastTrainedTimestamp]); // Dependencies
+  }, [pollForCompletion, fetchLastTrainedTimestamp, tagTransactionsAsTrained, transactions]); // Add local transactions dependency for handleTrainSelected path
   // *** END NEW FUNCTION ***
 
   return (
@@ -1441,9 +1495,9 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
             handleDateRangeChange={handleDateRangeChange}
             applyDateFilter={applyDateFilter}
             isApplying={isApplyingDates}
-            trainedCount={transactionStats.trainedCount}
-            clearedCount={transactionStats.clearedCount}
-            unclearedCount={transactionStats.unclearedCount}
+            trainedCount={totalTrainedCount} // Pass total trained count from state
+            clearedCount={totalReviewedCount}     // Pass total reviewed count
+            unclearedCount={totalUnreviewedCount}   // Pass total unreviewed count
             operationInProgress={operationInProgress}
             lastTrainedTimestamp={lastTrainedTimestamp}
             statusFilter={statusFilter}
