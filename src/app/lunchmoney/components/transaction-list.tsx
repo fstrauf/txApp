@@ -306,7 +306,22 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     }
   }, [transactions, selectedTransactions]); // Dependencies are transactions and selectedTransactions
 
-  // Memoize handleCategoryChange
+  // Memoize handleCancelSinglePrediction (Moved BEFORE handleCategoryChange)
+  const cancelSinglePrediction = useCallback((transactionId: string) => {
+    console.log(`Cancelling prediction for transaction ${transactionId}`);
+    setPendingCategoryUpdates(prev => {
+      const { [transactionId]: _, ...rest } = prev; // Destructure to remove the key
+      return rest;
+    });
+    // Optionally, clear any specific visual success state for this item if needed
+    setSuccessfulUpdates(prev => {
+      const { [transactionId]: _, ...rest } = prev;
+      return rest;
+    });
+    setToastMessage({ message: 'Prediction discarded for this transaction.', type: 'info' });
+  }, [setPendingCategoryUpdates, setSuccessfulUpdates, setToastMessage]); // Add dependencies
+  
+  // Memoize handleCategoryChange (Moved AFTER cancelSinglePrediction)
   const handleCategoryChange = useCallback(async (transactionId: string, categoryValue: string) => {
     setUpdatingCategory(transactionId);
     
@@ -321,7 +336,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       let hasTrainedTag = false;
       const filteredTags = txTags.filter(tag => {
         const tagName = typeof tag === 'string' ? tag : tag.name;
-        const isTrainedTag = tagName && tagName.toLowerCase() === 'trained';
+        const isTrainedTag = tagName && tagName.toLowerCase() === 'expense-sorted-trained';
         if (isTrainedTag) hasTrainedTag = true;
         return !isTrainedTag;
       });
@@ -334,7 +349,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         body: JSON.stringify({
           transactionId: transaction.lunchMoneyId,
           categoryId: categoryValue === "none" ? null : categoryValue,
-          tags: filteredTags,
+          tags: filteredTags, 
           status: 'cleared'
         })
       });
@@ -364,7 +379,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
                 category_name: categoryValue === "none" ? null : categoryName,
                 status: 'cleared'
               },
-              tags: responseData.updatedTags?.map((tag: string) => ({ name: tag, id: `tag-${Date.now()}-${Math.random()}` })) || filteredTags,
+              tags: responseData.updatedTags?.map((tag: string) => ({ name: tag, id: `tag-${Date.now()}-${Math.random()}` })) || filteredTags, 
               status: 'cleared'
             };
           }
@@ -376,6 +391,12 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       setTimeout(() => setSuccessfulUpdates(prev => ({ ...prev, [transactionId]: false })), 3000);
       
       setToastMessage({ message: responseData.message || 'Category updated and tagged.', type: 'success' });
+      
+      // If manually changing category, cancel any pending prediction for this item
+      if (pendingCategoryUpdates[transactionId]) {
+        cancelSinglePrediction(transactionId); 
+      }
+
     } catch (error) {
       console.error('Error updating category:', error);
       setError(error instanceof Error ? error.message : 'Failed to update category');
@@ -383,7 +404,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     } finally {
       setUpdatingCategory(null);
     }
-  }, [transactions, categories]); // Add dependencies
+  }, [transactions, categories, cancelSinglePrediction, pendingCategoryUpdates, setTransactions, setSuccessfulUpdates, setToastMessage, setError, setUpdatingCategory]); // Added all dependencies
 
   // Modify handleDateRangeChange to set dateRange directly
   const handleDateRangeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1202,21 +1223,6 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     }
     // Ensure getCategoryNameById is included in dependencies
   }, [pendingCategoryUpdates, getCategoryNameById]); 
-
-  // Memoize handleCancelSinglePrediction
-  const cancelSinglePrediction = useCallback((transactionId: string) => {
-    console.log(`Cancelling prediction for transaction ${transactionId}`);
-    setPendingCategoryUpdates(prev => {
-      const { [transactionId]: _, ...rest } = prev; // Destructure to remove the key
-      return rest;
-    });
-    // Optionally, clear any specific visual success state for this item if needed
-    setSuccessfulUpdates(prev => {
-      const { [transactionId]: _, ...rest } = prev;
-      return rest;
-    });
-    setToastMessage({ message: 'Prediction discarded for this transaction.', type: 'info' });
-  }, [setPendingCategoryUpdates, setSuccessfulUpdates, setToastMessage]); // Add dependencies
 
   // Function to manually close the progress modal
   const closeModal = useCallback(() => {

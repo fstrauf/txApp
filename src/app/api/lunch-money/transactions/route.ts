@@ -45,7 +45,11 @@ const getDateString = (date: Date): string => {
 function formatTransactions(transactions: LunchMoneyTransaction[]): FormattedTransaction[] {  
   return transactions.map(tx => {
     const lunchMoneyCategory = tx.category_name || null;
-    const isIncome = tx.is_income === true;
+    // Parse amount first
+    const amount = parseFloat(typeof tx.amount === 'string' ? tx.amount : String(tx.amount || '0'));
+    // Derive is_income and type from the sign of the amount
+    const isIncome = amount > 0;
+    const type = isIncome ? 'income' : 'expense';
 
     // Standardize tags
     let standardizedTags: Array<{id: number, name: string}> = [];
@@ -67,9 +71,9 @@ function formatTransactions(transactions: LunchMoneyTransaction[]): FormattedTra
       lunchMoneyId: tx.id.toString(),
       date: tx.date,
       description: tx.payee || tx.original_name || '',
-      amount: parseFloat(typeof tx.amount === 'string' ? tx.amount : String(tx.amount || '0')),
-      type: isIncome ? 'income' : 'expense',
-      is_income: isIncome,
+      amount: amount, // Use the parsed (and now signed) amount
+      type: type,     // Use the derived type
+      is_income: isIncome, // Use the derived boolean
       lunchMoneyCategory,
       notes: tx.notes || '',
       tags: standardizedTags,
@@ -110,11 +114,14 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('start_date') || getDateString(defaultStartDate);
     const statusFilter = searchParams.get('status') as 'cleared' | 'uncleared' | null; // Get the status filter
 
-    // 3. Fetch ALL transactions for the date range from Lunch Money API
-    // We will filter by status *after* fetching
+    // 3. Build Lunch Money API URL with parameters
     const url = new URL(LUNCH_MONEY_API_URL);
     url.searchParams.append('start_date', startDate);
     url.searchParams.append('end_date', endDate);
+    url.searchParams.append('debit_as_negative', 'true');
+    if (statusFilter) {
+      url.searchParams.append('status', statusFilter);
+    }
 
     console.log(`Fetching from Lunch Money API: ${url.toString()}`);
 
@@ -146,7 +153,8 @@ export async function GET(request: NextRequest) {
     // *** Format the transactions using the helper defined in *this* file ***
     let formattedData = formatTransactions(rawData.transactions || []);
 
-    // *** Filter based on the status parameter ***
+    // *** REMOVE Post-Fetch Filtering based on status ***
+    /*
     console.log(`Applying status filter: ${statusFilter}`);
     formattedData = formattedData.filter(tx => {
       const txStatus = tx.originalData?.status;
@@ -166,11 +174,11 @@ export async function GET(request: NextRequest) {
       }
       
       // If no status filter, keep everything (that isn't 'pending')
-      // This case shouldn't happen with current frontend logic, but good to handle.
       return true; 
     });
+    */
 
-    console.log(`Returning ${formattedData.length} transactions after filtering.`);
+    console.log(`Returning ${formattedData.length} transactions (filtered by API).`);
 
     // *** Return the filtered and formatted transactions ***
     return NextResponse.json({ transactions: formattedData }); 

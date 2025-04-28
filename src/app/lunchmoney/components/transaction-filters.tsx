@@ -88,9 +88,9 @@ const TransactionFilters = React.memo(({
         <div className="flex flex-col ml-auto pl-4 border-l border-gray-300 text-right">
           <span className="text-sm text-gray-600 font-medium">Trained: {trainedCount}</span>
           {statusFilter === 'cleared' ? (
-            <span className="text-sm text-gray-500 mt-1">Cleared: {clearedCount}</span>
+            <span className="text-sm text-gray-500 mt-1">Reviewed: {clearedCount}</span>
           ) : (
-            <span className="text-sm text-gray-500 mt-1">Uncleared: {unclearedCount}</span>
+            <span className="text-sm text-gray-500 mt-1">Unreviewed: {unclearedCount}</span>
           )}
           <span className="text-xs text-gray-400 mt-1">Last Trained: {formattedTimestamp}</span>
       </div>
@@ -105,7 +105,7 @@ const TransactionFilters = React.memo(({
         >
           <span className="size-4 translate-x-1 rounded-full bg-white transition group-data-checked:translate-x-6" />
         </Switch>
-        <Label className="text-sm font-medium text-gray-700 cursor-pointer">Show Cleared Transactions</Label>
+        <Label className="text-sm font-medium text-gray-700 cursor-pointer">Show Reviewed Transactions</Label>
       </Field>
     </div>
   );
