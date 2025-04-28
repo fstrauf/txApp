@@ -33,44 +33,45 @@ const CategorizationControls = React.memo(({
   const hasPendingUpdates = Object.keys(pendingCategoryUpdates).length > 0;
 
   return (
-    <div className="flex flex-row items-center gap-6 p-4 bg-gray-50 rounded-lg border border-gray-200 shadow-sm flex-wrap">
-      <div className="flex flex-col items-start gap-3">
-        <button
-          onClick={handleTrainSelected}
-          disabled={selectedTransactionsCount === 0 || operationInProgress}
-          className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left"
-        >
-          Train Selected ({selectedTransactionsCount})
-        </button>
-        <button
-          onClick={handleCategorizeSelected}
-          disabled={selectedTransactionsCount === 0 || operationInProgress}
-          className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left"
-        >
-          Categorize Selected ({selectedTransactionsCount})
-        </button>
-      </div>
-
-      <div className="text-sm text-gray-600 max-w-xs">
-        Use reviewed transactions to Train your model. Categorise transactions that need review.
+    <div className="flex flex-col gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 shadow-sm h-full">
+      <div className="flex items-center gap-4">
+        <div className="flex flex-col items-start gap-2 flex-shrink-0">
+          <button
+            onClick={handleTrainSelected}
+            disabled={selectedTransactionsCount === 0 || operationInProgress}
+            className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left whitespace-nowrap"
+          >
+            Train Selected ({selectedTransactionsCount})
+          </button>
+          <button
+            onClick={handleCategorizeSelected}
+            disabled={selectedTransactionsCount === 0 || operationInProgress}
+            className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left whitespace-nowrap"
+          >
+            Categorize Selected ({selectedTransactionsCount})
+          </button>
+        </div>
+        <div className="text-sm text-gray-600 flex-grow">
+          Use reviewed transactions to Train your model. Categorise transactions that need review.
+        </div>
       </div>
 
       {hasPendingUpdates && (
-        <div className="flex items-center gap-3 border-l border-gray-300 pl-4 ml-4 mt-3 sm:mt-0 flex-wrap">
-          <span className="text-sm font-medium text-secondary-dark">
+        <div className="flex items-center gap-3 border-t border-gray-200 pt-3 mt-3 flex-wrap">
+          <span className="text-sm font-medium text-secondary-dark whitespace-nowrap">
             {Object.keys(pendingCategoryUpdates).length} predictions ready
           </span>
           <button
             onClick={applyAllPredictedCategories}
             disabled={applyingAll || operationInProgress}
-            className="px-3 py-1 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-secondary text-white hover:bg-secondary-dark disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="px-3 py-1 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-secondary text-white hover:bg-secondary-dark disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
           >
             {applyingAll ? 'Applying...' : 'Apply All'}
           </button>
           <button
             onClick={handleCancelCategorization}
             disabled={applyingAll || operationInProgress}
-            className="px-3 py-1 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
           >
             Cancel
           </button>
@@ -78,7 +79,7 @@ const CategorizationControls = React.memo(({
       )}
 
       {importStatus !== 'idle' && (
-        <span className={`text-sm ml-4 ${importStatus === 'error' ? 'text-red-600' : 'text-gray-600'}`}>
+        <span className={`text-sm mt-auto pt-2 ${importStatus === 'error' ? 'text-red-600' : 'text-gray-600'}`}>
           {importMessage}
         </span>
       )}

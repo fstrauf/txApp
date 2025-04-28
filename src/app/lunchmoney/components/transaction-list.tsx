@@ -1278,40 +1278,44 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         onClose={closeModal} // Pass the close function
       />
 
-      {/* Updated wrapper for all controls */}
-      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+      {/* Updated wrapper for all controls - Now arranges items side-by-side */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-row items-stretch gap-6">
         
-        {/* Transaction Filters Component - Renders the switch internally now */}
-        <TransactionFilters
-          pendingDateRange={pendingDateRange}
-          handleDateRangeChange={handleDateRangeChange}
-          applyDateFilter={applyDateFilter}
-          isApplying={isApplyingDates}
-          trainedCount={transactionStats.trainedCount}
-          clearedCount={transactionStats.clearedCount}
-          unclearedCount={transactionStats.unclearedCount}
-          operationInProgress={operationInProgress}
-          lastTrainedTimestamp={lastTrainedTimestamp}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-        />
+        {/* Transaction Filters Component Wrapper */}
+        <div className="flex-1">
+          <TransactionFilters
+            pendingDateRange={pendingDateRange}
+            handleDateRangeChange={handleDateRangeChange}
+            applyDateFilter={applyDateFilter}
+            isApplying={isApplyingDates}
+            trainedCount={transactionStats.trainedCount}
+            clearedCount={transactionStats.clearedCount}
+            unclearedCount={transactionStats.unclearedCount}
+            operationInProgress={operationInProgress}
+            lastTrainedTimestamp={lastTrainedTimestamp}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+          />
+        </div>
 
-        {/* Categorization Controls Component */}
-        <CategorizationControls
-          pendingCategoryUpdates={pendingCategoryUpdates}
-          applyingAll={applyingAll}
-          applyAllPredictedCategories={applyAllPredictedCategories}
-          handleImportTransactions={handleImportTransactions}
-          handleTrainSelected={handleTrainSelected}
-          handleCategorizeSelected={handleCategorizeSelected}
-          selectedTransactionsCount={selectedTransactions.length}
-          loading={loading}
-          operationInProgress={operationInProgress}
-          importStatus={importStatus}
-          importMessage={importMessage}
-          handleCancelCategorization={handleCancelCategorization}
-          lastTrainedTimestamp={lastTrainedTimestamp}
-        />
+        {/* Categorization Controls Component Wrapper */}
+        <div className="flex-1">
+          <CategorizationControls
+            pendingCategoryUpdates={pendingCategoryUpdates}
+            applyingAll={applyingAll}
+            applyAllPredictedCategories={applyAllPredictedCategories}
+            handleImportTransactions={handleImportTransactions}
+            handleTrainSelected={handleTrainSelected}
+            handleCategorizeSelected={handleCategorizeSelected}
+            selectedTransactionsCount={selectedTransactions.length}
+            loading={loading}
+            operationInProgress={operationInProgress}
+            importStatus={importStatus}
+            importMessage={importMessage}
+            handleCancelCategorization={handleCancelCategorization}
+            lastTrainedTimestamp={lastTrainedTimestamp}
+          />
+        </div>
       </div>
 
       {/* Transaction Table */}
