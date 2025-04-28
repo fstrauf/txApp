@@ -7,7 +7,6 @@ import { users } from '@/db/schema';
 import { findUserByEmail } from '@/db/utils';
 
 const LUNCH_MONEY_API_URL = 'https://dev.lunchmoney.app/v1/transactions';
-const CATEGORIZED_TAG_NAME = 'tx-categorized'; // Define the tag name
 
 // Define interfaces for better type safety
 interface LunchMoneyTransaction {
@@ -182,141 +181,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// // POST handler to import transactions to our database
-// export async function POST(request: NextRequest) {
-//   try {
-//     const session = await getServerSession(authConfig);
-    
-//     if (!session?.user) {
-//       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-//     }
-    
-//     const user = await findUserByEmail(session.user.email!);
-    
-//     if (!user) {
-//       return NextResponse.json({ error: 'User not found' }, { status: 404 });
-//     }
-    
-//     const userId = user.id as string;
-//     const { transactions: transactionsToImport } = await request.json();
-    
-//     if (!Array.isArray(transactionsToImport) || transactionsToImport.length === 0) {
-//       return NextResponse.json({ error: 'No valid transactions provided' }, { status: 400 });
-//     }
-    
-//     // Get or create a default bank account for this user using Drizzle ORM
-//     const bankAccountQuery = db.select()
-//       .from(bankAccounts)
-//       .where(
-//         and(
-//           eq(bankAccounts.userId, userId as string),
-//           eq(bankAccounts.name, 'Lunch Money')
-//         )
-//       )
-//       .limit(1);
-
-//     const bankAccountResult = await bankAccountQuery;
-//     let bankAccount = bankAccountResult[0];
-
-//     if (!bankAccount) {
-//       // Create a new bank account using Drizzle
-//       const newBankAccountId = createId();
-//       const insertedAccounts = await db.insert(bankAccounts)
-//         .values({
-//           id: newBankAccountId,
-//           name: 'Lunch Money',
-//           type: 'Checking',
-//           userId: userId as string,
-//           balance: '0',
-//           createdAt: new Date(),
-//           updatedAt: new Date()
-//         })
-//         .returning();
-      
-//       bankAccount = insertedAccounts[0];
-//     }
-
-//     // Batch upsert transactions
-//     const results = [];
-
-//     for (const tx of transactionsToImport as FormattedTransaction[]) {
-//       // Handle lunchMoneyCategory properly
-//       let lunchMoneyCategory = null;
-//       if (typeof tx.lunchMoneyCategory === 'string' && tx.lunchMoneyCategory.trim() !== '') {
-//         lunchMoneyCategory = tx.lunchMoneyCategory;
-//       }
-      
-//       // Check if transaction exists
-//       const existingTxQuery = db.select()
-//         .from(transactions)
-//         .where(
-//           and(
-//             eq(transactions.userId, userId as string),
-//             eq(transactions.lunchMoneyId, tx.lunchMoneyId)
-//           )
-//         )
-//         .limit(1);
-      
-//       const existingTxResult = await existingTxQuery;
-      
-//       if (existingTxResult.length > 0) {
-//         // Update existing transaction with Drizzle
-//         const existingTx = existingTxResult[0];
-//         const updatedTx = await db.update(transactions)
-//           .set({
-//             description: tx.description,
-//             amount: tx.amount.toString(),
-//             date: new Date(tx.date),
-//             type: tx.type,
-//             notes: tx.notes || '',
-//             lunchMoneyCategory: lunchMoneyCategory,
-//             updatedAt: new Date()
-//           })
-//           .where(eq(transactions.id, existingTx.id))
-//           .returning();
-        
-//         if (updatedTx.length > 0) {
-//           results.push(updatedTx[0]);
-//         }
-//       } else {
-//         // Create new transaction with Drizzle
-//         const newTransactionId = createId();
-//         const insertedTx = await db.insert(transactions)
-//           .values({
-//             id: newTransactionId,
-//             userId: userId as string,
-//             lunchMoneyId: tx.lunchMoneyId,
-//             description: tx.description,
-//             amount: tx.amount.toString(),
-//             date: new Date(tx.date),
-//             type: tx.type,
-//             notes: tx.notes || '',
-//             lunchMoneyCategory: lunchMoneyCategory,
-//             bankAccountId: bankAccount.id,
-//             isReconciled: false,
-//             isTrainingData: false,
-//             createdAt: new Date(),
-//             updatedAt: new Date()
-//           })
-//           .returning();
-        
-//         if (insertedTx.length > 0) {
-//           results.push(insertedTx[0]);
-//         }
-//       }
-//     }
-    
-//     return NextResponse.json({ success: true, count: results.length });
-//   } catch (error) {
-//     console.error('Error in POST /api/lunch-money/transactions:', error);
-//     return NextResponse.json(
-//       { error: error instanceof Error ? error.message : 'An error occurred while importing transactions' },
-//       { status: 500 }
-//     );
-//   }
-// }
-
-// PATCH endpoint to update a transaction's category
+// PATCH endpoint to update a transaction's category and/or tags
 export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authConfig);
@@ -355,19 +220,14 @@ export async function PATCH(request: NextRequest) {
       updateObject.status = status; // Add status to the update object
     }
     
-    // --- Add Tags: Include existing tags + the new 'tx-categorized' tag --- 
-    // Get existing tag *names* for the API call
-    let currentTagNames = Array.isArray(existingTags) 
-        ? existingTags.map(tag => typeof tag === 'string' ? tag : tag.name).filter(Boolean) 
+    // --- Add Tags: Use the exact tags passed from the frontend request --- 
+    // The frontend will determine which tags should be set (e.g., just the trained tag)
+    let tagsToSet = Array.isArray(existingTags) 
+        ? existingTags.map(tag => typeof tag === 'string' ? tag : tag.name).filter(Boolean)
         : [];
 
-    // Ensure 'tx-categorized' is added only once
-    if (!currentTagNames.includes(CATEGORIZED_TAG_NAME)) {
-        currentTagNames.push(CATEGORIZED_TAG_NAME);
-    }
-    
-    // Update the 'tags' field in the object sent to Lunch Money
-    updateObject.tags = currentTagNames;
+    // Set the 'tags' field in the object sent to Lunch Money
+    updateObject.tags = tagsToSet; 
     
     const updateBody = {
       transaction: updateObject
@@ -400,12 +260,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: errorMessage }, { status: response.status || 500 });
     }
     
-    // Important: Lunch Money PUT response might be just { updated: true } or the updated transaction array
-    // Let's return a success message and the potentially updated tags
+    // Let's return a success message and the tags that were actually set
     return NextResponse.json({ 
       success: true, 
-      message: `Transaction ${transactionId} updated and tagged as categorized.`,
-      updatedTags: currentTagNames // Return the tags we *tried* to set
+      message: `Transaction ${transactionId} updated.`, 
+      updatedTags: tagsToSet // Return the tags that were set
     });
 
   } catch (error) {

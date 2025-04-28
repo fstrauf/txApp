@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, Fragment } from 'react';
-import LunchMoneySettingsForm from '@/components/lunch-money/settings-form';
+import { useState, useEffect, useCallback } from 'react';
+import LunchMoneySettingsForm from '../components/settings-form';
 import Link from 'next/link';
 // Import the component from the api-key page
 import ApiKeyManager from '@/app/api-key/ApiKeyManager';

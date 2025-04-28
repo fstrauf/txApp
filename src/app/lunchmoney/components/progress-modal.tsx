@@ -1,24 +1,42 @@
 import React from 'react';
-import { OperationType } from '../types';
+import { OperationType } from './types';
 
 type ProgressModalProps = {
   operationInProgress: boolean;
   operationType: OperationType;
   progressPercent: number;
   progressMessage: string;
+  onClose: () => void;
 };
 
 export default function ProgressModal({
   operationInProgress,
   operationType,
   progressPercent,
-  progressMessage
+  progressMessage,
+  onClose
 }: ProgressModalProps) {
   if (!operationInProgress) return null;
   
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface p-6 rounded-xl shadow-soft w-96 max-w-full">
+    <div 
+      className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-surface p-6 rounded-xl shadow-soft w-96 max-w-full relative" 
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button 
+          onClick={onClose}
+          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+          aria-label="Close modal"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        
         <div className="text-center mb-4">
           <h3 className="font-medium text-lg text-gray-800">
             {operationType === 'training' ? 'Training Model' : 'Categorizing Transactions'}
