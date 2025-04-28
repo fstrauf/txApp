@@ -334,7 +334,8 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         body: JSON.stringify({
           transactionId: transaction.lunchMoneyId,
           categoryId: categoryValue === "none" ? null : categoryValue,
-          tags: filteredTags
+          tags: filteredTags,
+          status: 'cleared'
         })
       });
       
@@ -360,9 +361,11 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
               originalData: {
                 ...tx.originalData,
                 category_id: categoryValue === "none" ? null : categoryValue,
-                category_name: categoryValue === "none" ? null : categoryName
+                category_name: categoryValue === "none" ? null : categoryName,
+                status: 'cleared'
               },
-              tags: responseData.updatedTags?.map((tag: string) => ({ name: tag, id: `tag-${Date.now()}-${Math.random()}` })) || filteredTags 
+              tags: responseData.updatedTags?.map((tag: string) => ({ name: tag, id: `tag-${Date.now()}-${Math.random()}` })) || filteredTags,
+              status: 'cleared'
             };
           }
           return tx;
@@ -453,32 +456,26 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       
       if (transactionsToTag.length === 0) {
         console.log(`No transactions to tag - all already have '${EXPENSE_SORTED_TRAINED_TAG}' tag`);
-        return;
+        return; // Exit if nothing to tag
       }
+
+      // This toast is removed as feedback is handled in the calling function
+      // setToastMessage({ ... });
       
-      setToastMessage({
-        message: `Applying "${EXPENSE_SORTED_TRAINED_TAG}" tag to ${transactionsToTag.length} transactions...`,
-        type: 'success'
-      });
-      
-      const batchSize = 5; // Keep batching for organization, but process sequentially within
+      const batchSize = 5; 
       let successCount = 0;
       let failCount = 0;
       const successfulTxIds: string[] = [];
       
       for (let i = 0; i < transactionsToTag.length; i += batchSize) {
         const batch = transactionsToTag.slice(i, i + batchSize);
-        console.log(`Processing batch ${i / batchSize + 1} of ${Math.ceil(transactionsToTag.length / batchSize)}...`);
+        console.log(`Tagging batch ${i / batchSize + 1} of ${Math.ceil(transactionsToTag.length / batchSize)}...`);
         
-        // Process batch items sequentially instead of Promise.all
+        // Process batch items sequentially
         for (const transactionId of batch) {
           try {
-            const tx = transactions.find(t => t.lunchMoneyId === transactionId);
-            if (!tx) {
-              console.warn(`Transaction ${transactionId} not found in local state during tagging.`);
-              failCount++;
-              continue; // Skip this one
-            }
+            // Removed lookup, not needed inside this inner loop if filtering happens above
+            // const tx = transactions.find(t => t.lunchMoneyId === transactionId);
 
             const response = await fetch('/api/lunch-money/transactions', {
               method: 'PATCH',
@@ -487,27 +484,23 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
               },
               body: JSON.stringify({
                 transactionId,
-                tags: [EXPENSE_SORTED_TRAINED_TAG] // Send only the new tag
+                tags: [EXPENSE_SORTED_TRAINED_TAG] 
               }),
-              // Removed AbortSignal for now
             });
 
             if (!response.ok) {
               console.error(`Failed to tag transaction ${transactionId} - Status: ${response.status}`);
               failCount++;
             } else {
-              // Optionally check response body if needed
-              // const responseData = await response.json(); 
               successCount++;
               successfulTxIds.push(transactionId);
-              setSuccessfulUpdates(prev => ({ ...prev, [transactionId]: true }));
+              // Update visual feedback immediately
+              setSuccessfulUpdates(prev => ({ ...prev, [transactionId]: true })); 
             }
           } catch (error) {
             console.error(`Error tagging transaction ${transactionId}:`, error);
             failCount++;
           }
-          // Optional: Add a small delay between requests if needed
-          // await new Promise(resolve => setTimeout(resolve, 100)); 
         }
       }
       
@@ -526,19 +519,15 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         );
       }
       
-      setToastMessage({
-        message: `Tagged ${successCount} transactions as "${EXPENSE_SORTED_TRAINED_TAG}"`,
-        type: 'success'
-      });
-      
+      // Return success/fail counts for feedback in calling function
+      return { successCount, failCount };
+
     } catch (error) {
       console.error('Error applying "Trained" tag:', error);
-      setToastMessage({
-        message: 'Failed to apply "Trained" tag to transactions',
-        type: 'error'
-      });
+      // Throw error or return failure state
+      return { successCount: 0, failCount: transactionIds.length };
     }
-  }, [transactions]); // Dependency: transactions
+  }, [transactions, setTransactions, setSuccessfulUpdates]); // Add setTransactions and setSuccessfulUpdates dependencies
 
   // Memoize pollForCompletion
   const pollForCompletion = useCallback(async (predictionId: string, type: 'training' | 'categorizing'): Promise<{ status: string; message?: string }> => {
@@ -851,11 +840,20 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       
       // --- Handle tagging AFTER successful polling --- 
       if (pollResult.status === 'completed') {
-        setProgressMessage('Tagging trained transactions...');
-        setProgressPercent(98); // Indicate final step
-        await tagTransactionsAsTrained(selectedTransactions); // Await tagging
-        fetchLastTrainedTimestamp(); // Refresh timestamp
-        setToastMessage({ message: 'Training and tagging completed!', type: 'success' });
+        const totalToTagInitially = selectedTransactions.length;
+        setProgressMessage(`Applying tag to ${totalToTagInitially} trained transactions...`); 
+        setProgressPercent(95); 
+        
+        // Call the reverted tag function, passing selected IDs
+        const tagResult = await tagTransactionsAsTrained(selectedTransactions);
+        
+        // Tagging finished - update timestamp and show final toast
+        fetchLastTrainedTimestamp(); 
+        // Use counts returned from tag function for accurate message
+        setToastMessage({ 
+          message: `Training complete. Tagged ${tagResult?.successCount || 0} transactions${(tagResult?.failCount || 0) > 0 ? ` (${tagResult?.failCount} failed)` : ''}.`,
+          type: (tagResult?.successCount || 0) > 0 ? 'success' : 'warning' 
+        });
         setSelectedTransactions([]); // Clear selection
       } else {
         // Handle polling failure/timeout
@@ -1205,6 +1203,30 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     // Ensure getCategoryNameById is included in dependencies
   }, [pendingCategoryUpdates, getCategoryNameById]); 
 
+  // Memoize handleCancelSinglePrediction
+  const cancelSinglePrediction = useCallback((transactionId: string) => {
+    console.log(`Cancelling prediction for transaction ${transactionId}`);
+    setPendingCategoryUpdates(prev => {
+      const { [transactionId]: _, ...rest } = prev; // Destructure to remove the key
+      return rest;
+    });
+    // Optionally, clear any specific visual success state for this item if needed
+    setSuccessfulUpdates(prev => {
+      const { [transactionId]: _, ...rest } = prev;
+      return rest;
+    });
+    setToastMessage({ message: 'Prediction discarded for this transaction.', type: 'info' });
+  }, [setPendingCategoryUpdates, setSuccessfulUpdates, setToastMessage]); // Add dependencies
+
+  // Function to manually close the progress modal
+  const closeModal = useCallback(() => {
+    setOperationInProgress(false);
+    setOperationType('none');
+    // Optionally reset progress too
+    setProgressPercent(0);
+    setProgressMessage('');
+  }, []); // Keep dependencies empty as it only uses setters
+
   // Get the transactions to display based on filters
   const filteredTransactions = getFilteredTransactions();
 
@@ -1219,6 +1241,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         operationType={operationType}
         progressPercent={progressPercent}
         progressMessage={progressMessage}
+        onClose={closeModal} // Pass the close function
       />
 
       {/* Updated wrapper for all controls */}
@@ -1270,6 +1293,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         successfulUpdates={successfulUpdates}
         applyPredictedCategory={applyPredictedCategory}
         applyingIndividual={applyingIndividual}
+        cancelSinglePrediction={cancelSinglePrediction}
         getCategoryNameById={getCategoryNameById}
         loading={loading}
       />
