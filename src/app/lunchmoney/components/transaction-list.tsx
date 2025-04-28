@@ -1297,6 +1297,125 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     setIsTagging(false); // Reset tagging flag
   }, []); // Keep dependencies empty as it only uses setters
 
+  // *** NEW: handleTrainAllReviewed ***
+  const handleTrainAllReviewed = useCallback(async () => {
+    setOperationInProgress(true);
+    setOperationType('training');
+    setProgressPercent(0);
+    setProgressMessage('Fetching all reviewed transactions...');
+    setError(null);
+    setIsOperationComplete(false);
+
+    try {
+      // 1. Fetch transactions over a wide date range (e.g., 5 years)
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setFullYear(startDate.getFullYear() - 5);
+      const wideDateRange = {
+        startDate: format(startDate, 'yyyy-MM-dd'),
+        endDate: format(endDate, 'yyyy-MM-dd')
+      };
+
+      console.log(`[Train All] Fetching transactions from ${wideDateRange.startDate} to ${wideDateRange.endDate}`);
+      
+      const params = new URLSearchParams({
+        start_date: wideDateRange.startDate,
+        end_date: wideDateRange.endDate,
+        // NO status filter - fetch all
+      });
+      const fetchResponse = await fetch(`/api/lunch-money/transactions?${params}`);
+      if (!fetchResponse.ok) {
+        const data = await fetchResponse.json().catch(() => ({}));
+        throw new Error(data.error || `Failed to fetch transactions (${fetchResponse.status})`);
+      }
+      const fetchData = await fetchResponse.json();
+      if (!fetchData.transactions || !Array.isArray(fetchData.transactions)) {
+        throw new Error('Received invalid transaction data format from server');
+      }
+
+      // 2. Filter for reviewed (categorized) transactions
+      const reviewedTransactions = fetchData.transactions.filter((tx: any) => !!tx.originalData?.category_id);
+      console.log(`[Train All] Found ${reviewedTransactions.length} transactions with categories.`);
+
+      if (reviewedTransactions.length < 10) {
+        throw new Error(`Need at least 10 reviewed (categorized) transactions for training. Found ${reviewedTransactions.length}.`);
+      }
+      
+      // 3. Prepare training data payload
+      setProgressMessage(`Preparing ${reviewedTransactions.length} transactions for training...`);
+      const trainingData = reviewedTransactions.map((tx: any) => ({
+        description: typeof tx.description === 'object' ? JSON.stringify(tx.description) : (tx.description || ''),
+        Category: tx.originalData?.category_id?.toString() || null,
+        money_in: tx.is_income,
+        amount: typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount || 0)),
+      }));
+      
+      const payload = { transactions: trainingData }; // Simplify payload if backend allows
+      
+      setProgressPercent(10);
+      setProgressMessage('Sending training request (all reviewed)...');
+      
+      // 4. Send training request
+      const trainResponse = await fetch('/api/classify/train', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      // Handle 403 Subscription Error
+      if (trainResponse.status === 403) {
+        const errorData = await trainResponse.json().catch(() => ({ error: 'Subscription check failed' }));
+        throw new Error(errorData.error || 'Subscription inactive or trial expired.');
+      }
+
+      // 5. Handle Training Response (Sync/Async)
+      let pollResult: { status: string; message?: string } = { status: 'unknown' };
+      if (trainResponse.status === 200) {
+        const syncResult = await trainResponse.json();
+        if (syncResult.status === 'completed') {
+          pollResult = { status: 'completed', message: 'Training completed successfully!' };
+        } else {
+          throw new Error('Received unexpected success response format during training.');
+        }
+      } else if (trainResponse.status === 202) {
+        const asyncResult = await trainResponse.json();
+        const predictionId = asyncResult.prediction_id || asyncResult.predictionId;
+        if (predictionId) {
+          setProgressMessage('Training started, waiting for results...');
+          setProgressPercent(10); 
+          pollResult = await pollForCompletion(predictionId, 'training');
+        } else {
+          throw new Error('Server started training but did not return a prediction ID.');
+        }
+      } else {
+        const result = await trainResponse.json().catch(() => ({ error: 'Failed to parse error response' }));
+        throw new Error(result.error || `Training request failed with status ${trainResponse.status}`);
+      }
+      
+      // 6. Update UI on Completion (No Tagging)
+      if (pollResult.status === 'completed') {
+        setProgressMessage(pollResult.message || 'Training completed successfully!');
+        setProgressPercent(100);
+        fetchLastTrainedTimestamp();
+        setToastMessage({ message: pollResult.message || 'Training completed successfully!', type: 'success' });
+        setIsOperationComplete(true); // Allow modal close
+      } else {
+        throw new Error(pollResult.message || 'Training polling failed or timed out.');
+      }
+
+    } catch (error) {
+      console.error('[Train All] Error:', error);
+      const message = error instanceof Error ? error.message : 'Failed to train all reviewed transactions';
+      setError(message);
+      setToastMessage({ message, type: 'error' });
+      // Ensure modal is closable on error
+      setIsOperationComplete(true); 
+      setProgressMessage('Training failed.'); 
+    }
+    // Note: operationInProgress is reset by the modal's onClose handler
+  }, [pollForCompletion, fetchLastTrainedTimestamp]); // Dependencies
+  // *** END NEW FUNCTION ***
+
   return (
     <div className="text-gray-900 text-sm bg-white min-h-screen p-4">
       {/* Toast notification */}
@@ -1340,6 +1459,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
             applyAllPredictedCategories={applyAllPredictedCategories}
             handleTrainSelected={handleTrainSelected}
             handleCategorizeSelected={handleCategorizeSelected}
+            handleTrainAllReviewed={handleTrainAllReviewed} // Pass the new handler
             selectedTransactionsCount={selectedTransactions.length}
             loading={loading}
             operationInProgress={operationInProgress}

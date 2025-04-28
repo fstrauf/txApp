@@ -1,7 +1,7 @@
 import React, { Dispatch, SetStateAction, useMemo } from 'react';
 import { DateRange } from './types';
 import { format } from 'date-fns';
-import { Switch, Field, Label } from '@headlessui/react';
+import { Tab, TabGroup, TabList } from '@headlessui/react';
 
 type TransactionFiltersProps = {
   pendingDateRange: DateRange;
@@ -39,6 +39,17 @@ const TransactionFilters = React.memo(({
       return 'Invalid Date';
     }
   }, [lastTrainedTimestamp]);
+
+  const selectedIndex = statusFilter === 'cleared' ? 1 : 0;
+
+  const handleTabChange = (index: number) => {
+    setStatusFilter(index === 1 ? 'cleared' : 'uncleared');
+  };
+
+  const tabBaseStyle = "px-4 py-2 text-sm font-medium rounded-lg border focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed";
+  const tabInactiveStyle = "bg-white border-gray-300 text-gray-700 hover:bg-gray-50";
+  const tabActiveSecondaryStyle = "bg-secondary border-secondary text-white";
+  const tabActivePrimaryStyle = "bg-primary border-primary text-white";
 
   return (
     <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 h-full">
@@ -90,26 +101,30 @@ const TransactionFilters = React.memo(({
 
       </div>
 
-      <Field as="div" className="flex items-center gap-2 mt-2">
-        <Switch
-          checked={statusFilter === 'cleared'}
-          onChange={(checked) => setStatusFilter(checked ? 'cleared' : 'uncleared')}
-          className="group inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition data-checked:bg-blue-600 data-disabled:cursor-not-allowed data-disabled:opacity-50"
-          disabled={operationInProgress}
-        >
-          <span className="size-4 translate-x-1 rounded-full bg-white transition group-data-checked:translate-x-6" />
-        </Switch>
-        <Label className="text-sm font-medium text-gray-700 cursor-pointer">Show Reviewed Transactions</Label>
-        <div className="flex flex-col ml-auto pl-4 border-l border-gray-300 text-right">
-          <span className="text-sm text-gray-600 font-medium">Trained: {trainedCount}</span>
-          {statusFilter === 'cleared' ? (
-            <span className="text-sm text-gray-500 mt-1">Reviewed: {clearedCount}</span>
-          ) : (
-            <span className="text-sm text-gray-500 mt-1">Unreviewed: {unclearedCount}</span>
-          )}
-          <span className="text-xs text-gray-400 mt-1">Last Trained: {formattedTimestamp}</span>
-        </div>
-      </Field>
+      <div className="flex flex-row items-center justify-between">
+      <TabGroup selectedIndex={selectedIndex} onChange={handleTabChange}>
+        <TabList className="flex space-x-2">
+          <Tab 
+            className={`${tabBaseStyle} ${selectedIndex === 0 ? tabActiveSecondaryStyle : tabInactiveStyle}`}
+            disabled={operationInProgress}
+          >
+            Unreviewed ({unclearedCount})
+          </Tab>
+          <Tab 
+             className={`${tabBaseStyle} ${selectedIndex === 1 ? tabActivePrimaryStyle : tabInactiveStyle}`}
+             disabled={operationInProgress}
+          >
+            Reviewed ({clearedCount})
+          </Tab>
+        </TabList>
+      </TabGroup>
+      <div className="flex flex-col ml-auto pl-4 text-right">
+        <span className="text-sm text-primary font-medium">Trained: {trainedCount}</span>
+        <span className="text-xs text-gray-400 mt-1">Last Trained: {formattedTimestamp}</span>
+      </div>
+      </div>
+
+      
     </div>
   );
 });

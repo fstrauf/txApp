@@ -49,7 +49,7 @@ export default function ProgressModal({
         </div>
         <div className="w-full bg-gray-200 rounded-full h-3 mb-2 overflow-hidden">
           <div 
-            className="h-3 rounded-full bg-primary transition-all duration-300 ease-out"
+            className={`h-3 rounded-full transition-all duration-300 ease-out ${operationType === 'training' ? 'bg-primary' : 'bg-secondary'}`}
             style={{ width: `${progressPercent}%` }}
           ></div>
         </div>

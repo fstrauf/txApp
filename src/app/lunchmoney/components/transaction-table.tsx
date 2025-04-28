@@ -60,7 +60,7 @@ const TransactionTable = React.memo(({
                   onChange={handleSelectAll}
                   className="h-4 w-4 accent-primary border-gray-300 rounded"
                 />
-                <span className="ml-2 font-medium">Select</span>
+                {/* <span className="ml-2 font-medium">Select</span> */}
               </label>
             </th>
             <th className="px-4 py-3 text-left font-medium w-32">Date</th>
