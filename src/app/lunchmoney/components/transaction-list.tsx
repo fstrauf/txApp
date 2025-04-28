@@ -360,8 +360,43 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     const transaction = transactions.find(tx => tx.lunchMoneyId === transactionId);
     if (!transaction) {
       setUpdatingCategory(null);
+      console.error("Transaction not found for update:", transactionId);
       return;
     }
+    
+    // --- Optimistic Update --- 
+    // Store the original state in case of failure
+    const originalTransaction = { ...transaction };
+    
+    // Get the category name for the optimistic update
+    let optimisticCategoryName = categoryValue;
+    const selectedCategoryObj = categories.find(cat => typeof cat !== 'string' && cat.id === categoryValue);
+    if (selectedCategoryObj && typeof selectedCategoryObj !== 'string') {
+      optimisticCategoryName = selectedCategoryObj.name;
+    }
+    
+    // Update local state IMMEDIATELY
+    setTransactions(prev => 
+      prev.map(tx => { 
+        if (tx.lunchMoneyId === transactionId) {
+          return {
+            ...tx,
+            category: categoryValue === "none" ? null : categoryValue,
+            lunchMoneyCategory: categoryValue === "none" ? null : optimisticCategoryName,
+            // Assume it will be cleared, update originalData optimistically too?
+            originalData: {
+              ...tx.originalData,
+              category_id: categoryValue === "none" ? null : categoryValue,
+              category_name: categoryValue === "none" ? null : optimisticCategoryName,
+              status: 'cleared' // Optimistically assume it clears
+            },
+            status: 'cleared' // Optimistically assume it clears
+          };
+        }
+        return tx;
+      })
+    );
+    // --- End Optimistic Update ---
     
     try {
       const txTags = transaction.tags || [];
@@ -392,27 +427,17 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         throw new Error(responseData.error || 'Failed to update category');
       }
       
-      let categoryName = categoryValue;
-      const selectedCategory = categories.find(cat => typeof cat !== 'string' && cat.id === categoryValue);
-      if (selectedCategory && typeof selectedCategory !== 'string') {
-        categoryName = selectedCategory.name;
-      }
-      
+      // We still need to update the tags locally if they changed
+      // (or refetch, but let's update locally for now)
       setTransactions(prev => 
-        prev.map(tx => {
+        prev.map(tx => { 
           if (tx.lunchMoneyId === transactionId) {
             return {
-              ...tx,
-              category: categoryValue === "none" ? null : categoryValue,
-              lunchMoneyCategory: categoryValue === "none" ? null : categoryName,
-              originalData: {
-                ...tx.originalData,
-                category_id: categoryValue === "none" ? null : categoryValue,
-                category_name: categoryValue === "none" ? null : categoryName,
-                status: 'cleared'
-              },
-              tags: responseData.updatedTags?.map((tag: string) => ({ name: tag, id: `tag-${Date.now()}-${Math.random()}` })) || filteredTags, 
-              status: 'cleared'
+              ...tx, // Keep the optimistically set category/status
+              // Update ONLY the tags based on the *actual* API response
+              tags: responseData.updatedTags?.map((tag: any) => 
+                typeof tag === 'string' ? { name: tag, id: `tag-${Date.now()}-${Math.random()}` } : tag
+              ) || filteredTags, 
             };
           }
           return tx;
@@ -431,6 +456,14 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
 
     } catch (error) {
       console.error('Error updating category:', error);
+      // --- Revert Optimistic Update on Error --- 
+      setTransactions(prev => 
+        prev.map(tx => 
+          tx.lunchMoneyId === transactionId ? originalTransaction : tx
+        )
+      );
+      // --- End Revert ---
+      
       setError(error instanceof Error ? error.message : 'Failed to update category');
       setToastMessage({ message: error instanceof Error ? error.message : 'Failed to update category', type: 'error' });
     } finally {
