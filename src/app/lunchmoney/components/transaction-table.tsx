@@ -42,6 +42,9 @@ const TransactionTable = React.memo(({
   handleNoteChange, // Destructure new prop
   updatingNoteId,  // Destructure new prop
 }: TransactionTableProps) => {
+  // Determine if the Actions column should be shown based on pending updates
+  const showActionsColumn = Object.keys(pendingCategoryUpdates).length > 0;
+
   if (!loading && filteredTransactions.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500 bg-surface rounded-lg border border-gray-100 shadow-sm">
@@ -75,7 +78,7 @@ const TransactionTable = React.memo(({
             <th className="px-4 py-3 text-left font-medium">Notes</th>
             <th className="px-4 py-3 text-left font-medium">Category</th>
             <th className="px-4 py-3 text-left font-medium">Predicted Category</th>
-            {Object.keys(pendingCategoryUpdates).length > 0 && (
+            {showActionsColumn && (
               <th className="px-4 py-3 text-left font-medium">Actions</th>
             )}
           </tr>
@@ -109,6 +112,7 @@ const TransactionTable = React.memo(({
                   getCategoryNameById={getCategoryNameById}
                   handleNoteChange={handleNoteChange}
                   updatingNoteId={updatingNoteId}
+                  showActionsColumn={showActionsColumn}
                 />
               );
             })
