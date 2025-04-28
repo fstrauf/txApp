@@ -42,11 +42,11 @@ export default function LunchMoneyPage() {
         <div className="space-y-4">
           <p>This page displays transactions imported from your connected Lunch Money account.</p>
           <p>Use the <strong>Settings</strong> button to configure your Lunch Money API key if you haven't already.</p>
-          <p>The list below shows your recent transactions. You can use this data for further analysis or processing within this application.</p>
-          <p>The core features for expense categorisation are training and categorisation:</p>
+          <p>Lunch Money groups transactions into those you have reviewed (e.g. adjusted categories) and those you have not.</p>
+          <p>This perfectly matches the functionality of the <strong>Training</strong> and <strong>Categorisation</strong> features:</p>
           <ul className="space-y-2">
-            <li><strong>Training:</strong> train your custom model with all you transactions and correct categorisation. We recommend using as many transaction as possible here. A label will appear next to transactions that are included in the training set.</li>
-            <li><strong>Categorisation:</strong> Automatically categorise transactions based on the training set. This will generate suggestions, that you can choose to apply.</li>
+            <li><strong>Training:</strong> train you custom model with all your reviewed transactions. This will be your base going forward for suggesting categories on new transactions.</li>
+            <li><strong>Categorisation:</strong> suggest categories for all transactions you have not reviewed yet, based on your historical categorisations.</li>
           </ul>
         </div>
       </HelpDrawer>

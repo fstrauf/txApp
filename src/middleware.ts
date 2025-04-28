@@ -5,7 +5,7 @@ import { withAuth } from 'next-auth/middleware';
 export default withAuth({
   // Matches the pages we want to protect
   pages: {
-    signIn: '/login', // Redirect to your login page if not authenticated
+    signIn: '/auth/signin', // Redirect to the actual signin page
     // error: '/auth/error', // Optional: page to redirect to on error
   },
 });

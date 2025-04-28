@@ -165,30 +165,6 @@ export async function GET(request: NextRequest) {
     // *** Format the transactions using the helper defined in *this* file ***
     let formattedData = formatTransactions(rawData.transactions || []);
 
-    // *** REMOVE Post-Fetch Filtering based on status ***
-    /*
-    console.log(`Applying status filter: ${statusFilter}`);
-    formattedData = formattedData.filter(tx => {
-      const txStatus = tx.originalData?.status;
-
-      // Always exclude 'pending' status
-      if (txStatus === 'pending') {
-        return false;
-      }
-
-      // Apply the specific filter if provided
-      if (statusFilter === 'cleared') {
-        return txStatus === 'cleared';
-      }
-      if (statusFilter === 'uncleared') {
-        // Keep if status is not 'cleared' (which includes 'uncleared' and potentially null/undefined)
-        return txStatus !== 'cleared'; 
-      }
-      
-      // If no status filter, keep everything (that isn't 'pending')
-      return true; 
-    });
-    */
 
     console.log(`Returning ${formattedData.length} transactions (filtered by API).`);
 
@@ -227,7 +203,7 @@ export async function PATCH(request: NextRequest) {
     // --- End Decryption ---
 
     // Read transactionId, categoryId, tags, AND status from the request body
-    const { transactionId, categoryId, tags: existingTags, status } = await request.json();
+    const { transactionId, categoryId, tags, status, notes } = await request.json();
     
     if (!transactionId) {
       return NextResponse.json({ error: 'Transaction ID is required' }, { status: 400 });
@@ -236,28 +212,35 @@ export async function PATCH(request: NextRequest) {
     // Update the transaction directly using the official Lunch Money API
     const url = `https://dev.lunchmoney.app/v1/transactions/${transactionId}`;
     
-    // Build the update object
-    const updateObject: any = {};
+    // Build the update object conditionally
+    const updateObject: Record<string, any> = {};
     
-    // --- Add Category ID if provided --- 
+    // --- Add Notes if provided --- 
+    if (notes !== undefined) {
+      updateObject.notes = notes;
+    }
+    
+    // --- Add Category ID if provided (also sets status) --- 
     if (categoryId !== undefined) {
       const lunchMoneyCategoryId = categoryId === "none" ? null : Number(categoryId);
       updateObject.category_id = lunchMoneyCategoryId;
+      // When category changes, Lunch Money expects status to be set (usually cleared)
+      updateObject.status = status || 'cleared'; // Use provided status or default to 'cleared'
     }
     
-    // --- Add Status if provided --- 
-    if (status) {
+    // --- Add Status if provided *separately* from category --- 
+    if (status !== undefined && categoryId === undefined) {
       updateObject.status = status; // Add status to the update object
     }
     
-    // --- Add Tags: Use the exact tags passed from the frontend request --- 
-    // The frontend will determine which tags should be set (e.g., just the trained tag)
-    let tagsToSet = Array.isArray(existingTags) 
-        ? existingTags.map(tag => typeof tag === 'string' ? tag : tag.name).filter(Boolean)
+    // --- Add Tags if provided --- 
+    if (tags !== undefined) {
+      // Format tags correctly for Lunch Money API (array of strings)
+      const tagsToSet = Array.isArray(tags)
+        ? tags.map(tag => typeof tag === 'string' ? tag : tag.name).filter(Boolean)
         : [];
-
-    // Set the 'tags' field in the object sent to Lunch Money
-    updateObject.tags = tagsToSet; 
+      updateObject.tags = tagsToSet;
+    }
     
     const updateBody = {
       transaction: updateObject
@@ -294,7 +277,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       message: `Transaction ${transactionId} updated.`, 
-      updatedTags: tagsToSet // Return the tags that were set
+      updatedTags: tags // Return the tags that were set
     });
 
   } catch (error) {
