@@ -1,6 +1,6 @@
 import React from 'react';
-import { ImportStatus, OperationType } from './types';
-import HelpTooltip from '@/components/shared/HelpTooltip';
+import { ImportStatus } from './types';
+// import HelpTooltip from '@/components/shared/HelpTooltip'; // No longer needed
 
 type CategorizationControlsProps = {
   pendingCategoryUpdates: Record<string, {categoryId: string | null, score: number}>;
@@ -28,34 +28,35 @@ const CategorizationControls = React.memo(({
   operationInProgress,
   importStatus,
   importMessage,
-  handleCancelCategorization,
-  lastTrainedTimestamp
+  handleCancelCategorization
 }: CategorizationControlsProps) => {
   const hasPendingUpdates = Object.keys(pendingCategoryUpdates).length > 0;
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
-      <div className="flex items-center gap-3 flex-wrap">
+    <div className="flex flex-row items-center gap-6 p-4 bg-gray-50 rounded-lg border border-gray-200 shadow-sm flex-wrap">
+      <div className="flex flex-col items-start gap-3">
         <button
           onClick={handleTrainSelected}
           disabled={selectedTransactionsCount === 0 || operationInProgress}
-          className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left"
         >
           Train Selected ({selectedTransactionsCount})
         </button>
-        <HelpTooltip content="Train your custom model with all you transactions and correct categorisation. We recommend using as many transaction as possible here. A label will appear next to transactions that are included in the training set." />
         <button
           onClick={handleCategorizeSelected}
           disabled={selectedTransactionsCount === 0 || operationInProgress}
-          className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left"
         >
           Categorize Selected ({selectedTransactionsCount})
         </button>
-        <HelpTooltip content="Automatically categorise transactions based on the training set. This will generate suggestions, that you can choose to apply." />
+      </div>
+
+      <div className="text-sm text-gray-600 max-w-xs">
+        Use reviewed transactions to Train your model. Categorise transactions that need review.
       </div>
 
       {hasPendingUpdates && (
-        <div className="flex items-center gap-3 border-l border-gray-300 pl-3 ml-3 mt-3 sm:mt-0 flex-wrap">
+        <div className="flex items-center gap-3 border-l border-gray-300 pl-4 ml-4 mt-3 sm:mt-0 flex-wrap">
           <span className="text-sm font-medium text-secondary-dark">
             {Object.keys(pendingCategoryUpdates).length} predictions ready
           </span>
