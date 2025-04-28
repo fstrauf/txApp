@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+// import { useRouter } from 'next/navigation'; // Removed
 import { format } from 'date-fns';
 import { 
   Transaction, 
   Category, 
   DateRange, 
   ToastMessage, 
-  ImportStatus, 
+  // ImportStatus, // Removed
   OperationType 
 } from './types';
 
@@ -26,7 +26,7 @@ const EXPENSE_SORTED_TRAINED_TAG = 'expense-sorted-trained'; // Define the new t
 
 // Remove props from component signature
 export default function TransactionList(/*{ statusFilter, setStatusFilter }: TransactionListProps*/) {
-  const router = useRouter();
+  // const router = useRouter(); // Removed
   // Add statusFilter state here
   const [statusFilter, setStatusFilter] = useState<TransactionStatusFilter>('uncleared');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -42,19 +42,21 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     startDate: format(new Date(new Date().getFullYear(), new Date().getMonth()-5, 1), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
   });
-  const [importStatus, setImportStatus] = useState<ImportStatus>('idle');
-  const [importMessage, setImportMessage] = useState('');
+  // const [importStatus, setImportStatus] = useState<ImportStatus>('idle'); // Removed
+  // const [importMessage, setImportMessage] = useState(''); // Removed
   const [categories, setCategories] = useState<(string | Category)[]>([]);
-  const [editingTransaction, setEditingTransaction] = useState<string | null>(null);
+  // const [editingTransaction, setEditingTransaction] = useState<string | null>(null); // Removed
   const [toastMessage, setToastMessage] = useState<ToastMessage | null>(null);
-  const categoryInputRef = useRef<HTMLSelectElement>(null);
+  // const categoryInputRef = useRef<HTMLSelectElement>(null); // Removed
   const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
   const [successfulUpdates, setSuccessfulUpdates] = useState<Record<string, boolean>>({});
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  // const [openDropdown, setOpenDropdown] = useState<string | null>(null); // Removed
   const [operationInProgress, setOperationInProgress] = useState<boolean>(false);
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [progressMessage, setProgressMessage] = useState<string>('');
   const [operationType, setOperationType] = useState<OperationType>('none');
+  const [isOperationComplete, setIsOperationComplete] = useState(false); // State for modal completion button
+  const [isTagging, setIsTagging] = useState(false); // State to indicate tagging phase
   
   // Categorization workflow states
   const [pendingCategoryUpdates, setPendingCategoryUpdates] = useState<Record<string, {categoryId: string | null, score: number}>>({});
@@ -115,13 +117,6 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       return () => clearTimeout(timer);
     }
   }, [toastMessage]);
-
-  // Focus the input when editing starts
-  useEffect(() => {
-    if (editingTransaction && categoryInputRef.current) {
-      categoryInputRef.current.focus();
-    }
-  }, [editingTransaction]);
 
   // First, let's add some debug to see what IDs we're working with
   useEffect(() => {
@@ -423,132 +418,130 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     setDateRange(pendingDateRange); // Update main dateRange to trigger fetch effect
   }, [pendingDateRange]); // Dependency on pendingDateRange
 
-  // Memoize handleImportTransactions
-  const handleImportTransactions = useCallback(async () => {
-    if (transactions.length === 0) return;
-    
-    setImportStatus('importing');
-    setImportMessage('Importing transactions...');
-
-    try {
-      const response = await fetch('/api/lunch-money/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ transactions }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to import transactions');
-      }
-
-      const result = await response.json();
-      setImportStatus('success');
-      setImportMessage(`Successfully imported ${result.count} transactions.`);
-      router.refresh(); // Consider if router refresh is desired here
-    } catch (error) {
-      console.error('Error importing transactions:', error);
-      setImportStatus('error');
-      setImportMessage(error instanceof Error ? error.message : 'Failed to import transactions');
-    }
-  }, [transactions, router]); // Dependencies: transactions, router
-
-  // Memoize tagTransactionsAsTrained
+  // Memoize tagTransactionsAsTrained (Robust Filtering + Batching)
   const tagTransactionsAsTrained = useCallback(async (transactionIds: string[]) => {
-    if (!transactionIds.length) return;
-    
-    try {
-      // Filter out transactions that already have the new "Trained" tag
-      const transactionsToTag = transactionIds.filter(txId => {
-        const tx = transactions.find(t => t.lunchMoneyId === txId);
-        if (!tx) return false;
-        
-        // Check if transaction already has the new "Trained" tag
-        const txTags = tx.tags || [];
-        const hasTrainedTag = txTags.some(tag => 
-          (typeof tag === 'string' && tag.toLowerCase() === EXPENSE_SORTED_TRAINED_TAG) || 
-          (typeof tag === 'object' && tag.name && tag.name.toLowerCase() === EXPENSE_SORTED_TRAINED_TAG)
-        );
-        
-        return !hasTrainedTag;
-      });
-      
-      if (transactionsToTag.length === 0) {
-        console.log(`No transactions to tag - all already have '${EXPENSE_SORTED_TRAINED_TAG}' tag`);
-        return; // Exit if nothing to tag
-      }
+    if (!transactionIds.length) {
+      console.log("[Tagging] No transaction IDs provided.");
+      return { successCount: 0, failCount: 0 };
+    }
+    console.log("[Tagging] Received IDs for potential tagging:", transactionIds);
 
-      // This toast is removed as feedback is handled in the calling function
-      // setToastMessage({ ... });
-      
-      const batchSize = 5; 
+    // 1. Filter based on current state BEFORE starting any API calls
+    const transactionsToTag = transactionIds.filter(txId => {
+      const tx = transactions.find(t => t.lunchMoneyId === txId);
+      if (!tx) {
+        console.warn(`[Tagging] Filter: Transaction ${txId} not found in current local state. Skipping.`);
+        return false; 
+      }
+      const txTags = tx.tags || [];
+      const hasTrainedTag = txTags.some(tag => 
+        (typeof tag === 'string' && tag.toLowerCase() === EXPENSE_SORTED_TRAINED_TAG) || 
+        (typeof tag === 'object' && tag.name && tag.name.toLowerCase() === EXPENSE_SORTED_TRAINED_TAG)
+      );
+      if (hasTrainedTag) {
+        // This is not an error, just info
+        // console.log(`[Tagging] Filter: Transaction ${txId} already has the tag.`); 
+      }
+      return !hasTrainedTag; // Keep only those needing the tag
+    });
+
+    console.log(`[Tagging] After filtering: ${transactionsToTag.length} transactions actually need tagging.`, transactionsToTag);
+
+    if (transactionsToTag.length === 0) {
+      console.log(`[Tagging] No transactions require tagging.`);
+      return { successCount: 0, failCount: 0 }; 
+    }
+
+    // 2. Process the filtered list in batches
+    try {
+      const batchSize = 10; // Adjust batch size if needed
       let successCount = 0;
       let failCount = 0;
       const successfulTxIds: string[] = [];
       
+      console.log(`[Tagging] Starting batch processing (Size: ${batchSize})...`);
       for (let i = 0; i < transactionsToTag.length; i += batchSize) {
-        const batch = transactionsToTag.slice(i, i + batchSize);
-        console.log(`Tagging batch ${i / batchSize + 1} of ${Math.ceil(transactionsToTag.length / batchSize)}...`);
-        
-        // Process batch items sequentially
-        for (const transactionId of batch) {
-          try {
-            // Removed lookup, not needed inside this inner loop if filtering happens above
-            // const tx = transactions.find(t => t.lunchMoneyId === transactionId);
+        const batchIds = transactionsToTag.slice(i, i + batchSize);
+        const batchNumber = i / batchSize + 1;
+        console.log(`[Tagging] Preparing Batch ${batchNumber} (IDs: ${batchIds.join(', ')})`);
 
-            const response = await fetch('/api/lunch-money/transactions', {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                transactionId,
-                tags: [EXPENSE_SORTED_TRAINED_TAG] 
-              }),
-            });
-
+        // Create fetch promises for the current batch
+        const batchPromises = batchIds.map(transactionId => 
+          fetch('/api/lunch-money/transactions', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              transactionId,
+              tags: [EXPENSE_SORTED_TRAINED_TAG] 
+            }),
+          }).then(async response => { 
             if (!response.ok) {
-              console.error(`Failed to tag transaction ${transactionId} - Status: ${response.status}`);
-              failCount++;
-            } else {
-              successCount++;
-              successfulTxIds.push(transactionId);
-              // Update visual feedback immediately
-              setSuccessfulUpdates(prev => ({ ...prev, [transactionId]: true })); 
+              const errorBody = await response.text().catch(() => 'Failed to read error body');
+              throw new Error(`API Error ${response.status} for TxID ${transactionId}: ${errorBody}`); 
             }
-          } catch (error) {
-            console.error(`Error tagging transaction ${transactionId}:`, error);
+            return { transactionId, responseData: await response.json() }; 
+          })
+        );
+
+        // Run batch promises concurrently
+        console.log(`[Tagging] Executing Batch ${batchNumber}...`);
+        const startTime = Date.now();
+        const batchResults = await Promise.allSettled(batchPromises);
+        const endTime = Date.now();
+        console.log(`[Tagging] Batch ${batchNumber} finished in ${endTime - startTime}ms.`);
+
+        // Process results for the batch
+        batchResults.forEach((result, index) => {
+          const transactionId = batchIds[index]; 
+          if (result.status === 'fulfilled') {
+            // console.log(`[Tagging] Batch Result: OK for ${transactionId}`);
+            successCount++;
+            successfulTxIds.push(transactionId);
+          } else {
+            console.error(`[Tagging] Batch Result: FAIL for ${transactionId}. Reason:`, result.reason?.message || result.reason);
             failCount++;
           }
-        }
+        });
+        
+        // Optional delay between batches if rate limiting is still an issue
+        // if (i + batchSize < transactionsToTag.length) {
+        //   console.log(`[Tagging] Pausing briefly before next batch...`);
+        //   await new Promise(resolve => setTimeout(resolve, 200)); 
+        // }
       }
       
-      // Update local state for all successful transactions AFTER all batches
+      // 3. Update local state after all batches
       if (successfulTxIds.length > 0) {
+        console.log(`[Tagging] Updating local state for ${successfulTxIds.length} successfully tagged transactions.`);
         setTransactions(prev => 
           prev.map(tx => {
+            // Check if this transaction was successfully tagged *in this run*
             if (successfulTxIds.includes(tx.lunchMoneyId)) {
+              const existingTags = tx.tags || [];
+              const tagToAdd = { name: EXPENSE_SORTED_TRAINED_TAG, id: `tag-${EXPENSE_SORTED_TRAINED_TAG}-${Date.now()}` };
+              // Avoid adding duplicate tag object visually if somehow missed by filter
+              const tagExists = existingTags.some(t => typeof t === 'object' && t.name?.toLowerCase() === EXPENSE_SORTED_TRAINED_TAG);
+              const newTags = tagExists ? existingTags : [...existingTags, tagToAdd];
               return {
                 ...tx,
-                tags: [{ name: EXPENSE_SORTED_TRAINED_TAG, id: `tag-${EXPENSE_SORTED_TRAINED_TAG}-${Date.now()}` }]
+                tags: newTags 
               };
             }
-            return tx;
+            return tx; // Return unchanged if not successfully tagged in this run
           })
         );
       }
       
-      // Return success/fail counts for feedback in calling function
+      console.log(`[Tagging] All batches completed. Overall Success: ${successCount}, Fail: ${failCount}`);
       return { successCount, failCount };
 
     } catch (error) {
-      console.error('Error applying "Trained" tag:', error);
-      // Throw error or return failure state
-      return { successCount: 0, failCount: transactionIds.length };
+      console.error('[Tagging] Error during batch processing loop:', error);
+      return { successCount: 0, failCount: transactionsToTag.length }; 
     }
-  }, [transactions, setTransactions, setSuccessfulUpdates]); // Add setTransactions and setSuccessfulUpdates dependencies
+  }, [transactions, setTransactions]); 
 
   // Memoize pollForCompletion
   const pollForCompletion = useCallback(async (predictionId: string, type: 'training' | 'categorizing'): Promise<{ status: string; message?: string }> => {
@@ -839,16 +832,48 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         console.log("Received synchronous training results:", syncResult);
 
         if (syncResult.status === 'completed') {
+          // --- Simplified Flow --- 
+          // 1. Show immediate success in modal
           setProgressMessage('Training completed successfully!');
           setProgressPercent(100);
-          setToastMessage({ message: 'Training completed successfully!', type: 'success' });
-          await tagTransactionsAsTrained(selectedTransactions); // Tag transactions
-          fetchLastTrainedTimestamp(); // <-- Refresh timestamp
-          setToastMessage({ message: 'Training and tagging completed!', type: 'success' });
-          setSelectedTransactions([]); // Clear selection
-          return { status: 'completed' }; // Indicate success
+          setIsOperationComplete(true); // Show Close button now
+          setIsTagging(false); // Ensure tagging state is off for modal visuals
+
+          // *** ADD PRE-FILTER LOGGING HERE ***
+          console.log("[handleTrainSelected] Preparing for background tagging...");
+          const selectedIdsForTagging = [...selectedTransactions]; // Capture IDs before clearing
+          // Log details of first few selected transactions before filtering
+          if (selectedIdsForTagging.length > 0) {
+            console.log(`[handleTrainSelected] Checking tags for ${selectedIdsForTagging.length} selected IDs. Sample:`);
+            selectedIdsForTagging.slice(0, 3).forEach(id => {
+              const tx = transactions.find(t => t.lunchMoneyId === id);
+              console.log(` - ID: ${id}, Tags:`, tx?.tags);
+            });
+          }
+          // *** END PRE-FILTER LOGGING ***
+
+          // 2. Perform tagging in background (fire and forget style, but handle result with toast)
+          tagTransactionsAsTrained(selectedIdsForTagging).then(tagResult => {
+            // This runs after tagging attempt finishes
+            fetchLastTrainedTimestamp(); // Update timestamp
+            setToastMessage({ 
+              message: `Tagging complete: ${tagResult?.successCount || 0} updated${(tagResult?.failCount || 0) > 0 ? `, ${tagResult?.failCount} failed` : ''}.`,
+              type: (tagResult?.failCount) > 0 ? 'error' : 'success' 
+            });
+            // Clear selection *after* toast related to tagging
+            setSelectedTransactions([]); 
+          }).catch(taggingError => {
+            // Handle potential errors from the tagging promise itself
+            console.error("[Tagging] Error after training completion:", taggingError);
+            setToastMessage({ message: 'Error occurred during background tagging.', type: 'error' });
+            setSelectedTransactions([]); // Still clear selection
+          });
+          
+          // Return success for the training operation itself
+          return { status: 'completed' }; 
         } else {
           // Handle unexpected 200 response format
+          setIsOperationComplete(true); // Allow closing modal even on error
           throw new Error('Received unexpected success response format from server during training.');
         }
       } else if (response.status === 202) {
@@ -873,29 +898,45 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       }
       // --- END MODIFIED RESPONSE HANDLING ---
       
-      // --- Handle tagging AFTER successful polling --- 
+      // --- Handle tagging AFTER successful polling (Simplified) --- 
       if (pollResult.status === 'completed') {
-        const totalToTagInitially = selectedTransactions.length;
-        setProgressMessage(`Applying tag to ${totalToTagInitially} trained transactions...`); 
-        setProgressPercent(95); 
+        // 1. Show immediate success in modal
+        setProgressMessage('Training completed successfully!'); // Final message
+        setProgressPercent(100);
+        setIsOperationComplete(true); // Show Close button now
+        setIsTagging(false); // Ensure tagging state is off for modal visuals
         
-        // Call the reverted tag function, passing selected IDs
-        const tagResult = await tagTransactionsAsTrained(selectedTransactions);
-        
-        // Tagging finished - update timestamp and show final toast
-        fetchLastTrainedTimestamp(); 
-        // Use counts returned from tag function for accurate message
-        setToastMessage({ 
-          message: `Training complete. Tagged ${tagResult?.successCount || 0} transactions${(tagResult?.failCount || 0) > 0 ? ` (${tagResult?.failCount} failed)` : ''}.`,
-          type: (tagResult?.successCount || 0) > 0 ? 'success' : 'warning' 
+        // *** ADD PRE-FILTER LOGGING HERE (Polling Path) ***
+        console.log("[handleTrainSelected - Polling Path] Preparing for background tagging...");
+        const selectedIdsForTagging = [...selectedTransactions]; // Capture IDs
+        if (selectedIdsForTagging.length > 0) {
+            console.log(`[handleTrainSelected - Polling Path] Checking tags for ${selectedIdsForTagging.length} selected IDs. Sample:`);
+            selectedIdsForTagging.slice(0, 3).forEach(id => {
+              const tx = transactions.find(t => t.lunchMoneyId === id);
+              console.log(` - ID: ${id}, Tags:`, tx?.tags);
+            });
+        }
+        // *** END PRE-FILTER LOGGING ***
+
+        // 2. Perform tagging in background
+        tagTransactionsAsTrained(selectedIdsForTagging).then(tagResult => {
+          fetchLastTrainedTimestamp(); 
+          setToastMessage({ 
+            message: `Tagging complete: ${tagResult?.successCount || 0} updated${(tagResult?.failCount || 0) > 0 ? `, ${tagResult?.failCount} failed` : ''}.`,
+            type: (tagResult?.successCount || 0) > 0 ? 'success' : 'info' 
+          });
+          setSelectedTransactions([]); // Clear selection after toast
+        }).catch(taggingError => {
+            console.error("[Tagging] Error after training completion (polling):", taggingError);
+            setToastMessage({ message: 'Error occurred during background tagging.', type: 'error' });
+            setSelectedTransactions([]); // Still clear selection
         });
-        setSelectedTransactions([]); // Clear selection
       } else {
         // Handle polling failure/timeout
-        // Provide a default message if pollResult.message is undefined
         setToastMessage({ message: pollResult?.message || 'Training polling failed or timed out.', type: 'error' });
+        setIsOperationComplete(true); // Allow closing modal even on failure
       }
-      // --- End tagging handling ---
+      // --- End simplified tagging handling ---
 
     } catch (error) {
       console.error('Error starting training:', error);
@@ -1154,12 +1195,6 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     }
   }, [pendingCategoryUpdates, categories]); // Dependencies: pendingCategoryUpdates, categories
 
-  // Memoize getFilteredTransactions (returns the raw list for now)
-  const getFilteredTransactions = useCallback(() => {
-    // Filtering is done server-side by statusFilter
-    return transactions; 
-  }, [transactions]); // Dependency: transactions
-
   // Memoize getCategoryNameById
   const getCategoryNameById = useCallback((categoryId: string | null) => {
     if (!categoryId) return null;
@@ -1252,30 +1287,29 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     // Ensure getCategoryNameById is included in dependencies
   }, [pendingCategoryUpdates, getCategoryNameById]); 
 
-  // Function to manually close the progress modal
+  // Function to manually close the progress modal - now resets completion states
   const closeModal = useCallback(() => {
     setOperationInProgress(false);
     setOperationType('none');
-    // Optionally reset progress too
     setProgressPercent(0);
     setProgressMessage('');
+    setIsOperationComplete(false); // Reset completion flag
+    setIsTagging(false); // Reset tagging flag
   }, []); // Keep dependencies empty as it only uses setters
-
-  // Get the transactions to display based on filters
-  const filteredTransactions = getFilteredTransactions();
 
   return (
     <div className="text-gray-900 text-sm bg-white min-h-screen p-4">
       {/* Toast notification */}
       <ToastNotification toastMessage={toastMessage} />
 
-      {/* Operation Progress Modal */}
+      {/* Operation Progress Modal - Pass completion state */}
       <ProgressModal
         operationInProgress={operationInProgress}
         operationType={operationType}
         progressPercent={progressPercent}
         progressMessage={progressMessage}
-        onClose={closeModal} // Pass the close function
+        isComplete={isOperationComplete} // Pass the completion state
+        onClose={closeModal} // Pass the updated close function
       />
 
       {/* Updated wrapper for all controls - Now arranges items side-by-side */}
@@ -1304,14 +1338,11 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
             pendingCategoryUpdates={pendingCategoryUpdates}
             applyingAll={applyingAll}
             applyAllPredictedCategories={applyAllPredictedCategories}
-            handleImportTransactions={handleImportTransactions}
             handleTrainSelected={handleTrainSelected}
             handleCategorizeSelected={handleCategorizeSelected}
             selectedTransactionsCount={selectedTransactions.length}
             loading={loading}
             operationInProgress={operationInProgress}
-            importStatus={importStatus}
-            importMessage={importMessage}
             handleCancelCategorization={handleCancelCategorization}
             lastTrainedTimestamp={lastTrainedTimestamp}
           />
@@ -1320,7 +1351,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
 
       {/* Transaction Table */}
       <TransactionTable
-        filteredTransactions={filteredTransactions}
+        filteredTransactions={transactions}
         selectedTransactions={selectedTransactions}
         handleSelectTransaction={handleSelectTransaction}
         handleSelectAll={handleSelectAll}

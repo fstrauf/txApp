@@ -1,19 +1,19 @@
 import React from 'react';
-import { ImportStatus } from './types';
+// import { ImportStatus } from './types'; // Type no longer needed
 // import HelpTooltip from '@/components/shared/HelpTooltip'; // No longer needed
 
 type CategorizationControlsProps = {
   pendingCategoryUpdates: Record<string, {categoryId: string | null, score: number}>;
   applyingAll: boolean;
   applyAllPredictedCategories: () => void;
-  handleImportTransactions: () => void;
+  // handleImportTransactions: () => void; // Removed
   handleTrainSelected: () => void;
   handleCategorizeSelected: () => void;
   selectedTransactionsCount: number;
   loading: boolean;
   operationInProgress: boolean;
-  importStatus: ImportStatus;
-  importMessage: string;
+  // importStatus: ImportStatus; // Removed
+  // importMessage: string; // Removed
   handleCancelCategorization: () => void;
   lastTrainedTimestamp?: string | null;
 };
@@ -26,8 +26,8 @@ const CategorizationControls = React.memo(({
   handleCategorizeSelected,
   selectedTransactionsCount,
   operationInProgress,
-  importStatus,
-  importMessage,
+  // importStatus, // Removed
+  // importMessage, // Removed
   handleCancelCategorization
 }: CategorizationControlsProps) => {
   const hasPendingUpdates = Object.keys(pendingCategoryUpdates).length > 0;
@@ -76,12 +76,6 @@ const CategorizationControls = React.memo(({
             Cancel
           </button>
         </div>
-      )}
-
-      {importStatus !== 'idle' && (
-        <span className={`text-sm mt-auto pt-2 ${importStatus === 'error' ? 'text-red-600' : 'text-gray-600'}`}>
-          {importMessage}
-        </span>
       )}
     </div>
   );

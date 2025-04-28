@@ -165,30 +165,6 @@ export async function GET(request: NextRequest) {
     // *** Format the transactions using the helper defined in *this* file ***
     let formattedData = formatTransactions(rawData.transactions || []);
 
-    // *** REMOVE Post-Fetch Filtering based on status ***
-    /*
-    console.log(`Applying status filter: ${statusFilter}`);
-    formattedData = formattedData.filter(tx => {
-      const txStatus = tx.originalData?.status;
-
-      // Always exclude 'pending' status
-      if (txStatus === 'pending') {
-        return false;
-      }
-
-      // Apply the specific filter if provided
-      if (statusFilter === 'cleared') {
-        return txStatus === 'cleared';
-      }
-      if (statusFilter === 'uncleared') {
-        // Keep if status is not 'cleared' (which includes 'uncleared' and potentially null/undefined)
-        return txStatus !== 'cleared'; 
-      }
-      
-      // If no status filter, keep everything (that isn't 'pending')
-      return true; 
-    });
-    */
 
     console.log(`Returning ${formattedData.length} transactions (filtered by API).`);
 
