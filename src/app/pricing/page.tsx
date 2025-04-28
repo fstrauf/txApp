@@ -4,14 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { hasActiveSubscriptionOrTrial, type UserSubscriptionData } from '@/lib/authUtils';
+import { toast, Toaster } from 'react-hot-toast';
 
-interface SubscriptionInfo {
+interface SubscriptionInfo extends UserSubscriptionData {
   subscriptionPlan: string;
-  subscriptionStatus: string | null;
   billingCycle: string | null;
-  trialEndsAt: string | null;
-  currentPeriodEndsAt: string | null;
-  hasActiveSubscription: boolean;
 }
 
 export default function PricingPage() {
@@ -19,6 +17,7 @@ export default function PricingPage() {
   const [isLoading, setIsLoading] = useState<{silver: boolean, gold: boolean}>({ silver: false, gold: false });
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
+  const [isStartingTrial, setIsStartingTrial] = useState(false);
   const { data: session } = useSession();
   const router = useRouter();
   
@@ -42,12 +41,47 @@ export default function PricingPage() {
       
       if (response.ok) {
         const data = await response.json();
-        setSubscription(data);
+        // Convert dates from API response
+        const subData: SubscriptionInfo = {
+          ...data,
+          currentPeriodEndsAt: data.currentPeriodEndsAt ? new Date(data.currentPeriodEndsAt) : null,
+          trialEndsAt: data.trialEndsAt ? new Date(data.trialEndsAt) : null,
+        };
+        setSubscription(subData);
       }
     } catch (error) {
       console.error('Error fetching subscription info:', error);
     } finally {
       setIsLoadingSubscription(false);
+    }
+  };
+
+  // Function to handle starting the free trial via API
+  const handleStartFreeTrial = async () => {
+    if (!session) {
+      router.push(`/auth/signin?callbackUrl=/pricing`);
+      return;
+    }
+
+    setIsStartingTrial(true);
+    try {
+      const response = await fetch('/api/user/start-trial', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success('Free trial started successfully!');
+        await fetchSubscriptionInfo();
+      } else {
+        throw new Error(data.error || 'Failed to start trial');
+      }
+    } catch (error) {
+      console.error("Error starting free trial:", error);
+      toast.error(`Failed to start trial: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsStartingTrial(false);
     }
   };
 
@@ -121,12 +155,14 @@ export default function PricingPage() {
   };
 
   const isPlanActive = (plan: string): boolean => {
-    if (!subscription || !subscription.hasActiveSubscription) return false;
-    return subscription.subscriptionPlan === plan;
+    if (!subscription) return false;
+    const isActive = hasActiveSubscriptionOrTrial(subscription);
+    return isActive && subscription.subscriptionPlan === plan;
   };
 
   return (
     <div className="bg-background-default min-h-screen py-12">
+      <Toaster position="bottom-center" />
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
@@ -140,7 +176,7 @@ export default function PricingPage() {
           </p>
 
           {/* Current Subscription Banner (if logged in and has subscription) */}
-          {session && subscription && subscription.hasActiveSubscription && (
+          {session && subscription && hasActiveSubscriptionOrTrial(subscription) && (
             <div className="mt-6 bg-white rounded-xl p-4 max-w-md mx-auto border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-medium text-gray-900">Current Plan:</span>
@@ -148,12 +184,12 @@ export default function PricingPage() {
               </div>
               {subscription.trialEndsAt && (
                 <p className="text-sm text-gray-700 mb-1">
-                  Trial ends: {formatDate(subscription.trialEndsAt)}
+                  Trial ends: {formatDate(subscription.trialEndsAt.toISOString())}
                 </p>
               )}
               {subscription.currentPeriodEndsAt && (
                 <p className="text-sm text-gray-700">
-                  Next billing: {formatDate(subscription.currentPeriodEndsAt)}
+                  Next billing: {formatDate(subscription.currentPeriodEndsAt.toISOString())}
                 </p>
               )}
             </div>
@@ -312,29 +348,51 @@ export default function PricingPage() {
               </li>
             </ul>
             
-            <button
-              onClick={() => handleSubscribe('gold')}
-              disabled={isLoading.gold || isPlanActive('GOLD')}
-              className={`inline-flex justify-center items-center px-6 py-3 rounded-xl ${
-                isPlanActive('GOLD') 
-                  ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                  : 'bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow'
-              } text-center disabled:opacity-70`}
-            >
-              {isLoading.gold ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </>
-              ) : isPlanActive('GOLD') ? "Current Plan" : session ? "Subscribe Now" : "Sign in to Subscribe"}
-            </button>
-            
-            <p className="text-sm text-center mt-4 text-gray-600">
-              Start with a free trial!
-            </p>
+            {/* === Start Gold Plan Button Logic === */}
+            {isPlanActive('GOLD') ? (
+              // Case 1: Current plan is Gold
+              <button
+                disabled={true}
+                className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed text-center"
+              >
+                Current Plan
+              </button>
+            ) : session && subscription !== null && !hasActiveSubscriptionOrTrial(subscription) && !isLoadingSubscription ? (
+              // Case 2: Logged in, subscription loaded, no active sub/trial -> Eligible for free trial
+              <button
+                onClick={handleStartFreeTrial}
+                disabled={isStartingTrial}
+                className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70"
+              >
+                {isStartingTrial ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Starting Trial...
+                  </>
+                ) : "Start 14-Day Free Trial"}
+              </button>
+            ) : (
+              // Case 3: Not eligible for trial (not logged in, already has active sub, or subscription still loading) -> Show Subscribe/Sign in
+              <button
+                onClick={() => handleSubscribe('gold')}
+                disabled={isLoading.gold || isLoadingSubscription}
+                className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70"
+              >
+                {isLoading.gold ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </>
+                ) : session ? "Subscribe Now" : "Sign in to Subscribe"}
+              </button>
+            )}
+            {/* === End Gold Plan Button Logic === */}
           </div>
         </div>
         

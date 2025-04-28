@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authConfig } from '@/lib/auth';
 import { findUserByEmail } from '@/db/utils';
+import { decryptApiKey } from '@/lib/encryption';
 
 // Fetch categories from Lunch Money API
 async function fetchLunchMoneyCategories(apiKey: string) {
@@ -75,11 +76,21 @@ export async function GET(request: NextRequest) {
     
     const user = await findUserByEmail(session.user.email!);
     
-    if (!user?.lunchMoneyApiKey) {
-      return NextResponse.json({ error: 'Lunch Money API key not found' }, { status: 400 });
+    // --- Decrypt API Key ---
+    const encryptedApiKey = user?.lunchMoneyApiKey;
+    if (!encryptedApiKey) {
+      return NextResponse.json({ error: 'Lunch Money API key not found or not configured.' }, { status: 400 });
     }
-    
-    const categories = await fetchLunchMoneyCategories(user.lunchMoneyApiKey as string);
+    let apiKey: string;
+    try {
+      apiKey = decryptApiKey(encryptedApiKey);
+    } catch (decError) {
+      console.error('Failed to decrypt API key for user:', user.id, decError);
+      return NextResponse.json({ error: 'Could not process API key.' }, { status: 500 }); 
+    }
+    // --- End Decryption ---
+
+    const categories = await fetchLunchMoneyCategories(apiKey);
     
     // Format categories to match our expected structure
     const formattedCategories = categories.map((cat: any) => ({
@@ -113,10 +124,20 @@ export async function PATCH(request: NextRequest) {
     
     const user = await findUserByEmail(session.user.email!);
     
-    if (!user?.lunchMoneyApiKey) {
-      return NextResponse.json({ error: 'Lunch Money API key not found' }, { status: 400 });
+    // --- Decrypt API Key ---
+    const encryptedApiKey = user?.lunchMoneyApiKey;
+    if (!encryptedApiKey) {
+      return NextResponse.json({ error: 'Lunch Money API key not found or not configured.' }, { status: 400 });
     }
-    
+    let apiKey: string;
+    try {
+      apiKey = decryptApiKey(encryptedApiKey);
+    } catch (decError) {
+      console.error('Failed to decrypt API key for user:', user.id, decError);
+      return NextResponse.json({ error: 'Could not process API key.' }, { status: 500 }); 
+    }
+    // --- End Decryption ---
+
     const { transactionId, categoryId } = await request.json();
     
     if (!transactionId) {
@@ -127,7 +148,7 @@ export async function PATCH(request: NextRequest) {
     const lunchMoneyCategoryId = categoryId === "none" ? null : Number(categoryId);
     
     const result = await updateLunchMoneyCategory(
-      user.lunchMoneyApiKey as string, 
+      apiKey, 
       transactionId,
       lunchMoneyCategoryId
     );

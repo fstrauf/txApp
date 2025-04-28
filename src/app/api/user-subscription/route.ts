@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authConfig } from '@/lib/auth';
-import { db } from '@/db';
-import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
 import { findUserByEmail } from '@/db/utils';
+import { hasActiveSubscriptionOrTrial } from '@/lib/authUtils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,6 +24,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Use the utility function to determine active status
+    const isActive = hasActiveSubscriptionOrTrial({
+      subscriptionStatus: user.subscriptionStatus,
+      currentPeriodEndsAt: user.currentPeriodEndsAt,
+      trialEndsAt: user.trialEndsAt,
+    });
+
     // Return subscription info from the user record
     return NextResponse.json({
       subscriptionPlan: user.subscriptionPlan || 'FREE',
@@ -33,7 +38,7 @@ export async function GET(request: NextRequest) {
       billingCycle: user.billingCycle || null,
       trialEndsAt: user.trialEndsAt,
       currentPeriodEndsAt: user.currentPeriodEndsAt,
-      hasActiveSubscription: ['ACTIVE', 'TRIALING'].includes(user.subscriptionStatus || ''),
+      hasActiveSubscription: isActive,
     });
   } catch (error) {
     console.error('Error fetching user subscription:', error);

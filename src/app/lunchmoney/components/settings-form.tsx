@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 // Define props for the component
 interface LunchMoneySettingsFormProps {
   initialApiKey: string | null;
+  onSuccess?: () => void;
 }
 
-export default function LunchMoneySettingsForm({ initialApiKey }: LunchMoneySettingsFormProps) {
+export default function LunchMoneySettingsForm({ initialApiKey, onSuccess }: LunchMoneySettingsFormProps) {
   const router = useRouter();
   const [lunchMoneyApiKey, setLunchMoneyApiKey] = useState('');
   const [lunchMoneyStatus, setLunchMoneyStatus] = useState<'loading' | 'valid' | 'invalid' | null>(null);
@@ -42,7 +43,7 @@ export default function LunchMoneySettingsForm({ initialApiKey }: LunchMoneySett
       if (response.ok) {
         setSuccessMessage('Lunch Money API key saved successfully!');
         setLunchMoneyStatus('valid');
-        router.refresh();
+        onSuccess?.();
       } else {
         const data = await response.json();
         setError(data.error || 'Failed to save Lunch Money API key');

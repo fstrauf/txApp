@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query'; // Import hooks
 import LunchMoneySettingsForm from '../components/settings-form';
 import Link from 'next/link';
 // Import the component from the api-key page
@@ -17,50 +18,59 @@ interface UserProfile {
   subscriptionPlan?: string | null; 
 }
 
-// Remove the placeholder StartTrialButton
-// const StartTrialButton = ... 
+// Define the fetch function separately
+const fetchUserProfile = async (): Promise<UserProfile> => {
+  const response = await fetch('/api/user/profile');
+  if (!response.ok) {
+    // Attempt to parse error message from API
+    let errorMsg = 'Failed to fetch user profile';
+    try {
+      const errorData = await response.json();
+      errorMsg = errorData.error || errorMsg;
+    } catch (parseError) { /* Ignore if parsing fails */ }
+    throw new Error(errorMsg);
+  }
+  const responseData = await response.json();
+  const user = responseData.user;
+  if (!user) {
+    throw new Error('User data not found in API response');
+  }
+  console.log('Fetched User profile data via React Query:', user);
+  return user as UserProfile;
+};
 
 export default function LunchMoneySettingsClientPage() {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use useQuery to fetch and manage the user profile state
+  const queryClient = useQueryClient(); // Get query client instance
+  const { 
+    data: userProfile, 
+    isLoading, 
+    error, 
+    // refetch // We usually invalidate instead of manually refetching
+  } = useQuery<UserProfile, Error>({ // Explicitly type the error
+    queryKey: ['userProfile'], // Unique key for this query
+    queryFn: fetchUserProfile, // Function to fetch data
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchOnWindowFocus: false, // Optional: prevent refetch on focus
+  });
 
-  const fetchUserProfile = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/user/profile');
-      if (!response.ok) {
-        throw new Error('Failed to fetch user profile');
-      }
-      // Expect the response to have a 'user' property
-      const responseData = await response.json();
-      const user = responseData.user;
+  // Callback to invalidate the queries
+  const invalidateUserDataQueries = useCallback(() => {
+    if (!userProfile?.id) return; // Need user ID to invalidate accountInfo
+    console.log('Invalidating userProfile and accountInfo queries...');
+    queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+    queryClient.invalidateQueries({ queryKey: ['accountInfo', userProfile.id] });
+  }, [queryClient, userProfile?.id]); // Depend on userProfile.id
 
-      if (!user) { // Add a check in case the 'user' object is missing
-          throw new Error('User data not found in API response');
-      }
-      
-      console.log('User profile data:', user); // Log the actual user object
-      setUserProfile(user as UserProfile); // Set state with the nested user object
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load settings data.');
-      setUserProfile(null); // Clear profile on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUserProfile();
-  }, [fetchUserProfile]);
-
-  // Define tab content conditionally based on userProfile
+  // Define tab content conditionally based on userProfile from useQuery
   const getTabs = () => {
-    if (!userProfile) return [];
+    // Handle loading and error states before accessing userProfile
+    if (isLoading) return []; // Or return loading indicator content
+    if (error) return []; // Or return error message content
+    if (!userProfile) return []; // Should be covered by isLoading/error, but good practice
 
     const apiSettingsContent = (
-      <div className="space-y-8"> {/* Reduced spacing from space-y-12 */}
+      <div className="space-y-8">
         {/* --- Step 1: Lunch Money Connection --- */}
         <section className="p-6 border border-gray-200 rounded-lg shadow-sm bg-white">
           <h2 className="text-xl font-semibold mb-1 flex items-center">
@@ -69,7 +79,10 @@ export default function LunchMoneySettingsClientPage() {
           </h2>
           <p className="text-gray-600 mb-6 ml-9">Enter the API key from your Lunch Money account settings page.</p>
           <div className="ml-9">
-            <LunchMoneySettingsForm initialApiKey={userProfile.lunchMoneyApiKey} />
+            <LunchMoneySettingsForm 
+              initialApiKey={userProfile.lunchMoneyApiKey} 
+              onSuccess={invalidateUserDataQueries} // Pass combined invalidation callback
+            />
           </div>
         </section>
 
@@ -83,7 +96,10 @@ export default function LunchMoneySettingsClientPage() {
             An active subscription grants access to AI features. Manage your plan and API key below.
           </p>
           <div className="ml-9">
-            <ApiKeyManager userId={userProfile.id} />
+            <ApiKeyManager 
+              userId={userProfile.id} 
+              onSuccess={invalidateUserDataQueries} // Pass combined invalidation callback
+            />
           </div>
         </section>
 
@@ -139,7 +155,8 @@ export default function LunchMoneySettingsClientPage() {
       <h1 className="text-3xl font-bold mb-8">Lunch Money Settings</h1>
       
       {isLoading && <p>Loading settings...</p>}
-      {error && <p className="text-red-500">Error: {error}</p>}
+      {/* Display error message from useQuery */}
+      {error && <p className="text-red-500">Error loading settings: {error.message}</p>}
 
       {!isLoading && !error && userProfile && (
         <TabsSimple tabs={getTabs()} />

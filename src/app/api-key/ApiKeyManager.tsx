@@ -1,62 +1,70 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast, Toaster } from 'react-hot-toast';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { hasActiveSubscriptionOrTrial, type UserSubscriptionData } from '@/lib/authUtils';
 
-interface Account {
+// Account interface matching UserSubscriptionData + specific fields
+interface Account extends UserSubscriptionData {
   id: string;
   api_key: string | null;
   email: string | null;
   name: string | null;
   subscriptionPlan: string;
-  subscriptionStatus: string;
-  billingCycle: string;
-  currentPeriodEndsAt: string | null;
+  subscriptionStatus: UserSubscriptionData['subscriptionStatus'];
+  billingCycle: string | null;
+  currentPeriodEndsAt: Date | null;
+  trialEndsAt: Date | null;
   monthlyCategorizations: number;
-  trialEndsAt: string | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
 }
 
 interface ApiKeyManagerProps {
   userId: string;
+  onSuccess?: () => void;
 }
 
-export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [accountInfo, setAccountInfo] = useState<Account | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [startingTrial, setStartingTrial] = useState(false);
+// Define fetch function for account info
+const fetchAccountInfo = async (userId: string): Promise<Account> => {
+  const response = await fetch(`/api/account?userId=${userId}`, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error('Failed to fetch account info');
+  }
+  const data = await response.json();
+   // Ensure dates are Date objects
+   const accountData = {
+    ...data,
+    currentPeriodEndsAt: data.currentPeriodEndsAt ? new Date(data.currentPeriodEndsAt) : null,
+    trialEndsAt: data.trialEndsAt ? new Date(data.trialEndsAt) : null,
+  };
+  console.log('Fetched Account info data via React Query:', accountData);
+  return accountData as Account;
+};
+
+export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps) {
+  const queryClient = useQueryClient();
   const pathname = usePathname();
 
-  useEffect(() => {
-    fetchApiKey();
-  }, []);
+  // Use useQuery for account info
+  const { 
+    data: accountInfo, 
+    isLoading: isLoadingAccount,
+    error: accountError,
+  } = useQuery<Account, Error>({ 
+    queryKey: ['accountInfo', userId],
+    queryFn: () => fetchAccountInfo(userId),
+    enabled: !!userId,
+    staleTime: 1 * 60 * 1000,
+  });
 
-  const fetchApiKey = async () => {
-    try {
-      const response = await fetch(`/api/account?userId=${userId}`, {
-        // Add cache: no-store to prevent caching
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch API key');
-      
-      const data = await response.json();
-      console.log('Account data:', data); // Debug subscription status
-      setApiKey(data?.api_key || null);
-      setAccountInfo(data || null);
-    } catch (error) {
-      console.error('Error fetching API key:', error);
-      toast.error('Failed to fetch API key');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [startingTrial, setStartingTrial] = useState(false);
+
+  // Derive API key from query data
+  const apiKey = useMemo(() => accountInfo?.api_key || null, [accountInfo]);
 
   const generateApiKey = async () => {
     try {
@@ -75,8 +83,9 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
 
       if (!response.ok) throw new Error('Failed to generate API key');
       
-      setApiKey(newApiKey);
       toast.success('API key generated successfully');
+      queryClient.invalidateQueries({ queryKey: ['accountInfo', userId] });
+      onSuccess?.();
     } catch (error) {
       console.error('Error generating API key:', error);
       toast.error('Failed to generate API key');
@@ -84,52 +93,49 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
   };
 
   const copyToClipboard = async () => {
+    if (!apiKey) return;
     try {
-      await navigator.clipboard.writeText(apiKey!);
+      await navigator.clipboard.writeText(apiKey);
       toast.success('API key copied to clipboard');
     } catch (error) {
       toast.error('Failed to copy API key');
     }
   };
 
-  // Start free trial (redirect to Gold monthly plan)
   const startFreeTrial = async () => {
+    setStartingTrial(true);
     try {
-      setStartingTrial(true);
-      
-      // Construct base URL
-      const checkoutUrl = new URLSearchParams({plan: 'gold', billing: 'monthly'});
-      
-      // Check if we are on the lunch money settings page
-      if (pathname === '/lunchmoney/settings') {
-        checkoutUrl.append('redirect', '/lunchmoney/settings'); // Add redirect parameter
-      }
-      
-      // Fetch with potentially added redirect param
-      const response = await fetch(`/api/stripe/checkout?${checkoutUrl.toString()}`);
+      const response = await fetch('/api/user/start-trial', {
+        method: 'POST',
+      });
+
       const data = await response.json();
-      
-      if (data.url) {
-        window.location.href = data.url;
+
+      if (response.ok && data.success) {
+        toast.success('Free trial started successfully!');
+        queryClient.invalidateQueries({ queryKey: ['accountInfo', userId] });
+        onSuccess?.();
       } else {
-        console.error("No checkout URL returned");
-        setStartingTrial(false);
-        toast.error('Failed to start free trial');
+        throw new Error(data.error || 'Failed to start trial');
       }
     } catch (error) {
       console.error('Error starting free trial:', error);
+      toast.error(`Failed to start trial: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
       setStartingTrial(false);
-      toast.error('Failed to start free trial');
     }
   };
 
-  // Helper to format dates
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch (e) {
+      console.error('Error formatting date string:', dateString, e);
+      return 'Invalid Date';
+    }
   };
 
-  // Helper to get usage information based on subscription plan
   const getUsageInfo = () => {
     if (!accountInfo) return null;
     
@@ -161,9 +167,9 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
     const plan = accountInfo.subscriptionPlan || 'FREE';
     const status = accountInfo.subscriptionStatus || '';
     
-    console.log('Subscription Badge - Plan:', plan, 'Status:', status); // Debug
+    console.log('Subscription Badge - Plan:', plan, 'Status:', status);
     
-    let badgeColor = 'bg-gray-100 text-gray-800'; // Default for FREE
+    let badgeColor = 'bg-gray-100 text-gray-800';
     
     if (plan === 'SILVER') {
       badgeColor = 'bg-blue-100 text-blue-800';
@@ -192,28 +198,26 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
     );
   };
 
-  // Check if the user has an active subscription
-  const hasActiveSubscription = () => {
-    if (!accountInfo) return false;
-    
-    console.log('Checking subscription status:', accountInfo.subscriptionStatus); // Debug
-    
-    // Check if we have a valid subscription status that indicates active subscription
-    return ['ACTIVE', 'TRIALING'].includes(accountInfo.subscriptionStatus || '');
-  };
+  const isActiveOrTrial = hasActiveSubscriptionOrTrial(accountInfo);
 
-  if (loading) {
-    return <div className="text-gray-700 text-center">Loading...</div>;
+  if (isLoadingAccount) {
+    return <div className="text-gray-700 text-center">Loading Account Info...</div>;
+  }
+
+  if (accountError) {
+    return <div className="text-red-500 text-center">Error loading account info: {accountError.message}</div>;
+  }
+
+  if (!accountInfo) {
+     return <div className="text-gray-700 text-center">No account information available.</div>;
   }
 
   const usageInfo = getUsageInfo();
-  const isActiveOrTrial = hasActiveSubscription();
 
   return (
     <div className="space-y-8">
-      <Toaster />
+      <Toaster position="bottom-center" />
       
-      {/* Subscription Info */}
       <div className="bg-white rounded-xl p-6 shadow-soft border border-gray-100">
         <div className="flex flex-wrap justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-900">Subscription</h2>
@@ -253,14 +257,14 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
               <span className="font-medium">Plan:</span> {accountInfo?.subscriptionPlan}{' '}
               ({accountInfo?.billingCycle === 'ANNUAL' ? 'Annual' : 'Monthly'})
             </p>
-            {accountInfo?.trialEndsAt && (
+            {accountInfo?.trialEndsAt && accountInfo.trialEndsAt.getTime() > Date.now() && (
               <p className="text-gray-700">
-                <span className="font-medium">Trial ends:</span> {formatDate(accountInfo.trialEndsAt)}
+                <span className="font-medium">Trial ends:</span> {formatDate(accountInfo.trialEndsAt.toISOString())}
               </p>
             )}
-            {accountInfo?.currentPeriodEndsAt && (
+            {accountInfo?.subscriptionStatus === 'ACTIVE' && accountInfo?.currentPeriodEndsAt && (
               <p className="text-gray-700">
-                <span className="font-medium">Next billing date:</span> {formatDate(accountInfo.currentPeriodEndsAt)}
+                <span className="font-medium">Next billing date:</span> {formatDate(accountInfo.currentPeriodEndsAt.toISOString())}
               </p>
             )}
             <div className="mt-4">
@@ -274,7 +278,6 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
           </div>
         )}
 
-        {/* Usage Information */}
         {usageInfo && (
           <div className="mt-6 pt-6 border-t border-gray-100">
             <h3 className="font-medium text-gray-900 mb-3">Monthly Categorization Usage</h3>
@@ -301,7 +304,6 @@ export default function ApiKeyManager({ userId }: ApiKeyManagerProps) {
         )}
       </div>
       
-      {/* API Key Section - Only shown for subscribers */}
       {isActiveOrTrial && (
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-gray-900">API Key</h2>
