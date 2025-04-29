@@ -33,7 +33,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <p className="mt-2 text-center text-sm text-gray-600">
           Or{" "}
           <Link
-            href="/auth/register"
+            href="/auth/signup"
             className="font-medium text-blue-600 hover:text-blue-500"
           >
             create a new account
