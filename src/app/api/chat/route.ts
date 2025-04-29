@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 import { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/index.mjs';
-import { eq, isNotNull, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '@/db'; // Import the central db instance
 import * as schema from '@/db/schema'; // Import your drizzle schema
 
@@ -94,19 +94,20 @@ async function safeExecuteSql(sqlString: string): Promise<any> {
   const cleanedSql = sqlString.trim();
   const upperCaseSql = cleanedSql.toUpperCase();
 
-  // Basic validation remains crucial
-  if (!upperCaseSql.startsWith('SELECT') || !upperCaseSql.includes('FROM TRANSACTIONS')) {
+  // Allow SELECT or WITH at the start, but still require FROM TRANSACTIONS somewhere
+  const startsWithSelect = upperCaseSql.startsWith('SELECT');
+  const startsWithWith = upperCaseSql.startsWith('WITH');
+  const includesFromTransactions = upperCaseSql.includes('FROM TRANSACTIONS');
+
+  if (!(startsWithSelect || startsWithWith) || !includesFromTransactions) {
       console.error("Blocked potentially unsafe SQL:", cleanedSql);
-      throw new Error("Query validation failed. Only SELECT queries on the transactions table are allowed.");
+      throw new Error("Query validation failed. Query must start with SELECT or WITH and reference the transactions table.");
   }
 
   try {
     console.log("Executing AI SQL:", cleanedSql); 
     // Use Drizzle's general sql execution method directly with the raw string
     const results = await db.execute(cleanedSql);
-    // Note: The structure of 'results' might differ depending on the Drizzle driver/
-    // For neon-http, it might be { rows: [...] } or similar. Adjust based on actual output.
-    // Assuming a structure like { rows: [...] } for now based on previous Pool usage.
     const rows = (results as any).rows || results; // Adapt as needed
     console.log("SQL Result Rows:", Array.isArray(rows) ? rows.length : 'N/A');
     const MAX_ROWS = 50;
@@ -134,32 +135,38 @@ export async function POST(req: NextRequest) {
 
     console.log(`[API] Received message: "${message}" for user: ${userId}`);
 
+    // --- Fetch Context --- 
     // Fetch category context (name and ID)
     const userCategories = await getUserCategoryContext(userId);
-    
-    // Format category list with names and IDs for the prompt
     const categoryListText = userCategories.length > 0 
       ? `Here is a list of the user's categories (Name [ID]): ${userCategories.map(c => `${c.name} [${c.id}]`).join(', ')}.` 
       : 'Could not retrieve user category list.';
+    
+    // Get current date for context
+    const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const dateContextText = `For context, the current date is ${currentDate}. Assume queries relate to the current year (${currentDate.substring(0, 4)}) unless the user specifies a different year or date range.`;
 
-    // Update system prompt instructions
+    // --- Construct System Prompt --- 
     const messages: ChatCompletionMessageParam[] = [
        {
         role: "system",
         content: `You are an AI assistant called Auto Accountant. You help users understand financial transactions by querying the 'transactions' table.
+        ${dateContextText} 
         ${tableSchema}
         ${categoryListText}
         IMPORTANT:
-        1. Use the provided category list (with names and IDs) to understand user queries. If a user asks about a category like 'groceries', find the corresponding category ID from the list (e.g., 'Groceries [cat_abc123]' means the ID is 'cat_abc123').
-        2. When generating SQL for the 'executeQuery' function, you MUST use the category ID in the WHERE clause (e.g., WHERE "categoryId" = 'cat_abc123'). Do NOT filter using the category name directly on the transactions table unless joining.
-        3. Always enclose all column names in double quotes (e.g., SELECT "description", "amount" FROM transactions WHERE "categoryId" = 'some_id').
-        Based on the user's request, decide if querying the database is necessary. Respond directly otherwise.`
+        1. The 'amount' column stores debit transactions (expenses) as NEGATIVE numbers (e.g., -50.00) and credit transactions (income) as POSITIVE numbers. This means finding the 'biggest' or 'highest' expenses requires sorting amount in ASCENDING (ASC) order.
+        2. Use the provided category list (with names and IDs) to understand user queries. If a user asks about a category like 'groceries', find the corresponding category ID from the list (e.g., 'Groceries [cat_abc123]' means the ID is 'cat_abc123').
+        3. When generating SQL for the 'executeQuery' function, you MUST use the category ID in the WHERE clause (e.g., WHERE "categoryId" = 'cat_abc123'). Do NOT filter using the category name directly on the transactions table unless joining.
+        4. Always enclose all column names in double quotes (e.g., SELECT "description", "amount" FROM transactions WHERE "categoryId" = 'some_id').
+        Based on the user's request, decide if querying the database is necessary. Respond directly otherwise.
+        5. Unless otherwise specified, Transfer Categories should be ignored in aggregation queries.`
       },
       { role: "user", content: message },
     ];
 
     // --- OpenAI interaction --- 
-    let response = await openai.chat.completions.create({ model: "gpt-4o", messages: messages, tools: [executeSqlFunctionTool], tool_choice: "auto" });
+    let response = await openai.chat.completions.create({ model: "o4-mini-2025-04-16", messages: messages, tools: [executeSqlFunctionTool], tool_choice: "auto" });
     let responseMessage = response.choices[0].message;
 
     // --- Function Call Handling (uses safeExecuteSql) --- 
@@ -179,13 +186,13 @@ export async function POST(req: NextRequest) {
           const queryResult = await safeExecuteSql(sqlToExecute);
           messages.push({ tool_call_id: toolCall.id, role: "tool", content: JSON.stringify(queryResult) });
           console.log("[API] Sending SQL results back to OpenAI");
-          response = await openai.chat.completions.create({ model: "gpt-4o", messages: messages, tools: [executeSqlFunctionTool], tool_choice: "auto" });
+          response = await openai.chat.completions.create({ model: "o4-mini-2025-04-16", messages: messages, tools: [executeSqlFunctionTool], tool_choice: "auto" });
           responseMessage = response.choices[0].message;
         } catch (error: any) {
            console.error("[API] Error executing SQL or processing result:", error);
            messages.push({ tool_call_id: toolCall.id, role: "tool", content: JSON.stringify({ error: error.message }) });
            console.log("[API] Sending error back to OpenAI");
-           response = await openai.chat.completions.create({ model: "gpt-4o", messages: messages });
+           response = await openai.chat.completions.create({ model: "o4-mini-2025-04-16", messages: messages });
            responseMessage = response.choices[0].message;
         }
       }
