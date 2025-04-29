@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -37,7 +38,21 @@ export function RegisterForm() {
         throw new Error(data.message || "Something went wrong");
       }
 
-      router.push("/auth/signin");
+      const signInResponse = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (signInResponse?.error) {
+        setError(
+          `Account created, but failed to automatically sign in: ${signInResponse.error}`
+        );
+      } else if (signInResponse?.ok) {
+        router.push("/");
+      } else {
+        setError("Account created, but sign in status is unknown.");
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : "Something went wrong");
     } finally {

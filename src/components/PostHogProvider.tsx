@@ -3,8 +3,7 @@
 import { FC, ReactNode, useEffect } from "react";
 import posthog from "posthog-js";
 import { PostHogProvider } from "posthog-js/react";
-// Temporarily commented out until Auth0 is properly set up
-// import { useUser } from "@auth0/nextjs-auth0/client";
+import { useSession } from "next-auth/react";
 import PostHogPageView from "./PostHogPageView";
 
 // Check that PostHog is client-side (browser)
@@ -23,16 +22,26 @@ interface Props {
 }
 
 const PostHogProviderWrapper: FC<Props> = ({ children }) => {
-  // Currently not using Auth0 - will be implemented later
-  const user = null;
+  // Use next-auth session instead of commented-out Auth0
+  const { data: session, status } = useSession();
 
   useEffect(() => {
-    // This will be re-implemented when Auth0 integration is complete
-    // For now, we'll use session-based identity
-    if (user) {
-      posthog.reset(); // Clear any previous identity
+    // Identify the user to PostHog when the session is loaded
+    if (status === "authenticated" && session?.user) {
+      posthog.identify(
+        session.user.email ?? session.user.id, // Use email as primary ID, fallback to id if needed
+        { 
+          // Add any other user properties you want to track
+          email: session.user.email, 
+          name: session.user.name, 
+        }
+      );
+    } else if (status === "unauthenticated") {
+      // Reset PostHog identification when the user logs out
+      posthog.reset();
     }
-  }, [user]);
+    // Do nothing while status === 'loading'
+  }, [session, status]);
 
   return (
     <PostHogProvider client={posthog}>
