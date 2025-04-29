@@ -9,6 +9,7 @@ alwaysApply: true
   - Use Next.js for all web development.
   - Use Tailwind CSS for styling.
   - Use Hono for endpoints that need to be reusable between the webapp and mobile.
+  - Tanstack Query for all API calls
 
 - **API Keys & Secrets:**
   - Never store any keys or secrets directly in the codebase.

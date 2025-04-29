@@ -29,6 +29,9 @@ importers:
       '@heroicons/react':
         specifier: ^2.2.0
         version: 2.2.0(react@19.1.0)
+      '@neondatabase/serverless':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@prisma/client':
         specifier: ^6.5.0
         version: 6.6.0(prisma@6.6.0(typescript@5.8.3))(typescript@5.8.3)
@@ -91,7 +94,7 @@ importers:
         version: 16.5.0
       drizzle-orm:
         specifier: ^0.41.0
-        version: 0.41.0(@prisma/client@6.6.0(prisma@6.6.0(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.11.13)(@vercel/postgres@0.10.0)(gel@2.0.2)(pg@8.14.1)(postgres@3.4.5)(prisma@6.6.0(typescript@5.8.3))
+        version: 0.41.0(@neondatabase/serverless@1.0.0)(@prisma/client@6.6.0(prisma@6.6.0(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.11.13)(@vercel/postgres@0.10.0)(gel@2.0.2)(pg@8.14.1)(postgres@3.4.5)(prisma@6.6.0(typescript@5.8.3))
       figlet:
         specifier: ^1.7.0
         version: 1.8.1
@@ -114,7 +117,7 @@ importers:
         specifier: ^4.24.11
         version: 4.24.11(@auth/core@0.34.2)(next@15.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       openai:
-        specifier: ^4.86.1
+        specifier: ^4.95.1
         version: 4.95.1(ws@8.18.1(bufferutil@4.0.9))(zod@3.24.3)
       ora:
         specifier: ^7.0.1
@@ -946,6 +949,10 @@ packages:
   '@neondatabase/serverless@0.9.5':
     resolution: {integrity: sha512-siFas6gItqv6wD/pZnvdu34wEqgG3nSE6zWZdq5j2DEsa+VvX8i/5HXJOo06qrw5axPXn+lGCxeR+NLaSPIXug==}
 
+  '@neondatabase/serverless@1.0.0':
+    resolution: {integrity: sha512-XWmEeWpBXIoksZSDN74kftfTnXFEGZ3iX8jbANWBc+ag6dsiQuvuR4LgB0WdCOKMb5AQgjqgufc0TgAsZubUYw==}
+    engines: {node: '>=19.0.0'}
+
   '@next/env@15.2.3':
     resolution: {integrity: sha512-a26KnbW9DFEUsSxAxKBORR/uD9THoYoKbkpFywMN/AFvboTt94b8+g/07T8J6ACsdLag8/PDU60ov4rPxRAixw==}
 
@@ -1439,6 +1446,9 @@ packages:
 
   '@types/node@20.17.30':
     resolution: {integrity: sha512-7zf4YyHA+jvBNfVrk2Gtvs6x7E8V+YDW05bNfG2XkWDJfYRXrTiP/DsB2zSYTaHX0bGIujTBQdMVAhb+j7mwpg==}
+
+  '@types/node@22.15.3':
+    resolution: {integrity: sha512-lX7HFZeHf4QG/J7tBZqrCAXwz9J5RD56Y6MpP0eJkka8p+K0RY/yBTW7CYFJ4VGCclxqOLKmiGP5juQc6MKgcw==}
 
   '@types/papaparse@5.3.15':
     resolution: {integrity: sha512-JHe6vF6x/8Z85nCX4yFdDslN11d+1pr12E526X8WAfhadOeaOTx5AuIkvDKIBopfvlzpzkdMx4YyvSKCM9oqtw==}
@@ -4300,6 +4310,11 @@ snapshots:
     dependencies:
       '@types/pg': 8.11.6
 
+  '@neondatabase/serverless@1.0.0':
+    dependencies:
+      '@types/node': 22.15.3
+      '@types/pg': 8.11.13
+
   '@next/env@15.2.3': {}
 
   '@next/eslint-plugin-next@15.2.3':
@@ -4731,6 +4746,10 @@ snapshots:
   '@types/node@20.17.30':
     dependencies:
       undici-types: 6.19.8
+
+  '@types/node@22.15.3':
+    dependencies:
+      undici-types: 6.21.0
 
   '@types/papaparse@5.3.15':
     dependencies:
@@ -5323,8 +5342,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.41.0(@prisma/client@6.6.0(prisma@6.6.0(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.11.13)(@vercel/postgres@0.10.0)(gel@2.0.2)(pg@8.14.1)(postgres@3.4.5)(prisma@6.6.0(typescript@5.8.3)):
+  drizzle-orm@0.41.0(@neondatabase/serverless@1.0.0)(@prisma/client@6.6.0(prisma@6.6.0(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.11.13)(@vercel/postgres@0.10.0)(gel@2.0.2)(pg@8.14.1)(postgres@3.4.5)(prisma@6.6.0(typescript@5.8.3)):
     optionalDependencies:
+      '@neondatabase/serverless': 1.0.0
       '@prisma/client': 6.6.0(prisma@6.6.0(typescript@5.8.3))(typescript@5.8.3)
       '@types/pg': 8.11.13
       '@vercel/postgres': 0.10.0

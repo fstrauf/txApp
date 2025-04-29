@@ -28,6 +28,9 @@ export const billingCycleEnum = pgEnum('billingCycle', ['MONTHLY', 'ANNUAL']);
 // Subscribers source enum
 export const subscriberSourceEnum = pgEnum('subscriberSource', ['SPREADSHEET', 'BETA_ACCESS', 'OTHER']);
 
+// Add enum for transaction type
+export const transactionTypeEnum = pgEnum('transactionType', ['credit', 'debit']);
+
 // Auth-related tables
 export const users = pgTable('users', {
   id: text('id').primaryKey().notNull().default(sql`gen_random_uuid()`),
@@ -237,7 +240,7 @@ export const transactions = pgTable(
     date: timestamp('date', { mode: 'date', withTimezone: true }).notNull(),
     description: text('description').notNull(),
     amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
-    type: text('type').notNull(),
+    type: transactionTypeEnum('type').notNull(),
     bankAccountId: text('bankAccountId')
       .notNull()
       .references(() => bankAccounts.id, { onDelete: 'cascade' }),

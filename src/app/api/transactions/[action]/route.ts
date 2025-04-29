@@ -255,6 +255,8 @@ export async function POST(request: NextRequest, { params }: { params: { action:
           } // else: No category header mapped, categoryId remains null
 
           // Prepare Transaction Data
+          // Define the expected type for clarity or import if defined elsewhere
+          type TransactionType = 'credit' | 'debit'; 
           const transactionData = {
             id: uuidv4(),
             userId: userId,
@@ -262,7 +264,8 @@ export async function POST(request: NextRequest, { params }: { params: { action:
             date: date,
             description: description.trim(),
             amount: String(amount.toFixed(2)),
-            type: amount >= 0 ? 'credit' : 'debit',
+            // Cast the conditional result to the specific enum type
+            type: (amount >= 0 ? 'credit' : 'debit') as TransactionType, 
             categoryId: categoryId, // Assign the resolved ID
             notes: null,
             lunchMoneyCategory: null,

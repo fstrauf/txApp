@@ -127,6 +127,13 @@
       "when": 1745782563291,
       "tag": "0017_aspiring_prima",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1745895928971,
+      "tag": "0018_supreme_bloodstorm",
+      "breakpoints": true
     }
   ]
 }
