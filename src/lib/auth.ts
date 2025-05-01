@@ -7,6 +7,7 @@ import * as schema from "@/db/schema"; // Import all schemas
 import { sql, eq } from "drizzle-orm";
 import * as bcrypt from 'bcryptjs';
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { Account } from "next-auth"; // Import Account type for JWT context
 
 // No longer need custom AuthorizeUser with accessToken
 
@@ -97,20 +98,21 @@ export const authConfig: NextAuthOptions = {
          // Define a type for the session object or use type assertion
          (session as any).apiKey = token.apiKey as string;
       }
+      // Note: We don't need trialStarted flag in the session, it's handled during redirect
       return session;
     },
-    // Modify jwt callback to fetch and include apiKey
-    async jwt({ token, user}) {
-      // On successful sign-in (user object is present), fetch and add apiKey
-      if (user?.id) { // Check if user object exists and has an id
+    // Modify jwt callback - REMOVE trial start logic
+    async jwt({ token, user, account, trigger, session }) {
+      // Only handle API key fetching on initial sign-in
+      if (user?.id) { 
+        console.log(`[JWT Callback] Initial sign-in for user ID: ${user.id}. Fetching API key.`);
         try {
-          console.log(`[JWT Callback] Fetching API key for user ID: ${user.id}`);
           const userResult = await db
             .select({ apiKey: schema.users.api_key })
             .from(schema.users)
             .where(eq(schema.users.id, user.id))
             .limit(1);
-            
+
           const userApiKey = userResult[0]?.apiKey;
           if (userApiKey) {
             token.apiKey = userApiKey;
@@ -120,10 +122,61 @@ export const authConfig: NextAuthOptions = {
           }
         } catch (error) {
           console.error(`[JWT Callback] Error fetching API key for user ${user.id}:`, error);
-          // Decide if you want to prevent token generation or just log error
         }
       }
       return token;
+    },
+    // Restore smarter redirect logic prioritizing callbackUrl query param
+    async redirect({ url, baseUrl }) { 
+        console.log(`[Redirect Callback] Incoming Url: ${url}`);
+        console.log(`[Redirect Callback] BaseUrl: ${baseUrl}`);
+        
+        const incomingUrlObject = new URL(url, baseUrl);
+        const callbackUrlParam = incomingUrlObject.searchParams.get('callbackUrl');
+        console.log(`[Redirect Callback] Detected callbackUrlParam: ${callbackUrlParam}`);
+
+        // 1. Prioritize callbackUrl query parameter if present and valid
+        if (callbackUrlParam) {
+            let redirectTarget = callbackUrlParam;
+            // Ensure it's treated as a relative path if it starts with /
+            if (redirectTarget.startsWith('/')) {
+                const finalRedirect = `${baseUrl}${redirectTarget}`;
+                console.log(`[Redirect Callback] Using callbackUrlParam (relative): ${finalRedirect}`);
+                return finalRedirect;
+            }
+            // Check if it's a valid absolute URL on the same origin
+            try {
+                const callbackUrlObject = new URL(redirectTarget);
+                if (callbackUrlObject.origin === baseUrl) {
+                    console.log(`[Redirect Callback] Using callbackUrlParam (absolute same origin): ${redirectTarget}`);
+                    return redirectTarget;
+                }
+            } catch (e) {
+                console.warn('[Redirect Callback] Invalid callbackUrlParam, falling back.', e);
+            }
+        }
+
+        // 2. Fallback: Check the base 'url' parameter itself (less likely to be correct in this flow)
+        // Allows relative URLs passed directly in 'url' 
+        if (url.startsWith("/")) { 
+            const finalRedirect = `${baseUrl}${url}`;
+            console.log(`[Redirect Callback] Using relative url: ${finalRedirect}`);
+            return finalRedirect;
+        }
+        // Allows absolute URLs on the same origin passed directly in 'url'
+        try {
+            const urlObject = new URL(url);
+            if (urlObject.origin === baseUrl) {
+                 console.log(`[Redirect Callback] Using absolute url on same origin: ${url}`);
+                 return url;
+            }
+        } catch(e) { 
+            // Invalid URL, fall through 
+        }
+
+        // 3. Final Fallback: Redirect to baseUrl
+        console.log(`[Redirect Callback] Defaulting to baseUrl: ${baseUrl}`);
+        return baseUrl
     },
   },
   debug: process.env.NODE_ENV !== "production",

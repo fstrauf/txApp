@@ -27,36 +27,38 @@ export function SignInForm({}: SignInFormProps) {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    let signInSuccess = false; // Flag to track success for manual redirect
-
     try {
       const result = await signIn("credentials", {
         email,
         password,
-        redirect: false, // Prevent automatic redirect
+        // redirect: false, // REMOVE: Let NextAuth handle redirect based on server callback
       });
 
+      // If redirect is handled by NextAuth, this error check might run
+      // AFTER the redirect has started. We might only see errors if the 
+      // redirect itself fails or if there's an immediate auth error.
       if (result?.error) {
         console.error("[SignInForm] signIn error:", result.error);
+        // Don't manually redirect here
         setError("Invalid email or password");
-        signInSuccess = false;
       } else if (!result?.ok) {
+         // Don't manually redirect here
         setError("Sign in failed. Please try again.");
-        signInSuccess = false;
       } else {
-        // Sign in was successful according to next-auth
-        signInSuccess = true;
+        // Sign in successful, redirect is handled by NextAuth server-side
+        // No need for client-side router.push
+        console.log("[SignInForm] Sign in successful, NextAuth will handle redirect.");
       }
     } catch (error) {
       console.error("[SignInForm] onSubmit error:", error);
       setError("Something went wrong. Please try again.");
-      signInSuccess = false;
+      // No manual redirect on error either
     } finally {
       setIsLoading(false);
-      // Manual redirect only if signIn was successful
-      if (signInSuccess) {
-        router.push(callbackUrl); 
-      }
+      // REMOVE Manual redirect logic
+      // if (signInSuccess) {
+      //   router.push(callbackUrl); 
+      // }
     }
   }
 
