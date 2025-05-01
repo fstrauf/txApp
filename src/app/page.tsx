@@ -34,14 +34,15 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-lg md:text-xl text-gray-700 mb-6 md:mb-8 max-w-xl mx-auto md:mx-0">
-              Ditch manual rules. Expense Sorted's AI automatically categorizes transactions in seconds within Google Sheets, Lunch Money, and soon PocketSmith & Monarch Money.
+              Ditch manual rules. Expense Sorted's AI automatically categorizes transactions in seconds within Google Sheets, Lunch Money, Tiller and soon PocketSmith & Monarch Money.
             </p>
 
             {/* Integration Logos */}
             <div className="flex items-center justify-center md:justify-start space-x-4 mb-6 md:mb-8">
-              <span className="text-sm font-medium text-gray-500">Works with:</span>
+              <span className="text-sm font-medium text-gray-500 mr-2">Works with:</span>
               {/* Use actual Google Sheets Logo */}
               <Image src="/Google_Sheets_2020_Logo.png" alt="Google Sheets" width={24} height={24} className="h-6 w-auto" title="Google Sheets" />
+              <Image src="/Tiller Logo 2021.svg" alt="Tiller" width={48} height={16} className="h-4 w-auto" title="Tiller" />
               <Image src="/lunchmoney.png" alt="Lunch Money" width={24} height={24} className="h-6 w-auto rounded-sm" title="Lunch Money"/>
               {/* Update PocketSmith Logo dimensions for better quality */}
               <Image src="/pockesmith_short.png" alt="PocketSmith" width={35} height={24} className="h-6 w-auto rounded-sm" title="PocketSmith"/>

@@ -32,6 +32,14 @@ const platformsData: Platform[] = [
     ctaLink: 'https://workspace.google.com/marketplace/app/expense_sorted/456363921097',
   },
   {
+    name: 'Tiller',
+    logo: '/Tiller Logo 2021.svg',
+    alt: 'Tiller Logo',
+    description: 'Connect your Tiller spreadsheet for AI categorization.',
+    ctaType: 'link',
+    ctaLink: 'https://workspace.google.com/marketplace/app/expense_sorted/456363921097',
+  },
+  {
     name: 'Lunch Money',
     logo: '/lunchmoney.png',
     alt: 'Lunch Money Logo',
