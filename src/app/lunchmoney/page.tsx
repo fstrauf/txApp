@@ -34,6 +34,28 @@ export default function LunchMoneyPage() {
 
       <TransactionList />
 
+      {/* Feedback Instructions */}
+      <div className="mt-8 text-center text-sm text-gray-600">
+        <p>
+          Got Feedback? Shoot us an{' '}
+          <a 
+            href="mailto:f.strauf@gmail.com" 
+            className="text-blue-600 hover:underline"
+          >
+            email
+          </a>{' '}
+          or ping us on{' '}
+          <a 
+            href="https://t.me/ffstrauf" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-blue-600 hover:underline"
+          >
+            Telegram
+          </a>.
+        </p>
+      </div>
+
       <HelpDrawer
         isOpen={isHelpDrawerOpen}
         onClose={() => setIsHelpDrawerOpen(false)}
