@@ -10,6 +10,7 @@ import { toast, Toaster } from 'react-hot-toast';
 import type { UserSubscriptionData as SubscriptionDataType } from '@/lib/authUtils';
 import ApiKeyManager from '@/app/api-key/ApiKeyManager';
 import IntegrationsPageClientWrapper from './IntegrationsPageClientWrapper';
+import { Suspense } from 'react';
 
 interface Platform {
   name: string;
@@ -403,7 +404,9 @@ function IntegrationsPageContent() {
 export default function IntegrationsPage() {
   return (
     <IntegrationsPageClientWrapper>
-      <IntegrationsPageContent />
+      <Suspense fallback={<div>Loading Integrations...</div>}>
+        <IntegrationsPageContent />
+      </Suspense>
     </IntegrationsPageClientWrapper>
   );
 } 
