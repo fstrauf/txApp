@@ -1,11 +1,17 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { useSearchParams } from 'next/navigation';
 
 export function GoogleSignInButton() {
+  const searchParams = useSearchParams();
+  const callbackUrlParam = searchParams.get('callbackUrl');
+
+  const finalCallbackUrl = callbackUrlParam || "/";
+
   return (
     <button
-      onClick={() => signIn("google", { callbackUrl: "/" })}
+      onClick={() => signIn("google", { callbackUrl: finalCallbackUrl })}
       className="flex w-full justify-center rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-500 shadow-sm hover:bg-gray-50"
     >
       <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">

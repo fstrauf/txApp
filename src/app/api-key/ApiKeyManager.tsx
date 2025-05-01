@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast, Toaster } from 'react-hot-toast';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { hasActiveSubscriptionOrTrial, type UserSubscriptionData } from '@/lib/authUtils';
+import type { UserSubscriptionData } from '@/lib/authUtils';
 
 // Account interface matching UserSubscriptionData + specific fields
 interface Account extends UserSubscriptionData {
@@ -65,6 +65,16 @@ export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps)
 
   // Derive API key from query data
   const apiKey = useMemo(() => accountInfo?.api_key || null, [accountInfo]);
+
+  // --- Granular Status Checks --- 
+  const now = Date.now();
+  const isActiveSub = !!accountInfo && accountInfo.subscriptionStatus === 'ACTIVE';
+  const isActiveTrial = !!accountInfo && !!accountInfo.trialEndsAt && accountInfo.trialEndsAt.getTime() > now;
+  const hasExpiredTrial = !!accountInfo && !!accountInfo.trialEndsAt && accountInfo.trialEndsAt.getTime() <= now;
+  // Can start trial only if account info is loaded and user has no active/expired access
+  const canStartTrial = accountInfo !== null && !isActiveSub && !isActiveTrial && !hasExpiredTrial; 
+  const hasAnyActiveAccess = isActiveSub || isActiveTrial;
+  // --- End Status Checks ---
 
   const generateApiKey = async () => {
     try {
@@ -198,18 +208,16 @@ export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps)
     );
   };
 
-  const isActiveOrTrial = hasActiveSubscriptionOrTrial(accountInfo);
-
   if (isLoadingAccount) {
-    return <div className="text-gray-700 text-center">Loading Account Info...</div>;
+    return <div className="text-gray-700 text-center py-4">Loading Account Info...</div>;
   }
 
   if (accountError) {
-    return <div className="text-red-500 text-center">Error loading account info: {accountError.message}</div>;
+    return <div className="text-red-500 text-center py-4">Error loading account info: {accountError.message}</div>;
   }
 
   if (!accountInfo) {
-     return <div className="text-gray-700 text-center">No account information available.</div>;
+     return <div className="text-gray-700 text-center py-4">No account information available.</div>;
   }
 
   const usageInfo = getUsageInfo();
@@ -224,61 +232,50 @@ export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps)
           {getSubscriptionBadge()}
         </div>
         
-        {!isActiveOrTrial ? (
-          <div className="mb-4">
-            <p className="text-gray-700 mb-4">Access to the API key requires an active subscription. Start a free trial to get full access.</p>
+        {isActiveSub && (
+          <p className="text-gray-700">
+            <span className="font-medium">Plan:</span> {accountInfo.subscriptionPlan}{' '}
+            ({accountInfo.billingCycle === 'ANNUAL' ? 'Annual' : 'Monthly'})
+          </p>
+        )}
+        {isActiveTrial && (
+          <p className="text-gray-700">
+            <span className="font-medium">Trial ends:</span> {formatDate(accountInfo.trialEndsAt?.toISOString() ?? null)}
+          </p>
+        )}
+        {isActiveSub && accountInfo.currentPeriodEndsAt && (
+          <p className="text-gray-700">
+            <span className="font-medium">Next billing date:</span> {formatDate(accountInfo.currentPeriodEndsAt?.toISOString() ?? null)}
+          </p>
+        )}
+        {hasExpiredTrial && (
+          <p className="text-gray-700 text-yellow-700 font-medium">Your free trial has expired.</p>
+        )}
+        {canStartTrial && (
+          <p className="text-gray-700">You are currently on the Free plan.</p>
+        )}
+
+        <div className="mt-4">
+          {hasAnyActiveAccess ? (
+            <Link href="/pricing" className="text-primary hover:underline font-medium">
+              Manage Subscription
+            </Link>
+          ) : hasExpiredTrial ? (
+            <Link href="/pricing" className="inline-flex items-center px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary-dark transition-all duration-200">
+              View Plans & Subscribe
+            </Link>
+          ) : canStartTrial ? (
             <button 
               onClick={startFreeTrial}
               disabled={startingTrial}
               className="inline-flex items-center px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary-dark transition-all duration-200 disabled:opacity-70"
             >
-              {startingTrial ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </>
-              ) : (
-                "Start Free Trial"
-              )}
+              {startingTrial ? 'Processing...' : "Start Free Trial"}
             </button>
-            <Link 
-              href="/pricing" 
-              className="ml-4 text-primary hover:underline font-medium"
-            >
-              View Plans
-            </Link>
-          </div>
-        ) : (
-          <div className="mb-4">
-            <p className="text-gray-700">
-              <span className="font-medium">Plan:</span> {accountInfo?.subscriptionPlan}{' '}
-              ({accountInfo?.billingCycle === 'ANNUAL' ? 'Annual' : 'Monthly'})
-            </p>
-            {accountInfo?.trialEndsAt && accountInfo.trialEndsAt.getTime() > Date.now() && (
-              <p className="text-gray-700">
-                <span className="font-medium">Trial ends:</span> {formatDate(accountInfo.trialEndsAt.toISOString())}
-              </p>
-            )}
-            {accountInfo?.subscriptionStatus === 'ACTIVE' && accountInfo?.currentPeriodEndsAt && (
-              <p className="text-gray-700">
-                <span className="font-medium">Next billing date:</span> {formatDate(accountInfo.currentPeriodEndsAt.toISOString())}
-              </p>
-            )}
-            <div className="mt-4">
-              <Link
-                href="/pricing"
-                className="text-primary hover:underline font-medium"
-              >
-                Manage Subscription
-              </Link>
-            </div>
-          </div>
-        )}
+          ) : null}
+        </div>
 
-        {usageInfo && (
+        {usageInfo && hasAnyActiveAccess && (
           <div className="mt-6 pt-6 border-t border-gray-100">
             <h3 className="font-medium text-gray-900 mb-3">Monthly Categorization Usage</h3>
             <div className="flex justify-between text-sm text-gray-700 mb-2">
@@ -297,14 +294,14 @@ export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps)
             
             <p className="text-sm text-gray-600 mt-2">
               {typeof usageInfo.remaining === 'number' ? 
-                `${usageInfo.remaining} categorizations remaining this month` : 
-                'Unlimited categorizations included in your plan'}
+                `${usageInfo.remaining} categorizations remaining` : 
+                'Unlimited categorizations included'}
             </p>
           </div>
         )}
       </div>
       
-      {isActiveOrTrial && (
+      {hasAnyActiveAccess ? (
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-gray-900">API Key</h2>
           
@@ -348,6 +345,22 @@ export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps)
               <li>Add your API key to the configuration</li>
             </ol>
           </div>
+        </div>
+      ) : (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-6 text-center">
+           <p className="font-medium">API Key access requires an active subscription or trial.</p>
+            {!canStartTrial && hasExpiredTrial && (
+               <Link href="/pricing" className="mt-2 inline-block underline font-semibold">View Plans & Subscribe</Link>
+            )}
+            {canStartTrial && (
+                 <button 
+                    onClick={startFreeTrial}
+                    disabled={startingTrial}
+                    className="mt-3 inline-flex items-center px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary-dark transition-all duration-200 disabled:opacity-70"
+                  >
+                     {startingTrial ? 'Processing...' : "Start Free Trial"}
+                 </button>
+            )}
         </div>
       )}
     </div>

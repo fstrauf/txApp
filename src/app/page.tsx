@@ -7,53 +7,10 @@ import Head from "next/head";
 import { FaGoogle } from "react-icons/fa";
 import AppBetaPopup from "@/components/shared/AppBetaPopup";
 import { useState } from "react";
+import { useSession } from 'next-auth/react';
 
 export default function Home() {
-  // State for Lunch Money Email Capture
-  const [showLunchMoneyEmailInput, setShowLunchMoneyEmailInput] = useState(false);
-  const [lunchMoneyEmail, setLunchMoneyEmail] = useState("");
-  const [isSubmittingLunchMoneyEmail, setIsSubmittingLunchMoneyEmail] = useState(false);
-  const [lunchMoneyEmailError, setLunchMoneyEmailError] = useState("");
-  const [lunchMoneyEmailSuccess, setLunchMoneyEmailSuccess] = useState(false);
-
-  // Handler for Lunch Money Email Submission
-  const handleLunchMoneyEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsSubmittingLunchMoneyEmail(true);
-    setLunchMoneyEmailError("");
-    setLunchMoneyEmailSuccess(false);
-
-    if (!lunchMoneyEmail) {
-      setLunchMoneyEmailError("Please enter a valid email address.");
-      setIsSubmittingLunchMoneyEmail(false);
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/createEmailContact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: lunchMoneyEmail,
-          source: "OTHER",
-          tags: ["lunch-money-waitlist"]
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setLunchMoneyEmailSuccess(true); // Show success message
-        // Optionally clear email or keep it: setEmail("");
-      } else {
-        setLunchMoneyEmailError(data.error || "Failed to subscribe. Please try again.");
-      }
-    } catch (error) {
-      setLunchMoneyEmailError("Something went wrong. Please try again.");
-    } finally {
-      setIsSubmittingLunchMoneyEmail(false);
-    }
-  };
+  const { data: session, status: sessionStatus } = useSession();
 
   return (
     <div className="min-h-screen bg-background-default">
@@ -64,73 +21,87 @@ export default function Home() {
         </Head>
       </div>
 
-      <main className="container mx-auto px-4 py-8 md:py-16 max-w-5xl">
-        {/* Hero Section - AI Add-on Focus */}
-        <div className="text-center mb-12 md:mb-16">
-          {/* Updated Headline */}
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-6 leading-tight">
-            Automate Your Monthly Budgeting
-            <br className="hidden md:block" />
-            in{" "}
-            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Google Sheets with AI
-            </span>
-          </h1>
-          {/* Updated Subheadline */}
-          <div className="flex flex-col gap-3 md:gap-4 mb-6 md:mb-8 max-w-3xl mx-auto">
-            <p className="text-lg md:text-xl text-gray-800">
-              Categorize a month's transactions in seconds, not hours, directly in your spreadsheet.
+      <main className="container mx-auto px-4 py-8 md:py-16 max-w-7xl">
+        {/* Hero Section - Redesigned */}
+        <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 mb-16 md:mb-24">
+          {/* Left Column: Text Content */}
+          <div className="md:w-1/2 text-center md:text-left">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-5 md:mb-6 leading-tight">
+              Effortless Expense Categorization
+              <br className="hidden md:block" />
+              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                Across Your Favorite Tools
+              </span>
+            </h1>
+            <p className="text-lg md:text-xl text-gray-700 mb-6 md:mb-8 max-w-xl mx-auto md:mx-0">
+              Ditch manual rules. Expense Sorted's AI automatically categorizes transactions in seconds within Google Sheets, Lunch Money, and soon PocketSmith & Monarch Money.
             </p>
-            {/* Removed the feature list div */}
-          </div>
 
-          {/* Primary and Secondary CTAs */}
-          <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-3">
-            {/* Primary CTA: Install Add-on */}
-            <Link
-              href="https://workspace.google.com/marketplace/app/expense_sorted/456363921097"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-lg w-full md:w-auto justify-center"
-            >
-              <FaGoogle className="mr-2 w-5 h-5" />
-              Install the Add-on
-            </Link>
-            {/* Secondary CTA: Download Template */}
-            <Link
-              href="/fuck-you-money-sheet"
-              className="inline-flex items-center px-6 py-3 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm w-full md:w-auto justify-center"
-            >
-              Download Free Template
-              {/* Optional: Add an icon like download or spreadsheet */}
-            </Link>
-          </div>
-
-          {/* Hero Image */}
-          <div className="max-w-5xl mx-auto my-8 px-4">
-            <div className="relative bg-white rounded-2xl p-8">
-              <Image
-                src="/hero expense sorted.gif"
-                width={1920}
-                height={1080}
-                alt="AI-powered expense categorization in Google Sheets"
-                className="w-full rounded-lg shadow-xl"
-                priority={true}
-                quality={100}
-              />
+            {/* Integration Logos */}
+            <div className="flex items-center justify-center md:justify-start space-x-4 mb-6 md:mb-8">
+              <span className="text-sm font-medium text-gray-500">Works with:</span>
+              {/* Use actual Google Sheets Logo */}
+              <Image src="/Google_Sheets_2020_Logo.png" alt="Google Sheets" width={24} height={24} className="h-6 w-auto" title="Google Sheets" />
+              <Image src="/lunchmoney.png" alt="Lunch Money" width={24} height={24} className="h-6 w-auto rounded-sm" title="Lunch Money"/>
+              {/* Update PocketSmith Logo dimensions for better quality */}
+              <Image src="/pockesmith_short.png" alt="PocketSmith" width={35} height={24} className="h-6 w-auto rounded-sm" title="PocketSmith"/>
+              <Image src="/monarchmoney_logo.png" alt="Monarch Money" width={24} height={24} className="h-6 w-auto rounded-sm" title="Monarch Money"/>
             </div>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start items-center mb-4">
+              {/* Conditional CTA Button/Link */}
+              {sessionStatus === 'loading' && (
+                <button
+                  disabled
+                  className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-gray-300 text-gray-500 cursor-not-allowed text-lg w-full sm:w-auto"
+                >
+                  Loading...
+                </button>
+              )}
+              {sessionStatus === 'unauthenticated' && (
+                <Link
+                  href="/auth/signup?callbackUrl=/integrations"
+                  className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-lg w-full sm:w-auto"
+                >
+                  Start Free Trial
+                </Link>
+              )}
+              {sessionStatus === 'authenticated' && (
+                <Link
+                  href="/integrations" // Link directly to integrations if logged in
+                  className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-lg w-full sm:w-auto"
+                >
+                  Get Started
+                </Link>
+              )}
+              
+            </div>
+            {/* Hide trial text if authenticated or loading */}
+            {sessionStatus === 'unauthenticated' && (
+               <p className="text-xs text-gray-500 text-center md:text-left">
+                  Free trial. No credit card required.
+              </p>
+            )}
           </div>
 
-          {/* Trust Statement */}
-          <p className="text-sm text-gray-600">
-            ✅ Your data stays in your Google Sheet – never leaves your control.
-          </p>
-
-          {/* Quick Social Proof */}
-          <div className="mt-8 text-gray-600">
-            <p>Over 1,000 people are already automating their budgeting</p>
+          {/* Right Column: Hero Image/GIF */}
+          <div className="md:w-1/2">
+             <div className="relative bg-white rounded-2xl p-4 shadow-xl border border-gray-100">
+                <Image
+                  src="/hero expense sorted.gif"
+                  width={1920} // Adjust width/height as needed
+                  height={1080}
+                  alt="AI-powered expense categorization in Google Sheets"
+                  className="w-full rounded-lg" // Removed shadow as parent has it now
+                  priority={true}
+                  quality={100}
+                />
+             </div>
+              <p className="text-sm text-gray-600 mt-4 text-center">
+                ✅ Your data stays secure – connect directly or use our Google Sheet Add-on.
+              </p>
           </div>
-          {/* Removed old link section and paragraph */}
         </div>
 
         {/* Workflow Visualization Section - Monthly Process */}
@@ -309,63 +280,33 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Integrations Section (Lunch Money Teaser) */}
+        {/* Integrations Section (Lunch Money Focus - Updated) */}
         <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-soft p-8 mb-16 border border-gray-100">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row gap-8 items-center">
-              {/* Text Content - Updated for Lunch Money */}
+              {/* Text Content - Updated for Live Lunch Money */}
               <div className="md:w-1/2 space-y-6 text-center md:text-left">
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-                   🚀 Coming Soon: Lunch Money Integration!
+                   Love Lunch Money?
                 </h2>
-                {!showLunchMoneyEmailInput ? (
-                  <>
-                    <p className="text-lg text-gray-700">
-                      Love <a href="https://lunchmoney.app/" target="_blank" rel="noopener noreferrer" className="font-semibold text-secondary hover:underline">Lunch Money</a>? Soon you'll be able to supercharge it with Expense Sorted's AI categorization.
-                    </p>
-                    <div className="pt-2">
-                      <button
-                        onClick={() => setShowLunchMoneyEmailInput(true)}
-                        className="inline-flex items-center px-6 py-3 rounded-lg bg-secondary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-md"
-                      >
-                        Join the Waitlist
-                        <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                        </svg>
-                      </button>
-                    </div>
-                  </>
-                ) : lunchMoneyEmailSuccess ? (
-                   <p className="text-green-600 font-medium text-lg">Thanks! We'll notify you when it's ready.</p>
-                ) : (
-                  <form onSubmit={handleLunchMoneyEmailSubmit} className="space-y-3 pt-2">
-                    <p className="text-gray-600">Enter your email to get notified:</p>
-                    <div>
-                      <input
-                        type="email"
-                        value={lunchMoneyEmail}
-                        onChange={(e) => setLunchMoneyEmail(e.target.value)}
-                        placeholder="your.email@example.com"
-                        required
-                        disabled={isSubmittingLunchMoneyEmail}
-                        className="max-w-sm p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm"
-                      />
-                      {lunchMoneyEmailError && <p className="text-red-500 text-sm mt-1">{lunchMoneyEmailError}</p>}
-                    </div>
-                    <div>
-                      <button
-                        type="submit"
-                        disabled={isSubmittingLunchMoneyEmail}
-                         className="bg-secondary text-white font-semibold hover:bg-secondary-dark px-4 py-2 rounded-lg disabled:bg-gray-400"
-                      >
-                        {isSubmittingLunchMoneyEmail ? 'Submitting...' : 'Notify Me'}
-                      </button>
-                    </div>
-                  </form>
-                )}
+                <p className="text-lg text-gray-700">
+                   Supercharge Lunch Money transaction categorization with Expense Sorted's AI.
+                </p>
+                {/* Updated Button */}
+                <div className="pt-2">
+                  <Link
+                      href="/integrations" // Link to the integrations hub
+                      className="inline-flex items-center px-6 py-3 rounded-lg bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-md"
+                  >
+                    Get Started Now
+                    <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </Link>
+                </div>
              </div>
               
-              {/* Screenshot -> Lunch Money Logo */}
+              {/* Lunch Money Logo */}
               <div className="md:w-1/2 flex justify-center items-center">
                 <div className="rounded-lg overflow-hidden">
                   <Image

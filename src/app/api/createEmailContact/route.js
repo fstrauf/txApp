@@ -3,34 +3,58 @@ import { Resend } from 'resend';
 import { db } from '@/db';
 import { subscribers } from '@/db/schema';
 import { createId } from '@/db/utils';
+import { eq } from 'drizzle-orm'; // Import eq for querying
 
 export async function POST(req) {
   try {
     const data = await req.json();
     const email = data.email;
-    const tags = data.tags || []; // Get tags if provided
+    const newTags = data.tags || []; // Get tags if provided, default to empty array
     const source = data.source || "OTHER"; // Get source if provided
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // Create a new subscriber in the database or handle if subscriber already exists
-    try {
-      // First, try to store the email in our database
+    // Check if subscriber already exists
+    const existingSubscriber = await db.select({
+        id: subscribers.id,
+        currentTags: subscribers.tags,
+        isActive: subscribers.isActive
+      })
+      .from(subscribers)
+      .where(eq(subscribers.email, email))
+      .limit(1);
+
+    if (existingSubscriber.length > 0) {
+      // Subscriber exists, update tags and potentially reactivate
+      const currentUser = existingSubscriber[0];
+      const currentTags = currentUser.currentTags || [];
+      const combinedTags = Array.from(new Set([...currentTags, ...newTags])); // Merge and deduplicate
+
+      console.log(`[createEmailContact] Updating existing subscriber: ${email}, New tags: ${JSON.stringify(combinedTags)}`);
+
+      await db.update(subscribers)
+        .set({
+          tags: combinedTags,
+          source: source, // Optionally update source?
+          isActive: true, // Reactivate if they were inactive
+          updatedAt: new Date(),
+        })
+        .where(eq(subscribers.id, currentUser.id));
+        
+    } else {
+      // Subscriber does not exist, create new one
+      console.log(`[createEmailContact] Creating new subscriber: ${email}, Tags: ${JSON.stringify(newTags)}`);
       await db.insert(subscribers).values({
         id: createId(),
         email,
         source,
-        tags: tags,
+        tags: newTags, // Use the passed tags
         isActive: true,
+        createdAt: new Date(), // Set createdAt explicitly
+        updatedAt: new Date(), // Set updatedAt explicitly
       });
-    } catch (dbError) {
-      // If it's a unique constraint error (email already exists), we'll just continue
-      // Otherwise, we'll throw the error
-      if (!dbError.message.includes('unique constraint')) {
-        throw dbError;
-      }
     }
 
     // Initialize Resend client

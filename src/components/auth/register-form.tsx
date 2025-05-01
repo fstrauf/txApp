@@ -4,11 +4,15 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 
 export function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const callbackUrl = searchParams.get('callbackUrl') || '/';
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -38,24 +42,34 @@ export function RegisterForm() {
         throw new Error(data.message || "Something went wrong");
       }
 
+      // Registration successful, now sign in
+      console.log(`[RegisterForm] Registration OK. Attempting sign in with callbackUrl: ${callbackUrl}`);
       const signInResponse = await signIn("credentials", {
-        email,
+        email, 
         password,
-        redirect: false,
+        callbackUrl: callbackUrl, // PASS the callbackUrl here
       });
 
+      // ONLY check for explicit error from signIn.
+      // If no error, the server-side redirect callback is handling navigation.
       if (signInResponse?.error) {
+        // If signIn itself fails (e.g., network error, server issue during callback)
+        console.error("[RegisterForm] Sign-in after registration failed:", signInResponse.error);
         setError(
-          `Account created, but failed to automatically sign in: ${signInResponse.error}`
+          `Account created, but automatic sign-in failed: ${signInResponse.error}. Please try logging in manually.` // Provide more context
         );
-      } else if (signInResponse?.ok) {
-        router.push("/");
-      } else {
-        setError("Account created, but sign in status is unknown.");
-      }
+        // Optional: Redirect to login page on sign-in failure?
+        // router.push(`/auth/signin?error=${signInResponse.error}`);
+      } 
+      // No need to check .ok or have a final else block, 
+      // as success is indicated by the server-side redirect taking effect.
+      
     } catch (error) {
+      // This catch block is primarily for the registration fetch
+      console.error("[RegisterForm] Registration or Sign-in Error:", error);
       setError(error instanceof Error ? error.message : "Something went wrong");
     } finally {
+      // Only stop loading indicator. Let redirect handle navigation.
       setIsLoading(false);
     }
   }

@@ -113,9 +113,9 @@ export default function PricingPage() {
   };
 
   // Helper to format dates
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return null;
-    return new Date(dateString).toLocaleDateString();
+  const formatDate = (date: Date | null): string => {
+    if (!date) return '';
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
   // Helper to get subscription badge
@@ -154,10 +154,18 @@ export default function PricingPage() {
     );
   };
 
+  // Determine user status flags, handling null subscription state
+  const now = Date.now();
+  const isActiveSub = !!subscription && subscription.subscriptionStatus === 'ACTIVE';
+  const isActiveTrial = !!subscription && !!subscription.trialEndsAt && subscription.trialEndsAt.getTime() > now;
+  const hasExpiredTrial = !!subscription && !!subscription.trialEndsAt && subscription.trialEndsAt.getTime() <= now;
+  // Can start trial only if subscription is loaded and user has no active/expired access
+  const canStartTrial = subscription !== null && !isActiveSub && !isActiveTrial && !hasExpiredTrial; 
+
+  // Combine active check
+  const hasAnyActiveAccess = isActiveSub || isActiveTrial;
   const isPlanActive = (plan: string): boolean => {
-    if (!subscription) return false;
-    const isActive = hasActiveSubscriptionOrTrial(subscription);
-    return isActive && subscription.subscriptionPlan === plan;
+    return hasAnyActiveAccess && subscription?.subscriptionPlan === plan;
   };
 
   return (
@@ -184,12 +192,12 @@ export default function PricingPage() {
               </div>
               {subscription.trialEndsAt && (
                 <p className="text-sm text-gray-700 mb-1">
-                  Trial ends: {formatDate(subscription.trialEndsAt.toISOString())}
+                  Trial ends: {formatDate(subscription.trialEndsAt)}
                 </p>
               )}
               {subscription.currentPeriodEndsAt && (
                 <p className="text-sm text-gray-700">
-                  Next billing: {formatDate(subscription.currentPeriodEndsAt.toISOString())}
+                  Next billing: {formatDate(subscription.currentPeriodEndsAt)}
                 </p>
               )}
             </div>
@@ -260,29 +268,23 @@ export default function PricingPage() {
               </li>
             </ul>
             
-            <button
-              onClick={() => handleSubscribe('silver')}
-              disabled={isLoading.silver || isPlanActive('SILVER')}
-              className={`inline-flex justify-center items-center px-6 py-3 rounded-xl ${
-                isPlanActive('SILVER') 
-                  ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
-                  : 'bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow'
-              } text-center disabled:opacity-70`}
-            >
-              {isLoading.silver ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </>
-              ) : isPlanActive('SILVER') ? "Current Plan" : session ? "Subscribe Now" : "Sign in to Subscribe"}
-            </button>
-            
-            <p className="text-sm text-center mt-4 text-gray-600">
-              Start with a free trial!
-            </p>
+            {/* --- Refined Silver Button Logic --- */}
+            {isPlanActive('SILVER') ? (
+              <button disabled className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed text-center">
+                Current Plan
+              </button>
+            ) : !session ? (
+              <button onClick={() => handleSubscribe('silver')} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center">
+                Sign in to Subscribe
+              </button>
+            ) : (
+              // Logged in, Silver not active -> Subscribe
+              <button onClick={() => handleSubscribe('silver')} disabled={isLoading.silver} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70">
+                {isLoading.silver ? 'Processing...' : 'Subscribe Now'}
+              </button>
+            )}
+            {/* Removed redundant trial text for Silver */}
+            {/* <p className="text-sm text-center mt-4 text-gray-600">Start with a free trial!</p> */}
           </div>
           
           {/* Gold Plan */}
@@ -348,51 +350,34 @@ export default function PricingPage() {
               </li>
             </ul>
             
-            {/* === Start Gold Plan Button Logic === */}
+            {/* === Refined Gold Plan Button Logic === */}
             {isPlanActive('GOLD') ? (
-              // Case 1: Current plan is Gold
-              <button
-                disabled={true}
-                className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed text-center"
-              >
+              // Case 1: Current plan is Gold (or active trial on Gold)
+              <button disabled className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed text-center">
                 Current Plan
               </button>
-            ) : session && subscription !== null && !hasActiveSubscriptionOrTrial(subscription) && !isLoadingSubscription ? (
-              // Case 2: Logged in, subscription loaded, no active sub/trial -> Eligible for free trial
-              <button
-                onClick={handleStartFreeTrial}
-                disabled={isStartingTrial}
-                className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70"
-              >
-                {isStartingTrial ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Starting Trial...
-                  </>
-                ) : "Start 14-Day Free Trial"}
+            ) : !session ? (
+                // Case 2: Logged out
+                <button onClick={() => handleSubscribe('gold')} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center">
+                  Sign in to Subscribe
+                </button>
+            ) : isLoadingSubscription ? (
+                 // Case 3: Still loading subscription status
+                 <button disabled className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed text-center">
+                    Loading...
+                 </button>
+            ) : canStartTrial ? (
+              // Case 4: Logged in, loaded, eligible for trial (no active sub/trial, no expired trial)
+              <button onClick={handleStartFreeTrial} disabled={isStartingTrial} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70">
+                {isStartingTrial ? 'Starting Trial...' : "Start 14-Day Free Trial"}
               </button>
             ) : (
-              // Case 3: Not eligible for trial (not logged in, already has active sub, or subscription still loading) -> Show Subscribe/Sign in
-              <button
-                onClick={() => handleSubscribe('gold')}
-                disabled={isLoading.gold || isLoadingSubscription}
-                className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70"
-              >
-                {isLoading.gold ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Processing...
-                  </>
-                ) : session ? "Subscribe Now" : "Sign in to Subscribe"}
+              // Case 5: Logged in, loaded, but NOT eligible for trial (e.g., expired trial, active Silver sub)
+              <button onClick={() => handleSubscribe('gold')} disabled={isLoading.gold} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70">
+                {isLoading.gold ? 'Processing...' : 'Subscribe Now'}
               </button>
             )}
-            {/* === End Gold Plan Button Logic === */}
+            {/* === End Refined Gold Plan Button Logic === */}
           </div>
         </div>
         
