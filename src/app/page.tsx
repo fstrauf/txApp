@@ -34,7 +34,7 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-lg md:text-xl text-gray-700 mb-6 md:mb-8 max-w-xl mx-auto md:mx-0">
-              Ditch manual rules. Expense Sorted's AI automatically categorizes transactions in seconds within Google Sheets, Lunch Money, Tiller and soon PocketSmith & Monarch Money.
+              Ditch manual rules. Expense Sorted's AI automatically categorizes transactions in seconds within Google Sheets, Lunch Money, Tiller and soon PocketSmith{/* & Monarch Money*/}.
             </p>
 
             {/* Integration Logos */}
@@ -46,7 +46,7 @@ export default function Home() {
               <Image src="/lunchmoney.png" alt="Lunch Money" width={24} height={24} className="h-6 w-auto rounded-sm" title="Lunch Money"/>
               {/* Update PocketSmith Logo dimensions for better quality */}
               <Image src="/pockesmith_short.png" alt="PocketSmith" width={35} height={24} className="h-6 w-auto rounded-sm" title="PocketSmith"/>
-              <Image src="/monarchmoney_logo.png" alt="Monarch Money" width={24} height={24} className="h-6 w-auto rounded-sm" title="Monarch Money"/>
+              {/* <Image src="/monarchmoney_logo.png" alt="Monarch Money" width={24} height={24} className="h-6 w-auto rounded-sm" title="Monarch Money"/> */}
             </div>
 
             {/* CTAs */}
