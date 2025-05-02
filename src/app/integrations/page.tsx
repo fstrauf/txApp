@@ -55,14 +55,14 @@ const platformsData: Platform[] = [
     ctaType: 'waitlist',
     waitlistTag: 'pocketsmith-waitlist',
   },
-  {
-    name: 'Monarch Money',
-    logo: '/monarchmoney_logo.png',
-    alt: 'Monarch Money Logo',
-    description: 'Coming soon! Join the waitlist for Monarch Money integration.',
-    ctaType: 'waitlist',
-    waitlistTag: 'monarch-waitlist',
-  },
+  // {
+  //   name: 'Monarch Money',
+  //   logo: '/monarchmoney_logo.png',
+  //   alt: 'Monarch Money Logo',
+  //   description: 'Coming soon! Join the waitlist for Monarch Money integration.',
+  //   ctaType: 'waitlist',
+  //   waitlistTag: 'monarch-waitlist',
+  // },
 ];
 
 interface WaitlistFormState {
