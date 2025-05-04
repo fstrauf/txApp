@@ -8,26 +8,40 @@ import { Loader2, Check, ChevronsUpDown, AlertCircle } from 'lucide-react';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
 import { CsvImportProfile } from '@/app/api/import-profiles/route';
+import { toast } from 'react-hot-toast'; // Import toast
+import FileUploadSection from './components/FileUploadSection'; // Import the new component
+import SaveProfilePrompt from './components/SaveProfilePrompt'; // Import the new component
+import CategoryMappingSection from './components/CategoryMappingSection'; // Import the new component
+import ConfigurationSection from './components/ConfigurationSection'; // Import the new component
+import { parse } from 'date-fns'; // Import parse from date-fns
+import ReviewStep from './components/ReviewStep'; // Import the new component
 
 // Add imports for category-related API calls and types
 import { eq } from 'drizzle-orm'; // Assuming this might be needed if API functions are moved
 
 // --- API Interaction Functions (defined *outside* the component) ---
 
-interface BankAccountsApiResponse {
+export interface BankAccountsApiResponse {
     bankAccounts: BankAccount[];
 }
+
 interface CreateBankAccountApiResponse {
     bankAccount: BankAccount;
     error?: string;
 }
+
 interface AnalyzeApiResponse extends AnalysisResult {
     error?: string;
 }
+
 interface ImportApiResponse {
     message: string;
     error?: string;
     details?: any;
+    successCount?: number; // Add successCount
+    skippedCount?: number; // Add skippedCount
+    errors?: { row: number; message: string }[]; // Add errors
+    duplicates?: { row: number; data: any }[]; // Add duplicates
 }
 
 const fetchBankAccounts = async (): Promise<BankAccount[]> => {
@@ -40,7 +54,7 @@ const fetchBankAccounts = async (): Promise<BankAccount[]> => {
     return data.bankAccounts || [];
 };
 
-const analyzeFile = async (file: File): Promise<AnalysisResult> => {
+export const analyzeFile = async (file: File): Promise<AnalysisResult> => {
     const fileText = await file.text();
     let headers: string[] = [];
     let previewRows: any[] = [];
@@ -99,12 +113,12 @@ const analyzeFile = async (file: File): Promise<AnalysisResult> => {
                  complete: () => {
                      console.log(`Full parse complete. Found ${allCsvCategoriesSet.size} unique category values.`);
                  },
-                 error: (error: Error) => {
-                     console.error('Error during full category parse: ' + error.message);
+                 error: (catParseError: Error) => {
+                     console.error('Error during full category parsing:', catParseError);
                  }
              });
-         } catch (e) {
-             console.error("Error during full category parsing:", e);
+         } catch (catParseError) {
+             console.error("Error during full category parsing:", catParseError);
          }
      }
 
@@ -158,6 +172,7 @@ interface Category {
 interface CategoriesApiResponse {
     categories: Category[];
 }
+
 interface CreateCategoryApiResponse {
     category: Category;
     error?: string;
@@ -189,26 +204,27 @@ const createCategory = async (name: string): Promise<Category> => {
 };
 
 // --- Interfaces & Types ---
-interface BankAccount {
+export interface BankAccount {
     id: string;
     name: string;
 }
 
-interface AnalysisResult {
+export interface AnalysisResult {
     headers: string[];
     previewRows: Record<string, any>[];
     detectedDelimiter: string;
     allCsvCategories?: string[];
 }
 
-type MappedFieldType = 'date' | 'amount' | 'description' | 'currency' | 'category' | 'none';
+export type MappedFieldType = 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'category' | 'none';
 
-interface ImportConfig {
-    bankAccountId: string;
+export interface ImportConfig {
+    bankAccountId: string | null;
     mappings: {
         date: string;
         amount: string;
         description: string;
+        description2?: string;
         currency?: string;
         category?: string;
     };
@@ -219,7 +235,7 @@ interface ImportConfig {
     delimiter?: string;
 }
 
-type ConfigState = Partial<Omit<ImportConfig, 'mappings' | 'bankAccountId' | 'signColumn' | 'dateFormat' | 'amountFormat'>> & {
+export type ConfigState = Partial<Omit<ImportConfig, 'mappings' | 'bankAccountId' | 'signColumn' | 'dateFormat' | 'amountFormat'>> & {
     mappings: Record<string, MappedFieldType>;
     signColumn?: string;
     dateFormat: string;
@@ -227,7 +243,7 @@ type ConfigState = Partial<Omit<ImportConfig, 'mappings' | 'bankAccountId' | 'si
 };
 
 // --- Constants ---
-const commonDateFormats = [
+export const commonDateFormats = [
     { value: 'yyyy-MM-dd HH:mm:ss', label: 'YYYY-MM-DD HH:MM:SS' },
     { value: 'yyyy-MM-dd', label: 'YYYY-MM-DD' },
     { value: 'MM/dd/yyyy', label: 'MM/DD/YYYY' },
@@ -236,17 +252,18 @@ const commonDateFormats = [
     { value: 'yyyy/MM/dd', label: 'YYYY/MM/DD' },
 ];
 
-const amountFormatOptions = [
+export const amountFormatOptions = [
     { value: 'standard', label: 'Standard' },
     { value: 'negate', label: 'Negate all' },
     { value: 'sign_column', label: 'Separate Sign Column' },
 ];
 
-const mappingOptions: { value: MappedFieldType; label: string }[] = [
+export const mappingOptions: { value: MappedFieldType; label: string }[] = [
     { value: 'none', label: '- Skip Column -' },
     { value: 'date', label: 'Map to: Date *' },
     { value: 'amount', label: 'Map to: Amount *' },
     { value: 'description', label: 'Map to: Description *' },
+    { value: 'description2', label: 'Map to: Description 2' },
     { value: 'currency', label: 'Map to: Currency' },
     { value: 'category', label: 'Map to: Category' },
 ];
@@ -265,6 +282,7 @@ interface CreateProfileApiResponse {
     profile: CsvImportProfile;
     error?: string;
 }
+
 const createImportProfile = async (profileData: { name: string; config: Omit<CsvImportProfile['config'], 'id'> }): Promise<CsvImportProfile> => {
     const response = await fetch('/api/import-profiles', {
         method: 'POST',
@@ -274,6 +292,25 @@ const createImportProfile = async (profileData: { name: string; config: Omit<Csv
     const result: CreateProfileApiResponse = await response.json();
     if (!response.ok) {
         throw new Error(result.error || 'Failed to create profile');
+    }
+    return result.profile;
+};
+
+// Add function to update a profile
+interface UpdateProfileApiResponse {
+    profile: CsvImportProfile;
+    error?: string;
+}
+
+const updateImportProfile = async (profileData: { id: string; name: string; config: Omit<CsvImportProfile['config'], 'id'> }): Promise<CsvImportProfile> => {
+    const response = await fetch('/api/import-profiles', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileData),
+    });
+    const result: UpdateProfileApiResponse = await response.json();
+    if (!response.ok) {
+        throw new Error(result.error || 'Failed to update profile');
     }
     return result.profile;
 };
@@ -299,8 +336,9 @@ const ImportTransactionsPage: React.FC = () => {
     const [categoryMappings, setCategoryMappings] = useState<Record<string, { targetId: string | null | '__CREATE__'; newName?: string }>>({});
 
     // --- State for managing the UI flow ---
-    type ImportStep = 'configure' | 'map_categories' | 'submitting';
+    type ImportStep = 'configure' | 'review' | 'map_categories' | 'submitting';
     const [currentStep, setCurrentStep] = useState<ImportStep>('configure');
+    const [validationIssues, setValidationIssues] = useState<{ errors: string[], warnings: string[] }>({ errors: [], warnings: [] });
 
     const { data: bankAccounts = [], isLoading: isLoadingBankAccounts, error: bankAccountsError } = useQuery<BankAccount[], Error>({
         queryKey: ['bankAccounts'],
@@ -324,6 +362,9 @@ const ImportTransactionsPage: React.FC = () => {
     const [showSaveProfilePrompt, setShowSaveProfilePrompt] = useState(false);
     const [lastSuccessfulConfig, setLastSuccessfulConfig] = useState<Omit<CsvImportProfile['config'], 'id'> | null>(null);
     const [postImportProfileName, setPostImportProfileName] = useState('');
+    const [importResults, setImportResults] = useState<ImportApiResponse | null>(null); // Add importResults state
+    // New state for dropdown selection: '__CREATE__', '__SKIP__', or profile.id
+    const [postImportSaveSelection, setPostImportSaveSelection] = useState<string | null>('__SKIP__'); 
 
     // --- State for managing the UI flow ---
     const { data: importProfiles = [], isLoading: isLoadingProfiles, error: profilesError } = useQuery<CsvImportProfile[], Error>({
@@ -406,6 +447,7 @@ const ImportTransactionsPage: React.FC = () => {
             setShowSaveProfilePrompt(false);
             setLastSuccessfulConfig(null);
             setPostImportProfileName('');
+            setPostImportSaveSelection('__SKIP__');
             createProfileMutation.reset(); // Reset any errors from previous post-import save attempts
         },
         onError: (error) => {
@@ -415,6 +457,7 @@ const ImportTransactionsPage: React.FC = () => {
              setShowSaveProfilePrompt(false);
              setLastSuccessfulConfig(null);
              setPostImportProfileName('');
+             setPostImportSaveSelection('__SKIP__');
              createProfileMutation.reset();
         }
     });
@@ -461,76 +504,84 @@ const ImportTransactionsPage: React.FC = () => {
         }
     });
 
-    // Define mutation with top-level onSuccess/onError
-    const importMutation = useMutation<ImportApiResponse, Error, { file: File; config: ImportConfig; categoryMappings: typeof categoryMappings }>({ 
+    // Define mutation with top-level onSuccess/onError, adding originalMappings to variables
+    const importMutation = useMutation<ImportApiResponse, Error, {
+        file: File;
+        config: ImportConfig; // This is { fieldType: header } format for the API
+        categoryMappings: typeof categoryMappings;
+        originalMappings: Record<string, MappedFieldType>; // This is { header: fieldType } for profile saving
+    }>({
         mutationFn: async (vars) => {
             // (This part remains the same - POST to /api/transactions/import)
             const { file, config, categoryMappings } = vars;
             const importData = new FormData();
             importData.append('file', file);
-            const fullPayload = { ...config, categoryMappings };
+            // API expects config: { fieldType: header }, and categoryMappings separately
+            const fullPayload = { config, categoryMappings };
             importData.append('config', JSON.stringify(fullPayload));
             const response = await fetch('/api/transactions/import', { method: 'POST', body: importData });
             const result: ImportApiResponse = await response.json();
-            if (!response.ok) {
-                const errorDetails = result.details ? ` Details: ${JSON.stringify(result.details)}` : '';
-                throw new Error(result.error || 'Import failed' + errorDetails);
-            }
+            if (!response.ok) throw new Error(result.message || 'Import failed');
             return result;
         },
-        onSuccess: (data, variables) => { // Use top-level onSuccess
-             console.log("Import successful:", data.message);
-             
-             // Construct the config snapshot from the *variables* that were successfully sent
-             const mappingsForProfile: CsvImportProfile['config']['mappings'] = {};
-             // Find the original header->fieldType mappings based on the submitted fieldType->header mappings
-             const originalMappings = config.mappings; // Access component state 
-             const submittedMappings = variables.config.mappings; // { date: 'HeaderA', amount: 'HeaderB', ... }
-             
-             for(const header in originalMappings) {
-                 const fieldType = originalMappings[header];
-                 // Check if this fieldType was part of the successful submission
-                 const submittedHeader = submittedMappings[fieldType as keyof typeof submittedMappings];
-                 if(submittedHeader === header) { // Ensure the header matches what was submitted for this field type
-                     mappingsForProfile[header] = fieldType;
-                 } else if (fieldType !== 'none') {
-                     console.warn(`Mapping mismatch for header '${header}' / fieldType '${fieldType}' during profile save construction.`);
+        onSuccess: (data, variables) => {
+            toast.success(`${data.message || 'Import successful!'}`);
+            setImportResults(data);
+
+            if ((data.successCount ?? 0) > 0) {
+                 // Successfully imported, let's prepare to ask about saving the profile
+                 console.log("Import successful, preparing profile save prompt. Variables:", variables);
+
+                 // Construct the config snapshot from the *variables* that were successfully sent
+                 // **Use the directly passed originalMappings**
+                 const successfulMappingsForProfile = variables.originalMappings;
+
+                 const successfulConfigForProfile: Omit<CsvImportProfile['config'], 'id'> = {
+                     mappings: successfulMappingsForProfile, // Use the directly passed { header: fieldType } mappings
+                     dateFormat: variables.config.dateFormat,
+                     amountFormat: variables.config.amountFormat,
+                     signColumn: variables.config.signColumn, // Already correct from variables.config
+                     skipRows: variables.config.skipRows,
+                     delimiter: variables.config.delimiter,
+                     // bankAccountId is handled separately below
+                 };
+
+                 // Add bankAccountId if it was selected
+                 if (variables.config.bankAccountId) {
+                     successfulConfigForProfile.bankAccountId = variables.config.bankAccountId;
                  }
-             }
 
-             const successfulConfigForProfile: Omit<CsvImportProfile['config'], 'id'> = {
-                 mappings: mappingsForProfile, // Use the reconstructed { header: fieldType } mappings
-                 dateFormat: variables.config.dateFormat,
-                 amountFormat: variables.config.amountFormat,
-                 signColumn: variables.config.signColumn,
-                 skipRows: variables.config.skipRows,
-                 delimiter: variables.config.delimiter,
-             };
+                 console.log("Config used for successful import (for profile save):", successfulConfigForProfile);
 
-             setLastSuccessfulConfig(successfulConfigForProfile);
-             setShowSaveProfilePrompt(true); 
-             setPostImportProfileName(''); 
-             createProfileMutation.reset(); 
-
-             // Reset other state (as before)
-             setFile(null);
-             analyzeMutation.reset();
-             setSelectedBankAccount(null);
-             setBankAccountQuery("");
-             setConfig({ mappings: {}, dateFormat: commonDateFormats[1].value, amountFormat: 'standard', skipRows: 0, signColumn: undefined, delimiter: undefined });
-             setUniqueCsvCategories([]);
-             setCategoryMappings({});
-             setCurrentStep('configure'); 
-             setSelectedProfile(null); 
+                 setLastSuccessfulConfig(successfulConfigForProfile); // Store the config used for this success
+                 setShowSaveProfilePrompt(true); // Show the prompt
+            } else {
+                 // No rows imported (e.g., all duplicates or errors)
+                 setLastSuccessfulConfig(null);
+                 setShowSaveProfilePrompt(false);
+            }
+            // Reset form only after handling potential profile save
+            // setConfig(initialConfigState);
+            // setFile(null);
+            // setHeaders([]);
+            // setPreviewRows([]);
+            // setCategoryMappings({});
+            // setStep(3); // Move to results view
         },
-        onError: (error) => { // Use top-level onError
-            console.error("Import Mutation Error:", error);
-            setCurrentStep('configure'); 
-            setShowSaveProfilePrompt(false);
+        onError: (error) => {
+            toast.error(`Import Error: ${error.message}`);
+            // Add the required 'message' property when setting results on error
+            setImportResults({ 
+                message: `Import Error: ${error.message}`, // Add error message
+                successCount: 0, 
+                skippedCount: 0, 
+                errors: [{ row: 0, message: error.message }], 
+                duplicates: [] 
+            });
             setLastSuccessfulConfig(null);
-            setPostImportProfileName('');
-            createProfileMutation.reset();
-        }
+            setShowSaveProfilePrompt(false);
+            // setStep(3); // Removed: Move to results view even on error to show the message
+        },
     });
 
     // Mutation for creating a new profile
@@ -538,20 +589,37 @@ const ImportTransactionsPage: React.FC = () => {
         mutationFn: createImportProfile,
         onSuccess: (newProfile) => {
             console.log(`Profile '${newProfile.name}' created successfully.`);
-            queryClient.setQueryData<CsvImportProfile[]>(['importProfiles'], (oldData = []) => [...oldData, newProfile]);
-            // If created via post-import prompt, hide the prompt
-            if (showSaveProfilePrompt) {
-                setShowSaveProfilePrompt(false);
-                setLastSuccessfulConfig(null);
-                setPostImportProfileName('');
-            } else {
-                // If somehow triggered differently (e.g., future edit feature), select it
-                 setSelectedProfile(newProfile);
-            }
+            queryClient.setQueryData<CsvImportProfile[]>(['importProfiles'], (oldData = []) => [...oldData, newProfile].sort((a, b) => a.name.localeCompare(b.name)));
+            // Hide prompt after successful creation
+            setShowSaveProfilePrompt(false);
+            setLastSuccessfulConfig(null);
+            setPostImportProfileName('');
+            setPostImportSaveSelection('__SKIP__'); // Reset selection
         },
         onError: (error) => {
             console.error(`Failed to create profile:`, error);
             // Error will be shown via renderFeedback OR inline in the post-import prompt
+        }
+    });
+
+    // Add mutation for updating profiles
+    const updateProfileMutation = useMutation<CsvImportProfile, Error, { id: string; name: string; config: Omit<CsvImportProfile['config'], 'id'> }>({ 
+        mutationFn: updateImportProfile,
+        onSuccess: (updatedProfile) => {
+             console.log(`Profile '${updatedProfile.name}' updated successfully.`);
+             // Update the profile in the cache
+             queryClient.setQueryData<CsvImportProfile[]>(['importProfiles'], (oldData = []) => 
+                oldData.map(p => p.id === updatedProfile.id ? updatedProfile : p).sort((a, b) => a.name.localeCompare(b.name))
+             );
+            // Hide prompt after successful update
+            setShowSaveProfilePrompt(false);
+            setLastSuccessfulConfig(null);
+            setPostImportProfileName('');
+            setPostImportSaveSelection('__SKIP__'); // Reset selection
+        },
+        onError: (error) => {
+            console.error(`Failed to update profile:`, error);
+            // Error should be displayed inline in the prompt
         }
     });
 
@@ -597,7 +665,9 @@ const ImportTransactionsPage: React.FC = () => {
         setShowSaveProfilePrompt(false);
         setLastSuccessfulConfig(null);
         setPostImportProfileName('');
+        setPostImportSaveSelection('__SKIP__');
         createProfileMutation.reset();
+        updateProfileMutation.reset();
 
         if (selectedFile && sessionStatus === 'authenticated') {
             setFile(selectedFile);
@@ -639,16 +709,21 @@ const ImportTransactionsPage: React.FC = () => {
      const handleMappingChange = (csvHeader: string, fieldType: MappedFieldType) => {
         setConfig(prevConfig => {
             const newMappings = { ...prevConfig.mappings };
-            const uniqueFields: MappedFieldType[] = ['date', 'amount', 'description', 'currency'];
+            // Fields that should only be mapped once
+            const uniqueFields: MappedFieldType[] = ['date', 'amount', 'description', 'description2', 'currency']; 
 
+            // If the new fieldType is a unique one (and not 'none')
             if (uniqueFields.includes(fieldType) && fieldType !== 'none') {
+                 // Find if another header is already mapped to this fieldType
                  const currentHeaderForField = Object.keys(newMappings).find(
-                     header => newMappings[header] === fieldType && header !== csvHeader
+                     header => newMappings[header] === fieldType && header !== csvHeader 
                  );
+                 // If found, unmap the old header
                  if (currentHeaderForField) {
                      newMappings[currentHeaderForField] = 'none';
                  }
              }
+            // Assign the new mapping
             newMappings[csvHeader] = fieldType;
             return { ...prevConfig, mappings: newMappings };
         });
@@ -672,83 +747,139 @@ const ImportTransactionsPage: React.FC = () => {
          }
     };
 
-    // --- Function to proceed from configuration/column mapping step ---
-    const handleProceedToCategoryMapping = async (e: React.MouseEvent<HTMLButtonElement>) => {
-        e.preventDefault(); // Prevent default form submission if used in a form context later
-        setCurrentStep('submitting'); // Indicate processing starts
-        importMutation.reset(); // Clear previous import errors before validation
+    // --- Validation Function ---
+    const validateConfigurationAndData = (currentConfig: ConfigState, analysisData: AnalysisResult | null, bankAccount: BankAccount | null): { errors: string[], warnings: string[] } => {
+        const issues: { errors: string[], warnings: string[] } = { errors: [], warnings: [] };
 
-        if (!file || !analyzeMutation.data || !selectedBankAccount?.id) {
-            importMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(importMutation as any)._error = new Error("Please select a file and bank account.");} });
-            setCurrentStep('configure'); // Go back to config step
+        if (!analysisData) {
+            issues.errors.push("File analysis data is missing.");
+            return issues; // Cannot proceed
+        }
+
+        if (!bankAccount) {
+             issues.errors.push("Please select a target bank account.");
+         }
+
+        // Configuration Checks (similar to previous logic)
+        let apiMappings: Partial<Record<MappedFieldType, string>> = {};
+        let requiredFieldsFound = { date: false, amount: false, description: false };
+
+        for (const header in currentConfig.mappings) {
+             const fieldType = currentConfig.mappings[header];
+             if (fieldType !== 'none') {
+                 if (apiMappings[fieldType]) { // Check if fieldType already mapped
+                     // Allow multiple description/description2, but not others
+                     if (fieldType !== 'description' && fieldType !== 'description2') {
+                          issues.errors.push(`Field '${fieldType}' can only be mapped to one column.`);
+                     }
+                 } 
+                 apiMappings[fieldType] = header;
+                 if (requiredFieldsFound.hasOwnProperty(fieldType)) {
+                      requiredFieldsFound[fieldType as keyof typeof requiredFieldsFound] = true;
+                  }
+             }
+         }
+         if (!requiredFieldsFound.date) issues.errors.push("Map a column to 'date'.");
+         if (!requiredFieldsFound.amount) issues.errors.push("Map a column to 'amount'.");
+         if (!requiredFieldsFound.description) issues.errors.push("Map a column to 'description'."); // Check for at least one description
+         if (currentConfig.amountFormat === 'sign_column' && !currentConfig.signColumn) {
+              issues.errors.push("Select the 'Sign Column' when using that Amount Format.");
+         }
+         if (currentConfig.amountFormat === 'sign_column' && currentConfig.signColumn && !analysisData.headers.includes(currentConfig.signColumn)) {
+               issues.errors.push(`Selected Sign Column '${currentConfig.signColumn}' not found in file headers.`);
+         }
+         if (!currentConfig.dateFormat) issues.errors.push("Select a Date Format.");
+
+        // Sample Data Checks (using preview rows)
+        const dateHeader = apiMappings.date;
+        const amountHeader = apiMappings.amount;
+
+        if (dateHeader && currentConfig.dateFormat) {
+            analysisData.previewRows.slice(0, 3).forEach((row, index) => {
+                const dateStr = row[dateHeader];
+                if (dateStr) {
+                    try {
+                        const parsedDate = parse(String(dateStr), currentConfig.dateFormat, new Date());
+                        if (isNaN(parsedDate.getTime())) {
+                            issues.warnings.push(`Row ${index + 1}: Date '${dateStr}' might not match format '${currentConfig.dateFormat}'.`);
+                        }
+                    } catch { 
+                        issues.warnings.push(`Row ${index + 1}: Could not attempt parsing date '${dateStr}' with format '${currentConfig.dateFormat}'.`);
+                    }
+                }
+            });
+        }
+
+        if (amountHeader) {
+             analysisData.previewRows.slice(0, 3).forEach((row, index) => {
+                const amountRaw = row[amountHeader];
+                if (amountRaw !== null && amountRaw !== undefined && amountRaw !== '') {
+                    let amountStr = String(amountRaw).replace(/[^0-9.,-]/g, '').replace(',', '.');
+                    if (isNaN(parseFloat(amountStr))) {
+                         issues.warnings.push(`Row ${index + 1}: Amount '${amountRaw}' does not look like a valid number.`);
+                    }
+                 } else {
+                      issues.warnings.push(`Row ${index + 1}: Amount column seems to contain empty values.`);
+                 }
+            });
+        }
+
+        return issues;
+    };
+
+    // --- Function to handle proceeding from Configuration step ---
+    const handleValidateAndProceed = (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.preventDefault(); 
+        importMutation.reset(); 
+        setValidationIssues({ errors: [], warnings: [] }); // Clear previous issues
+
+        const issues = validateConfigurationAndData(config, analyzeMutation.data || null, selectedBankAccount);
+
+        if (issues.errors.length > 0) {
+            setValidationIssues(issues);
+            setCurrentStep('review'); // Go to review step to show errors
             return;
         }
 
-        // --- Basic Validation (Pre-Category Mapping) ---
-        let apiMappings: { date?: string; amount?: string; description?: string; currency?: string; category?: string } = {};
-        let requiredFieldsFound = { date: false, amount: false, description: false };
-        let validationErrors: string[] = [];
-
+        // Determine if category mapping is needed (only if validation passed)
+        let apiMappings: Partial<Record<MappedFieldType, string>> = {};
         for (const header in config.mappings) {
-             const fieldType = config.mappings[header];
-             if (fieldType !== 'none') {
-                 if (apiMappings[fieldType as keyof typeof apiMappings]) {
-                     if (['date', 'amount', 'description', 'currency'].includes(fieldType)) {
-                         validationErrors.push(`Field '${fieldType}' is mapped multiple times.`);
-                     }
-                 } else {
-                     apiMappings[fieldType as keyof typeof apiMappings] = header;
-                     if (requiredFieldsFound.hasOwnProperty(fieldType)) {
-                          requiredFieldsFound[fieldType as keyof typeof requiredFieldsFound] = true;
-                      }
-                 }
-             }
-         }
-         if (!requiredFieldsFound.date) validationErrors.push("Map a column to 'date'.");
-         if (!requiredFieldsFound.amount) validationErrors.push("Map a column to 'amount'.");
-         if (!requiredFieldsFound.description) validationErrors.push("Map a column to 'description'.");
-         if (config.amountFormat === 'sign_column' && !config.signColumn) {
-              validationErrors.push("Select the 'Sign Column' when using that Amount Format.");
-         }
-         if (config.amountFormat === 'sign_column' && config.signColumn && !analyzeMutation.data.headers.includes(config.signColumn)) {
-               validationErrors.push(`Selected Sign Column '${config.signColumn}' not found.`);
-         }
-         if (!config.dateFormat) validationErrors.push("Select a Date Format.");
-
-         if (validationErrors.length > 0) {
-             importMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(importMutation as any)._error = new Error(`Configuration errors: ${validationErrors.join(' ')}`);} });
-             setCurrentStep('configure'); // Stay on config step
-             return;
-         }
-        // --- End Basic Validation ---
-
-        // Check if category mapping is needed
+            const fieldType = config.mappings[header];
+            if (fieldType !== 'none') {
+                apiMappings[fieldType] = header;
+            }
+        }
         const categoryHeader = apiMappings.category;
         if (categoryHeader && uniqueCsvCategories.length > 0) {
             console.log("Proceeding to category mapping step.");
-            setCurrentStep('map_categories'); // Move to the category mapping step
+            setValidationIssues(issues); // Store warnings even if proceeding
+            setCurrentStep('map_categories'); // Set step, wait for user
         } else {
-            console.log("Skipping category mapping, proceeding directly to import.");
-            // No category column mapped or no unique categories found, submit directly
-             handleSubmit(); // Call the final submit logic directly
+            console.log("Skipping category mapping, proceeding directly to import submission.");
+            setValidationIssues(issues); // Store warnings even if proceeding
+            // Set step to submitting *before* calling handleSubmit
+            setCurrentStep('submitting'); 
+            handleSubmit(); // Call the final submit logic directly
         }
     };
 
     // --- Final Submit Handler --- 
-    const handleSubmit = async () => {
-        // Set step to submitting if not already set (e.g., called directly)
-        if (currentStep !== 'submitting') {
-            setCurrentStep('submitting');
-             importMutation.reset(); // Clear errors if called directly
-        }
+    const handleSubmit = () => {
+        // Remove initial check/set for currentStep
+        importMutation.reset(); // Reset mutation state before validation
 
-        // Re-run basic validations quickly (should pass if called from handleProceedToCategoryMapping)
-        if (!file || !analyzeMutation.data || !selectedBankAccount?.id) {
+        // Re-run basic validations quickly
+         if (!file || !analyzeMutation.data || !selectedBankAccount?.id) {
              importMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(importMutation as any)._error = new Error("Missing file, analysis data or bank account.");} });
-             setCurrentStep('configure'); return;
+             // Reset step manually as mutation onError won't fire
+             setCurrentStep(config.mappings?.category && uniqueCsvCategories.length > 0 ? 'map_categories' : 'configure');
+             return;
          }
-         let apiMappings: { date?: string; amount?: string; description?: string; currency?: string; category?: string } = {};
-         // Repopulate apiMappings based on current config
+         // Repopulate apiMappings
+         let apiMappings: { 
+            date?: string; amount?: string; description?: string; description2?: string; 
+            currency?: string; category?: string 
+        } = {};
          for (const header in config.mappings) {
              const fieldType = config.mappings[header];
              if (fieldType !== 'none') {
@@ -758,19 +889,9 @@ const ImportTransactionsPage: React.FC = () => {
              }
          }
 
-        // Check required fields more strictly
-        if (!apiMappings.date || !apiMappings.amount || !apiMappings.description) {
-            console.error("Validation failed: Required mappings (date, amount, description) are missing.");
-            importMutation.reset();
-            importMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(importMutation as any)._error = new Error("Configuration error: Ensure Date, Amount, and Description columns are mapped.");} });
-            setCurrentStep('configure');
-            return; 
-        }
-
-        // --- Category Mapping Validation (only if category step was involved) ---
+        // --- Category Mapping Validation --- 
         let validationErrors: string[] = [];
         const mappedCategoryHeader = apiMappings.category;
-        // We only *need* to validate category mappings if the step was shown OR if a category header exists
         if (mappedCategoryHeader && uniqueCsvCategories.length > 0) {
              for (const csvCat of uniqueCsvCategories) {
                  const mapping = categoryMappings[csvCat];
@@ -794,56 +915,82 @@ const ImportTransactionsPage: React.FC = () => {
                  }
              }
         }
-        // --- End Category Validation ---
+        // --- End Category Validation --- 
 
         if (validationErrors.length > 0) {
             importMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(importMutation as any)._error = new Error(`Category Mapping errors: ${validationErrors.join(' ')}`);} });
-            // If errors found here, force back to category mapping step if applicable, else configure
             setCurrentStep(mappedCategoryHeader && uniqueCsvCategories.length > 0 ? 'map_categories' : 'configure');
             return;
         }
 
-        // Construct config FOR IMPORT API
-        const finalApiMappings: Required<Pick<ImportConfig['mappings'], 'date' | 'amount' | 'description'>> & Pick<ImportConfig['mappings'], 'currency' | 'category'> = {
-            date: apiMappings.date as string, 
-            amount: apiMappings.amount as string,
-            description: apiMappings.description as string,
-            currency: apiMappings.currency,
-            category: apiMappings.category,
-        };
-        const submitConfig: ImportConfig = {
-            bankAccountId: selectedBankAccount!.id,
-            mappings: finalApiMappings,
-            dateFormat: config.dateFormat,
-            amountFormat: config.amountFormat,
-            signColumn: config.amountFormat === 'sign_column' ? config.signColumn : undefined,
-            skipRows: Number(config.skipRows || 0),
-            delimiter: config.delimiter || undefined,
-        };
-        
-        // Trigger Import - Use the standard mutate call without inline callbacks
-        importMutation.mutate({ file: file!, config: submitConfig, categoryMappings: categoryMappings });
+        // Check required apiMappings again before constructing submitConfig
+        if (!apiMappings.date || !apiMappings.amount || !apiMappings.description) {
+            console.error("handleSubmit validation failed: Required mappings missing.");
+            importMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(importMutation as any)._error = new Error("Configuration error: Date, Amount, Description mapping lost.");} });
+            setCurrentStep('configure');
+            return; 
+        }
 
-        // Removed snapshot capture here - logic moved to top-level onSuccess
+        // --- Actual Submission Logic --- 
+        try {
+            // Map field types to header names for API
+            const submitConfig: ImportConfig = {
+                ...config,
+                skipRows: config.skipRows ?? 0, // Ensure skipRows is a number
+                mappings: {} as ImportConfig['mappings'], // Re-apply type assertion
+                bankAccountId: selectedBankAccount?.id === 'none' ? null : selectedBankAccount?.id ?? null, // Fix bank account ID access
+            };
+            Object.entries(config.mappings).forEach(([header, fieldType]) => {
+                if (fieldType !== 'none') {
+                    submitConfig.mappings[fieldType as keyof ImportConfig['mappings']] = header;
+                }
+            });
+
+            // --- Validation ---
+            if (!file) {
+                 toast.error("Please select a file.");
+                 return;
+            }
+            if (!submitConfig.mappings.date || !submitConfig.mappings.amount || !submitConfig.mappings.description) {
+                toast.error("Please map Date, Amount, and Description columns.");
+                return;
+            }
+            // Add validation for description2 if present? No, it's optional.
+
+            // --- Trigger Import ---
+            console.log("Calling importMutation.mutate with config:", submitConfig);
+            // Pass the original { header: fieldType } mappings explicitly for profile saving
+            importMutation.mutate({
+                file: file!,
+                config: submitConfig, // API needs { fieldType: header } format
+                categoryMappings: categoryMappings,
+                originalMappings: config.mappings // Pass the component state's { header: fieldType } mappings
+            });
+            // State reset happens in onSuccess/onError
+
+        } catch (error: any) {
+            console.error("Error preparing import:", error);
+            toast.error(`Error: ${error.message}`);
+        }
     };
 
-    // --- Handler to save profile from the POST-IMPORT prompt ---
-    const handlePostImportSaveProfile = () => {
+    // --- New Handler for Save Button --- 
+    const handleSaveNewProfileClick = () => {
         const profileName = postImportProfileName.trim();
         if (!profileName) {
              createProfileMutation.reset();
+             updateProfileMutation.reset();
              createProfileMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(createProfileMutation as any)._error = new Error("Profile name cannot be empty.");} });
              return;
          }
-         if (!lastSuccessfulConfig) {
-              console.error("Cannot save profile, last successful config is missing.");
-              createProfileMutation.reset();
-              createProfileMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(createProfileMutation as any)._error = new Error("Configuration data missing.");} });
-              return;
+         if (!lastSuccessfulConfig) { 
+             console.error("Cannot save new profile, last successful config is missing.");
+             createProfileMutation.reset();
+             updateProfileMutation.reset();
+             createProfileMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(createProfileMutation as any)._error = new Error("Configuration data missing.");} });
+             return; 
          }
-
-        console.log("Saving post-import profile:", profileName, lastSuccessfulConfig);
-        createProfileMutation.mutate({ name: profileName, config: lastSuccessfulConfig });
+         createProfileMutation.mutate({ name: profileName, config: lastSuccessfulConfig });
     };
 
     const filteredBankAccounts =
@@ -934,511 +1081,92 @@ const ImportTransactionsPage: React.FC = () => {
             
             {/* --- Post-Import Save Prompt --- */}
             {showSaveProfilePrompt && (
-                <div className="card-style p-4 space-y-3 bg-green-50 border border-green-300">
-                    {/* Show specific success message for import */} 
-                    <div className="alert-success mb-3">
-                         <Check className="h-5 w-5" />
-                         <div>
-                             <h5 className="font-bold">Import Successful!</h5>
-                             {/* You might want to show the count from importMutation.data?.count here */} 
-                         </div>
-                     </div>
-                     
-                    <p className="text-sm font-medium text-gray-700">Save these import settings for next time?</p>
-                    <div className="flex items-center space-x-2">
-                        <input 
-                            type="text"
-                            placeholder="Enter profile name (e.g., ANZ Checking)"
-                            value={postImportProfileName}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                setPostImportProfileName(e.target.value);
-                                // Clear error if user starts typing
-                                if (createProfileMutation.isError) createProfileMutation.reset();
-                            }}
-                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm input-style flex-grow"
-                            disabled={isLoading || createProfileMutation.isPending}
-                        />
-                        <Button
-                            type="button"
-                            onClick={handlePostImportSaveProfile}
-                            disabled={isLoading || createProfileMutation.isPending || !postImportProfileName.trim()}
-                            className="whitespace-nowrap text-sm"
-                        >
-                            {createProfileMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Save Profile
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={() => {
-                                setShowSaveProfilePrompt(false);
-                                setLastSuccessfulConfig(null);
-                                setPostImportProfileName('');
-                                createProfileMutation.reset();
-                            }}
-                            disabled={isLoading || createProfileMutation.isPending}
-                            className="text-sm text-gray-600 hover:bg-gray-100 bg-transparent px-4 py-2 rounded-md"
-                        >
-                            Skip
-                        </Button>
-                    </div>
-                     {createProfileMutation.isError && (
-                         <p className="mt-1 text-xs text-red-600">{createProfileMutation.error.message}</p>
-                     )}
-                </div>
+                <SaveProfilePrompt 
+                    lastSuccessfulConfig={lastSuccessfulConfig}
+                    importProfiles={importProfiles}
+                    onSaveNewProfile={(name) => {
+                        if (lastSuccessfulConfig) {
+                            createProfileMutation.mutate({ name, config: lastSuccessfulConfig });
+                        }
+                    }}
+                    onUpdateProfile={(profileId) => {
+                        const profileToUpdate = importProfiles.find(p => p.id === profileId);
+                        if (profileToUpdate && lastSuccessfulConfig) {
+                            updateProfileMutation.mutate({
+                                id: profileToUpdate.id,
+                                name: profileToUpdate.name, // Keep original name for now
+                                config: lastSuccessfulConfig
+                            });
+                        }
+                    }}
+                    onSkipSave={() => {
+                        setShowSaveProfilePrompt(false);
+                        setLastSuccessfulConfig(null);
+                        // Reset internal state of prompt component handled via prop change/unmount
+                    }}
+                    isSavingProfile={createProfileMutation.isPending || updateProfileMutation.isPending}
+                    saveError={createProfileMutation.error || updateProfileMutation.error || null}
+                />
             )}
 
-            {/* --- Step 1: Upload --- */}
-            {/* Conditionally hide upload if save prompt is shown? Or allow uploading new file? */}
-            {/* Let's keep it visible for now, handleFileChange will hide the prompt */} 
-            {currentStep !== 'map_categories' && ( 
-                <div className={`card-style ${analyzeMutation.isPending ? 'opacity-50' : ''}`}> 
-                    {/* Restore card content */}
-                    <div className="card-header-style">
-                         <h3 className="card-title-style">Step 1: Upload CSV File</h3>
-                         <p className="card-description-style">Select the CSV file containing your bank transactions.</p>
-                     </div>
-                     <div className="p-6 pt-0">
-                        <input
-                            type="file"
-                            accept=".csv"
-                            onChange={handleFileChange}
-                            disabled={isLoading || analyzeMutation.isPending}
-                            className="input-style file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                            key={file ? 'file-loaded' : 'file-empty'} // Use state to reset input if needed
-                        />
-                    </div>
-                 </div>
-             )}
-             {analyzeMutation.isPending && ( /* ... spinner ... */
-                  <div className="flex justify-center items-center p-4">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      <span className="ml-2">Analyzing file...</span>
-                  </div>
-              )}
+            {/* --- Step 1: File Upload Section --- */}
+            {currentStep !== 'map_categories' && !showSaveProfilePrompt && (
+                <FileUploadSection 
+                    onFileChange={handleFileChange}
+                    isLoading={isLoading}
+                    isAnalyzing={analyzeMutation.isPending}
+                    fileKey={file ? 'file-loaded' : 'file-empty'} // Pass the key
+                />
+            )}
 
             {/* --- Step 2a + 3: Configure & Map Columns --- */}
-            {sessionStatus === 'authenticated' && analyzeMutation.isSuccess && analyzeMutation.data && currentStep === 'configure' && (
-                <div className="space-y-6"> {/* Wrapper for this logical step */}
-                    {/* --- 2a: Configure Settings --- */}
-                    <div className="card-style">
-                         <div className="card-header-style">
-                            <h3 className="card-title-style">Step 2: Configure Import Settings</h3>
-                             <p className="card-description-style">Select an existing profile or configure manually. Map columns in the preview below.</p>
-                         </div>
-                        <div className="p-6 pt-0 space-y-4">
-                            {/* --- Profile Selection (Loading Only) --- */}
-                            <div className="space-y-2 p-4 border border-blue-200 rounded-md bg-blue-50/30">
-                                <h4 className="text-sm font-medium text-blue-800">Import Profiles (Optional)</h4>
-                                <div>
-                                     <Listbox value={selectedProfile} onChange={setSelectedProfile} by="id" >
-                                        <Label className="block text-sm font-medium text-gray-700 mb-1">Load Settings from Profile</Label>
-                                         <div className="relative mt-1">
-                                             <ListboxButton className="listbox-button-style" disabled={isLoading || isLoadingProfiles || !analyzeMutation.data}>
-                                                 <span className="block truncate">{selectedProfile?.name ?? (isLoadingProfiles ? 'Loading profiles...' : 'Manual Configuration')}</span>
-                                                 <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                                                     <ChevronsUpDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                                                 </span>
-                                             </ListboxButton>
-                                             <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                                                 <ListboxOptions className="listbox-options-style z-20">
-                                                     {/* Add option to clear selection */}
-                                                     <ListboxOption value={null} className={({ active }) => `listbox-option-style ${active ? 'bg-primary/10 text-primary' : 'text-gray-900'}`}>
-                                                          {({ selected }) => (
-                                                              <>
-                                                                  <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>-- Manual Configuration --</span>
-                                                                  {selected ? <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary"><Check className="h-5 w-5" aria-hidden="true" /></span> : null}
-                                                              </>
-                                                          )}
-                                                     </ListboxOption>
-                                                     {importProfiles.map((profile) => (
-                                                         <ListboxOption key={profile.id} value={profile} className={({ active }) => `listbox-option-style ${active ? 'bg-primary/10 text-primary' : 'text-gray-900'}`}>
-                                                             {({ selected }) => (
-                                                                 <>
-                                                                     <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>{profile.name}</span>
-                                                                     {selected ? <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary"><Check className="h-5 w-5" aria-hidden="true" /></span> : null}
-                                                                 </>
-                                                             )}
-                                                         </ListboxOption>
-                                                     ))}
-                                                     {importProfiles.length === 0 && !isLoadingProfiles && (
-                                                         <div className="relative cursor-default select-none py-2 px-4 text-gray-700">No saved profiles found.</div>
-                                                     )}
-                                                 </ListboxOptions>
-                                             </Transition>
-                                         </div>
-                                     </Listbox>
-                                </div>
-                            </div>
-                            {/* --- End Profile Selection --- */}
-
-                            {/* ... Bank Account Combobox ... */}
-                            <div>
-                                 <Combobox value={selectedBankAccount} onChange={setSelectedBankAccount} by="id" nullable>
-                                     {({ open }) => (
-                                        <div className="relative mt-1">
-                                            <Combobox.Label className="block text-sm font-medium text-gray-700 mb-1">Target Bank Account *</Combobox.Label>
-                                            <div className="relative w-full cursor-default overflow-hidden rounded-md border border-gray-300 bg-white text-left shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-primary/10 sm:text-sm">
-                                                <Combobox.Input
-                                                     className="w-full border-none py-2 pl-3 pr-10 text-sm leading-5 text-gray-900 focus:ring-0"
-                                                     onChange={(event) => setBankAccountQuery(event.target.value)}
-                                                     displayValue={(account: BankAccount | null) => account?.name ?? ""}
-                                                     placeholder="Select or type to create..."
-                                                     autoComplete='off'
-                                                     disabled={createAccountMutation.isPending}
-                                                />
-                                                <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2" disabled={createAccountMutation.isPending}>
-                                                     <ChevronsUpDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                                                 </Combobox.Button>
-                                             </div>
-                                            <Transition
-                                                as={Fragment}
-                                                leave="transition ease-in duration-100"
-                                                leaveFrom="opacity-100"
-                                                leaveTo="opacity-0"
-                                            >
-                                                <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                                                     {isValidNewName && (
-                                                        <Combobox.Option
-                                                            value={{ id: '__create__', name: bankAccountQuery } as any}
-                                                            className={({ active }) => `relative cursor-pointer select-none py-2 px-4 ${active ? 'bg-primary text-white' : 'text-gray-900'}`}
-                                                            onClick={() => {
-                                                                 if (!createAccountMutation.isPending) {
-                                                                      createAccountMutation.mutate(bankAccountQuery.trim());
-                                                                  }
-                                                             }}
-                                                        >
-                                                             Create "{bankAccountQuery.trim()}"
-                                                             {createAccountMutation.isPending && createAccountMutation.variables === bankAccountQuery.trim() && (
-                                                                 <Loader2 className="ml-2 h-4 w-4 animate-spin inline-block" />
-                                                             )}
-                                                        </Combobox.Option>
-                                                     )}
-                                                      {filteredBankAccounts.length === 0 && !isValidNewName ? (
-                                                         <div className="relative cursor-default select-none py-2 px-4 text-gray-700">
-                                                              {bankAccountQuery !== '' ? 'No matching accounts found.' : 'Type to search or create...'}
-                                                         </div>
-                                                     ) : null}
-
-                                                     {filteredBankAccounts.map((account) => (
-                                                        <Combobox.Option
-                                                            key={account.id}
-                                                            value={account}
-                                                            disabled={createAccountMutation.isPending}
-                                                            className={({ active, disabled }) =>
-                                                                 `relative select-none py-2 pl-10 pr-4 ${disabled ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer'} ${active && !disabled ? 'bg-primary text-white' : 'text-gray-900'}`
-                                                            }
-                                                         >
-                                                            {({ selected, active }) => (
-                                                                 <>
-                                                                     <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                                                         {account.name}
-                                                                     </span>
-                                                                     {selected ? (
-                                                                         <span className={`absolute inset-y-0 left-0 flex items-center pl-3 ${active ? 'text-white' : 'text-primary'}`}>
-                                                                             <Check className="h-5 w-5" aria-hidden="true" />
-                                                                         </span>
-                                                                     ) : null}
-                                                                 </>
-                                                             )}
-                                                         </Combobox.Option>
-                                                    ))}
-                                                </Combobox.Options>
-                                            </Transition>
-                                        </div>
-                                    )}
-                                 </Combobox>
-                                 {createAccountMutation.isError && (
-                                     <p className="mt-1 text-xs text-red-600">Creation failed: {createAccountMutation.error.message}</p>
-                                 )}
-                             </div>
-                            {/* ... Format Settings ... */} 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                     <Listbox value={config.dateFormat} onChange={(value) => handleConfigChange('dateFormat', value)}>
-                                        <Label className="block text-sm font-medium text-gray-700 mb-1">Date Format *</Label>
-                                         <div className="relative mt-1">
-                                             <ListboxButton className="listbox-button-style">
-                                                 <span className="block truncate">{commonDateFormats.find(f => f.value === config.dateFormat)?.label ?? 'Select...'}</span>
-                                                 <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                                                     <ChevronsUpDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                                                 </span>
-                                             </ListboxButton>
-                                             <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                                                 <ListboxOptions className="listbox-options-style">
-                                                     {commonDateFormats.map((format) => (
-                                                         <ListboxOption key={format.value} value={format.value} className={({ active }) => `listbox-option-style ${active ? 'bg-primary/10 text-primary' : 'text-gray-900'}`}>
-                                                             {({ selected }) => (
-                                                                 <>
-                                                                     <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>{format.label}</span>
-                                                                     {selected ? <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary"><Check className="h-5 w-5" aria-hidden="true" /></span> : null}
-                                                                 </>
-                                                             )}
-                                                         </ListboxOption>
-                                                     ))}
-                                                 </ListboxOptions>
-                                             </Transition>
-                                         </div>
-                                     </Listbox>
-                                     <p className="text-sm text-muted-foreground mt-1">Select the format matching the date column.</p>
-                                </div>
-
-                                <div>
-                                     <Listbox value={config.amountFormat} onChange={(value) => handleConfigChange('amountFormat', value)}>
-                                        <Label className="block text-sm font-medium text-gray-700 mb-1">Amount Format *</Label>
-                                         <div className="relative mt-1">
-                                             <ListboxButton className="listbox-button-style">
-                                                 <span className="block truncate">{amountFormatOptions.find(f => f.value === config.amountFormat)?.label ?? 'Select...'}</span>
-                                                  <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"><ChevronsUpDown className="h-5 w-5 text-gray-400" aria-hidden="true" /></span>
-                                             </ListboxButton>
-                                             <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                                                 <ListboxOptions className="listbox-options-style">
-                                                     {amountFormatOptions.map((format) => (
-                                                         <ListboxOption key={format.value} value={format.value} className={({ active }) => `listbox-option-style ${active ? 'bg-primary/10 text-primary' : 'text-gray-900'}`}>
-                                                             {({ selected }) => (
-                                                                 <>
-                                                                     <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>{format.label}</span>
-                                                                     {selected ? <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary"><Check className="h-5 w-5" aria-hidden="true" /></span> : null}
-                                                                 </>
-                                                             )}
-                                                         </ListboxOption>
-                                                     ))}
-                                                 </ListboxOptions>
-                                             </Transition>
-                                         </div>
-                                     </Listbox>
-                                </div>
-
-                                {config.amountFormat === 'sign_column' && (
-                                    <div>
-                                         <Listbox value={config.signColumn} onChange={(value) => handleConfigChange('signColumn', value)}>
-                                             <Label className="block text-sm font-medium text-gray-700 mb-1">Sign Column *</Label>
-                                             <div className="relative mt-1">
-                                                 <ListboxButton className="listbox-button-style">
-                                                     <span className="block truncate">{config.signColumn ?? 'Select sign column...'}</span>
-                                                      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"><ChevronsUpDown className="h-5 w-5 text-gray-400" aria-hidden="true" /></span>
-                                                 </ListboxButton>
-                                                 <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                                                     <ListboxOptions className="listbox-options-style">
-                                                         {analyzeMutation.data.headers.map(header => (
-                                                             <ListboxOption key={header} value={header} className={({ active }) => `listbox-option-style ${active ? 'bg-primary/10 text-primary' : 'text-gray-900'}`}>
-                                                                 {({ selected }) => (
-                                                                     <>
-                                                                         <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>{header}</span>
-                                                                         {selected ? <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary"><Check className="h-5 w-5" aria-hidden="true" /></span> : null}
-                                                                     </>
-                                                                 )}
-                                                             </ListboxOption>
-                                                         ))}
-                                                     </ListboxOptions>
-                                                 </Transition>
-                                             </div>
-                                         </Listbox>
-                                        <p className="text-sm text-muted-foreground mt-1">Column indicating Debit/Credit.</p>
-                                    </div>
-                                )}
-                            </div>
-                            {/* ... Other Settings ... */} 
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="skipRows" className="block text-sm font-medium text-gray-700 mb-1">Header Rows to Skip</label>
-                                    <input
-                                        id="skipRows"
-                                        type="number"
-                                        min="0"
-                                        value={config.skipRows || 0}
-                                        onChange={(e) => handleConfigChange('skipRows', parseInt(e.target.value, 10) || 0)}
-                                        className="input-style"
-                                        disabled={isLoading}
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="delimiter" className="block text-sm font-medium text-gray-700 mb-1">Delimiter (Optional)</label>
-                                    <input
-                                        id="delimiter"
-                                        value={config.delimiter || ''}
-                                        onChange={(e) => handleConfigChange('delimiter', e.target.value)}
-                                        placeholder={`Detected: ${analyzeMutation.data.detectedDelimiter || 'Comma (,)'}`}
-                                        className="input-style"
-                                        disabled={isLoading}
-                                    />
-                                    <p className="text-sm text-muted-foreground mt-1">Leave blank to auto-detect.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* --- 3: Preview & Map Columns --- */} 
-                    <div className="card-style">
-                         <div className="card-header-style">
-                             <h3 className="card-title-style">Step 3: Preview Data & Map Columns</h3>
-                             <p className="card-description-style">Review the first {analyzeMutation.data.previewRows.length} rows and map columns.</p>
-                         </div>
-                         <div className="p-6 pt-0">
-                             <div className="relative w-full overflow-auto">
-                                 <table className="w-full caption-bottom text-sm">
-                                     <thead className="[&_tr]:border-b">
-                                         <tr className="border-b">
-                                              {analyzeMutation.data.headers.map(header => (
-                                                  <th key={header} className="h-12 px-3 text-left align-middle font-medium text-muted-foreground whitespace-nowrap pt-2 pb-1 border-r last:border-r-0">
-                                                      <div className="font-semibold mb-1 text-gray-800 truncate" title={header}>{header}</div>
-                                                       <Listbox value={config.mappings[header] || 'none'} onChange={(value) => handleMappingChange(header, value)}>
-                                                          <div className="relative mt-1 max-w-48">
-                                                              <ListboxButton className="relative w-full cursor-default rounded bg-white py-1.5 pl-3 pr-8 text-left border border-gray-300 focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-primary/50 text-xs">
-                                                                  <span className="block truncate">{mappingOptions.find(o => o.value === (config.mappings[header] || 'none'))?.label}</span>
-                                                                  <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1.5">
-                                                                      <ChevronsUpDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
-                                                                  </span>
-                                                              </ListboxButton>
-                                                              <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                                                                  <ListboxOptions className="absolute z-20 mt-1 max-h-60 w-auto min-w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm">
-                                                                      {mappingOptions.map((option) => (
-                                                                          <ListboxOption key={option.value} value={option.value} className={({ active }) => `relative cursor-default select-none py-2 pl-10 pr-4 text-xs ${active ? 'bg-primary/10 text-primary' : 'text-gray-900'}`}>
-                                                                              {({ selected }) => (
-                                                                                  <>
-                                                                                      <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>{option.label}</span>
-                                                                                      {selected ? <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary"><Check className="h-4 w-4" aria-hidden="true" /></span> : null}
-                                                                                  </>
-                                                                              )}
-                                                                          </ListboxOption>
-                                                                      ))}
-                                                                  </ListboxOptions>
-                                                              </Transition>
-                                                          </div>
-                                                      </Listbox>
-                                                  </th>
-                                              ))}
-                                         </tr>
-                                     </thead>
-                                     <tbody className="[&_tr:last-child]:border-0">
-                                          {analyzeMutation.data.previewRows.map((row, index) => (
-                                             <tr key={index} className="border-b hover:bg-muted/50">
-                                                 {analyzeMutation.data.headers.map(header => (
-                                                     <td key={header} className="p-2 align-middle text-xs whitespace-nowrap border-r last:border-r-0">
-                                                          {String(row[header] ?? '')}
-                                                     </td>
-                                                 ))}
-                                             </tr>
-                                         ))}
-                                     </tbody>
-                                 </table>
-                             </div>
-                         </div>
-                     </div>
-
-                     {/* --- Button to Proceed - Use custom Button --- */}
-                     <Button
-                         type="button"
-                         onClick={handleProceedToCategoryMapping}
-                         disabled={isLoading || !file || !selectedBankAccount}
-                         className="mt-6 w-full md:w-auto"
-                     >
-                          Review & Import
-                      </Button>
-                </div>
+            {currentStep === 'configure' && analyzeMutation.isSuccess && (
+                 <ConfigurationSection 
+                     config={config}
+                     onConfigChange={handleConfigChange}
+                     onMappingChange={handleMappingChange}
+                     bankAccounts={bankAccounts}
+                     selectedBankAccount={selectedBankAccount}
+                     onBankAccountChange={setSelectedBankAccount} // Pass state setter
+                     onBankAccountQueryChange={setBankAccountQuery} // Pass state setter
+                     bankAccountQuery={bankAccountQuery}
+                     onBankAccountCreate={(name) => createAccountMutation.mutate(name)} // Call mutation
+                     isCreatingBankAccount={createAccountMutation.isPending}
+                     createBankAccountError={createAccountMutation.error || null}
+                     importProfiles={importProfiles}
+                     selectedProfile={selectedProfile}
+                     onProfileChange={setSelectedProfile} // Pass state setter
+                     isLoadingProfiles={isLoadingProfiles}
+                     analysisResult={analyzeMutation.data} // Pass analysis results (non-null asserted by isSuccess)
+                     onProceed={handleValidateAndProceed} // Pass the new handler
+                     isLoading={isLoading}
+                 />
             )}
 
-            {/* --- Step 2b: Map Categories --- */} 
-            {(sessionStatus === 'authenticated' && analyzeMutation.isSuccess && analyzeMutation.data && currentStep === 'map_categories') && (
-                <div className="space-y-6">
-                     <div className="card-style">
-                         <div className="card-header-style">
-                             <h3 className="card-title-style">Step 2b: Map Imported Categories</h3>
-                             <p className="card-description-style">Match or create categories for items found in the file.</p>
-                         </div>
-                         <div className="p-6 pt-0 space-y-3 divide-y divide-gray-200">
-                             <div className="grid grid-cols-[1fr_2fr] gap-4 items-center font-medium text-gray-500 text-sm py-2">
-                                <div>CSV Category Name</div>
-                                <div>Map To</div>
-                             </div>
-                             {isLoadingCategories && <p>Loading categories...</p>}
-                             {categoriesError && <p className="text-red-600">Error loading categories: {categoriesError.message}</p>}
+            {/* --- Review Step --- */}
+            {currentStep === 'review' && (
+                <ReviewStep 
+                    validationIssues={validationIssues}
+                    onBack={() => setCurrentStep('configure')}
+                />
+            )}
 
-                             {!isLoadingCategories && !categoriesError && uniqueCsvCategories.map((csvCat) => (
-                                 <div key={csvCat} className="grid grid-cols-[1fr_2fr] gap-4 items-start pt-3">
-                                     <div className="font-medium text-sm pt-2 truncate" title={csvCat}>{csvCat}</div>
-                                     <div className="w-full">
-                                         <Listbox
-                                             value={categoryMappings[csvCat]?.targetId ?? '__SKIP__'}
-                                             onChange={(selectedValue) => {
-                                                 const targetId = selectedValue === '__SKIP__' ? null : selectedValue === '__CREATE__' ? '__CREATE__' : selectedValue;
-                                                 // If creating, default newName to the CSV category name
-                                                 // Otherwise, clear newName (when selecting Skip or Existing)
-                                                 const update = targetId === '__CREATE__' 
-                                                     ? { targetId, newName: csvCat } 
-                                                     : { targetId, newName: '' }; 
-                                                 handleCategoryMappingChange(csvCat, update);
-                                             }}
-                                             disabled={isLoading}
-                                         >
-                                             <div className="relative">
-                                                <ListboxButton className="input-style relative w-full cursor-default rounded-md bg-white py-2 pl-3 pr-10 text-left border border-gray-300 shadow-sm focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
-                                                     <span className="block truncate">{getCategoryMappingDisplay(csvCat)}</span>
-                                                     <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                                                         <ChevronsUpDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                                                     </span>
-                                                 </ListboxButton>
-                                                 <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                                                     <ListboxOptions className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                                                         <ListboxOption value="__SKIP__" className={({ active }) => `relative cursor-default select-none py-2 pl-10 pr-4 ${ active ? 'bg-blue-100 text-blue-900' : 'text-gray-900' }`}>
-                                                             {({ selected }) => (<><span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>- Skip Category -</span>{selected ? <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600"><Check className="h-5 w-5" aria-hidden="true" /></span> : null}</>)}
-                                                         </ListboxOption>
-                                                          <ListboxOption value="__CREATE__" className={({ active }) => `relative cursor-default select-none py-2 pl-10 pr-4 ${ active ? 'bg-blue-100 text-blue-900' : 'text-gray-900' }`}>
-                                                             {({ selected }) => (<><span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>-- Create New Category --</span>{selected ? <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600"><Check className="h-5 w-5" aria-hidden="true" /></span> : null}</>)}
-                                                         </ListboxOption>
-                                                         <div className="relative cursor-default select-none py-1 px-4 text-gray-500 text-xs">Existing Categories</div>
-                                                          {userCategories.map(cat => (
-                                                             <ListboxOption key={cat.id} value={cat.id} className={({ active }) => `relative cursor-default select-none py-2 pl-10 pr-4 ${ active ? 'bg-blue-100 text-blue-900' : 'text-gray-900' }`}>
-                                                                {({ selected }) => (<><span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>{cat.name}</span>{selected ? <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600"><Check className="h-5 w-5" aria-hidden="true" /></span> : null}</>)}
-                                                             </ListboxOption>
-                                                         ))}
-                                                     </ListboxOptions>
-                                                 </Transition>
-                                             </div>
-                                         </Listbox>
+            {/* --- Step 2b: Map Categories --- */}
+            {currentStep === 'map_categories' && (
+                <CategoryMappingSection 
+                    uniqueCsvCategories={uniqueCsvCategories}
+                    userCategories={userCategories}
+                    categoryMappings={categoryMappings}
+                    onCategoryMappingChange={handleCategoryMappingChange} // Pass the existing handler
+                    onProceed={handleSubmit} // Directly call final submit
+                    onBack={() => setCurrentStep('configure')} // Go back to config
+                    isLoading={isLoading}
+                    isCreatingCategory={createCategoryMutation.isPending}
+                    createCategoryError={createCategoryMutation.error || null}
+                />
+            )}
 
-                                         {categoryMappings[csvCat]?.targetId === '__CREATE__' && (
-                                             <div className="mt-1">
-                                                <input
-                                                     type="text"
-                                                     placeholder="Enter new category name..."
-                                                     value={categoryMappings[csvCat]?.newName || ''}
-                                                     onChange={(e) => handleCategoryMappingChange(csvCat, { targetId: '__CREATE__', newName: e.target.value })}
-                                                      className="input-style w-full text-sm"
-                                                      disabled={isLoading || createCategoryMutation.isPending}
-                                                 />
-                                             </div>
-                                         )}
-                                         {createCategoryMutation.isError && createCategoryMutation.variables?.csvCategoryName === csvCat && (
-                                             <p className="text-xs text-red-600 mt-1">Creation failed: {createCategoryMutation.error.message}</p>
-                                         )}
-                                     </div>
-                                 </div>
-                             ))}
-                         </div>
-                     </div>
-
-                     {/* --- Buttons - Use custom Button --- */}
-                     <div className="flex space-x-4">
-                         <Button
-                             type="button"
-                             onClick={() => setCurrentStep('configure')}
-                             disabled={isLoading}
-                             className="bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-indigo-500"
-                         >
-                             Back to Configuration
-                         </Button>
-                         <Button
-                             type="button"
-                             onClick={handleSubmit}
-                             disabled={isLoading || createCategoryMutation.isPending}
-                         >
-                             {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 'Import Transactions'}
-                         </Button>
-                     </div>
-                 </div>
-             )}
-
-             {currentStep === 'submitting' && (
+            {currentStep === 'submitting' && (
                   <div className="flex justify-center items-center p-4 card-style">
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
                       <span className="ml-2">Submitting import...</span>

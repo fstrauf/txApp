@@ -308,23 +308,29 @@ export const webhookResults = pgTable('webhookResults', {
   created_at: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow(),
 });
 
+// Base type for the config matching the Zod schema used in the API
+// Explicitly define the allowed values for the mapping
+type ImportProfileConfigMappingValue = 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'category' | 'none';
+
+interface ImportProfileConfig {
+    mappings: Record<string, ImportProfileConfigMappingValue>; 
+    dateFormat: string;
+    amountFormat: 'standard' | 'negate' | 'sign_column';
+    signColumn?: string;
+    skipRows: number;
+    delimiter?: string;
+    bankAccountId?: string; // Include optional bankAccountId
+}
+
 // New table for CSV Import Profiles
 export const csvImportProfiles = pgTable('csvImportProfiles', {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: text('userId')
         .notNull()
         .references(() => users.id, { onDelete: 'cascade' }),
-    name: text('name').notNull(), // e.g., "ANZ Bank Checking", "My Credit Card Statement"
-    config: jsonb('config').notNull().$type<{ // Store the core configuration parts
-        mappings: Record<string, 'date' | 'amount' | 'description' | 'currency' | 'category' | 'none'>;
-        dateFormat: string;
-        amountFormat: 'standard' | 'negate' | 'sign_column';
-        signColumn?: string;
-        skipRows: number;
-        delimiter?: string;
-        // Note: bankAccountId is NOT stored here, user selects it each time.
-        // Note: categoryMappings are NOT stored here, they are file-specific.
-    }>(),
+    name: text('name').notNull(), 
+    // Use the explicitly defined interface for $type
+    config: jsonb('config').notNull().$type<ImportProfileConfig>(), 
     createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
 }, (profile) => ({
