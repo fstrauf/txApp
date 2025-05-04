@@ -11,6 +11,7 @@ import {
   uuid,
   pgEnum,
   integer,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 
 // App beta opt in status enum
@@ -307,6 +308,29 @@ export const webhookResults = pgTable('webhookResults', {
   created_at: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow(),
 });
 
+// New table for CSV Import Profiles
+export const csvImportProfiles = pgTable('csvImportProfiles', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('userId')
+        .notNull()
+        .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(), // e.g., "ANZ Bank Checking", "My Credit Card Statement"
+    config: jsonb('config').notNull().$type<{ // Store the core configuration parts
+        mappings: Record<string, 'date' | 'amount' | 'description' | 'currency' | 'category' | 'none'>;
+        dateFormat: string;
+        amountFormat: 'standard' | 'negate' | 'sign_column';
+        signColumn?: string;
+        skipRows: number;
+        delimiter?: string;
+        // Note: bankAccountId is NOT stored here, user selects it each time.
+        // Note: categoryMappings are NOT stored here, they are file-specific.
+    }>(),
+    createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
+}, (profile) => ({
+    userIdNameIndex: uniqueIndex('userId_profileName_idx').on(profile.userId, profile.name),
+}));
+
 // Relationships
 export const accountsRelations = relations(accounts, ({ one }) => ({
   user: one(users, { fields: [accounts.userId], references: [users.id] }),
@@ -379,4 +403,10 @@ export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   trainingJobs: many(trainingJobs),
   transactions: many(transactions),
+  csvImportProfiles: many(csvImportProfiles),
+}));
+
+// Add relations for csvImportProfiles
+export const csvImportProfilesRelations = relations(csvImportProfiles, ({ one }) => ({
+    user: one(users, { fields: [csvImportProfiles.userId], references: [users.id] }),
 })); 

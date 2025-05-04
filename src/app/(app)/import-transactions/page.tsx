@@ -1,17 +1,18 @@
 'use client';
 
-import React, { useState, ChangeEvent, FormEvent, Fragment } from 'react';
+import React, { useState, ChangeEvent, FormEvent, Fragment, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Combobox, Label, Listbox, ListboxButton, ListboxOption, ListboxOptions, Transition } from '@headlessui/react';
 import { Loader2, Check, ChevronsUpDown, AlertCircle } from 'lucide-react';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
+import { CsvImportProfile } from '@/app/api/import-profiles/route';
 
 // Add imports for category-related API calls and types
 import { eq } from 'drizzle-orm'; // Assuming this might be needed if API functions are moved
 
-// --- API Interaction Functions ---
+// --- API Interaction Functions (defined *outside* the component) ---
 
 interface BankAccountsApiResponse {
     bankAccounts: BankAccount[];
@@ -250,6 +251,33 @@ const mappingOptions: { value: MappedFieldType; label: string }[] = [
     { value: 'category', label: 'Map to: Category' },
 ];
 
+const fetchImportProfiles = async (): Promise<CsvImportProfile[]> => {
+    const response = await fetch('/api/import-profiles');
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to fetch profiles' }));
+        throw new Error(errorData.error || `Failed to fetch profiles (${response.status})`);
+    }
+    const data = await response.json();
+    return data.profiles || [];
+};
+
+interface CreateProfileApiResponse {
+    profile: CsvImportProfile;
+    error?: string;
+}
+const createImportProfile = async (profileData: { name: string; config: Omit<CsvImportProfile['config'], 'id'> }): Promise<CsvImportProfile> => {
+    const response = await fetch('/api/import-profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileData),
+    });
+    const result: CreateProfileApiResponse = await response.json();
+    if (!response.ok) {
+        throw new Error(result.error || 'Failed to create profile');
+    }
+    return result.profile;
+};
+
 // --- Component ---
 const ImportTransactionsPage: React.FC = () => {
     const { status: sessionStatus } = useSession();
@@ -287,6 +315,22 @@ const ImportTransactionsPage: React.FC = () => {
         queryFn: fetchUserCategories,
         enabled: sessionStatus === 'authenticated',
         staleTime: 5 * 60 * 1000,
+    });
+
+    // --- State for Profiles ---
+    const [selectedProfile, setSelectedProfile] = useState<CsvImportProfile | null>(null);
+
+    // --- State for Post-Import Save Prompt ---
+    const [showSaveProfilePrompt, setShowSaveProfilePrompt] = useState(false);
+    const [lastSuccessfulConfig, setLastSuccessfulConfig] = useState<Omit<CsvImportProfile['config'], 'id'> | null>(null);
+    const [postImportProfileName, setPostImportProfileName] = useState('');
+
+    // --- State for managing the UI flow ---
+    const { data: importProfiles = [], isLoading: isLoadingProfiles, error: profilesError } = useQuery<CsvImportProfile[], Error>({
+        queryKey: ['importProfiles'],
+        queryFn: fetchImportProfiles,
+        enabled: sessionStatus === 'authenticated',
+        staleTime: 10 * 60 * 1000, // Profiles might change less often
     });
 
     const analyzeMutation = useMutation<AnalysisResult, Error, File>({
@@ -355,10 +399,23 @@ const ImportTransactionsPage: React.FC = () => {
             createAccountMutation.reset();
             setSelectedBankAccount(null);
             setBankAccountQuery("");
+
+            // Reset profile selection on new file analysis
+            setSelectedProfile(null);
+            // Hide post-import prompt and clear related state
+            setShowSaveProfilePrompt(false);
+            setLastSuccessfulConfig(null);
+            setPostImportProfileName('');
+            createProfileMutation.reset(); // Reset any errors from previous post-import save attempts
         },
         onError: (error) => {
              console.error("Analysis Mutation Error:", error);
              setCurrentStep('configure'); // Reset step on error
+             // Also hide post-import prompt on analysis error
+             setShowSaveProfilePrompt(false);
+             setLastSuccessfulConfig(null);
+             setPostImportProfileName('');
+             createProfileMutation.reset();
         }
     });
 
@@ -404,61 +461,144 @@ const ImportTransactionsPage: React.FC = () => {
         }
     });
 
-    const importMutation = useMutation<ImportApiResponse, Error, { file: File; config: ImportConfig; categoryMappings: typeof categoryMappings }>({
+    // Define mutation with top-level onSuccess/onError
+    const importMutation = useMutation<ImportApiResponse, Error, { file: File; config: ImportConfig; categoryMappings: typeof categoryMappings }>({ 
         mutationFn: async (vars) => {
+            // (This part remains the same - POST to /api/transactions/import)
             const { file, config, categoryMappings } = vars;
             const importData = new FormData();
             importData.append('file', file);
-            // Combine main config and category mappings for the backend
-            const fullPayload = { ...config, categoryMappings }; 
+            const fullPayload = { ...config, categoryMappings };
             importData.append('config', JSON.stringify(fullPayload));
-
-            const response = await fetch('/api/transactions/import', {
-                method: 'POST',
-                body: importData,
-            });
+            const response = await fetch('/api/transactions/import', { method: 'POST', body: importData });
             const result: ImportApiResponse = await response.json();
-             if (!response.ok) {
+            if (!response.ok) {
                 const errorDetails = result.details ? ` Details: ${JSON.stringify(result.details)}` : '';
                 throw new Error(result.error || 'Import failed' + errorDetails);
             }
             return result;
         },
-        onSuccess: (data) => {
+        onSuccess: (data, variables) => { // Use top-level onSuccess
              console.log("Import successful:", data.message);
+             
+             // Construct the config snapshot from the *variables* that were successfully sent
+             const mappingsForProfile: CsvImportProfile['config']['mappings'] = {};
+             // Find the original header->fieldType mappings based on the submitted fieldType->header mappings
+             const originalMappings = config.mappings; // Access component state 
+             const submittedMappings = variables.config.mappings; // { date: 'HeaderA', amount: 'HeaderB', ... }
+             
+             for(const header in originalMappings) {
+                 const fieldType = originalMappings[header];
+                 // Check if this fieldType was part of the successful submission
+                 const submittedHeader = submittedMappings[fieldType as keyof typeof submittedMappings];
+                 if(submittedHeader === header) { // Ensure the header matches what was submitted for this field type
+                     mappingsForProfile[header] = fieldType;
+                 } else if (fieldType !== 'none') {
+                     console.warn(`Mapping mismatch for header '${header}' / fieldType '${fieldType}' during profile save construction.`);
+                 }
+             }
+
+             const successfulConfigForProfile: Omit<CsvImportProfile['config'], 'id'> = {
+                 mappings: mappingsForProfile, // Use the reconstructed { header: fieldType } mappings
+                 dateFormat: variables.config.dateFormat,
+                 amountFormat: variables.config.amountFormat,
+                 signColumn: variables.config.signColumn,
+                 skipRows: variables.config.skipRows,
+                 delimiter: variables.config.delimiter,
+             };
+
+             setLastSuccessfulConfig(successfulConfigForProfile);
+             setShowSaveProfilePrompt(true); 
+             setPostImportProfileName(''); 
+             createProfileMutation.reset(); 
+
+             // Reset other state (as before)
              setFile(null);
              analyzeMutation.reset();
              setSelectedBankAccount(null);
              setBankAccountQuery("");
-             setConfig({
-                mappings: {},
-                dateFormat: commonDateFormats[1].value,
-                amountFormat: 'standard',
-                skipRows: 0,
-                signColumn: undefined,
-                delimiter: undefined
-             });
-             // Reset category mapping state as well
+             setConfig({ mappings: {}, dateFormat: commonDateFormats[1].value, amountFormat: 'standard', skipRows: 0, signColumn: undefined, delimiter: undefined });
              setUniqueCsvCategories([]);
              setCategoryMappings({});
-             setCurrentStep('configure'); // Reset step on successful import
+             setCurrentStep('configure'); 
+             setSelectedProfile(null); 
         },
-        onError: (error) => {
+        onError: (error) => { // Use top-level onError
             console.error("Import Mutation Error:", error);
-            setCurrentStep('configure'); // Reset step on import error to allow fixes
+            setCurrentStep('configure'); 
+            setShowSaveProfilePrompt(false);
+            setLastSuccessfulConfig(null);
+            setPostImportProfileName('');
+            createProfileMutation.reset();
         }
     });
+
+    // Mutation for creating a new profile
+    const createProfileMutation = useMutation<CsvImportProfile, Error, { name: string; config: Omit<CsvImportProfile['config'], 'id'> }>({
+        mutationFn: createImportProfile,
+        onSuccess: (newProfile) => {
+            console.log(`Profile '${newProfile.name}' created successfully.`);
+            queryClient.setQueryData<CsvImportProfile[]>(['importProfiles'], (oldData = []) => [...oldData, newProfile]);
+            // If created via post-import prompt, hide the prompt
+            if (showSaveProfilePrompt) {
+                setShowSaveProfilePrompt(false);
+                setLastSuccessfulConfig(null);
+                setPostImportProfileName('');
+            } else {
+                // If somehow triggered differently (e.g., future edit feature), select it
+                 setSelectedProfile(newProfile);
+            }
+        },
+        onError: (error) => {
+            console.error(`Failed to create profile:`, error);
+            // Error will be shown via renderFeedback OR inline in the post-import prompt
+        }
+    });
+
+    // --- Effect to apply selected profile ---
+    useEffect(() => {
+        if (selectedProfile) {
+            console.log("Applying selected profile:", selectedProfile.name);
+            // Apply profile config to the main config state
+            setConfig(prev => ({
+                ...prev, // Keep non-profile things like mappings (from analysis) and delimiter (from analysis)
+                dateFormat: selectedProfile.config.dateFormat,
+                amountFormat: selectedProfile.config.amountFormat,
+                signColumn: selectedProfile.config.signColumn,
+                skipRows: selectedProfile.config.skipRows,
+                // Important: Apply mappings from profile *only if* they exist in the current analyzed headers
+                mappings: analyzeMutation.data?.headers.reduce((acc, header) => {
+                    // Find if this header was mapped in the saved profile config
+                    const profileMappingEntry = Object.entries(selectedProfile.config.mappings)
+                                                    .find(([fieldType, mappedHeader]) => mappedHeader === header);
+                    
+                    // If found, use the fieldType from the profile, otherwise 'none'
+                    acc[header] = profileMappingEntry ? profileMappingEntry[0] as MappedFieldType : 'none';
+                    return acc;
+                }, {} as Record<string, MappedFieldType>) || prev.mappings, // Fallback to existing if no analysis data yet
+                delimiter: selectedProfile.config.delimiter || prev.delimiter, // Apply delimiter from profile if set
+            }));
+        }
+    }, [selectedProfile, analyzeMutation.data?.headers, queryClient]); // Rerun when profile or headers change, added queryClient dependency for safety
 
     const isLoading = sessionStatus === 'loading' ||
                       isLoadingBankAccounts ||
                       isLoadingCategories ||
+                      isLoadingProfiles ||
                       analyzeMutation.isPending ||
                       createAccountMutation.isPending ||
                       createCategoryMutation.isPending ||
+                      createProfileMutation.isPending ||
                       importMutation.isPending;
 
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
+        // Hide prompt and clear state when file changes
+        setShowSaveProfilePrompt(false);
+        setLastSuccessfulConfig(null);
+        setPostImportProfileName('');
+        createProfileMutation.reset();
+
         if (selectedFile && sessionStatus === 'authenticated') {
             setFile(selectedFile);
             setSelectedBankAccount(null);
@@ -594,7 +734,7 @@ const ImportTransactionsPage: React.FC = () => {
         }
     };
 
-    // --- Final Submit Handler (called after category mapping or directly) ---
+    // --- Final Submit Handler --- 
     const handleSubmit = async () => {
         // Set step to submitting if not already set (e.g., called directly)
         if (currentStep !== 'submitting') {
@@ -612,12 +752,20 @@ const ImportTransactionsPage: React.FC = () => {
          for (const header in config.mappings) {
              const fieldType = config.mappings[header];
              if (fieldType !== 'none') {
-                 // Simplified: Assume first mapping wins if duplicates somehow exist
                  if (!apiMappings[fieldType as keyof typeof apiMappings]) {
                      apiMappings[fieldType as keyof typeof apiMappings] = header;
                  }
              }
          }
+
+        // Check required fields more strictly
+        if (!apiMappings.date || !apiMappings.amount || !apiMappings.description) {
+            console.error("Validation failed: Required mappings (date, amount, description) are missing.");
+            importMutation.reset();
+            importMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(importMutation as any)._error = new Error("Configuration error: Ensure Date, Amount, and Description columns are mapped.");} });
+            setCurrentStep('configure');
+            return; 
+        }
 
         // --- Category Mapping Validation (only if category step was involved) ---
         let validationErrors: string[] = [];
@@ -655,47 +803,47 @@ const ImportTransactionsPage: React.FC = () => {
             return;
         }
 
-        // --- Actual Submission Logic --- 
-        try {
-            // --- Handle Category Creation --- 
-            const categoriesToCreate = Object.entries(categoryMappings)
-                .filter(([csvCat, mapping]) => mapping.targetId === '__CREATE__' && mapping.newName?.trim())
-                .map(([csvCat, mapping]) => ({ csvCategoryName: csvCat, newName: mapping.newName!.trim() }));
+        // Construct config FOR IMPORT API
+        const finalApiMappings: Required<Pick<ImportConfig['mappings'], 'date' | 'amount' | 'description'>> & Pick<ImportConfig['mappings'], 'currency' | 'category'> = {
+            date: apiMappings.date as string, 
+            amount: apiMappings.amount as string,
+            description: apiMappings.description as string,
+            currency: apiMappings.currency,
+            category: apiMappings.category,
+        };
+        const submitConfig: ImportConfig = {
+            bankAccountId: selectedBankAccount!.id,
+            mappings: finalApiMappings,
+            dateFormat: config.dateFormat,
+            amountFormat: config.amountFormat,
+            signColumn: config.amountFormat === 'sign_column' ? config.signColumn : undefined,
+            skipRows: Number(config.skipRows || 0),
+            delimiter: config.delimiter || undefined,
+        };
+        
+        // Trigger Import - Use the standard mutate call without inline callbacks
+        importMutation.mutate({ file: file!, config: submitConfig, categoryMappings: categoryMappings });
 
-            if (categoriesToCreate.length > 0) {
-                console.log("Attempting to pre-create categories:", categoriesToCreate);
-                 await Promise.all(categoriesToCreate.map(catInfo => createCategoryMutation.mutateAsync(catInfo)));
-                 console.log("Finished pre-creating categories.");
-                 await new Promise(resolve => setTimeout(resolve, 100)); // Allow state updates
-             }
+        // Removed snapshot capture here - logic moved to top-level onSuccess
+    };
 
-            // --- Construct Config --- 
-            const targetAccountId = selectedBankAccount!.id;
-            const finalCategoryMappings = { ...categoryMappings };
-            const submitConfig: ImportConfig = {
-                 bankAccountId: targetAccountId,
-                 mappings: {
-                     date: apiMappings.date!, amount: apiMappings.amount!, description: apiMappings.description!,
-                     ...(apiMappings.currency && { currency: apiMappings.currency }),
-                     ...(apiMappings.category && { category: apiMappings.category }),
-                  },
-                  dateFormat: config.dateFormat, amountFormat: config.amountFormat,
-                  signColumn: config.amountFormat === 'sign_column' ? config.signColumn : undefined,
-                  skipRows: Number(config.skipRows || 0), delimiter: config.delimiter || undefined,
-             };
-
-            // --- Trigger Import --- 
-            importMutation.mutate({ file: file!, config: submitConfig, categoryMappings: finalCategoryMappings });
-            // CurrentStep will be reset by importMutation's onSuccess/onError
-
-        } catch (error: any) {
-             console.error("Error during final submission process:", error);
-             const message = error instanceof Error ? error.message : "An unexpected error occurred.";
-             importMutation.reset();
-             importMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(importMutation as any)._error = new Error(message);} });
-             // Force back to a reasonable step on error
-             setCurrentStep(mappedCategoryHeader && uniqueCsvCategories.length > 0 ? 'map_categories' : 'configure');
+    // --- Handler to save profile from the POST-IMPORT prompt ---
+    const handlePostImportSaveProfile = () => {
+        const profileName = postImportProfileName.trim();
+        if (!profileName) {
+             createProfileMutation.reset();
+             createProfileMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(createProfileMutation as any)._error = new Error("Profile name cannot be empty.");} });
+             return;
          }
+         if (!lastSuccessfulConfig) {
+              console.error("Cannot save profile, last successful config is missing.");
+              createProfileMutation.reset();
+              createProfileMutation.mutate(undefined as any, { onError: () => {}, onSettled: () => {(createProfileMutation as any)._error = new Error("Configuration data missing.");} });
+              return;
+         }
+
+        console.log("Saving post-import profile:", profileName, lastSuccessfulConfig);
+        createProfileMutation.mutate({ name: profileName, config: lastSuccessfulConfig });
     };
 
     const filteredBankAccounts =
@@ -708,18 +856,50 @@ const ImportTransactionsPage: React.FC = () => {
     const queryMatchesExisting = bankAccounts.some(acc => acc.name.toLowerCase() === bankAccountQuery.toLowerCase());
     const isValidNewName = bankAccountQuery.trim() !== '' && !queryMatchesExisting;
 
-    // Helper function to get display text for category mapping dropdown/value
     const getCategoryMappingDisplay = (csvCategoryName: string): string => {
          const mapping = categoryMappings[csvCategoryName];
-         if (!mapping) return "Mapping..."; // Should not happen if initialized
+         if (!mapping) return "Mapping...";
          if (mapping.targetId === null) return "- Skip Category -";
          if (mapping.targetId === '__CREATE__') {
              return mapping.newName?.trim() ? `Create: "${mapping.newName.trim()}"` : "-- Create New Category --";
          }
-         // Find existing category name by ID
          const existing = userCategories.find(cat => cat.id === mapping.targetId);
-         return existing ? existing.name : "Select Existing..."; // Fallback if ID not found
+         return existing ? existing.name : "Select Existing...";
      };
+
+    const renderFeedback = () => {
+        // Include profile errors in feedback
+        const mutationWithError = [analyzeMutation, createAccountMutation, importMutation, createProfileMutation, createCategoryMutation].find(m => m.isError);
+        const queryError = bankAccountsError || categoriesError || profilesError; // Include profiles query error
+        const error = queryError || mutationWithError?.error;
+        const successMessage = importMutation.isSuccess ? (importMutation.data?.message || 'Import successful!') : createProfileMutation.isSuccess ? `Profile '${createProfileMutation.data?.name}' saved!` : null;
+
+        if (error) {
+            return (
+                <div className="alert-error mb-4">
+                     <AlertCircle className="h-5 w-5" />
+                    <div>
+                        <h5 className="font-bold">Error</h5>
+                        <p>{error.message}</p>
+                    </div>
+                </div>
+            );
+         }
+        if (successMessage) {
+             // Use different style for profile success?
+             const alertClass = createProfileMutation.isSuccess ? "alert-info mb-4" : "alert-success mb-4";
+             return (
+                 <div className={alertClass}>
+                     <Check className="h-5 w-5" />
+                     <div>
+                         <h5 className="font-bold">Success</h5>
+                         <p>{successMessage}</p>
+                     </div>
+                 </div>
+             );
+         }
+         return null;
+    };
 
     if (sessionStatus === 'loading') {
         return (
@@ -744,47 +924,76 @@ const ImportTransactionsPage: React.FC = () => {
         );
     }
 
-    const renderFeedback = () => {
-        const mutationWithError = [analyzeMutation, createAccountMutation, importMutation].find(m => m.isError);
-        const error = bankAccountsError || mutationWithError?.error;
-        const successMessage = importMutation.isSuccess ? (importMutation.data?.message || 'Import successful!') : null;
-
-        if (error) {
-            return (
-                <div className="alert-error mb-4">
-                     <AlertCircle className="h-5 w-5" />
-                    <div>
-                        <h5 className="font-bold">Error</h5>
-                        <p>{error.message}</p>
-                    </div>
-                </div>
-            );
-         }
-        if (successMessage) {
-             return (
-                 <div className="alert-success mb-4">
-                     <Check className="h-5 w-5" />
-                     <div>
-                         <h5 className="font-bold">Success</h5>
-                         <p>{successMessage}</p>
-                     </div>
-                 </div>
-             );
-         }
-         return null;
-    };
-
     return (
-        <div className="container mx-auto p-4 space-y-6">
+        // Add max-w-7xl to the main container
+        <div className="container mx-auto p-4 space-y-6 max-w-7xl">
             <h1 className="text-2xl font-bold">Import Transactions from CSV</h1>
-            {renderFeedback()}
+            
+            {/* Show general feedback (errors, generic success) */}
+            {!showSaveProfilePrompt && renderFeedback()} 
+            
+            {/* --- Post-Import Save Prompt --- */}
+            {showSaveProfilePrompt && (
+                <div className="card-style p-4 space-y-3 bg-green-50 border border-green-300">
+                    {/* Show specific success message for import */} 
+                    <div className="alert-success mb-3">
+                         <Check className="h-5 w-5" />
+                         <div>
+                             <h5 className="font-bold">Import Successful!</h5>
+                             {/* You might want to show the count from importMutation.data?.count here */} 
+                         </div>
+                     </div>
+                     
+                    <p className="text-sm font-medium text-gray-700">Save these import settings for next time?</p>
+                    <div className="flex items-center space-x-2">
+                        <input 
+                            type="text"
+                            placeholder="Enter profile name (e.g., ANZ Checking)"
+                            value={postImportProfileName}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                setPostImportProfileName(e.target.value);
+                                // Clear error if user starts typing
+                                if (createProfileMutation.isError) createProfileMutation.reset();
+                            }}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm input-style flex-grow"
+                            disabled={isLoading || createProfileMutation.isPending}
+                        />
+                        <Button
+                            type="button"
+                            onClick={handlePostImportSaveProfile}
+                            disabled={isLoading || createProfileMutation.isPending || !postImportProfileName.trim()}
+                            className="whitespace-nowrap text-sm"
+                        >
+                            {createProfileMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Save Profile
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={() => {
+                                setShowSaveProfilePrompt(false);
+                                setLastSuccessfulConfig(null);
+                                setPostImportProfileName('');
+                                createProfileMutation.reset();
+                            }}
+                            disabled={isLoading || createProfileMutation.isPending}
+                            className="text-sm text-gray-600 hover:bg-gray-100 bg-transparent px-4 py-2 rounded-md"
+                        >
+                            Skip
+                        </Button>
+                    </div>
+                     {createProfileMutation.isError && (
+                         <p className="mt-1 text-xs text-red-600">{createProfileMutation.error.message}</p>
+                     )}
+                </div>
+            )}
 
             {/* --- Step 1: Upload --- */}
-            {/* Show always, unless analysis is pending */}
-             {currentStep !== 'map_categories' && ( // Hide during category mapping
-                  <div className={`card-style ${analyzeMutation.isPending ? 'opacity-50' : ''}`}>
-                      {/* ... Card content ... */}
-                      <div className="card-header-style">
+            {/* Conditionally hide upload if save prompt is shown? Or allow uploading new file? */}
+            {/* Let's keep it visible for now, handleFileChange will hide the prompt */} 
+            {currentStep !== 'map_categories' && ( 
+                <div className={`card-style ${analyzeMutation.isPending ? 'opacity-50' : ''}`}> 
+                    {/* Restore card content */}
+                    <div className="card-header-style">
                          <h3 className="card-title-style">Step 1: Upload CSV File</h3>
                          <p className="card-description-style">Select the CSV file containing your bank transactions.</p>
                      </div>
@@ -795,7 +1004,7 @@ const ImportTransactionsPage: React.FC = () => {
                             onChange={handleFileChange}
                             disabled={isLoading || analyzeMutation.isPending}
                             className="input-style file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                            key={file ? 'file-loaded' : 'file-empty'}
+                            key={file ? 'file-loaded' : 'file-empty'} // Use state to reset input if needed
                         />
                     </div>
                  </div>
@@ -808,16 +1017,60 @@ const ImportTransactionsPage: React.FC = () => {
               )}
 
             {/* --- Step 2a + 3: Configure & Map Columns --- */}
-            {/* Show only when analysis is done and we are in the configure step */}
             {sessionStatus === 'authenticated' && analyzeMutation.isSuccess && analyzeMutation.data && currentStep === 'configure' && (
                 <div className="space-y-6"> {/* Wrapper for this logical step */}
                     {/* --- 2a: Configure Settings --- */}
                     <div className="card-style">
                          <div className="card-header-style">
                             <h3 className="card-title-style">Step 2: Configure Import Settings</h3>
-                             <p className="card-description-style">Select target account, formats, and map columns in the preview table below.</p>
+                             <p className="card-description-style">Select an existing profile or configure manually. Map columns in the preview below.</p>
                          </div>
                         <div className="p-6 pt-0 space-y-4">
+                            {/* --- Profile Selection (Loading Only) --- */}
+                            <div className="space-y-2 p-4 border border-blue-200 rounded-md bg-blue-50/30">
+                                <h4 className="text-sm font-medium text-blue-800">Import Profiles (Optional)</h4>
+                                <div>
+                                     <Listbox value={selectedProfile} onChange={setSelectedProfile} by="id" >
+                                        <Label className="block text-sm font-medium text-gray-700 mb-1">Load Settings from Profile</Label>
+                                         <div className="relative mt-1">
+                                             <ListboxButton className="listbox-button-style" disabled={isLoading || isLoadingProfiles || !analyzeMutation.data}>
+                                                 <span className="block truncate">{selectedProfile?.name ?? (isLoadingProfiles ? 'Loading profiles...' : 'Manual Configuration')}</span>
+                                                 <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                                     <ChevronsUpDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                                                 </span>
+                                             </ListboxButton>
+                                             <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+                                                 <ListboxOptions className="listbox-options-style z-20">
+                                                     {/* Add option to clear selection */}
+                                                     <ListboxOption value={null} className={({ active }) => `listbox-option-style ${active ? 'bg-primary/10 text-primary' : 'text-gray-900'}`}>
+                                                          {({ selected }) => (
+                                                              <>
+                                                                  <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>-- Manual Configuration --</span>
+                                                                  {selected ? <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary"><Check className="h-5 w-5" aria-hidden="true" /></span> : null}
+                                                              </>
+                                                          )}
+                                                     </ListboxOption>
+                                                     {importProfiles.map((profile) => (
+                                                         <ListboxOption key={profile.id} value={profile} className={({ active }) => `listbox-option-style ${active ? 'bg-primary/10 text-primary' : 'text-gray-900'}`}>
+                                                             {({ selected }) => (
+                                                                 <>
+                                                                     <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>{profile.name}</span>
+                                                                     {selected ? <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary"><Check className="h-5 w-5" aria-hidden="true" /></span> : null}
+                                                                 </>
+                                                             )}
+                                                         </ListboxOption>
+                                                     ))}
+                                                     {importProfiles.length === 0 && !isLoadingProfiles && (
+                                                         <div className="relative cursor-default select-none py-2 px-4 text-gray-700">No saved profiles found.</div>
+                                                     )}
+                                                 </ListboxOptions>
+                                             </Transition>
+                                         </div>
+                                     </Listbox>
+                                </div>
+                            </div>
+                            {/* --- End Profile Selection --- */}
+
                             {/* ... Bank Account Combobox ... */}
                             <div>
                                  <Combobox value={selectedBankAccount} onChange={setSelectedBankAccount} by="id" nullable>
@@ -1027,9 +1280,9 @@ const ImportTransactionsPage: React.FC = () => {
                                          <tr className="border-b">
                                               {analyzeMutation.data.headers.map(header => (
                                                   <th key={header} className="h-12 px-3 text-left align-middle font-medium text-muted-foreground whitespace-nowrap pt-2 pb-1 border-r last:border-r-0">
-                                                      <div className="font-semibold mb-1 text-gray-800">{header}</div>
+                                                      <div className="font-semibold mb-1 text-gray-800 truncate" title={header}>{header}</div>
                                                        <Listbox value={config.mappings[header] || 'none'} onChange={(value) => handleMappingChange(header, value)}>
-                                                          <div className="relative mt-1">
+                                                          <div className="relative mt-1 max-w-48">
                                                               <ListboxButton className="relative w-full cursor-default rounded bg-white py-1.5 pl-3 pr-8 text-left border border-gray-300 focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-primary/50 text-xs">
                                                                   <span className="block truncate">{mappingOptions.find(o => o.value === (config.mappings[header] || 'none'))?.label}</span>
                                                                   <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1.5">
@@ -1085,7 +1338,7 @@ const ImportTransactionsPage: React.FC = () => {
             )}
 
             {/* --- Step 2b: Map Categories --- */} 
-            {sessionStatus === 'authenticated' && analyzeMutation.isSuccess && analyzeMutation.data && currentStep === 'map_categories' && (
+            {(sessionStatus === 'authenticated' && analyzeMutation.isSuccess && analyzeMutation.data && currentStep === 'map_categories') && (
                 <div className="space-y-6">
                      <div className="card-style">
                          <div className="card-header-style">

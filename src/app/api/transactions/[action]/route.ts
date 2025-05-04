@@ -78,8 +78,9 @@ function parseDate(dateStr: string, format: string): Date | null {
 */
 
 // --- POST Handler ---
-export async function POST(request: NextRequest, { params }: { params: { action: string } }) {
-  const action = params.action;
+export async function POST(request: NextRequest, context: { params: { action: string } }) {
+  // Access params through the context object provided as the second argument
+  const action = context.params.action; 
 
   // --- Authentication Check ---
   const session = await getServerSession(authConfig);
