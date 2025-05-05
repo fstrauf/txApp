@@ -18,6 +18,7 @@ import TransactionFilters from './transaction-filters';
 import CategorizationControls from './categorization-controls';
 import TransactionTable from './transaction-table';
 import ToastNotification from './toast-notification';
+import { Switch } from '@headlessui/react'; // Import Switch
 
 // Define type here now
 type TransactionStatusFilter = 'uncleared' | 'cleared';
@@ -69,6 +70,11 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
   const [applyingIndividual, setApplyingIndividual] = useState<string | null>(null);
   const [lastTrainedTimestamp, setLastTrainedTimestamp] = useState<string | null>(null);
   const [updatingNoteId, setUpdatingNoteId] = useState<string | null>(null); // Add state for note updates
+  const [isTransferringPayees, setIsTransferringPayees] = useState(false); // State for admin payee transfer
+
+  // *** Admin Mode State ***
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [filterNoPayee, setFilterNoPayee] = useState(false);
 
   // Calculate transaction stats (Only uncategorized needed now)
   const transactionStats = useMemo(() => {
@@ -104,6 +110,16 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     // return { trainedCount, uncategorizedCount }; // Removed trained
     return { uncategorizedCount }; // Only uncategorized needed from this calculation
   }, [transactions]);
+
+  // *** Filtered Transactions for Display ***
+  const displayedTransactions = useMemo(() => {
+    if (isAdminMode && filterNoPayee) {
+      // Assuming the payee field to check is in originalData
+      return transactions.filter(tx => tx.originalData?.payee === '[No Payee]'); 
+    } 
+    // Return all transactions if not filtering
+    return transactions;
+  }, [transactions, isAdminMode, filterNoPayee]);
 
   // Fetch initial data when component mounts (Categories and Timestamp only)
   useEffect(() => {
@@ -283,6 +299,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       setError(error instanceof Error ? error.message : 'An error occurred while fetching transactions');
     } finally {
       setLoading(false);
+      setIsApplyingDates(false);
     }
   };
 
@@ -471,15 +488,14 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     }
   }, [transactions, categories, cancelSinglePrediction, pendingCategoryUpdates, setTransactions, setSuccessfulUpdates, setToastMessage, setError, setUpdatingCategory]); // Added all dependencies
 
-  // Modify handleDateRangeChange to set dateRange directly
-  const handleDateRangeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  // Add the missing handler function
+  const handleDateRangeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setDateRange(prev => ({
+    setPendingDateRange(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
-    // No need to set pending state
-  }, []); // No dependencies needed
+  };
 
   // Re-add memoized applyDateFilter function
   const applyDateFilter = useCallback(() => {
@@ -1553,6 +1569,132 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
   }, [setTransactions, setToastMessage, setError]); // Add dependencies
   // *** END NEW FUNCTION ***
 
+  // *** START Placeholder for Admin Function ***
+  const handleTransferOriginalNames = useCallback(async () => {
+    // 1. Filter selected transactions for those needing the update
+    const transactionsToUpdate = transactions.filter(tx => 
+      selectedTransactions.includes(tx.lunchMoneyId) &&
+      tx.originalData?.payee === '[No Payee]' &&
+      tx.originalData?.original_name && 
+      tx.originalData.original_name.trim() !== ''
+    );
+
+    if (transactionsToUpdate.length === 0) {
+      setToastMessage({ message: "No selected transactions found with payee '[No Payee]' and a valid Original Name.", type: "warning" });
+      return;
+    }
+
+    console.log(`[Admin] Found ${transactionsToUpdate.length} transactions to update payee for.`);
+    setIsTransferringPayees(true);
+    setOperationInProgress(true); // Use general operation lock
+
+    try {
+      const batchSize = 10; // Process in batches
+      let successCount = 0;
+      let failCount = 0;
+      const successfulTxIds: string[] = [];
+      const updatedPayeesMap: Record<string, string> = {}; // Store updated payees for local update
+
+      for (let i = 0; i < transactionsToUpdate.length; i += batchSize) {
+        const batch = transactionsToUpdate.slice(i, i + batchSize);
+        console.log(`[Admin] Processing batch ${i / batchSize + 1} with ${batch.length} transactions.`);
+
+        const promises = batch.map(async (tx) => {
+          const transactionId = tx.lunchMoneyId;
+          const newPayee = tx.originalData.original_name; // Already checked it exists
+
+          try {
+            const response = await fetch('/api/lunch-money/transactions', {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                transactionId: transactionId,
+                payee: newPayee, // Send the new payee
+                // We don't need to send status or category here
+              })
+            });
+
+            const responseData = await response.json();
+
+            if (!response.ok || responseData.error) {
+              const errorMsg = responseData.error || `API Error ${response.status}`;
+              console.error(`[Admin] Failed to update payee for ${transactionId}:`, errorMsg);
+              throw new Error(errorMsg);
+            }
+
+            console.log(`[Admin] Successfully updated payee for ${transactionId} to "${newPayee}"`);
+            return { success: true, txId: transactionId, updatedPayee: newPayee };
+          } catch (error) {
+            console.error(`[Admin] Network/fetch error updating payee for ${transactionId}:`, error);
+            return { success: false, txId: transactionId, error: error instanceof Error ? error.message : 'Unknown error' };
+          }
+        });
+
+        const results = await Promise.allSettled(promises);
+
+        results.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value.success) {
+            successCount++;
+            successfulTxIds.push(result.value.txId);
+            updatedPayeesMap[result.value.txId] = result.value.updatedPayee;
+          } else {
+            failCount++;
+            // Log detailed error if available
+            if (result.status === 'fulfilled' && !result.value.success) {
+              console.error(`[Admin] Update failed for TxID ${result.value.txId}: ${result.value.error}`);
+            } else if (result.status === 'rejected') {
+              console.error(`[Admin] Batch promise rejected:`, result.reason);
+            }
+          }
+        });
+      } // End batch loop
+
+      // Update local state for successful transactions
+      if (successfulTxIds.length > 0) {
+        setTransactions(prev =>
+          prev.map(tx => {
+            if (updatedPayeesMap[tx.lunchMoneyId]) {
+              console.log(`[Admin] Updating local state for ${tx.lunchMoneyId}`);
+              return {
+                ...tx,
+                // Update the main description field for display
+                description: updatedPayeesMap[tx.lunchMoneyId],
+                // Update the originalData as well for consistency
+                originalData: {
+                  ...tx.originalData,
+                  payee: updatedPayeesMap[tx.lunchMoneyId],
+                },
+              };
+            }
+            return tx;
+          })
+        );
+      }
+
+      // Show feedback toast
+      if (failCount > 0) {
+        setToastMessage({ message: `Payee Transfer: ${successCount} updated, ${failCount} failed. Check console for errors.`, type: "error" });
+      } else {
+        setToastMessage({ message: `Successfully transferred original name to payee for ${successCount} transactions.`, type: "success" });
+      }
+
+      // Optionally clear selection on success
+      if (failCount === 0) {
+         setSelectedTransactions(prev => prev.filter(id => !successfulTxIds.includes(id)));
+      }
+
+    } catch (error) {
+      console.error('[Admin] Error during payee transfer process:', error);
+      setToastMessage({ message: 'An unexpected error occurred during the payee transfer.', type: "error" });
+    } finally {
+      setIsTransferringPayees(false);
+      setOperationInProgress(false); // Release general operation lock
+    }
+  }, [transactions, selectedTransactions, setTransactions, setToastMessage, setSelectedTransactions]); // Add dependencies
+  // *** END Placeholder ***
+
   return (
     <div className="text-gray-900 text-sm bg-white min-h-screen p-4">
       {/* Toast notification */}
@@ -1568,6 +1710,24 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         onClose={closeModal} // Pass the updated close function
       />
 
+      {/* Admin Mode Toggle - Placed above filter/controls */}
+      <div className="mb-4 flex items-center justify-end space-x-2">
+        <span className="text-sm font-medium text-gray-700">Admin Mode</span>
+        <Switch
+          checked={isAdminMode}
+          onChange={setIsAdminMode}
+          className={`${
+            isAdminMode ? 'bg-blue-600' : 'bg-gray-200'
+          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
+        >
+          <span
+            className={`${
+              isAdminMode ? 'translate-x-6' : 'translate-x-1'
+            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+          />
+        </Switch>
+      </div>
+
       {/* Updated wrapper for all controls - Now arranges items side-by-side */}
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-row items-stretch gap-6">
         
@@ -1575,7 +1735,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         <div className="flex-1">
           <TransactionFilters
             pendingDateRange={pendingDateRange}
-            handleDateRangeChange={handleDateRangeChange}
+            handleDateRangeChange={handleDateRangeChange} // Pass the new handler here
             applyDateFilter={applyDateFilter}
             isApplying={isApplyingDates}
             trainedCount={totalTrainedCount} // Pass total trained count from state
@@ -1589,7 +1749,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         </div>
 
         {/* Categorization Controls Component Wrapper */}
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col gap-4"> {/* Added flex-col and gap */}
           <CategorizationControls
             pendingCategoryUpdates={pendingCategoryUpdates}
             applyingAll={applyingAll}
@@ -1603,12 +1763,31 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
             handleCancelCategorization={handleCancelCategorization}
             lastTrainedTimestamp={lastTrainedTimestamp}
           />
+          {/* Admin Mode Buttons - Conditionally Rendered */}
+          {isAdminMode && (
+            <div className="border-t border-gray-200 pt-4 mt-4 flex items-center gap-4">
+              <button
+                onClick={() => setFilterNoPayee(prev => !prev)} // Toggle filter state
+                className={`px-3 py-1.5 text-sm font-medium rounded-md border ${filterNoPayee ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                disabled={operationInProgress} 
+              >
+                {filterNoPayee ? 'Clear "[No Payee]" Filter' : 'Filter by "[No Payee]"'}
+              </button>
+              <button
+                onClick={() => handleTransferOriginalNames()} // Define this function next
+                className="px-3 py-1.5 text-sm font-medium rounded-md border border-transparent shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                disabled={operationInProgress || selectedTransactions.length === 0 || !transactions.some(tx => selectedTransactions.includes(tx.lunchMoneyId) && tx.originalData?.payee === '[No Payee]')}
+              >
+                Transfer Original Name to Payee (Selected)
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Transaction Table */}
       <TransactionTable
-        filteredTransactions={transactions}
+        filteredTransactions={displayedTransactions}
         selectedTransactions={selectedTransactions}
         handleSelectTransaction={handleSelectTransaction}
         handleSelectAll={handleSelectAll}
@@ -1624,6 +1803,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         loading={loading}
         handleNoteChange={handleNoteChange} // Pass the new handler
         updatingNoteId={updatingNoteId}   // Pass the loading state
+        isAdminMode={isAdminMode} // Pass the admin mode state
       />
     </div>
   );

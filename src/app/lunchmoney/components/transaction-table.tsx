@@ -22,6 +22,7 @@ type TransactionTableProps = {
   loading: boolean;
   handleNoteChange: (transactionId: string, newNote: string) => Promise<void>; // Add prop for handling note changes
   updatingNoteId: string | null; // Add prop for loading state
+  isAdminMode: boolean; // Add Admin Mode prop
 };
 
 const TransactionTable = React.memo(({
@@ -41,6 +42,7 @@ const TransactionTable = React.memo(({
   loading,
   handleNoteChange, // Destructure new prop
   updatingNoteId,  // Destructure new prop
+  isAdminMode, // Destructure Admin Mode prop
 }: TransactionTableProps) => {
   // Determine if the Actions column should be shown based on pending updates
   const showActionsColumn = Object.keys(pendingCategoryUpdates).length > 0;
@@ -55,7 +57,7 @@ const TransactionTable = React.memo(({
 
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
-      <table className="min-w-full bg-surface text-sm">
+      <table className="min-w-full bg-surface text-xs">
         <thead className="bg-gray-50 text-gray-600">
           <tr>
             <th className="px-4 py-3 text-left">
@@ -76,6 +78,9 @@ const TransactionTable = React.memo(({
             <th className="px-4 py-3 text-left font-medium">Description</th>
             <th className="px-4 py-3 text-left font-medium">Amount</th>
             <th className="px-4 py-3 text-left font-medium">Notes</th>
+            {isAdminMode && ( // Conditionally render Original Name header
+              <th className="px-4 py-3 text-left font-medium">Original Name</th>
+            )}
             <th className="px-4 py-3 text-left font-medium">Category</th>
             <th className="px-4 py-3 text-left font-medium">Predicted Category</th>
             {showActionsColumn && (
@@ -113,6 +118,7 @@ const TransactionTable = React.memo(({
                   handleNoteChange={handleNoteChange}
                   updatingNoteId={updatingNoteId}
                   showActionsColumn={showActionsColumn}
+                  isAdminMode={isAdminMode} // Pass Admin Mode down to Row
                 />
               );
             })
