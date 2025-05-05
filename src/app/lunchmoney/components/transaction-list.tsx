@@ -943,6 +943,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
           tagTransactionsAsTrained(selectedTxObjectsForTagging).then(tagResult => {
             // This runs after tagging attempt finishes
             fetchLastTrainedTimestamp(); // Update timestamp
+            fetchTotalCounts(dateRange); // <<< ADD THIS LINE
             setToastMessage({ 
               message: `Tagging complete: ${tagResult?.successCount || 0} updated${(tagResult?.failCount || 0) > 0 ? `, ${tagResult?.failCount} failed` : ''}.`,
               type: (tagResult?.failCount) > 0 ? 'error' : 'success' 
@@ -1008,6 +1009,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         // 2. Perform tagging in background
         tagTransactionsAsTrained(selectedTxObjectsForTagging).then(tagResult => {
           fetchLastTrainedTimestamp(); 
+          fetchTotalCounts(dateRange); // <<< ADD THIS LINE
           setToastMessage({ 
             message: `Tagging complete: ${tagResult?.successCount || 0} updated${(tagResult?.failCount || 0) > 0 ? `, ${tagResult?.failCount} failed` : ''}.`,
             type: (tagResult?.successCount || 0) > 0 ? 'success' : 'info' 
@@ -1032,7 +1034,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       setOperationInProgress(false);
       setOperationType('none');
     }
-  }, [selectedTransactions, transactions, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp]); // Use memoized functions
+  }, [selectedTransactions, transactions, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp, fetchTotalCounts, dateRange]); // Add fetchTotalCounts and dateRange dependencies
 
   // Memoize handleCategorizeSelected
   const handleCategorizeSelected = useCallback(async () => {
@@ -1494,6 +1496,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         console.log(`[Train All] Training complete. Triggering background tagging for ${reviewedTransactions.length} fetched transactions...`);
         tagTransactionsAsTrained(reviewedTransactions).then(tagResult => { // Pass full objects
             fetchLastTrainedTimestamp(); // Update timestamp after tagging
+            fetchTotalCounts(dateRange); // <<< ADD THIS LINE
             setToastMessage({ 
               message: `Tagging complete: ${tagResult?.successCount || 0} updated${(tagResult?.failCount || 0) > 0 ? `, ${tagResult?.failCount} failed` : ''}.`,
               type: (tagResult?.failCount ?? 0) > 0 ? 'error' : 'success' 
@@ -1517,7 +1520,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       setProgressMessage('Training failed.'); 
     }
     // Note: operationInProgress is reset by the modal's onClose handler
-  }, [pollForCompletion, fetchLastTrainedTimestamp, tagTransactionsAsTrained, transactions]); // Add local transactions dependency for handleTrainSelected path
+  }, [pollForCompletion, fetchLastTrainedTimestamp, tagTransactionsAsTrained, transactions, fetchTotalCounts, dateRange]); // Add fetchTotalCounts and dateRange dependencies
   // *** END NEW FUNCTION ***
 
   // *** START NEW FUNCTION: handleNoteChange ***
