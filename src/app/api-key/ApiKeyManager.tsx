@@ -6,6 +6,7 @@ import { toast, Toaster } from 'react-hot-toast';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { UserSubscriptionData } from '@/lib/authUtils';
+import { generateApiKeyUtil } from '@/lib/apiKeyUtils';
 
 // Account interface matching UserSubscriptionData + specific fields
 interface Account extends UserSubscriptionData {
@@ -76,29 +77,14 @@ export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps)
   const hasAnyActiveAccess = isActiveSub || isActiveTrial;
   // --- End Status Checks ---
 
+  // Refactor generateApiKey to use the utility function
   const generateApiKey = async () => {
     try {
-      const newApiKey = crypto.randomUUID();
-      
-      const response = await fetch('/api/account', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          userId: userId,
-          api_key: newApiKey
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to generate API key');
-      
-      toast.success('API key generated successfully');
-      queryClient.invalidateQueries({ queryKey: ['accountInfo', userId] });
-      onSuccess?.();
+      await generateApiKeyUtil(userId, queryClient, onSuccess);
+      // Success toast is handled within the util
     } catch (error) {
-      console.error('Error generating API key:', error);
-      toast.error('Failed to generate API key');
+      // Error is logged in util, display toast here
+      toast.error(`Failed to generate API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -124,7 +110,16 @@ export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps)
       if (response.ok && data.success) {
         toast.success('Free trial started successfully!');
         queryClient.invalidateQueries({ queryKey: ['accountInfo', userId] });
-        onSuccess?.();
+        // --- New: Automatically generate API key after starting trial --- 
+        try {
+          await generateApiKeyUtil(userId, queryClient); 
+          toast.success('Free trial started and API key generated!'); // Combined message
+        } catch (apiKeyError) {
+          // Log error from util, show specific toast
+          toast.error(`Trial started, but failed to generate API key: ${apiKeyError instanceof Error ? apiKeyError.message : 'Please generate manually'}`);
+        }
+        // --- End New --- 
+        onSuccess?.(); // Call original onSuccess after everything
       } else {
         throw new Error(data.error || 'Failed to start trial');
       }

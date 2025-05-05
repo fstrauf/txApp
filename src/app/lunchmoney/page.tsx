@@ -6,20 +6,55 @@ import { useState } from 'react';
 import HelpTooltip from '@/components/shared/HelpTooltip';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 import { Tab, TabGroup, TabList, TabPanels, TabPanel } from '@headlessui/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import LunchMoneySettingsClientPage from './settings/LunchMoneySettingsClientPage';
 import AnalyzeTabContent from './components/AnalyzeTabContent';
+
+// Minimal interface for the key check
+interface UserProfileCheck {
+  lunchMoneyApiKey: string | null;
+}
+
+// Fetch function for the minimal profile check
+const fetchUserProfileCheck = async (): Promise<UserProfileCheck> => {
+  const response = await fetch('/api/user/profile');
+  if (!response.ok) {
+    // Don't throw full error, just return null key perhaps, or handle silently?
+    // Let's log and return null for simplicity, the UI will just not highlight.
+    console.error('Failed to fetch user profile for key check');
+    return { lunchMoneyApiKey: null }; 
+  }
+  const responseData = await response.json();
+  const user = responseData.user;
+  // Return only what's needed, defaulting to null if user not found
+  return { lunchMoneyApiKey: user?.lunchMoneyApiKey ?? null };
+};
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-export default function LunchMoneyPage() {
+function LunchMoneyDashboardContent() {
   const [isHelpDrawerOpen, setIsHelpDrawerOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [queryClient] = useState(() => new QueryClient());
+
+  // Fetch minimal profile data just for the key check
+  const { 
+    data: profileCheck, 
+    isLoading: isLoadingCheck,
+    // We might ignore errors for this simple check or handle differently
+    // error: profileCheckError 
+  } = useQuery<UserProfileCheck, Error>({
+    queryKey: ['userProfileCheck'], 
+    queryFn: fetchUserProfileCheck,
+    staleTime: 10 * 60 * 1000, // Cache for 10 mins
+    refetchOnWindowFocus: false,
+    retry: false, // Don't retry on failure for this passive check
+  });
 
   const tabs = ['Train & Categorize', 'Analyze', 'Settings'];
+  // Determine if the key is missing *after* loading and without errors (implicitly handled by profileCheck being potentially null/default)
+  const needsLmKeySetup = !isLoadingCheck && (!profileCheck || !profileCheck.lunchMoneyApiKey);
 
   return (
     <main className="container mx-auto px-4 py-8 md:py-16">
@@ -38,43 +73,54 @@ export default function LunchMoneyPage() {
         </div>
       </div>
 
-      <QueryClientProvider client={queryClient}>
-        <TabGroup selectedIndex={selectedIndex} onChange={setSelectedIndex}>
-          <TabList className="flex space-x-1 rounded-lg bg-gray-100 p-1 mb-4">
-            {tabs.map((tabName) => (
+      <TabGroup selectedIndex={selectedIndex} onChange={setSelectedIndex}>
+        <TabList className="flex space-x-1 rounded-lg bg-gray-100 p-1 mb-4">
+          {tabs.map((tabName) => {
+            const isSettingsTab = tabName === 'Settings';
+            const showHighlight = isSettingsTab && needsLmKeySetup;
+
+            return (
               <Tab
                 key={tabName}
                 className={({ selected }) =>
                   classNames(
-                    'w-full rounded-md py-2 px-3 text-sm font-medium leading-5',
+                    'w-full rounded-md py-2 px-3 text-sm font-medium leading-5 relative', // Added relative for potential absolute positioning of indicators
                     'focus:outline-none focus:ring-2 ring-offset-2 ring-offset-blue-400 ring-white ring-opacity-60',
                     selected
                       ? 'bg-white shadow text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+                      : 'text-gray-600 hover:bg-gray-200 hover:text-gray-800',
+                    // Add subtle highlight if needed
+                    showHighlight && !selected ? 'bg-yellow-50 ring-1 ring-yellow-400 ring-inset' : '' 
                   )
                 }
               >
                 {tabName}
+                {/* Add text cue if needed */} 
+                {showHighlight && (
+                  <span className="ml-1 text-xs text-yellow-700 font-normal"> 
+                    (start by configuring here) 
+                  </span>
+                )}
               </Tab>
-            ))}
-          </TabList>
-          <div className="mt-2 border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
-            <TabPanels>
-              <TabPanel>
-                 <TransactionList />
-              </TabPanel>
+            );
+          })}
+        </TabList>
+        <div className="mt-2 border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+          <TabPanels>
+            <TabPanel>
+               <TransactionList />
+            </TabPanel>
 
-              <TabPanel>
-                <AnalyzeTabContent />
-              </TabPanel>
+            <TabPanel>
+              <AnalyzeTabContent />
+            </TabPanel>
 
-              <TabPanel>
-                <LunchMoneySettingsClientPage />
-              </TabPanel>
-            </TabPanels>
-          </div>
-        </TabGroup>
-      </QueryClientProvider>
+            <TabPanel>
+              <LunchMoneySettingsClientPage />
+            </TabPanel>
+          </TabPanels>
+        </div>
+      </TabGroup>
 
       <div className="mt-8 text-center text-sm text-gray-600">
         <p>
@@ -119,5 +165,16 @@ export default function LunchMoneyPage() {
         </div>
       </HelpDrawer>
     </main>
+  );
+}
+
+// Main export wrapping with QueryClientProvider
+export default function LunchMoneyPage() {
+  const [queryClient] = useState(() => new QueryClient());
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <LunchMoneyDashboardContent />
+    </QueryClientProvider>
   );
 } 
