@@ -1,134 +1,107 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-// import { useRouter } from 'next/navigation'; // Removed
 import { format } from 'date-fns';
+import { toast } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
+
 import { 
   Transaction, 
   Category, 
-  DateRange, 
   ToastMessage, 
-  // ImportStatus, // Removed
   OperationType 
 } from './types';
 
-// Import components (Reverted paths)
+// Import components
 import ProgressModal from './progress-modal';
 import TransactionFilters from './transaction-filters';
 import CategorizationControls from './categorization-controls';
 import TransactionTable from './transaction-table';
 import ToastNotification from './toast-notification';
-import { Switch } from '@headlessui/react'; // Import Switch
+import { Switch } from '@headlessui/react';
+import { useLunchMoneyData } from '../hooks/useLunchMoneyData'; // Import the hook
 
 // Define type here now
 type TransactionStatusFilter = 'uncleared' | 'cleared';
 
-const EXPENSE_SORTED_TRAINED_TAG = 'expense-sorted-trained'; // Define the new tag name here as well
+const EXPENSE_SORTED_TRAINED_TAG = 'expense-sorted-trained';
 
-// Remove props from component signature
-export default function TransactionList(/*{ statusFilter, setStatusFilter }: TransactionListProps*/) {
-  // const router = useRouter(); // Removed
-  // Add statusFilter state here
-  const [statusFilter, setStatusFilter] = useState<TransactionStatusFilter>('uncleared');
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isApplyingDates, setIsApplyingDates] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export default function TransactionList() {
+  // === Use the Custom Hook ===
+  const {
+    dateRange,
+    pendingDateRange,
+    statusFilter,
+    isApplyingDates,
+    isTrainingInBackground,
+    transactions,
+    isLoadingTransactions,
+    transactionError, // Use this error for display if needed
+    countsData,
+    isLoadingCounts,
+    countsError,
+    categories,
+    isLoadingCategories, // Use this for display if needed
+    categoriesError, // Use this for display if needed
+    lastTrainedTimestamp,
+    isLoadingTimestamp, // Use this for display if needed
+    timestampError, // Use this for display if needed
+    handleDateRangeChange,
+    applyDateFilter,
+    setStatusFilter,
+    startBackgroundTraining, // Use this function
+    stopBackgroundTraining // Use this function
+  } = useLunchMoneyData();
+  // =========================
+
+  // Get QueryClient instance
+  const queryClient = useQueryClient();
+
+  // === Component State (Keep state not managed by the hook) ===
+  const [loading, setLoading] = useState(true); // Keep local loading for overall component?
+  const [error, setError] = useState<string | null>(null); // Keep local generic error state?
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
-  const [pendingDateRange, setPendingDateRange] = useState<DateRange>({
-    startDate: format(new Date(new Date().getFullYear(), new Date().getMonth()-5, 1), 'yyyy-MM-dd'),
-    endDate: format(new Date(), 'yyyy-MM-dd'),
-  });
-  const [dateRange, setDateRange] = useState<DateRange>({
-    startDate: format(new Date(new Date().getFullYear(), new Date().getMonth()-5, 1), 'yyyy-MM-dd'),
-    endDate: format(new Date(), 'yyyy-MM-dd'),
-  });
-  // const [importStatus, setImportStatus] = useState<ImportStatus>('idle'); // Removed
-  // const [importMessage, setImportMessage] = useState(''); // Removed
-  const [categories, setCategories] = useState<(string | Category)[]>([]);
-  // const [editingTransaction, setEditingTransaction] = useState<string | null>(null); // Removed
   const [toastMessage, setToastMessage] = useState<ToastMessage | null>(null);
-  // const categoryInputRef = useRef<HTMLSelectElement>(null); // Removed
   const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
   const [successfulUpdates, setSuccessfulUpdates] = useState<Record<string, boolean>>({});
-  // const [openDropdown, setOpenDropdown] = useState<string | null>(null); // Removed
   const [operationInProgress, setOperationInProgress] = useState<boolean>(false);
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [progressMessage, setProgressMessage] = useState<string>('');
   const [operationType, setOperationType] = useState<OperationType>('none');
-  const [isOperationComplete, setIsOperationComplete] = useState(false); // State for modal completion button
-  const [isTagging, setIsTagging] = useState(false); // State to indicate tagging phase
-  
-  // State for total counts (independent of filtering)
-  const [totalReviewedCount, setTotalReviewedCount] = useState<number>(0);
-  const [totalUnreviewedCount, setTotalUnreviewedCount] = useState<number>(0);
-  const [totalTrainedCount, setTotalTrainedCount] = useState<number>(0); // Add state for trained count
-  
-  // Categorization workflow states
+  const [isOperationComplete, setIsOperationComplete] = useState(false); 
+  const [isTagging, setIsTagging] = useState(false); 
   const [pendingCategoryUpdates, setPendingCategoryUpdates] = useState<Record<string, {categoryId: string | null, score: number}>>({});
   const [applyingAll, setApplyingAll] = useState<boolean>(false);
   const [applyingIndividual, setApplyingIndividual] = useState<string | null>(null);
-  const [lastTrainedTimestamp, setLastTrainedTimestamp] = useState<string | null>(null);
-  const [updatingNoteId, setUpdatingNoteId] = useState<string | null>(null); // Add state for note updates
-  const [isTransferringPayees, setIsTransferringPayees] = useState(false); // State for admin payee transfer
-
-  // *** Admin Mode State ***
+  const [updatingNoteId, setUpdatingNoteId] = useState<string | null>(null); 
+  const [isTransferringPayees, setIsTransferringPayees] = useState(false); 
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [filterNoPayee, setFilterNoPayee] = useState(false);
+  // ==========================================================
 
-  // Calculate transaction stats (Only uncategorized needed now)
-  const transactionStats = useMemo(() => {
-    // let trainedCount = 0; // Removed - using separate state now
-    let uncategorizedCount = 0;
-    // let clearedCount = 0; // Removed - using separate state now
-    // let unclearedCount = 0; // Removed - using separate state now
+  // Remove state managed by hook: 
+  // statusFilter, pendingDateRange, dateRange, isApplyingDates, isTrainingInBackground, expectedTrainCount
 
-    transactions.forEach(tx => {
-      // Trained tag check removed - using API count
-      // const hasTrainedTag = tx.tags?.some(tag => 
-      //  ...
-      // );
-      // if (hasTrainedTag) {
-      //   trainedCount++;
-      // }
+  // Remove fetch functions managed by hook: 
+  // fetchTransactionsWithDates, fetchTotalCounts, fetchCategories, fetchLastTrainedTimestamp, fetchAllReviewedForTagging
 
-      // Check if uncategorized (using originalData as the source of truth)
-      const isUncategorized = !tx.originalData?.category_id;
-      if (isUncategorized) {
-        uncategorizedCount++;
-      }
+  // Remove useQuery calls managed by hook: 
+  // transactions, counts, categories, timestamp
 
-      // Cleared/Uncleared Check (based on currently filtered list) - No longer needed for stats display here
-      // if (tx.originalData?.status === 'cleared') {
-      //   clearedCount++;
-      // } else {
-      //   unclearedCount++; 
-      // }
-    });
+  // Remove effects managed by hook: 
+  // Polling effect, initial fetch effect
 
-    // Return only relevant counts
-    // return { trainedCount, uncategorizedCount }; // Removed trained
-    return { uncategorizedCount }; // Only uncategorized needed from this calculation
-  }, [transactions]);
-
-  // *** Filtered Transactions for Display ***
-  const displayedTransactions = useMemo(() => {
-    if (isAdminMode && filterNoPayee) {
-      // Assuming the payee field to check is in originalData
-      return transactions.filter(tx => tx.originalData?.payee === '[No Payee]'); 
-    } 
-    // Return all transactions if not filtering
-    return transactions;
-  }, [transactions, isAdminMode, filterNoPayee]);
-
-  // Fetch initial data when component mounts (Categories and Timestamp only)
+  // Update local loading/error based on hook states
   useEffect(() => {
-    // fetchTransactionsWithDates(dateRange, statusFilter); // Removed - Handled by the effect below
-    fetchCategories();
-    fetchLastTrainedTimestamp();
-  }, []); // Keep dependency array empty for mount only
+      // Combine loading states from hook for a general loading indicator
+      const overallLoading = isLoadingTransactions || isLoadingCounts || isLoadingCategories || isLoadingTimestamp;
+      setLoading(overallLoading);
+      // Combine errors or prioritize
+      const overallError = transactionError || countsError || categoriesError || timestampError;
+      setError(overallError ? overallError.message : null);
+  }, [isLoadingTransactions, isLoadingCounts, isLoadingCategories, isLoadingTimestamp, transactionError, countsError, categoriesError, timestampError]);
 
-  // Auto-hide toast after 3 seconds
+  // Auto-hide toast effect (Keep)
   useEffect(() => {
     if (toastMessage) {
       const timer = setTimeout(() => {
@@ -138,180 +111,35 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     }
   }, [toastMessage]);
 
-  // First, let's add some debug to see what IDs we're working with
-  useEffect(() => {
-    if (transactions.length > 0) {
-      console.log("Transaction IDs in list:", transactions.map(tx => tx.lunchMoneyId));
-    }
+  // Calculate uncategorizedCount locally from hook's transactions
+  const transactionStats = useMemo(() => {
+    let uncategorizedCount = 0;
+    transactions.forEach(tx => {
+      if (!tx.originalData?.category_id) {
+        uncategorizedCount++;
+      }
+    });
+    return { uncategorizedCount };
   }, [transactions]);
 
-  // Fetch transactions when the status filter or date range changes (Handles initial load too)
-  useEffect(() => {
-    fetchTransactionsWithDates(dateRange, statusFilter);
-    // Don't fetch counts here, use the separate effect below
-  }, [statusFilter, dateRange]); 
+  // Displayed transactions calculation (Keep)
+  const displayedTransactions = useMemo(() => {
+    const listToFilter = transactions; // Use transactions from hook
+    if (isAdminMode && filterNoPayee) {
+      return listToFilter.filter(tx => tx.originalData?.payee === '[No Payee]'); 
+    } 
+    return listToFilter;
+  }, [transactions, isAdminMode, filterNoPayee]);
 
-  // *** NEW: Function to fetch total counts ***
-  const fetchTotalCounts = useCallback(async (dates: DateRange) => {
-    console.log("[Counts] Fetching total counts for date range:", dates);
-    try {
-      const params = new URLSearchParams({
-        start_date: dates.startDate,
-        end_date: dates.endDate,
-      });
-      const response = await fetch(`/api/lunch-money/transaction-counts?${params}`);
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || `Failed to fetch counts (${response.status})`);
-      }
-      const data = await response.json();
-      setTotalReviewedCount(data.clearedCount || 0);
-      setTotalUnreviewedCount(data.unclearedCount || 0);
-      setTotalTrainedCount(data.trainedCount || 0); // Set the trained count state
-      console.log("[Counts] Fetched totals - Reviewed:", data.clearedCount, "Unreviewed:", data.unclearedCount);
-    } catch (error) {
-      console.error("[Counts] Error fetching total counts:", error);
-      // Optionally show a toast or set an error state specific to counts
-      // setToastMessage({ message: "Could not load transaction counts.", type: "error" });
-      setTotalReviewedCount(0); // Reset on error
-      setTotalUnreviewedCount(0);
-      setTotalTrainedCount(0); // Reset trained count on error
-    }
-  }, []); // Empty dependency array initially, called manually by effect
+  // Keep handleSelectTransaction, handleSelectAll, cancelSinglePrediction, handleCategoryChange, etc.
+  // Ensure they use `transactions` and `categories` from the hook.
 
-  // *** NEW: Effect to fetch counts when dateRange changes ***
-  useEffect(() => {
-    fetchTotalCounts(dateRange);
-  }, [dateRange, fetchTotalCounts]); // Run when dateRange changes
-
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('/api/lunch-money/categories');
-      if (!response.ok) {
-        throw new Error('Failed to fetch Lunch Money categories');
-      }
-      
-      const data = await response.json();
-      let categoriesList = data.categories || [];
-      
-      // If we don't have any categories from the API, extract from transactions
-      if ((!categoriesList || categoriesList.length === 0) && transactions.length > 0) {
-        console.log("Extracting categories from transactions");
-        const uniqueCategories = new Map();
-        
-        transactions.forEach(tx => {
-          // Extract from originalData which contains all the LunchMoney API data
-          if (tx.originalData?.category_id && tx.originalData?.category_name) {
-            uniqueCategories.set(tx.originalData.category_id.toString(), {
-              id: tx.originalData.category_id.toString(),
-              name: tx.originalData.category_name
-            });
-          }
-        });
-        
-        categoriesList = Array.from(uniqueCategories.values());
-        console.log("Extracted categories:", categoriesList);
-      }
-      
-      setCategories(categoriesList);
-    } catch (error) {
-      console.error('Error fetching Lunch Money categories:', error);
-      setToastMessage({
-        message: 'Failed to load categories from Lunch Money',
-        type: 'error'
-      });
-    }
-  };
-  
-  const fetchTransactionsWithDates = async (dates: { startDate: string; endDate: string }, filter: 'uncleared' | 'cleared') => {
-    setLoading(true);
-    setError(null);
-    
-    console.log('Fetching with date range:', dates, 'Status Filter:', filter);
-
-    try {
-      const params = new URLSearchParams({
-        start_date: dates.startDate,
-        end_date: dates.endDate,
-        // Pass the status filter to the API
-        status: filter,
-      });
-
-      const response = await fetch(`/api/lunch-money/transactions?${params}`);
-      
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to fetch transactions');
-      }
-
-      const data = await response.json();
-      
-      if (!data.transactions || !Array.isArray(data.transactions)) {
-        console.error('Invalid response format:', data);
-        throw new Error('Received invalid data format from server');
-      }
-
-      console.log("data.transactions", data.transactions);
-      
-      // Ensure all transaction amounts are numbers and sanitize object values
-      let formattedTransactions = data.transactions.map((tx: any) => {
-        // Create a sanitized transaction object to prevent rendering issues
-        const sanitized = {
-          ...tx,
-          id: tx.id || '',
-          lunchMoneyId: tx.lunchMoneyId || '',
-          date: tx.date || new Date().toISOString(),
-          description: typeof tx.description === 'object' ? JSON.stringify(tx.description) : (tx.description || ''),
-          amount: typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount || 0)),
-          is_income: tx.is_income,
-          // Ensure we use category_name from originalData for consistency
-          lunchMoneyCategory: tx.originalData?.category_name || tx.lunchMoneyCategory || null,
-          // Ensure predictedCategory is a string
-          predictedCategory: typeof tx.predictedCategory === 'object' ? 
-            tx.predictedCategory?.name || null : (tx.predictedCategory || null),
-          // Ensure tags is an array of objects with name/id properties
-          tags: Array.isArray(tx.tags) ? tx.tags.map((tag: any) => 
-            typeof tag === 'object' ? tag : { name: tag, id: `tag-${Date.now()}-${Math.random()}` } // Ensure objects
-          ) : []
-        };
-        return sanitized;
-      });
-
-      console.log("formattedTransactions", formattedTransactions);
-      
-      // Sort transactions by date in descending order (newest first)
-      formattedTransactions = formattedTransactions.sort((a: Transaction, b: Transaction) => {
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
-        return dateB.getTime() - dateA.getTime();
-      });
-      
-      setTransactions(formattedTransactions);
-      
-      // Clear any previous selections when new transactions are loaded
-      setSelectedTransactions([]);
-      
-      // Remove category fetching from here - categories are fetched on mount
-      // await fetchCategories(); 
-
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      setError(error instanceof Error ? error.message : 'An error occurred while fetching transactions');
-    } finally {
-      setLoading(false);
-      setIsApplyingDates(false);
-    }
-  };
-
-  // Memoize handleSelectTransaction
+  // --- Example: Refactor handleSelectTransaction (Check if modification needed) --- 
   const handleSelectTransaction = useCallback((txId: string) => {
     if (!txId) {
       console.error("Attempted to select a transaction with no ID");
       return;
     }
-    
-    console.log('Toggling selection for transaction:', txId);
-    
     setSelectedTransactions(prev => {
       if (prev.includes(txId)) {
         return prev.filter(id => id !== txId);
@@ -319,43 +147,28 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         return [...prev, txId];
       }
     });
-  }, []); // No dependencies needed if it only uses setSelectedTransactions
+  }, []); // Still only depends on setSelectedTransactions
 
-  // Memoize handleSelectAll
+  // --- Example: Refactor handleSelectAll (Use hook's transactions) --- 
   const handleSelectAll = useCallback(() => {
-    // Use the main transactions state, as filtering is done server-side
-    if (transactions.length === 0) return; 
-    
-    console.log('Current transactions count:', transactions.length);
-    console.log('Current selections count:', selectedTransactions.length);
-    
-    // Get IDs from the main transactions list
-    const currentTransactionIds = transactions
+    if (transactions.length === 0) return; // Use transactions from hook
+    const currentTransactionIds = transactions // Use transactions from hook
       .map(tx => tx.lunchMoneyId)
       .filter((id): id is string => id !== undefined && id !== null);
-    
     const allCurrentSelected = currentTransactionIds.every(id => selectedTransactions.includes(id));
-    
     if (allCurrentSelected && selectedTransactions.length > 0) {
-      console.log('Deselecting all current transactions');
-      setSelectedTransactions(prev => 
-        prev.filter(id => !currentTransactionIds.includes(id))
-      );
+      setSelectedTransactions(prev => prev.filter(id => !currentTransactionIds.includes(id)));
     } else {
-      console.log('Selecting all current transactions');
       setSelectedTransactions(prev => {
         const newSelection = [...prev];
-        currentTransactionIds.forEach(id => {
-          if (!newSelection.includes(id)) {
-            newSelection.push(id);
-          }
-        });
+        currentTransactionIds.forEach(id => { if (!newSelection.includes(id)) { newSelection.push(id); } });
         return newSelection;
       });
     }
-  }, [transactions, selectedTransactions]); // Dependencies are transactions and selectedTransactions
+  }, [transactions, selectedTransactions]); // Add transactions dependency from hook
 
-  // Memoize handleCancelSinglePrediction (Moved BEFORE handleCategoryChange)
+  // --- Keep other action handlers (cancelSinglePrediction, handleCategoryChange, etc.) ---
+  // Ensure they use `transactions` and `categories` from the hook where necessary.
   const cancelSinglePrediction = useCallback((transactionId: string) => {
     console.log(`Cancelling prediction for transaction ${transactionId}`);
     setPendingCategoryUpdates(prev => {
@@ -370,102 +183,55 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     setToastMessage({ message: 'Prediction discarded for this transaction.', type: 'info' });
   }, [setPendingCategoryUpdates, setSuccessfulUpdates, setToastMessage]); // Add dependencies
   
-  // Memoize handleCategoryChange (Moved AFTER cancelSinglePrediction)
+  // Define handleCategoryChange here
   const handleCategoryChange = useCallback(async (transactionId: string, categoryValue: string) => {
     setUpdatingCategory(transactionId);
-    
-    const transaction = transactions.find(tx => tx.lunchMoneyId === transactionId);
+    const transaction = transactions.find(tx => tx.lunchMoneyId === transactionId); // Use transactions from hook
     if (!transaction) {
       setUpdatingCategory(null);
-      console.error("Transaction not found for update:", transactionId);
+      console.error("Transaction not found for category update:", transactionId);
+      setToastMessage({ message: 'Transaction not found', type: 'error' });
       return;
     }
-    
-    // --- Optimistic Update --- 
-    // Store the original state in case of failure
-    const originalTransaction = { ...transaction };
-    
-    // Get the category name for the optimistic update
-    let optimisticCategoryName = categoryValue;
-    const selectedCategoryObj = categories.find(cat => typeof cat !== 'string' && cat.id === categoryValue);
-    if (selectedCategoryObj && typeof selectedCategoryObj !== 'string') {
-      optimisticCategoryName = selectedCategoryObj.name;
-    }
-    
-    // Update local state IMMEDIATELY
-    setTransactions(prev => 
-      prev.map(tx => { 
-        if (tx.lunchMoneyId === transactionId) {
-          return {
-            ...tx,
-            category: categoryValue === "none" ? null : categoryValue,
-            lunchMoneyCategory: categoryValue === "none" ? null : optimisticCategoryName,
-            // Assume it will be cleared, update originalData optimistically too?
-            originalData: {
-              ...tx.originalData,
-              category_id: categoryValue === "none" ? null : categoryValue,
-              category_name: categoryValue === "none" ? null : optimisticCategoryName,
-              status: 'cleared' // Optimistically assume it clears
-            },
-            status: 'cleared' // Optimistically assume it clears
-          };
-        }
-        return tx;
-      })
-    );
-    // --- End Optimistic Update ---
-    
+
+    // --- Note: Optimistic updates removed for simplicity with query invalidation --- 
+
     try {
+      // Prepare data for API (handle 'none' category, maybe filter tags?)
       const txTags = transaction.tags || [];
-      let hasTrainedTag = false;
-      const filteredTags = txTags.filter(tag => {
-        const tagName = typeof tag === 'string' ? tag : tag.name;
-        const isTrainedTag = tagName && tagName.toLowerCase() === 'expense-sorted-trained';
-        if (isTrainedTag) hasTrainedTag = true;
-        return !isTrainedTag;
-      });
-      
+      const filteredTags = txTags.filter(tag => 
+          !(typeof tag === 'string' && tag.toLowerCase() === EXPENSE_SORTED_TRAINED_TAG) && 
+          !(typeof tag === 'object' && tag.name && tag.name.toLowerCase() === EXPENSE_SORTED_TRAINED_TAG)
+      );
+
       const response = await fetch('/api/lunch-money/transactions', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           transactionId: transaction.lunchMoneyId,
           categoryId: categoryValue === "none" ? null : categoryValue,
-          tags: filteredTags, 
+          tags: filteredTags, // Send filtered tags
           status: 'cleared'
         })
       });
-      
+
       const responseData = await response.json();
-      
       if (!response.ok) {
         throw new Error(responseData.error || 'Failed to update category');
       }
-      
-      // We still need to update the tags locally if they changed
-      // (or refetch, but let's update locally for now)
-      setTransactions(prev => 
-        prev.map(tx => { 
-          if (tx.lunchMoneyId === transactionId) {
-            return {
-              ...tx, // Keep the optimistically set category/status
-              // Update ONLY the tags based on the *actual* API response
-              tags: responseData.updatedTags?.map((tag: any) => 
-                typeof tag === 'string' ? { name: tag, id: `tag-${Date.now()}-${Math.random()}` } : tag
-              ) || filteredTags, 
-            };
-          }
-          return tx;
-        })
-      );
-      
+
+      // Invalidate queries to refetch data
+      console.log(`[Category Change ${transactionId}] Invalidating transaction and count queries.`);
+      queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactions', dateRange, statusFilter] });
+      queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts', dateRange] });
+      // Potentially invalidate categories if this action could add one? Usually not.
+      // queryClient.invalidateQueries({ queryKey: ['lunchMoneyCategories'] });
+
       setSuccessfulUpdates(prev => ({ ...prev, [transactionId]: true }));
       setTimeout(() => setSuccessfulUpdates(prev => ({ ...prev, [transactionId]: false })), 3000);
-      
-      setToastMessage({ message: responseData.message || 'Category updated and tagged.', type: 'success' });
-      
+
+      setToastMessage({ message: responseData.message || 'Category updated successfully.', type: 'success' });
+
       // If manually changing category, cancel any pending prediction for this item
       if (pendingCategoryUpdates[transactionId]) {
         cancelSinglePrediction(transactionId); 
@@ -473,38 +239,16 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
 
     } catch (error) {
       console.error('Error updating category:', error);
-      // --- Revert Optimistic Update on Error --- 
-      setTransactions(prev => 
-        prev.map(tx => 
-          tx.lunchMoneyId === transactionId ? originalTransaction : tx
-        )
-      );
-      // --- End Revert ---
-      
+      // --- Revert Optimistic Update on Error (Removed as we rely on invalidation) ---
       setError(error instanceof Error ? error.message : 'Failed to update category');
       setToastMessage({ message: error instanceof Error ? error.message : 'Failed to update category', type: 'error' });
     } finally {
       setUpdatingCategory(null);
     }
-  }, [transactions, categories, cancelSinglePrediction, pendingCategoryUpdates, setTransactions, setSuccessfulUpdates, setToastMessage, setError, setUpdatingCategory]); // Added all dependencies
+  // Add dependencies: transactions, queryClient, dateRange, statusFilter, local state setters/values
+  }, [transactions, queryClient, dateRange, statusFilter, pendingCategoryUpdates, cancelSinglePrediction, setToastMessage, setError, setUpdatingCategory, setSuccessfulUpdates]);
 
-  // Add the missing handler function
-  const handleDateRangeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setPendingDateRange(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  // Re-add memoized applyDateFilter function
-  const applyDateFilter = useCallback(() => {
-    console.log("Applying date filter with:", pendingDateRange);
-    setIsApplyingDates(true); // Set loading state for button
-    setDateRange(pendingDateRange); // Update main dateRange to trigger fetch effect
-  }, [pendingDateRange]); // Dependency on pendingDateRange
-
-  // Memoize tagTransactionsAsTrained (Robust Filtering + Batching)
+  // --- Keep tagging function here, as it's an action --- 
   const tagTransactionsAsTrained = useCallback(async (transactionsToPotentiallyTag: Transaction[]) => {
     if (!transactionsToPotentiallyTag.length) {
       console.log("[Tagging] No transaction objects provided.");
@@ -599,26 +343,13 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         // }
       }
       
-      // 3. Update local state after all batches
-      if (successfulTxIds.length > 0) {
-        console.log(`[Tagging] Updating local state for ${successfulTxIds.length} successfully tagged transactions.`);
-        setTransactions(prev => 
-          prev.map(tx => {
-            // Check if this transaction was successfully tagged *in this run*
-            if (successfulTxIds.includes(tx.lunchMoneyId)) {
-              const existingTags = tx.tags || [];
-              const tagToAdd = { name: EXPENSE_SORTED_TRAINED_TAG, id: `tag-${EXPENSE_SORTED_TRAINED_TAG}-${Date.now()}` };
-              // Avoid adding duplicate tag object visually if somehow missed by filter
-              const tagExists = existingTags.some(t => typeof t === 'object' && t.name?.toLowerCase() === EXPENSE_SORTED_TRAINED_TAG);
-              const newTags = tagExists ? existingTags : [...existingTags, tagToAdd];
-              return {
-                ...tx,
-                tags: newTags 
-              };
-            }
-            return tx; // Return unchanged if not successfully tagged in this run
-          })
-        );
+      // INSTEAD: Invalidate queries to refetch data
+      if (successCount > 0) {
+          console.log("[Tagging] Invalidating transaction and count queries after tagging.");
+          queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactions', dateRange, statusFilter] });
+          queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts', dateRange] });
+          // Also invalidate timestamp if tagging updates it (depends on backend)
+          // queryClient.invalidateQueries({ queryKey: ['lastTrainedTimestamp'] });
       }
       
       console.log(`[Tagging] All batches completed. Overall Success: ${successCount}, Fail: ${failCount}`);
@@ -626,11 +357,12 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
 
     } catch (error) {
       console.error('[Tagging] Error during batch processing loop:', error);
-      return { successCount: 0, failCount: transactionsToTagIds.length }; // Use the count of IDs we attempted to tag
+      return { successCount: 0, failCount: transactionsToPotentiallyTag.length }; 
     }
-  }, [transactions, setTransactions]); // Keep local transactions dependency for updating state
+  }, [queryClient, dateRange, statusFilter]); 
 
-  // Memoize pollForCompletion
+  // Keep pollForCompletion - needed by handleTrainSelected and handleCategorizeSelected 
+  // (Though handleTrainAllReviewed doesn't use it anymore)
   const pollForCompletion = useCallback(async (predictionId: string, type: 'training' | 'categorizing'): Promise<{ status: string; message?: string }> => {
     const maxPolls = 120; 
     const pollInterval = 5000;
@@ -701,29 +433,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     return result; // Return the final status object
   }, [setProgressMessage, setProgressPercent]); // Add dependencies for state setters used inside
 
-  // Memoize fetchLastTrainedTimestamp
-  const fetchLastTrainedTimestamp = useCallback(async () => {
-    try {
-      const response = await fetch('/api/classify/last-trained');
-      if (!response.ok) {
-        console.warn(`Failed to fetch last trained timestamp: ${response.status}`);
-        setLastTrainedTimestamp(null);
-        return;
-      }
-      const data = await response.json();
-      setLastTrainedTimestamp(data.lastTrainedAt || null);
-      if (data.lastTrainedAt) {
-        console.log('Successfully fetched last trained timestamp:', data.lastTrainedAt);
-      } else {
-        console.log('No last trained timestamp found for user.');
-      }
-    } catch (error) {
-      console.error('Error fetching last trained timestamp:', error);
-      setLastTrainedTimestamp(null);
-    }
-  }, []); // No dependencies needed
-
-  // Memoize updateTransactionsWithPredictions
+  // Keep updateTransactionsWithPredictions
   const updateTransactionsWithPredictions = useCallback((results: any[]) => {
     if (!results || results.length === 0) {
       console.log("No results to update transactions with");
@@ -835,7 +545,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     });
   }, [transactions, categories, selectedTransactions]); // Dependencies: transactions, categories, selectedTransactions
 
-  // Memoize handleTrainSelected
+  // Keep handleTrainSelected (Action handler)
   const handleTrainSelected = useCallback(async () => {
     if (selectedTransactions.length === 0) {
       setToastMessage({ message: "Please select at least one transaction for training", type: "error" });
@@ -942,7 +652,8 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
           // 2. Perform tagging in background (fire and forget style, but handle result with toast)
           tagTransactionsAsTrained(selectedTxObjectsForTagging).then(tagResult => {
             // This runs after tagging attempt finishes
-            fetchLastTrainedTimestamp(); // Update timestamp
+            // fetchLastTrainedTimestamp(); // REMOVE direct call
+            queryClient.invalidateQueries({ queryKey: ['lastTrainedTimestamp'] }); // Invalidate instead
             setToastMessage({ 
               message: `Tagging complete: ${tagResult?.successCount || 0} updated${(tagResult?.failCount || 0) > 0 ? `, ${tagResult?.failCount} failed` : ''}.`,
               type: (tagResult?.failCount) > 0 ? 'error' : 'success' 
@@ -1007,9 +718,10 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
 
         // 2. Perform tagging in background
         tagTransactionsAsTrained(selectedTxObjectsForTagging).then(tagResult => {
-          fetchLastTrainedTimestamp(); 
+          // fetchLastTrainedTimestamp(); // REMOVE direct call
+          queryClient.invalidateQueries({ queryKey: ['lastTrainedTimestamp'] }); // Invalidate instead
           setToastMessage({ 
-            message: `Tagging complete: ${tagResult?.successCount || 0} updated${(tagResult?.failCount || 0) > 0 ? `, ${tagResult?.failCount} failed` : ''}.`,
+            message: `Tagging complete: ${tagResult?.successCount || 0} updated${(tagResult?.successCount || 0) > 0 ? `, ${tagResult?.successCount} trained` : ''}.`,
             type: (tagResult?.successCount || 0) > 0 ? 'success' : 'info' 
           });
           setSelectedTransactions([]); // Clear selection after toast
@@ -1032,9 +744,9 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       setOperationInProgress(false);
       setOperationType('none');
     }
-  }, [selectedTransactions, transactions, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp]); // Use memoized functions
+     }, [selectedTransactions, transactions, pollForCompletion, tagTransactionsAsTrained]);
 
-  // Memoize handleCategorizeSelected
+  // Keep handleCategorizeSelected (Action handler)
   const handleCategorizeSelected = useCallback(async () => {
     if (selectedTransactions.length === 0) {
       setToastMessage({ message: 'Please select transactions to categorize', type: 'warning' });
@@ -1155,9 +867,9 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       setProgressPercent(0);
       setProgressMessage('');
     }
-  }, [selectedTransactions, pendingCategoryUpdates, transactions, pollForCompletion, updateTransactionsWithPredictions]); // Use memoized functions
+      }, [selectedTransactions, pendingCategoryUpdates, transactions, pollForCompletion, updateTransactionsWithPredictions]);
 
-  // Memoize handleCancelCategorization
+  // Keep handleCancelCategorization
   const handleCancelCategorization = useCallback(() => {
     console.log("Cancelling pending categorization updates.");
     setPendingCategoryUpdates({});
@@ -1166,7 +878,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     setToastMessage({ message: 'Discarded pending category predictions.', type: 'success' }); 
   }, []); // No dependencies needed
 
-  // Memoize applyAllPredictedCategories
+  // Keep applyAllPredictedCategories
   const applyAllPredictedCategories = useCallback(async () => {
     const transactionIds = Object.keys(pendingCategoryUpdates);
     if (transactionIds.length === 0) {
@@ -1232,38 +944,13 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         });
       }
       
-      // Update local state for all successful transactions AFTER the loop
-      if (successfulTxIds.length > 0) {
-        setTransactions(prev => 
-          prev.map(tx => {
-            if (successfulTxIds.includes(tx.lunchMoneyId)) {
-              const update = pendingCategoryUpdates[tx.lunchMoneyId];
-              let categoryName = update.categoryId;
-              const selectedCategory = categories.find(cat => 
-                typeof cat !== 'string' && cat.id === update.categoryId
-              );
-              if (selectedCategory && typeof selectedCategory !== 'string') {
-                categoryName = selectedCategory.name;
-              }
-              
-              return {
-                ...tx,
-                category: update.categoryId === "none" ? null : update.categoryId,
-                lunchMoneyCategory: update.categoryId === "none" ? null : categoryName,
-                originalData: {
-                  ...tx.originalData,
-                  category_id: update.categoryId === "none" ? null : update.categoryId,
-                  category_name: update.categoryId === "none" ? null : categoryName,
-                  status: 'cleared'
-                },
-                status: 'cleared'
-              };
-            }
-            return tx;
-          })
-        );
+      // INSTEAD: Invalidate queries
+      if (successCount > 0) {
+          console.log("[Apply All] Invalidating transaction and count queries.");
+          queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactions', dateRange, statusFilter] });
+          queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts', dateRange] });
       }
-      
+
       setPendingCategoryUpdates({});
       
       setToastMessage({
@@ -1280,9 +967,9 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     } finally {
       setApplyingAll(false);
     }
-  }, [pendingCategoryUpdates, categories]); // Dependencies: pendingCategoryUpdates, categories
+  }, [pendingCategoryUpdates, categories, queryClient, dateRange, statusFilter]); // Ensure no fetchLastTrainedTimestamp here
 
-  // Memoize getCategoryNameById
+  // Keep getCategoryNameById
   const getCategoryNameById = useCallback((categoryId: string | null) => {
     if (!categoryId) return null;
     // Find category, ensuring it's an object before accessing .id
@@ -1293,7 +980,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     return (typeof category === 'object' && category !== null) ? category.name : categoryId;
   }, [categories]); // Dependency: categories
 
-  // Memoize applyPredictedCategory
+  // Keep applyPredictedCategory
   const applyPredictedCategory = useCallback(async (transactionId: string) => {
     const update = pendingCategoryUpdates[transactionId];
     if (!update) {
@@ -1328,25 +1015,10 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         categoryName = foundCategoryName;
       }
       
-      setTransactions(prev => 
-        prev.map(tx => {
-          if (tx.lunchMoneyId === transactionId) {
-            return {
-              ...tx,
-              category: update.categoryId === "none" ? null : update.categoryId,
-              lunchMoneyCategory: update.categoryId === "none" ? null : categoryName,
-              originalData: {
-                ...tx.originalData,
-                category_id: update.categoryId === "none" ? null : update.categoryId,
-                category_name: update.categoryId === "none" ? null : categoryName,
-                status: 'cleared'
-              },
-              status: 'cleared'
-            };
-          }
-          return tx;
-        })
-      );
+      // INSTEAD: Invalidate queries
+      console.log(`[Apply Single ${transactionId}] Invalidating transaction and count queries.`);
+      queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactions', dateRange, statusFilter] });
+      queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts', dateRange] });
       
       setSuccessfulUpdates(prev => ({
         ...prev,
@@ -1372,155 +1044,58 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       setApplyingIndividual(null);
     }
     // Ensure getCategoryNameById is included in dependencies
-  }, [pendingCategoryUpdates, getCategoryNameById]); 
+  }, [pendingCategoryUpdates, getCategoryNameById, queryClient, dateRange, statusFilter]); 
 
-  // Function to manually close the progress modal - now resets completion states
+  // Update closeModal to use stopBackgroundTraining from hook
   const closeModal = useCallback(() => {
     setOperationInProgress(false);
     setOperationType('none');
     setProgressPercent(0);
     setProgressMessage('');
-    setIsOperationComplete(false); // Reset completion flag
-    setIsTagging(false); // Reset tagging flag
-  }, []); // Keep dependencies empty as it only uses setters
+    setIsOperationComplete(false); 
+    setIsTagging(false); 
+    // Call stopBackgroundTraining from hook
+    stopBackgroundTraining(); 
+  }, [stopBackgroundTraining]); // Add hook function to dependency
 
-  // *** NEW: handleTrainAllReviewed ***
+  // Refactor handleTrainAllReviewed to use hook function
   const handleTrainAllReviewed = useCallback(async () => {
-    setOperationInProgress(true);
-    setOperationType('training');
-    setProgressPercent(0);
-    setProgressMessage('Fetching all reviewed transactions...');
+    const currentReviewedCount = countsData?.reviewedCount ?? 0;
+    console.log(`[Train All - Start] Current reviewed count from query: ${currentReviewedCount}`);
+    if (currentReviewedCount < 10) {
+      setToastMessage({ message: `Need at least 10 reviewed transactions. Found ${currentReviewedCount}.`, type: 'error' });
+      return;
+    }
+    // Call the hook function to start polling
+    startBackgroundTraining(currentReviewedCount);
     setError(null);
-    setIsOperationComplete(false);
-
+    // Make the API call (fire and forget for polling)
     try {
-      // 1. Fetch transactions over a wide date range (e.g., 5 years)
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setFullYear(startDate.getFullYear() - 5);
-      const wideDateRange = {
-        startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd')
-      };
-
-      console.log(`[Train All] Fetching transactions from ${wideDateRange.startDate} to ${wideDateRange.endDate}`);
-      
-      const params = new URLSearchParams({
-        start_date: wideDateRange.startDate,
-        end_date: wideDateRange.endDate,
-        // NO status filter - fetch all
-      });
-      const fetchResponse = await fetch(`/api/lunch-money/transactions?${params}`);
-      if (!fetchResponse.ok) {
-        const data = await fetchResponse.json().catch(() => ({}));
-        throw new Error(data.error || `Failed to fetch transactions (${fetchResponse.status})`);
-      }
-      const fetchData = await fetchResponse.json();
-      if (!fetchData.transactions || !Array.isArray(fetchData.transactions)) {
-        throw new Error('Received invalid transaction data format from server');
-      }
-
-      // 2. Filter for reviewed (categorized) transactions
-      const reviewedTransactions = fetchData.transactions.filter((tx: any) => !!tx.originalData?.category_id);
-      console.log(`[Train All] Found ${reviewedTransactions.length} transactions with categories.`);
-
-      if (reviewedTransactions.length < 10) {
-        throw new Error(`Need at least 10 reviewed (categorized) transactions for training. Found ${reviewedTransactions.length}.`);
-      }
-      
-      // 3. Prepare training data payload
-      setProgressMessage(`Preparing ${reviewedTransactions.length} transactions for training...`);
-      const trainingData = reviewedTransactions.map((tx: any) => ({
-        description: typeof tx.description === 'object' ? JSON.stringify(tx.description) : (tx.description || ''),
-        Category: tx.originalData?.category_id?.toString() || null,
-        money_in: tx.is_income,
-        amount: typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount || 0)),
-      }));
-      
-      // *** Calculate IDs that were sent for training ***
-      const idsToSend = reviewedTransactions.map((tx: any) => tx.lunchMoneyId).filter((id: string | number | undefined): id is string => !!id);
-      console.log(`[Train All] Calculated ${idsToSend.length} IDs from reviewed transactions for potential tagging.`);
-
-      const payload = { transactions: trainingData }; // Simplify payload if backend allows
-      
-      setProgressPercent(10);
-      setProgressMessage('Sending training request (all reviewed)...');
-      
-      // 4. Send training request
+      const payload = { trainAllReviewed: true };
       const trainResponse = await fetch('/api/classify/train', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
-      // Handle 403 Subscription Error
       if (trainResponse.status === 403) {
         const errorData = await trainResponse.json().catch(() => ({ error: 'Subscription check failed' }));
         throw new Error(errorData.error || 'Subscription inactive or trial expired.');
       }
-
-      // 5. Handle Training Response (Sync/Async)
-      let pollResult: { status: string; message?: string } = { status: 'unknown' };
-      if (trainResponse.status === 200) {
-        const syncResult = await trainResponse.json();
-        if (syncResult.status === 'completed') {
-          pollResult = { status: 'completed', message: 'Training completed successfully!' };
-        } else {
-          throw new Error('Received unexpected success response format during training.');
-        }
-      } else if (trainResponse.status === 202) {
-        const asyncResult = await trainResponse.json();
-        const predictionId = asyncResult.prediction_id || asyncResult.predictionId;
-        if (predictionId) {
-          setProgressMessage('Training started, waiting for results...');
-          setProgressPercent(10); 
-          pollResult = await pollForCompletion(predictionId, 'training');
-        } else {
-          throw new Error('Server started training but did not return a prediction ID.');
-        }
-      } else {
-        const result = await trainResponse.json().catch(() => ({ error: 'Failed to parse error response' }));
-        throw new Error(result.error || `Training request failed with status ${trainResponse.status}`);
+      if (!trainResponse.ok && trainResponse.status !== 202) { 
+         const errorData = await trainResponse.json().catch(() => ({ error: `Server error ${trainResponse.status}` }));
+         throw new Error(errorData.error || `Training initiation failed with status ${trainResponse.status}`);
       }
-      
-      // 6. Update UI on Completion & Trigger Tagging
-      if (pollResult.status === 'completed') {
-        setProgressMessage(pollResult.message || 'Training completed successfully!');
-        setProgressPercent(100);
-        setIsOperationComplete(true); // Allow modal close immediately
-        // No tagging state needed visually for modal
-
-        // Trigger background tagging using the fetched reviewed transaction *objects*
-        console.log(`[Train All] Training complete. Triggering background tagging for ${reviewedTransactions.length} fetched transactions...`);
-        tagTransactionsAsTrained(reviewedTransactions).then(tagResult => { // Pass full objects
-            fetchLastTrainedTimestamp(); // Update timestamp after tagging
-            setToastMessage({ 
-              message: `Tagging complete: ${tagResult?.successCount || 0} updated${(tagResult?.failCount || 0) > 0 ? `, ${tagResult?.failCount} failed` : ''}.`,
-              type: (tagResult?.failCount ?? 0) > 0 ? 'error' : 'success' 
-            });
-        }).catch(taggingError => {
-            console.error("[Tagging] Error after Train All completion:", taggingError);
-            setToastMessage({ message: 'Error occurred during background tagging.', type: 'error' });
-        });
-
-      } else {
-        throw new Error(pollResult.message || 'Training polling failed or timed out.');
-      }
-
+      console.log(`[Train All - Start] Successfully initiated training request (Status: ${trainResponse.status}).`);
     } catch (error) {
-      console.error('[Train All] Error:', error);
-      const message = error instanceof Error ? error.message : 'Failed to train all reviewed transactions';
+      console.error('[Train All - Start] Error initiating training:', error);
+      const message = error instanceof Error ? error.message : 'Failed to start training';
       setError(message);
-      setToastMessage({ message, type: 'error' });
-      // Ensure modal is closable on error
-      setIsOperationComplete(true); 
-      setProgressMessage('Training failed.'); 
+      toast.error(`Failed to start training: ${message}`, { id: 'training-toast' }); // Use constant ID if available
+      stopBackgroundTraining(); // Stop polling on initiation error
     }
-    // Note: operationInProgress is reset by the modal's onClose handler
-  }, [pollForCompletion, fetchLastTrainedTimestamp, tagTransactionsAsTrained, transactions]); // Add local transactions dependency for handleTrainSelected path
-  // *** END NEW FUNCTION ***
+  }, [countsData, startBackgroundTraining, stopBackgroundTraining]); // Depend on hook data/functions
 
-  // *** START NEW FUNCTION: handleNoteChange ***
+  // Keep handleNoteChange
   const handleNoteChange = useCallback(async (transactionId: string, newNote: string) => {
     console.log(`Attempting to save note for tx ${transactionId}: "${newNote}"`);
     setUpdatingNoteId(transactionId); // Set loading state
@@ -1546,12 +1121,9 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         throw new Error(responseData.error || 'Failed to update note');
       }
 
-      // Update local transaction state on success
-      setTransactions(prev =>
-        prev.map(tx =>
-          tx.lunchMoneyId === transactionId ? { ...tx, notes: newNote } : tx
-        )
-      );
+      // INSTEAD: Invalidate query
+      console.log(`[Note Update ${transactionId}] Invalidating transaction query.`);
+      queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactions', dateRange, statusFilter] });
 
       // Show success toast
       setToastMessage({ message: 'Note updated successfully.', type: 'success' });
@@ -1566,10 +1138,9 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     } finally {
       setUpdatingNoteId(null); // Clear loading state
     }
-  }, [setTransactions, setToastMessage, setError]); // Add dependencies
-  // *** END NEW FUNCTION ***
+  }, [setToastMessage, setError, queryClient, dateRange, statusFilter]); // Add dependencies
 
-  // *** START Placeholder for Admin Function ***
+  // Keep handleTransferOriginalNames
   const handleTransferOriginalNames = useCallback(async () => {
     // 1. Filter selected transactions for those needing the update
     const transactionsToUpdate = transactions.filter(tx => 
@@ -1651,26 +1222,10 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         });
       } // End batch loop
 
-      // Update local state for successful transactions
-      if (successfulTxIds.length > 0) {
-        setTransactions(prev =>
-          prev.map(tx => {
-            if (updatedPayeesMap[tx.lunchMoneyId]) {
-              console.log(`[Admin] Updating local state for ${tx.lunchMoneyId}`);
-              return {
-                ...tx,
-                // Update the main description field for display
-                description: updatedPayeesMap[tx.lunchMoneyId],
-                // Update the originalData as well for consistency
-                originalData: {
-                  ...tx.originalData,
-                  payee: updatedPayeesMap[tx.lunchMoneyId],
-                },
-              };
-            }
-            return tx;
-          })
-        );
+      // INSTEAD: Invalidate query
+      if (successCount > 0) {
+         console.log("[Admin Payee Transfer] Invalidating transaction query.");
+         queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactions', dateRange, statusFilter] });
       }
 
       // Show feedback toast
@@ -1692,25 +1247,24 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       setIsTransferringPayees(false);
       setOperationInProgress(false); // Release general operation lock
     }
-  }, [transactions, selectedTransactions, setTransactions, setToastMessage, setSelectedTransactions]); // Add dependencies
-  // *** END Placeholder ***
+  }, [transactions, selectedTransactions, setToastMessage, setSelectedTransactions, queryClient, dateRange, statusFilter]); // Add dependencies
 
   return (
     <div className="text-gray-900 text-sm bg-white min-h-screen p-4">
       {/* Toast notification */}
       <ToastNotification toastMessage={toastMessage} />
 
-      {/* Operation Progress Modal - Pass completion state */}
+      {/* Operation Progress Modal */}
       <ProgressModal
         operationInProgress={operationInProgress}
         operationType={operationType}
         progressPercent={progressPercent}
         progressMessage={progressMessage}
-        isComplete={isOperationComplete} // Pass the completion state
-        onClose={closeModal} // Pass the updated close function
+        isComplete={isOperationComplete}
+        onClose={closeModal}
       />
 
-      {/* Admin Mode Toggle - Placed above filter/controls */}
+      {/* Admin Mode Toggle */}
       <div className="mb-4 flex items-center justify-end space-x-2">
         <span className="text-sm font-medium text-gray-700">Admin Mode</span>
         <Switch
@@ -1728,42 +1282,45 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         </Switch>
       </div>
 
-      {/* Updated wrapper for all controls - Now arranges items side-by-side */}
-      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-row items-stretch gap-6">
-        
-        {/* Transaction Filters Component Wrapper */}
-        <div className="flex-1">
+      {/* Controls Wrapper */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-wrap md:flex-nowrap items-stretch gap-6">
+        {/* Transaction Filters - Use hook values */} 
+        <div className="flex-1 min-w-[350px]">
           <TransactionFilters
             pendingDateRange={pendingDateRange}
-            handleDateRangeChange={handleDateRangeChange} // Pass the new handler here
+            handleDateRangeChange={handleDateRangeChange} 
             applyDateFilter={applyDateFilter}
-            isApplying={isApplyingDates}
-            trainedCount={totalTrainedCount} // Pass total trained count from state
-            clearedCount={totalReviewedCount}     // Pass total reviewed count
-            unclearedCount={totalUnreviewedCount}   // Pass total unreviewed count
-            operationInProgress={operationInProgress}
+            isApplying={isApplyingDates} 
+            trainedCount={countsData?.trainedCount ?? 0}
+            clearedCount={countsData?.reviewedCount ?? 0}    
+            unclearedCount={countsData?.unreviewedCount ?? 0}  
+            isLoadingCounts={isLoadingCounts}
+            countsError={countsError}
+            isTrainingInBackground={isTrainingInBackground} 
+            operationInProgress={operationInProgress} // Keep passing local operation lock if needed
             lastTrainedTimestamp={lastTrainedTimestamp}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
           />
         </div>
 
-        {/* Categorization Controls Component Wrapper */}
-        <div className="flex-1 flex flex-col gap-4"> {/* Added flex-col and gap */}
+        {/* Categorization Controls - Use hook values */} 
+        <div className="flex-1 min-w-[300px] flex flex-col gap-4"> 
           <CategorizationControls
             pendingCategoryUpdates={pendingCategoryUpdates}
             applyingAll={applyingAll}
             applyAllPredictedCategories={applyAllPredictedCategories}
             handleTrainSelected={handleTrainSelected}
             handleCategorizeSelected={handleCategorizeSelected}
-            handleTrainAllReviewed={handleTrainAllReviewed} // Pass the new handler
+            handleTrainAllReviewed={handleTrainAllReviewed}
+            isTrainingInBackground={isTrainingInBackground} // Pass polling state from hook
             selectedTransactionsCount={selectedTransactions.length}
-            loading={loading}
-            operationInProgress={operationInProgress}
+            loading={loading} // Pass combined loading state
+            operationInProgress={operationInProgress} // Keep passing local operation lock
             handleCancelCategorization={handleCancelCategorization}
             lastTrainedTimestamp={lastTrainedTimestamp}
           />
-          {/* Admin Mode Buttons - Conditionally Rendered */}
+          {/* Admin Mode Buttons */}
           {isAdminMode && (
             <div className="border-t border-gray-200 pt-4 mt-4 flex items-center gap-4">
               <button
@@ -1785,25 +1342,24 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         </div>
       </div>
 
-      {/* Transaction Table */}
-      <TransactionTable
+     <TransactionTable
         filteredTransactions={displayedTransactions}
         selectedTransactions={selectedTransactions}
         handleSelectTransaction={handleSelectTransaction}
         handleSelectAll={handleSelectAll}
         pendingCategoryUpdates={pendingCategoryUpdates}
         categories={categories}
-        handleCategoryChange={handleCategoryChange}
-        updatingCategory={updatingCategory}
+        handleCategoryChange={handleCategoryChange} // Ensure this line exists
+        updatingCategory={updatingCategory}     // Ensure this line exists
         successfulUpdates={successfulUpdates}
         applyPredictedCategory={applyPredictedCategory}
         applyingIndividual={applyingIndividual}
         cancelSinglePrediction={cancelSinglePrediction}
         getCategoryNameById={getCategoryNameById}
         loading={loading}
-        handleNoteChange={handleNoteChange} // Pass the new handler
-        updatingNoteId={updatingNoteId}   // Pass the loading state
-        isAdminMode={isAdminMode} // Pass the admin mode state
+        handleNoteChange={handleNoteChange}
+        updatingNoteId={updatingNoteId}
+        isAdminMode={isAdminMode}
       />
     </div>
   );
