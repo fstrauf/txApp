@@ -23,6 +23,7 @@ type TransactionRowProps = {
   handleNoteChange: (transactionId: string, newNote: string) => Promise<void>;
   updatingNoteId: string | null;
   showActionsColumn: boolean;
+  isAdminMode: boolean;
 };
 
 // Create the memoized Row component
@@ -42,7 +43,8 @@ const TransactionRow = React.memo((
     getCategoryNameById, 
     handleNoteChange, 
     updatingNoteId, 
-    showActionsColumn 
+    showActionsColumn, 
+    isAdminMode 
   }: TransactionRowProps
 ) => {
   const hasPendingUpdate = !!pendingUpdate;
@@ -85,7 +87,7 @@ const TransactionRow = React.memo((
           </div>
         )}
       </td>
-      <td className="px-4 py-3 align-top text-gray-800">
+      <td className="px-4 py-3 align-top text-gray-800 w-56">
         {/* Description */}
         {typeof transaction.description === 'object' 
           ? JSON.stringify(transaction.description) 
@@ -109,6 +111,11 @@ const TransactionRow = React.memo((
           updatingNoteId={updatingNoteId}
         />
       </td>
+      {isAdminMode && (
+        <td className="px-4 py-3 align-top text-gray-600 w-56">
+          {transaction.originalData?.original_name || <span className="text-gray-400 italic">N/A</span>}
+        </td>
+      )}
       <td className="px-4 py-3 align-top">
         {/* Category Select */}
         <CategorySelect

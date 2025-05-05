@@ -203,7 +203,7 @@ export async function PATCH(request: NextRequest) {
     // --- End Decryption ---
 
     // Read transactionId, categoryId, tags, AND status from the request body
-    const { transactionId, categoryId, tags, status, notes } = await request.json();
+    const { transactionId, categoryId, tags, status, notes, payee } = await request.json();
     
     if (!transactionId) {
       return NextResponse.json({ error: 'Transaction ID is required' }, { status: 400 });
@@ -215,6 +215,11 @@ export async function PATCH(request: NextRequest) {
     // Build the update object conditionally
     const updateObject: Record<string, any> = {};
     
+    // --- Add Payee if provided --- 
+    if (payee !== undefined) {
+      updateObject.payee = payee;
+    }
+
     // --- Add Notes if provided --- 
     if (notes !== undefined) {
       updateObject.notes = notes;
