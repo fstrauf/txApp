@@ -34,7 +34,8 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-lg md:text-xl text-gray-700 mb-6 md:mb-8 max-w-xl mx-auto md:mx-0">
-              Ditch manual rules. Expense Sorted's AI automatically categorizes transactions in seconds within Google Sheets, Lunch Money, Tiller and soon PocketSmith{/* & Monarch Money*/}.
+              Ditch manual rules. Expense Sorted's AI automatically categorizes transactions in seconds within Google Sheets, Lunch Money, Tiller and soon PocketSmith.
+              <Link href="/api-landing" className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium ml-1">Developers, explore our API for custom integrations.</Link>
             </p>
 
             {/* Integration Logos */}
@@ -432,6 +433,27 @@ export default function Home() {
               Learn more about the spreadsheet
               <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+
+        {/* Developer API Section */}
+        <div className="bg-white rounded-2xl shadow-soft p-8 mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
+            Integrate Our AI
+          </h2>
+          <p className="text-lg text-gray-700 mb-8 text-center max-w-2xl mx-auto">
+            Want to build custom financial tools or enhance your existing applications? Our robust API provides direct access to Expense Sorted's intelligent categorization engine. Clean merchant names, personalized models, and localized context at your fingertips.
+          </p>
+          <div className="text-center">
+            <Link
+              href="/api-landing"
+              className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-all duration-200 shadow-soft hover:shadow-glow text-lg"
+            >
+              Explore Our API
+              <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </Link>
           </div>
