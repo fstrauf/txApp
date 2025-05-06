@@ -75,6 +75,8 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
   // *** Admin Mode State ***
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [filterNoPayee, setFilterNoPayee] = useState(false);
+  // *** NEW: AI Mode State ***
+  const [useAiMode, setUseAiMode] = useState(false);
 
   // Calculate transaction stats (Only uncategorized needed now)
   const transactionStats = useMemo(() => {
@@ -733,107 +735,108 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
     console.log(`Processing ${results.length} prediction results to update transactions`);
     console.log("Raw results:", JSON.stringify(results, null, 2));
     
-    // Special case for the format shared in your error message
-    // If we're getting a format like the example with narrative/predicted_category/similarity_score
-    const hasCorrectFormat = results.length > 0 && 
-      results[0] && 
-      (results[0].narrative !== undefined && results[0].predicted_category !== undefined);
-    
-    if (hasCorrectFormat) {
-      console.log("Results appear to be in the correct format already!");
-    }
-    
-    // Create a new map for categorized transactions
-    const newCategorizedTransactions = new Map();
-    
-    // Process results and build prediction map
-    results.forEach((result, index) => {
-      // The API might return results with different field names, so we handle both formats
-      const narrative = result.narrative || result.Narrative || result.description || '';
-      let predictedCategory = result.predicted_category || result.category || result.Category || '';
-      const similarityScore = result.similarity_score || result.score || 0;
-      
-      // Skip "None" categories or replace with a fallback
-      if (!predictedCategory || predictedCategory.toLowerCase() === 'none') {
-        console.log(`Result ${index+1}: "${narrative}" → "None" category detected, using fallback`);
-        predictedCategory = 'Uncategorized';
-      }
-      
-      if (narrative && predictedCategory) {
-        console.log(`Result ${index+1}: "${narrative}" → "${predictedCategory}" (${similarityScore})`);
-        newCategorizedTransactions.set(narrative, {
-          category: predictedCategory,
-          score: similarityScore
-        });
-      } else {
-        console.log(`Result ${index+1} is missing required fields:`, result);
-      }
-    });
-    
-    console.log("Built categorization map with", newCategorizedTransactions.size, "entries");
-    
-    // Clear any pending updates and set the new categorized transactions
-    setPendingCategoryUpdates({});
-    // Comment out removed state setter
-    // setCategorizedTransactions(new Map());
-    
     // Create a mapping of transaction IDs to predicted categories and scores for easier access
     const pendingUpdates: Record<string, {categoryId: string | null, score: number}> = {}; // Allow null categoryId
 
-    // Map the predictions to transaction IDs
-    selectedTransactions.forEach(txId => {
-      const tx = transactions.find(t => t.lunchMoneyId === txId);
-      if (tx && tx.description) {
-        const prediction = newCategorizedTransactions.get(tx.description);
-        
-        if (prediction) {
-          // Handle case where prediction is explicitly 'Uncategorized' (our fallback for 'None')
-          if (prediction.category === 'Uncategorized') {
-            pendingUpdates[txId] = {
-              categoryId: null, // Use null to signify 'Needs Review' or 'Uncategorized'
-              score: prediction.score
-            };
-          } else {
-            // Find the category ID for this predicted category name
-            const categoryObj = categories.find(cat => 
+    // *** Determine response type and process accordingly ***
+    const isAiResponse = results[0] && results[0].transactionId !== undefined && results[0].suggestedCategory !== undefined;
+    
+    if (isAiResponse) {
+      console.log("Detected AI response format (transactionId, suggestedCategory).");
+      results.forEach(result => {
+        const { transactionId, suggestedCategory } = result;
+        if (!transactionId) return; // Skip if somehow missing ID
+
+        let categoryId: string | null = null;
+        if (suggestedCategory && suggestedCategory !== "Needs Review") {
+           const categoryObj = categories.find(cat => 
               typeof cat !== 'string' && 
-              cat.name.toLowerCase() === prediction.category.toLowerCase()
-            );
-            
-            // Use the found category ID or the category name as fallback if ID not found
-            const categoryId = categoryObj && typeof categoryObj !== 'string' 
-              ? categoryObj.id 
-              : prediction.category; // Keep original prediction if ID mapping fails
-            
-            pendingUpdates[txId] = {
-              categoryId,
-              score: prediction.score
-            };
+              cat.name.toLowerCase() === suggestedCategory.toLowerCase()
+           );
+           categoryId = categoryObj && typeof categoryObj !== 'string' 
+             ? categoryObj.id 
+             : suggestedCategory; // Fallback to name if ID not found (should ideally not happen)
+        } // If "Needs Review" or null/empty, categoryId remains null
+        
+        pendingUpdates[transactionId] = {
+          categoryId, 
+          score: 0 // AI doesn't provide score
+        };
+      });
+    } else {
+      // --- Existing logic for the old endpoint --- 
+      console.log("Using legacy response format processing (narrative, predicted_category).");
+      // Create a new map for categorized transactions
+      const newCategorizedTransactions = new Map();
+      
+      // Process results and build prediction map
+      results.forEach((result, index) => {
+        const narrative = result.narrative || result.Narrative || result.description || '';
+        let predictedCategory = result.predicted_category || result.category || result.Category || '';
+        const similarityScore = result.similarity_score || result.score || 0;
+        
+        if (!predictedCategory || predictedCategory.toLowerCase() === 'none') {
+          predictedCategory = 'Needs Review'; // Use consistent marker
+        }
+        
+        if (narrative) { // Only map if we have a narrative/description to match on
+          newCategorizedTransactions.set(narrative, {
+            category: predictedCategory,
+            score: similarityScore
+          });
+        } else {
+          console.log(`Legacy Result ${index+1} is missing narrative/description:`, result);
+        }
+      });
+      
+      console.log("Built legacy categorization map with", newCategorizedTransactions.size, "entries");
+
+      // Map the predictions to transaction IDs based on description
+      selectedTransactions.forEach(txId => {
+        const tx = transactions.find(t => t.lunchMoneyId === txId);
+        if (tx && tx.description) {
+          const prediction = newCategorizedTransactions.get(tx.description);
+          
+          if (prediction) {
+            let categoryId: string | null = null;
+            if (prediction.category !== 'Needs Review') {
+              const categoryObj = categories.find(cat => 
+                typeof cat !== 'string' && 
+                cat.name.toLowerCase() === prediction.category.toLowerCase()
+              );
+              categoryId = categoryObj && typeof categoryObj !== 'string' 
+                ? categoryObj.id 
+                : prediction.category; // Fallback
+            }
+            pendingUpdates[txId] = { categoryId, score: prediction.score };
+          } else {
+            console.log(`No legacy prediction found for txId ${txId} with description "${tx.description}". Marking for review.`);
+            pendingUpdates[txId] = { categoryId: null, score: 0 };
           }
         } else {
-            // Handle cases where a transaction was selected but received no prediction (e.g., API error for just that item)
-            // Or if the 'None' category was filtered out earlier (ensure it's handled)
-            // We might want to explicitly mark these for review as well
-            console.log(`No prediction found for txId ${txId} with description "${tx.description}". Marking for review.`);
-            pendingUpdates[txId] = {
-              categoryId: null, // Mark as needing review
-              score: 0 // Assign a zero score
-            };
+           console.warn(`Selected transaction ${txId} not found or has no description for legacy matching.`);
+           // Optionally mark for review if the tx was selected but couldn't be matched
+           // pendingUpdates[txId] = { categoryId: null, score: 0 }; 
         }
-      }
-    });
+      });
+      // --- End Existing logic --- 
+    }
     
-    // Store the pending updates
+    // Clear any previous pending updates before setting new ones
+    setPendingCategoryUpdates({});
+    
+    // Store the newly generated pending updates
     setPendingCategoryUpdates(pendingUpdates);
     
     console.log("Prepared", Object.keys(pendingUpdates).length, "pending category updates");
     
     // Show a success toast
     setToastMessage({
-      message: `Categorized ${Object.keys(pendingUpdates).length} transactions. Review and apply the changes.`,
+      message: `Generated ${Object.keys(pendingUpdates).length} category suggestions. Review and apply.`, 
       type: 'success'
     });
-  }, [transactions, categories, selectedTransactions]); // Dependencies: transactions, categories, selectedTransactions
+    // Remove dependency on selectedTransactions for AI path
+  }, [transactions, categories]); // Simplified dependencies
 
   // Memoize handleTrainSelected
   const handleTrainSelected = useCallback(async () => {
@@ -1081,17 +1084,25 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         // Send money_in status based on the transaction data
         money_in: tx.is_income,
         amount: typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount || 0)),
+        // *** Include LunchMoney ID for ChatGPT endpoint ***
+        lunchMoneyId: tx.lunchMoneyId, 
       }));
 
       console.log("Payload being sent:", selectedTxObjects);
 
       setProgressMessage('Sending request to server...');
-      const response = await fetch('/api/classify/classify', {
+      
+      // *** Choose endpoint based on useAiMode ***
+      const endpoint = useAiMode ? '/api/classify/chatgpt' : '/api/classify/classify';
+      console.log(`Using endpoint: ${endpoint}`);
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ transactions: selectedTxObjects }),
+        // Send slightly different payload structure depending on the endpoint
+        body: JSON.stringify(useAiMode ? { transactionsToCategorize: selectedTxObjects } : { transactions: selectedTxObjects }),
       });
 
       // === START 403 HANDLING ===
@@ -1114,19 +1125,35 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         const syncResult = await response.json();
         console.log("Received synchronous classification results:", syncResult);
 
-        if (syncResult.status === 'completed' && Array.isArray(syncResult.results)) {
-          setProgressMessage('Processing results...');
-          setProgressPercent(100);
-          updateTransactionsWithPredictions(syncResult.results);
-          setToastMessage({ message: 'Categorization completed successfully!', type: 'success' });
-          setOperationInProgress(false); // Close modal immediately
-          setSelectedTransactions([]); // Clear selection after successful sync categorization
+        // Adjust response handling based on endpoint
+        if (useAiMode) {
+           // ChatGPT endpoint returns { categorizedResults: [{ transactionId: string, suggestedCategory: string }] }
+           if (Array.isArray(syncResult.categorizedResults)) {
+              setProgressMessage('Processing results...');
+              setProgressPercent(100);
+              updateTransactionsWithPredictions(syncResult.categorizedResults); // Pass the array directly
+              setToastMessage({ message: 'AI categorization completed successfully!', type: 'success' });
+              setOperationInProgress(false); // Close modal immediately
+              setSelectedTransactions([]); // Clear selection
+           } else {
+              throw new Error('Received unexpected success response format from AI server.');
+           }
         } else {
-          // Handle unexpected 200 response format
-          throw new Error('Received unexpected success response format from server.');
+          // Existing endpoint returns { status: 'completed', results: [...] }
+          if (syncResult.status === 'completed' && Array.isArray(syncResult.results)) {
+            setProgressMessage('Processing results...');
+            setProgressPercent(100);
+            updateTransactionsWithPredictions(syncResult.results); // Pass results array
+            setToastMessage({ message: 'Categorization completed successfully!', type: 'success' });
+            setOperationInProgress(false); // Close modal immediately
+            setSelectedTransactions([]); // Clear selection after successful sync categorization
+          } else {
+            // Handle unexpected 200 response format
+            throw new Error('Received unexpected success response format from server.');
+          }
         }
       } else if (response.status === 202) {
-        // Asynchronous Processing Started
+        // Asynchronous Processing Started (Assume both endpoints can be async for now)
         const asyncResult = await response.json();
         console.log("Received asynchronous start response:", asyncResult);
         if (asyncResult.prediction_id) {
@@ -1157,7 +1184,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
       setProgressPercent(0);
       setProgressMessage('');
     }
-  }, [selectedTransactions, pendingCategoryUpdates, transactions, pollForCompletion, updateTransactionsWithPredictions]); // Use memoized functions
+  }, [selectedTransactions, pendingCategoryUpdates, transactions, pollForCompletion, updateTransactionsWithPredictions, useAiMode]); // Add useAiMode dependency
 
   // Memoize handleCancelCategorization
   const handleCancelCategorization = useCallback(() => {
@@ -1731,6 +1758,24 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
         </Switch>
       </div>
 
+      {/* *** NEW: AI Mode Toggle *** */}
+      <div className="mb-4 flex items-center justify-end space-x-2">
+        <span className="text-sm font-medium text-gray-700">Use AI (ChatGPT)</span>
+        <Switch
+          checked={useAiMode}
+          onChange={setUseAiMode}
+          className={`${
+            useAiMode ? 'bg-green-600' : 'bg-gray-200'
+          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2`}
+        >
+          <span
+            className={`${
+              useAiMode ? 'translate-x-6' : 'translate-x-1'
+            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+          />
+        </Switch>
+      </div>
+
       {/* Updated wrapper for all controls - Now arranges items side-by-side */}
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-row items-stretch gap-6">
         
@@ -1765,6 +1810,7 @@ export default function TransactionList(/*{ statusFilter, setStatusFilter }: Tra
             operationInProgress={operationInProgress}
             handleCancelCategorization={handleCancelCategorization}
             lastTrainedTimestamp={lastTrainedTimestamp}
+            useAiMode={useAiMode} // Pass AI mode state
           />
           {/* Admin Mode Buttons - Conditionally Rendered */}
           {isAdminMode && (

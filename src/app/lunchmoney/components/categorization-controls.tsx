@@ -17,6 +17,7 @@ type CategorizationControlsProps = {
   // importMessage: string; // Removed
   handleCancelCategorization: () => void;
   lastTrainedTimestamp?: string | null;
+  useAiMode: boolean;
 };
 
 const CategorizationControls = React.memo(({
@@ -30,43 +31,39 @@ const CategorizationControls = React.memo(({
   operationInProgress,
   // importStatus, // Removed
   // importMessage, // Removed
-  handleCancelCategorization
+  handleCancelCategorization,
+  useAiMode
 }: CategorizationControlsProps) => {
   const hasPendingUpdates = Object.keys(pendingCategoryUpdates).length > 0;
 
   return (
     <div className="flex flex-col gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 shadow-sm h-full">
       <div className="flex items-start gap-4">
-        <div className="flex flex-col items-start gap-2 flex-shrink-0">
-          {/* <button
-            onClick={handleTrainSelected}
-            disabled={selectedTransactionsCount === 0 || operationInProgress}
-            className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left whitespace-nowrap"
-            title="Train model using only the currently selected transactions."
-          >
-            Train Selected ({selectedTransactionsCount})
-          </button> */}
-          <button 
-            onClick={handleTrainAllReviewed}
-            disabled={operationInProgress}
-            className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left whitespace-nowrap"
-            title="Train model using all your transactions that have a category assigned (fetched from Lunch Money)."
-          >
-            Train All Reviewed
-          </button>
-          <button
-            onClick={handleCategorizeSelected}
-            disabled={selectedTransactionsCount === 0 || operationInProgress}
-            className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-secondary text-white hover:bg-secondary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left whitespace-nowrap"
-            title="Suggest categories for the currently selected transactions based on trained model."
-          >
-            Categorize Selected ({selectedTransactionsCount})
-          </button>
+        <button 
+          onClick={handleTrainAllReviewed}
+          disabled={operationInProgress || useAiMode}
+          className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-primary text-white hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left whitespace-nowrap relative group"
+          title={"Train model using all your transactions that have a category assigned (fetched from Lunch Money)."}
+        >
+          Train All Reviewed
+        </button>
+        <button
+          onClick={handleCategorizeSelected}
+          disabled={selectedTransactionsCount === 0 || operationInProgress}
+          className="px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-150 bg-secondary text-white hover:bg-secondary-dark disabled:bg-gray-400 disabled:cursor-not-allowed w-full text-left whitespace-nowrap relative group"
+          title={useAiMode 
+            ? "Suggest categories for selected transactions using AI (ChatGPT)." 
+            : "Suggest categories for the currently selected transactions based on trained model."}
+        >
+          Categorize Selected ({selectedTransactionsCount})
+          {useAiMode && (
+            <span className="absolute -top-1 -right-1 bg-green-200 text-green-800 text-xs font-bold px-1 py-0.5 rounded-full opacity-90 group-hover:opacity-100">AI</span>
+          )}
+        </button>
 
-        </div>
-        <div className="text-sm text-gray-600 flex-grow mt-1">
-          Use reviewed transactions to Train your model. Categorise transactions that need review.
-        </div>
+      </div>
+      <div className="text-sm text-gray-600 flex-grow mt-1">
+        Use reviewed transactions to Train your model. Categorise transactions that need review.
       </div>
 
       {hasPendingUpdates && (

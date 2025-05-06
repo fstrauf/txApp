@@ -34,9 +34,7 @@ export default function CategorySelect({
         className={`w-full py-1.5 px-2 pr-8 appearance-none rounded-md border text-sm shadow-sm focus:ring-primary focus:border-primary ${
           successfulUpdates[transaction.lunchMoneyId] 
             ? 'border-green-500 bg-green-50 text-green-800' 
-            : hasPendingUpdate
-              ? 'border-secondary bg-secondary/5 text-secondary-dark'
-              : 'border-gray-300 bg-white text-gray-800'
+            : 'border-gray-300 bg-white text-gray-800'
         }`}
       >
         <option value="none">-- Uncategorized --</option>
