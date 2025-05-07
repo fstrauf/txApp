@@ -367,12 +367,38 @@ export function useCategorization() {
     }
   };
 
+  // Function to cancel a single pending prediction
+  const cancelSinglePrediction = (
+    transactionId: string,
+    onSuccess?: (message: string) => void
+  ) => {
+    setCategorizationState(prev => {
+      const newPendingUpdates = { ...prev.pendingUpdates };
+      if (newPendingUpdates[transactionId]) {
+        delete newPendingUpdates[transactionId];
+        if (onSuccess) {
+          onSuccess('Prediction discarded.');
+        }
+        return {
+          ...prev,
+          pendingUpdates: newPendingUpdates,
+          stats: {
+            ...prev.stats,
+            total: prev.stats.total > 0 ? prev.stats.total - 1 : 0, // Decrement total if it was part of it
+          }
+        };
+      }
+      return prev; // No change if ID not found
+    });
+  };
+
   return {
     categorizationState,
     setCategorizationState,
     resetCategorizationState,
     updateTransactionsWithPredictions,
     applyPredictedCategory,
-    applyAllPredictedCategories
+    applyAllPredictedCategories,
+    cancelSinglePrediction,
   };
 } 
