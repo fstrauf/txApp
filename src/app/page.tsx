@@ -4,9 +4,7 @@ import References from "./components/References.js";
 import FAQ from "./components/FAQ.js";
 import Link from "next/link";
 import Head from "next/head";
-import { FaGoogle } from "react-icons/fa";
 import AppBetaPopup from "@/components/shared/AppBetaPopup";
-import { useState } from "react";
 import { useSession } from 'next-auth/react';
 
 export default function Home() {
@@ -21,21 +19,23 @@ export default function Home() {
         </Head>
       </div>
 
-      <main className="container mx-auto px-4 py-8 md:py-16 max-w-7xl">
+      <main className="w-full px-4 py-8 md:py-16 md:container md:mx-auto md:max-w-7xl">
         {/* Hero Section - Redesigned */}
         <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 mb-16 md:mb-24">
           {/* Left Column: Text Content */}
-          <div className="md:w-1/2 text-center md:text-left">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-5 md:mb-6 leading-tight">
+          <div className="w-full md:w-1/2 text-center md:text-left min-w-0">
+            <h1 style={{ overflowWrap: 'anywhere' }} className="text-4xl md:text-5xl font-bold text-gray-900 mb-5 md:mb-6 leading-tight break-words min-w-0">
               Effortless Expense Categorization
               <br className="hidden md:block" />
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <span className="inline-block bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 Across Your Favorite Tools
               </span>
             </h1>
-            <p className="text-lg md:text-xl text-gray-700 mb-6 md:mb-8 max-w-xl mx-auto md:mx-0">
+            <p className="text-lg text-gray-700 mb-6 md:mb-8 break-words md:text-xl md:max-w-xl md:mx-0 min-w-0">
               Ditch manual rules. Expense Sorted's AI automatically categorizes transactions in seconds within Google Sheets, Lunch Money, Tiller and soon PocketSmith.
-              <Link href="/api-landing" className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium ml-1">Developers, explore our API for custom integrations.</Link>
+              <Link href="/api-landing" className="block md:inline text-indigo-600 hover:text-indigo-800 hover:underline font-medium md:ml-1 mt-1 md:mt-0">
+                Explore our API for custom integrations.
+              </Link>
             </p>
 
             {/* Integration Logos */}
@@ -88,7 +88,7 @@ export default function Home() {
           </div>
 
           {/* Right Column: Hero Image/GIF */}
-          <div className="md:w-1/2">
+          <div className="w-full md:w-1/2 overflow-hidden">
              <div className="relative bg-white rounded-2xl p-4 shadow-xl border border-gray-100">
                 <Image
                   src="/hero expense sorted.gif"

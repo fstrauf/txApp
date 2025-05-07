@@ -7,9 +7,9 @@ export default function ApiLandingPage() {
       <div className="container mx-auto px-4 max-w-7xl py-8 md:py-16">
         {/* Revised Hero Section - Two Column Layout */}
         <section className="relative py-12 md:py-20 bg-gradient-to-r from-primary to-secondary text-white rounded-xl shadow-lg overflow-hidden">
-          {/* Coming Soon Ribbon */}
-          <div className="absolute top-0 right-0 w-36 h-36 md:w-40 md:h-40 pointer-events-none">
-            <div className="absolute transform rotate-45 bg-white text-primary font-semibold text-center py-1 right-[-38px] top-[28px] md:right-[-34px] md:top-[32px] w-[170px] shadow-md">
+          {/* Coming Soon Ribbon - Adjusted for Mobile */}
+          <div className="absolute top-0 right-0 w-28 h-28 md:w-40 md:h-40 pointer-events-none">
+            <div className="absolute transform rotate-45 bg-white text-primary font-semibold text-center py-1 right-[-30px] top-[22px] w-[130px] md:right-[-34px] md:top-[32px] md:w-[170px] shadow-md text-xs md:text-sm">
               Coming Soon
             </div>
           </div>
