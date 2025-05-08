@@ -1,4 +1,4 @@
-import React, { Dispatch, SetStateAction, useMemo, useState, useEffect } from 'react';
+import React, { Dispatch, SetStateAction, useMemo, useState, useEffect, Fragment } from 'react';
 import { format } from 'date-fns';
 import { Tab, TabGroup, TabList } from '@headlessui/react';
 
@@ -49,8 +49,6 @@ const TransactionFilters = React.memo(({
       return 'Invalid Date';
     }
   }, [lastTrainedTimestamp]);
-
-  const selectedIndex = statusFilter === 'cleared' ? 1 : 0;
 
   const handleTabChange = (index: number) => {
     setStatusFilter(index === 1 ? 'cleared' : 'uncleared');
@@ -127,19 +125,25 @@ const TransactionFilters = React.memo(({
       </div>
 
       <div className="flex flex-row items-center justify-between">
-      <TabGroup selectedIndex={selectedIndex} onChange={handleTabChange}>
+      <TabGroup defaultIndex={statusFilter === 'cleared' ? 1 : 0} onChange={handleTabChange}>
         <TabList className="flex space-x-2">
-          <Tab 
-            className={`${tabBaseStyle} ${selectedIndex === 0 ? tabActiveSecondaryStyle : tabInactiveStyle}`}
-            disabled={isDisabled}
-          >
-            Unreviewed ({unclearedCount})
+          <Tab as={Fragment}>
+            {({ selected }) => (
+              <button
+                className={`${tabBaseStyle} ${selected ? tabActiveSecondaryStyle : tabInactiveStyle}`}
+              >
+                Unreviewed ({unclearedCount})
+              </button>
+            )}
           </Tab>
-          <Tab 
-             className={`${tabBaseStyle} ${selectedIndex === 1 ? tabActivePrimaryStyle : tabInactiveStyle}`}
-             disabled={isDisabled}
-          >
-            Reviewed ({clearedCount})
+          <Tab as={Fragment}>
+            {({ selected }) => (
+              <button
+                className={`${tabBaseStyle} ${selected ? tabActivePrimaryStyle : tabInactiveStyle}`}
+              >
+                Reviewed ({clearedCount})
+              </button>
+            )}
           </Tab>
         </TabList>
       </TabGroup>
