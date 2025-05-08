@@ -138,9 +138,11 @@ export default function TransactionList() {
   // This is called by useTraining after AI categorization completes
   // const updateTransactionsWithPredictions = useCallback((results: any[]) => { /* ... */ }, [selectedIds, hookCategories, showSuccess, setPendingCategoryUpdates]);
   // Hook version will be passed to useTraining
-  const handleAIUpdateWithPredictionsForTraining = useCallback((results: any[]) => {
-    hookUpdateTransactionsWithPredictions(results, hookTransactions, selectedIds, hookCategories, showSuccess);
-  }, [hookUpdateTransactionsWithPredictions, hookTransactions, selectedIds, hookCategories, showSuccess]);
+  const handleAIUpdateWithPredictionsForTraining = useCallback((results: any[], processedTransactionIds: string[]) => {
+    // Pass: API results, the IDs for these results, all transactions, all categories, and the success callback.
+    // `selectedIds` from the outer scope is not directly needed here anymore, as `processedTransactionIds` is more specific.
+    hookUpdateTransactionsWithPredictions(results, processedTransactionIds, hookTransactions, hookCategories, showSuccess);
+  }, [hookUpdateTransactionsWithPredictions, hookTransactions, hookCategories, showSuccess]);
 
   const {
     operationState: trainingOperationState,

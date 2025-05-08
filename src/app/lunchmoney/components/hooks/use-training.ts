@@ -24,7 +24,7 @@ interface UseTrainingProps {
   selectedIds: string[];
   showToast: (message: string, type: 'success' | 'error' | 'info') => void;
   updateTransactions: (updatedTransactions: Transaction[]) => void;
-  onCategorizationComplete?: (results: any[]) => void;
+  onCategorizationComplete?: (results: any[], transactionIds: string[]) => void;
 }
 
 interface TrainingDataItem {
@@ -116,13 +116,13 @@ export function useTraining({
       updateProgress(5, `Job submitted. Polling for status of ${type} job ${predictionId}...`);
 
       const executePoll = async () => {
-        while (pollCount < maxPolls) {
-          pollCount++;
-          await new Promise(resolve => setTimeout(resolve, pollInterval));
-
+    while (pollCount < maxPolls) {
+        pollCount++;
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        
           try {
             const response = await fetch(`/api/classify/status/${predictionId}`);
-            if (!response.ok) {
+        if (!response.ok) {
               // If the status endpoint itself fails (e.g., 500, 404 for the ID),
               // we might want to retry a few times or fail fast.
               // For now, we'll treat non-200 as a polling error after first attempt.
@@ -458,87 +458,140 @@ export function useTraining({
       showToast("Please select transactions to categorize.", 'info');
       return;
     }
-    const transactionsToCategorize = transactions.filter(tx => selectedIds.includes(tx.lunchMoneyId));
+
+    // Filter out transactions that might already have pending predictions from another source,
+    // or are not suitable for categorization (e.g., already categorized and locked).
+    // For this example, we'll assume all selected are uncategorized or eligible.
+    const transactionsToCategorize = transactions.filter(tx => 
+      selectedIds.includes(tx.lunchMoneyId) 
+      // && !tx.originalData?.category_id // Example: Only uncategorized
+    );
 
     if (transactionsToCategorize.length === 0) {
-       showToast("No valid transactions found for categorization among selected.", 'info');
-       return;
+      showToast('No suitable transactions selected for categorization.', 'info');
+      return;
     }
 
-    const categorizationPayload = transactionsToCategorize.map(tx => ({
-     description: tx.description,
-     money_in: tx.is_income,
-     amount: tx.amount
-    })) as CategorizationDataItem[];
- 
-    setOperationState({ inProgress: true, type: 'categorizing', progress: { percent: 0, message: 'Submitting selected for categorization...' }, result: { success: false, message: null, data: null } });
- 
-     try {
-      // Assuming categorization endpoint is /api/classify/classify
+    const transactionsToCategorizeIds = transactionsToCategorize.map(tx => tx.lunchMoneyId);
+
+    const categorizationData: CategorizationDataItem[] = transactionsToCategorize.map(tx => ({
+      // Ensure description is a string, even if it's an object in source
+      description: typeof tx.description === 'object' ? JSON.stringify(tx.description) : String(tx.description || ''),
+      money_in: !!tx.is_income, // Ensure boolean
+      amount: typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount || '0')),
+    }));
+
+    setOperationState({
+      inProgress: true,
+      type: 'categorizing',
+      progress: { percent: 0, message: 'Preparing transactions for categorization...' },
+      result: { success: false, message: null, data: null }
+    });
+
+    try {
+      setOperationState(prev => ({ ...prev, progress: { percent: 5, message: 'Sending categorization request...' }}));
+      
       const response = await fetch('/api/classify/classify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions: categorizationPayload }),
+        body: JSON.stringify({ transactions: categorizationData }),
       });
 
       if (response.status === 403) {
-        const errorData = await response.json().catch(() => ({ error: 'Subscription check failed' }));
-        throw new Error(errorData.error || 'Subscription inactive or trial expired. Cannot categorize.');
+        const errorData = await response.json().catch(() => ({ error: 'Subscription check failed or access denied.' }));
+        const message = errorData.error || 'Categorization failed: Subscription inactive or trial expired.';
+        setOperationState(prev => ({ 
+          ...prev, 
+          inProgress: false, 
+          type: 'none', 
+          result: { success: false, message, data: null },
+          progress: { percent: 0, message: '' }
+        }));
+        showToast(message, 'error');
+        return;
       }
-      
-      if (response.status === 200) { // Synchronous completion
-        const syncResult = await response.json();
-         // Assuming syncResult for categorization contains { status: 'completed', data: [] }
-        if (syncResult.status === 'completed' && syncResult.data) {
-          showToast('Categorization complete! Review suggestions.', 'success');
-          if (onCategorizationComplete) onCategorizationComplete(syncResult.data);
-          setOperationState(prev => ({
-            ...prev,
-            inProgress: false, 
-            type: 'categorizing',
-            progress: { percent: 100, message: 'Categorization successful.' },
-            result: { success: true, message: 'Categorization successful', data: syncResult.data }
-          }));
-          // No automatic resetOperationState, parent component manages this based on user action
-        } else {
-          throw new Error(syncResult.message || 'Categorization API returned success but unexpected content.');
+
+      if (!response.ok && response.status !== 202) { // 202 is for async, other non-ok are errors
+        const errorData = await response.json().catch(() => ({ error: `Request failed with status ${response.status}` }));
+        throw new Error(errorData.error || `Categorization request failed with status ${response.status}`);
+      }
+
+      const responseData = await response.json();
+
+      if (response.status === 200 && responseData.status === 'completed') { // Synchronous success
+        setOperationState(prev => ({ 
+          ...prev, 
+          inProgress: false, 
+          type: 'none',
+          result: { success: true, message: 'Categorization completed synchronously.', data: responseData.results || [] },
+          progress: { percent: 100, message: 'Completed!' }
+        }));
+        if (onCategorizationComplete && responseData.results) {
+          onCategorizationComplete(responseData.results, transactionsToCategorizeIds);
+        } else if (onCategorizationComplete) {
+          onCategorizationComplete([], transactionsToCategorizeIds); // Pass empty results if none
         }
-      } else if (response.status === 202) { // Asynchronous, polling required
-        const asyncResult = await response.json();
-        const predictionId = asyncResult.prediction_id || asyncResult.predictionId;
-        if (!predictionId) throw new Error('Categorization API started but did not return a prediction ID.');
+        showToast('Categorization completed!', 'success');
+        // Clear selection? This might be handled by the calling component.
 
-        setOperationState(prev => ({ ...prev, progress: { ...prev.progress, message: `Categorization job ${predictionId} submitted. Polling...`}}));
+      } else if (response.status === 202 && responseData.prediction_id) { // Asynchronous started
+        setOperationState(prev => ({ 
+          ...prev, 
+          // inProgress remains true
+          progress: { percent: 10, message: `Categorization job ${responseData.prediction_id} started. Waiting for results...` }
+        }));
 
-        await pollForCompletion(predictionId, 'categorizing', 
-            (results) => { // onSuccess for polling
-                showToast('Categorization complete! Review suggestions.', 'success');
-                if (onCategorizationComplete) onCategorizationComplete(results || []); 
-                setOperationState(prev => ({
-                  ...prev,
-                   inProgress: false, 
-                   type: 'categorizing', 
-                   progress: { percent: 100, message: 'Categorization API process complete.' },
-                   result: { success: true, message: 'Categorization successful', data: results || [] }
-                }));
-            }, 
-            (errorMessage) => { // onError for polling
-                showToast(`Categorization job ${predictionId} failed: ${errorMessage}`, 'error');
-                setOperationState({ inProgress: false, type: 'categorizing', progress: { percent: 0, message: '' }, result: { success: false, message: `Polling failed: ${errorMessage}`, data: null } });
-                setTimeout(resetOperationState, 3000); 
+        await pollForCompletion(
+          responseData.prediction_id,
+          'categorizing',
+          (pollingResults) => { // onSuccess from poll
+            setOperationState(prev => ({ 
+              ...prev, 
+              inProgress: false, 
+              type: 'none',
+              result: { success: true, message: 'Categorization completed via polling.', data: pollingResults || [] },
+              progress: { percent: 100, message: 'Completed!' }
+            }));
+            if (onCategorizationComplete) {
+              onCategorizationComplete(pollingResults || [], transactionsToCategorizeIds);
             }
+            showToast('Categorization completed!', 'success');
+          },
+          (pollingError) => { // onError from poll
+            setOperationState(prev => ({ 
+              ...prev, 
+              inProgress: false, 
+              type: 'none',
+              result: { success: false, message: pollingError, data: null },
+              progress: { percent: 0, message: '' }
+            }));
+            showToast(pollingError, 'error');
+          }
         );
-      } else {
-       const errorData = await response.json().catch(() => ({ error: 'Failed to parse error from categorization API' }));
-       throw new Error(errorData.error || `Categorization request failed with status: ${response.status}`); 
+      } else { // Unexpected response
+        throw new Error(responseData.message || responseData.error || 'Unexpected response from categorization server.');
       }
+
     } catch (error) {
-         const message = error instanceof Error ? error.message : 'Failed to start categorization for selected transactions.';
-         showToast(message, 'error');
-        setOperationState({ inProgress: false, type: 'categorizing', progress: { percent: 0, message: '' }, result: { success: false, message: message, data: null } });
-        setTimeout(resetOperationState, 3000);
-     }
-  }, [selectedIds, transactions, showToast, pollForCompletion, onCategorizationComplete, resetOperationState]);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during categorization.';
+      console.error("Categorization error in useTraining:", errorMessage, error);
+      setOperationState(prev => ({
+        ...prev,
+        inProgress: false,
+        type: 'none',
+        result: { success: false, message: errorMessage, data: null },
+        progress: { percent: 0, message: '' }
+      }));
+      showToast(errorMessage, 'error');
+    }
+  }, [
+    selectedIds, 
+    transactions, 
+    showToast, 
+    onCategorizationComplete, 
+    pollForCompletion, 
+    // No need for `categories` or `updateTransactions` here as this hook only triggers it
+  ]);
 
   return {
     operationState,

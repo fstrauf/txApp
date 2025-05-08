@@ -131,8 +131,8 @@ const TransactionFilters = React.memo(({
             {({ selected }) => (
               <button
                 className={`${tabBaseStyle} ${selected ? tabActiveSecondaryStyle : tabInactiveStyle}`}
-              >
-                Unreviewed ({unclearedCount})
+          >
+            Unreviewed ({unclearedCount})
               </button>
             )}
           </Tab>
@@ -140,8 +140,8 @@ const TransactionFilters = React.memo(({
             {({ selected }) => (
               <button
                 className={`${tabBaseStyle} ${selected ? tabActivePrimaryStyle : tabInactiveStyle}`}
-              >
-                Reviewed ({clearedCount})
+          >
+            Reviewed ({clearedCount})
               </button>
             )}
           </Tab>
