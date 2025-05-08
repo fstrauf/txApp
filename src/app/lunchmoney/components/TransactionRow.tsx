@@ -59,8 +59,6 @@ const TransactionRow = React.memo((
 ) => {
   const hasPendingUpdate = !!pendingUpdate;
   const predictedCategoryIsDifferent = hasPendingUpdate && pendingUpdate && pendingUpdate.predictedCategoryId !== pendingUpdate.originalCategoryId;
-  
-  console.log(`Rendering Row: ${transaction.lunchMoneyId}`); // Add log for debugging re-renders
 
   return (
     <tr className={`hover:bg-gray-50 ${ 

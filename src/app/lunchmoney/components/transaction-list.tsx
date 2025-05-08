@@ -82,38 +82,7 @@ export default function TransactionList() {
     setFilterNoPayee,
     handleTransferOriginalNames,
     isTransferringNames,
-  } = useAdminOperations();
-
-  // === Local State (To be removed/moved) ===
-  const [loading, setLoading] = useState(true); // TODO: Replace with hookIsLoading
-  const [isApplyingDates, setIsApplyingDates] = useState(false); // TODO: Remove or rethink if apply button still needed
-  const [error, setError] = useState<string | null>(null); // TODO: Replace with hookIsError
-
-  // Placeholder state for things moving to other hooks later
-  const [lastTrainedTimestamp, setLastTrainedTimestamp] = useState<string | null>(null); // TODO: Move to useTraining
-  const [updatingNoteId, setUpdatingNoteId] = useState<string | null>(null); // TODO: Move to useManualTransactionActions
-  const [operationInProgress, setOperationInProgress] = useState<boolean>(false); // TODO: Move to useTraining
-  const [progressPercent, setProgressPercent] = useState<number>(0); // TODO: Move to useTraining
-  const [progressMessage, setProgressMessage] = useState<string>(''); // TODO: Move to useTraining
-  const [operationType, setOperationType] = useState<OperationType>('none'); // TODO: Move to useTraining
-  const [isOperationComplete, setIsOperationComplete] = useState(false); // TODO: Move to useTraining
-  const [isTagging, setIsTagging] = useState(false); 
-
-  // === Effects and Callbacks (To be removed/moved) ===
-  // Example: This will be removed once date filter state from hook is used
-  // const [pendingDateRange, setPendingDateRange] = useState<DateRange>({
-  //   startDate: format(new Date(new Date().getFullYear(), new Date().getMonth()-5, 1), 'yyyy-MM-dd'),
-  //   endDate: format(new Date(), 'yyyy-MM-dd'),
-  // });
-  // const [dateRange, setDateRange] = useState<DateRange>({
-  //   startDate: format(new Date(new Date().getFullYear(), new Date().getMonth()-5, 1), 'yyyy-MM-dd'),
-  //   endDate: format(new Date(), 'yyyy-MM-dd'),
-  // });
-  // Existing fetch/effect logic here...
-  // const fetchCategories = ...
-  // const fetchTransactionsWithDates = ...
-  // const fetchTotalCounts = ...
-  // useEffects calling fetches...
+  } = useAdminOperations({ allTransactions: hookTransactions, selectedIds });
 
   // === Calculations ===
   // Calculate transaction stats using hookTransactions
@@ -269,6 +238,32 @@ export default function TransactionList() {
                   <Switch.Label className="ml-2 text-sm text-gray-700">Admin Mode</Switch.Label>
               </div>
           </Switch.Group>
+
+          {/* Button to transfer original names, visible only in Admin Mode */}
+          {isAdminMode && (
+            <button
+              onClick={() => {
+                console.log('[TransactionList] Admin "Transfer Names" BUTTON CLICKED! Now calling handleTransferOriginalNames...');
+                // First, verify this log appears in the console when the button is clicked.
+                // If it does, then uncomment the line below to call the actual function.
+                handleTransferOriginalNames(); 
+              }}
+              disabled={isTransferringNames || selectedIds.length === 0}
+              className="ml-4 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {isTransferringNames ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Transferring...
+                </span>
+              ) : (
+                'Transfer Original Names to Description'
+              )}
+            </button>
+          )}
       </div>
 
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-row items-stretch gap-6">

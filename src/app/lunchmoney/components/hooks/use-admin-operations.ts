@@ -1,76 +1,112 @@
 import { useState, useCallback } from 'react';
 import { Transaction } from '../types';
 import { useToast } from './use-toast';
-import { useTransactionData } from './use-transaction-data';
 import { useSelection } from './use-selection';
+import { useQueryClient } from '@tanstack/react-query';
 
-export function useAdminOperations() {
-  const { showToast, showError, showSuccess, showInfo } = useToast(); // Added showInfo
-  const { allTransactions, updateTransactions } = useTransactionData(); 
-  const { selectedIds } = useSelection();
+interface UseAdminOperationsProps {
+  allTransactions: Transaction[];
+  selectedIds: string[];
+}
+
+export function useAdminOperations({ 
+  allTransactions: currentAllTransactions,
+  selectedIds: currentSelectedIds 
+}: UseAdminOperationsProps) {
+  const { showError, showSuccess, showInfo } = useToast();
+  const queryClient = useQueryClient();
 
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [filterNoPayee, setFilterNoPayee] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
 
   const handleTransferOriginalNames = useCallback(async () => {
-    if (selectedIds.length === 0) {
+    console.log('[useAdminOperations] handleTransferOriginalNames CALLED. Selected IDs:', currentSelectedIds, 'All Transactions Count:', currentAllTransactions.length);
+    if (currentSelectedIds.length === 0) {
       showInfo('Please select transactions to transfer original names.');
+      console.log('[useAdminOperations] No selected IDs, returning from handleTransferOriginalNames.');
       return;
     }
 
     setIsTransferring(true);
-    showInfo(`Attempting to transfer original names for ${selectedIds.length} transactions...`);
+    showInfo(`Processing ${currentSelectedIds.length} selected transaction(s)...`);
 
-    const transactionsToUpdate: Partial<Transaction>[] = [];
-    // let successCount = 0; // successCount will be transactionsToUpdate.length after filtering
-    // let failCount = 0; // Assuming API call handles this or we simplify for now
-
-    selectedIds.forEach(id => {
-      const transaction = allTransactions.find(tx => tx.lunchMoneyId === id);
-      // Ensure originalData and originalData.payee exist and are not already '[No Payee]'
-      if (transaction && transaction.originalData && transaction.originalData.payee && transaction.originalData.payee !== '[No Payee]') {
-        // Ensure there is an actual change to be made
-        if (transaction.description !== transaction.originalData.payee) {
-          transactionsToUpdate.push({
-            lunchMoneyId: id,
-            description: transaction.originalData.payee, // Transfer original payee to description
-          });
-        }
+    const transactionsToProcess = currentSelectedIds.map(id => {
+      const transaction = currentAllTransactions.find(tx => tx.lunchMoneyId === id);
+      console.log(`[useAdminOperations] Checking TxID ${id}:`, {
+        found: !!transaction,
+        description: transaction?.description,
+        originalData: transaction?.originalData,
+        originalPayee: transaction?.originalData?.payee,
+        originalName: transaction?.originalData?.original_name
+      });
+      if (transaction && 
+          transaction.originalData && 
+          transaction.originalData.original_name &&
+          transaction.description !== transaction.originalData.original_name) {
+        return {
+          lunchMoneyId: id,
+          newDescription: transaction.originalData.original_name,
+        };
       }
-    });
+      return null;
+    }).filter(Boolean) as Array<{ lunchMoneyId: string; newDescription: string }>;
 
-    if (transactionsToUpdate.length === 0) {
-      showInfo('No transactions required original name transfer (e.g., payee already matches description or no original payee available).');
+    console.log('[useAdminOperations] transactionsToProcess (using original_name):', transactionsToProcess);
+    if (transactionsToProcess.length === 0) {
+      showInfo('No transactions required original name transfer (e.g., description already matches original payee, or no original payee available).');
       setIsTransferring(false);
+      console.log('[useAdminOperations] No transactions to process, returning from handleTransferOriginalNames.');
       return;
     }
 
-    try {
-      // Construct full transaction objects for the update, as updateTransactions might expect them
-      const fullTransactionsToUpdate = transactionsToUpdate.map(partialTx => {
-        const originalTx = allTransactions.find(tx => tx.lunchMoneyId === partialTx.lunchMoneyId);
-        // Ensure originalTx is found before spreading, though it should be from the loop above
-        if (!originalTx) throw new Error(`Transaction with ID ${partialTx.lunchMoneyId} not found for update.`);
-        return { ...originalTx, ...partialTx } as Transaction;
-      }).filter(Boolean); // Filter out any potential nulls if error handling was different
+    console.log(`[useAdminOperations] About to Promise.allSettled for ${transactionsToProcess.length} transactions.`);
+    let successCount = 0;
+    let failCount = 0;
 
-      if (fullTransactionsToUpdate.length > 0) {
-        // updateTransactions will invalidate queries via useTransactionData
-        updateTransactions(fullTransactionsToUpdate);
-        showSuccess(`${fullTransactionsToUpdate.length} transaction(s) had their original names transferred to description.`);
+    const results = await Promise.allSettled(
+      transactionsToProcess.map(txToUpdate => 
+        fetch('/api/lunch-money/transactions', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transactionId: txToUpdate.lunchMoneyId,
+            payee: txToUpdate.newDescription,
+          }),
+        }).then(async response => {
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: `Request failed with status ${response.status}`}));
+            throw new Error(errorData.error || `Failed to update description for ${txToUpdate.lunchMoneyId}`);
+          }
+          return response.json();
+        })
+      )
+    );
+
+    results.forEach((result, index) => {
+      const txInfo = transactionsToProcess[index];
+      if (result.status === 'fulfilled') {
+        successCount++;
+        console.log(`Successfully transferred name for ${txInfo.lunchMoneyId}`);
       } else {
-        // This case should be caught by the earlier check of transactionsToUpdate.length === 0
-        showInfo('No valid transactions were prepared for original name transfer.');
+        failCount++;
+        console.error(`Failed to transfer name for ${txInfo.lunchMoneyId}:`, result.reason);
       }
-      
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'An unknown error occurred';
-      showError(`Failed to transfer original names: ${message}`);
-    } finally {
-      setIsTransferring(false);
+    });
+
+    if (successCount > 0) {
+      showSuccess(`${successCount} transaction(s) had their descriptions updated from original names.`);
+      queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactions'] });
     }
-  }, [selectedIds, allTransactions, updateTransactions, showInfo, showSuccess, showError]);
+    if (failCount > 0) {
+      showError(`${failCount} transaction(s) failed to update.`);
+    }
+    if (successCount === 0 && failCount === 0) {
+        showInfo('No transactions were processed for name transfer.');
+    }
+
+    setIsTransferring(false);
+  }, [currentSelectedIds, currentAllTransactions, queryClient, showInfo, showSuccess, showError]);
 
   return {
     isAdminMode,
