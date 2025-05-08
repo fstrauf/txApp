@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { format, subMonths } from 'date-fns';
 import { Transaction, Category } from '../types';
 
 export type OperationType = 'none' | 'training' | 'categorizing';
@@ -82,67 +83,107 @@ export function useTraining({
 
   const fetchLastTrainedTimestamp = useCallback(async () => {
     try {
-      const response = await fetch('/api/classify/last-trained'); 
-      if (!response.ok) {
-        console.warn(`Failed to fetch last trained timestamp: ${response.status}`);
-        setLastTrainedTimestamp(null);
-        return;
-      }
+      const response = await fetch('/api/classify/last-trained');
+      if (!response.ok) throw new Error('Failed to fetch last trained timestamp');
       const data = await response.json();
-      const timestamp = data.lastTrainedAt || null;
-      setLastTrainedTimestamp(timestamp);
-      if (timestamp) console.log('Fetched last trained timestamp:', timestamp);
+      if (data.lastTrained) {
+        setLastTrainedTimestamp(data.lastTrained);
+      }
     } catch (error) {
-      console.error('Error fetching last trained timestamp:', error);
-      setLastTrainedTimestamp(null);
-      showToast('Could not load last trained time', 'error');
+      console.error("Error fetching last trained timestamp:", error);
+      // Do not show toast for this background fetch
     }
-  }, [showToast]);
+  }, []);
 
   useEffect(() => {
     fetchLastTrainedTimestamp();
   }, [fetchLastTrainedTimestamp]);
 
-  const pollForCompletion = useCallback(async (
+  const pollForCompletion = useCallback(
+    async (
     predictionId: string, 
     type: 'training' | 'categorizing',
-    onSuccess: (results?: any[]) => void, 
+      onSuccess: (results?: any[]) => void, 
     onError: (message: string) => void
   ) => {
-    const maxPolls = 120;
-    const pollInterval = 5000; 
+      const maxPolls = 120; // 120 * 5s = 10 minutes
+      const pollInterval = 5000; 
     let pollCount = 0;
-    const updateProgress = (percent: number, message: string) => {
-      setOperationState(prev => ({ ...prev, progress: { percent, message } }));
-    };
+      const updateProgress = (percent: number, message: string) => {
+       setOperationState(prev => ({ ...prev, progress: { percent, message } }));
+      };
 
-    updateProgress(5, `${type === 'training' ? 'Training' : 'Categorization'} started...`);
+      updateProgress(5, `Job submitted. Polling for status of ${type} job ${predictionId}...`);
 
-    while (pollCount < maxPolls) {
-      pollCount++;
-      try {
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
-        const simulateProgress = Math.min(95, 5 + Math.floor((pollCount / maxPolls) * 90));
-        updateProgress(simulateProgress, `${type === 'training' ? 'Training' : 'Categorization'} in progress...`);
-        
-        if (pollCount > 5) { 
-            console.log(`Simulating ${type} completion for ${predictionId}`);
-            updateProgress(100, `${type === 'training' ? 'Training' : 'Categorization'} completed successfully!`);
-            onSuccess(type === 'categorizing' ? [{ /* simulated results */ }] : undefined);
-            return;
+      const executePoll = async () => {
+        while (pollCount < maxPolls) {
+          pollCount++;
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+          try {
+            const response = await fetch(`/api/classify/status/${predictionId}`);
+            if (!response.ok) {
+              // If the status endpoint itself fails (e.g., 500, 404 for the ID),
+              // we might want to retry a few times or fail fast.
+              // For now, we'll treat non-200 as a polling error after first attempt.
+              if (pollCount > 3) { // Allow a few retries for transient network issues with the status endpoint
+                 throw new Error(`Status endpoint error: ${response.status} ${response.statusText}`);
+              } else {
+                  console.warn(`[Poll] Status endpoint non-OK response for ${predictionId} (attempt ${pollCount}): ${response.status}. Retrying...`);
+                  // Continue to the next poll iteration
+                  updateProgress(
+                    Math.min(95, 5 + Math.floor((pollCount / (maxPolls / 2)) * 90)), // Slower progress if status endpoint has issues
+                    `${type === 'training' ? 'Training' : 'Categorization'} job ${predictionId} status check (poll ${pollCount})...`
+                  );
+                  continue;
+              }
+            }
+
+            const data = await response.json();
+
+            if (data.status === 'completed') {
+              updateProgress(100, `${type === 'training' ? 'Training' : 'Categorization'} job ${predictionId} completed.`);
+              onSuccess(data.data || (type === 'categorizing' ? [] : undefined)); // Pass data for categorization
+              return;
+            } else if (data.status === 'failed') {
+              console.error(`[Poll] ${type} job ${predictionId} failed:`, data.message);
+              onError(data.message || `${type === 'training' ? 'Training' : 'Categorization'} job failed.`);
+              return;
+            } else if (data.status === 'pending') {
+              // Calculate progress: make it somewhat representative of polls, but don't promise 100% until 'completed'
+              const simulatedProgress = Math.min(95, 5 + Math.floor((pollCount / (maxPolls / 1.5)) * 90)); // Gradual progress
+              updateProgress(simulatedProgress, `${type === 'training' ? 'Training' : 'Categorization'} job ${predictionId} is still pending (poll ${pollCount})...`);
+            } else {
+              console.warn(`[Poll] Unknown status for ${predictionId}: ${data.status}`);
+              // Treat unknown status like pending for a few attempts
+              if (pollCount > 5) {
+                throw new Error(`Unknown status '${data.status}' received for job ${predictionId} after multiple polls.`);
+              }
+               updateProgress(
+                Math.min(95, 5 + Math.floor((pollCount / (maxPolls / 2)) * 90)),
+                `${type === 'training' ? 'Training' : 'Categorization'} job ${predictionId} status unknown (poll ${pollCount})...`
+              );
+            }
+          } catch (error) {
+            console.error(`[Poll] Error polling for ${predictionId} (attempt ${pollCount}):`, error);
+            if (pollCount >= maxPolls / 2) { // If significant polling attempts failed, then error out
+              onError(error instanceof Error ? error.message : `Failed to poll for job ${predictionId} status.`);
+              return;
+            }
+            // Otherwise, log and continue polling, hoping it's transient
+            updateProgress(
+              Math.min(95, 5 + Math.floor((pollCount / (maxPolls / 2)) * 90)),
+              `Polling error for ${predictionId} (attempt ${pollCount}), retrying...`
+            );
+          }
         }
+        // If loop finishes, it means timeout
+        onError(`${type === 'training' ? 'Training' : 'Categorization'} job ${predictionId} timed out after ${maxPolls} polling attempts.`);
+      };
+      await executePoll();
+   }, []);
 
-      } catch (error) {
-        const message = error instanceof Error ? error.message : `Polling failed for ${type}`;
-        console.error(`Polling error (${type}, ID: ${predictionId}):`, error);
-        onError(message);
-        return;
-      }
-    }
-    onError(`${type === 'training' ? 'Training' : 'Categorization'} timed out after ${maxPolls} attempts.`);
-  }, []);
-
-  const tagTransactionsAsTrained = useCallback(async (transactionsToTag: Transaction[]) => {
+   const tagTransactionsAsTrained = useCallback(async (transactionsToTag: Transaction[]) => {
     console.log(`[useTraining] Attempting to tag ${transactionsToTag.length} transactions.`);
     const filteredForTagging = transactionsToTag.filter(tx => 
         !tx.tags?.some(tag => 
@@ -160,9 +201,11 @@ export function useTraining({
     let successCount = 0;
     let failCount = 0;
     const batchSize = 10;
+    let currentBatchStartIndex = 0;
 
     try {
       for (let i = 0; i < idsToTag.length; i += batchSize) {
+        currentBatchStartIndex = i;
         const batchIds = idsToTag.slice(i, i + batchSize);
         const promises = batchIds.map(txId => 
           fetch('/api/lunch-money/transactions', {
@@ -188,7 +231,7 @@ export function useTraining({
       return { successCount, failCount };
     } catch (error) {
         console.error('[useTraining] Error during tagging batch:', error);
-        return { successCount, failCount: failCount + (idsToTag.length - i) };
+        return { successCount, failCount: failCount + (idsToTag.length - currentBatchStartIndex) };
     }
 
   }, [updateTransactions]);
@@ -198,127 +241,217 @@ export function useTraining({
       showToast("Please select at least one transaction.", 'info');
       return;
     }
-    
-    const clearedTransactionsToTrain = transactions.filter(tx =>
-      selectedIds.includes(tx.lunchMoneyId) && tx.originalData?.status === 'cleared'
+
+    const transactionsToTrain = transactions.filter(tx =>
+      selectedIds.includes(tx.lunchMoneyId) && 
+      tx.originalData?.status === 'cleared' && 
+      tx.originalData?.category_id
     );
-    
-    if (clearedTransactionsToTrain.length < 10) {
-      showToast(`Need at least 10 'cleared' transactions for training. Found ${clearedTransactionsToTrain.length} eligible out of ${selectedIds.length} selected.`, 'error');
+     
+     if (transactionsToTrain.length < 10) {
+      showToast(`Need at least 10 selected 'cleared' transactions with categories for training. Found ${transactionsToTrain.length} eligible.`, 'error');
       return;
     }
-    
-    const trainingPayloadItems = clearedTransactionsToTrain.map(tx => {
-      const categoryId = tx.originalData?.category_id?.toString();
-      if (!categoryId) return null;
-      return { 
-        description: tx.description, Category: categoryId, 
-        money_in: tx.is_income, amount: tx.amount 
-      };
-    }).filter(item => item !== null) as TrainingDataItem[];
 
-    if (trainingPayloadItems.length < 10) {
-        showToast(`Only ${trainingPayloadItems.length} selected transactions have required category data. Need 10.`, 'error');
-        return;
-    }
-    
-    setOperationState({ inProgress: true, type: 'training', progress: { percent: 0, message: 'Starting training...' }, result: { success: false, message: null, data: null } });
+     const trainingPayloadItems = transactionsToTrain.map(tx => ({
+       description: tx.description,
+       Category: tx.originalData!.category_id!.toString(), 
+       money_in: tx.is_income,
+       amount: tx.amount
+     })) as TrainingDataItem[];
+     
+    setOperationState({ inProgress: true, type: 'training', progress: { percent: 0, message: 'Submitting selected transactions for training...' }, result: { success: false, message: null, data: null } });
 
-    try {
-      const apiPayload = { transactions: trainingPayloadItems };
-      await new Promise(res => setTimeout(res, 1000)); 
-      const simulatedResponse = { status: 202, json: async () => ({ prediction_id: `train-${Date.now()}` }) };
+     try {
+      const response = await fetch('/api/classify/train', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactions: trainingPayloadItems }),
+      });
 
-      if (simulatedResponse.status === 403) throw new Error('Subscription inactive');
+      if (response.status === 403) {
+        const errorData = await response.json().catch(() => ({ error: 'Subscription check failed' }));
+        throw new Error(errorData.error || 'Subscription inactive or trial expired. Cannot start training.');
+      }
 
-      if (simulatedResponse.status === 200) {
-         setOperationState(prev => ({ ...prev, progress: { percent: 100, message: 'Training complete!' }, result: { success: true, message: 'Completed', data: null } }));
-         const tagResult = await tagTransactionsAsTrained(clearedTransactionsToTrain);
-         showToast(`Tagging: ${tagResult.successCount} OK, ${tagResult.failCount} failed`, tagResult.failCount > 0 ? 'error' : 'success');
-         fetchLastTrainedTimestamp();
-         setTimeout(resetOperationState, 2000);
-      } else if (simulatedResponse.status === 202) {
-         const data = await simulatedResponse.json();
-         const predictionId = data.prediction_id;
-         if (!predictionId) throw new Error('No prediction ID received');
+      if (response.status === 200) { // Synchronous completion
+        const syncResult = await response.json();
+        if (syncResult.status === 'completed') {
+          setOperationState(prev => ({ ...prev, progress: { percent: 95, message: 'Training completed. Tagging transactions...' } }));
+          const tagResult = await tagTransactionsAsTrained(transactionsToTrain);
+          const finalMessage = `Training complete. Tagged ${tagResult.successCount} of ${transactionsToTrain.length} transactions. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed.` : ''}`;
+          showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
+          setOperationState({
+            inProgress: false, 
+            type: 'training',
+            progress: { percent: 100, message: finalMessage }, 
+            result: { success: tagResult.failCount === 0, message: finalMessage, data: null }
+          });
+          fetchLastTrainedTimestamp();
+          setTimeout(resetOperationState, 3000);
+        } else {
+          throw new Error(syncResult.message || 'Training API returned success status but unexpected content.');
+        }
+      } else if (response.status === 202) { // Asynchronous, polling required
+         const asyncResult = await response.json();
+         const predictionId = asyncResult.prediction_id || asyncResult.predictionId;
+         if (!predictionId) throw new Error('Training API started but did not return a prediction ID.');
+
+         setOperationState(prev => ({ ...prev, progress: { ...prev.progress, message: `Training job ${predictionId} submitted. Polling for completion...`}}));
+
          await pollForCompletion(predictionId, 'training', 
-            async () => {
-                const tagResult = await tagTransactionsAsTrained(clearedTransactionsToTrain);
-                showToast(`Tagging: ${tagResult.successCount} OK, ${tagResult.failCount} failed`, tagResult.failCount > 0 ? 'error' : 'success');
+            async () => { // onSuccess for polling
+                setOperationState(prev => ({ ...prev, type: 'training', progress: { percent: 95, message: 'Training API complete. Now tagging transactions...' } }));
+                const tagResult = await tagTransactionsAsTrained(transactionsToTrain);
+                const finalMessage = `Training complete. Tagged ${tagResult.successCount} of ${transactionsToTrain.length} transactions. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed.` : ''}`;
+                showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
+                setOperationState(prev => ({
+                  ...prev,
+                   inProgress: false, 
+                   progress: { percent: 100, message: finalMessage }, 
+                   result: { success: tagResult.failCount === 0, message: finalMessage, data: null }
+                }));
                 fetchLastTrainedTimestamp();
-                setTimeout(resetOperationState, 2000);
+                setTimeout(resetOperationState, 3000);
             }, 
-            (errorMessage) => {
-                showToast(`Training failed: ${errorMessage}`, 'error');
-                setOperationState({ inProgress: false, type: 'none', progress: { percent: 0, message: '' }, result: { success: false, message: errorMessage, data: null } });
+            (errorMessage) => { // onError for polling
+                showToast(`Training job ${predictionId} failed during polling: ${errorMessage}`, 'error');
+                setOperationState({ inProgress: false, type: 'training', progress: { percent: 0, message: '' }, result: { success: false, message: `Polling failed: ${errorMessage}`, data: null } });
+                setTimeout(resetOperationState, 3000);
             }
          );
       } else {
-        throw new Error(`Training request failed`);
+        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error from training API' }));
+        throw new Error(errorData.error || `Training request failed with status: ${response.status}`);
       }
-    } catch (error) {       
-        const message = error instanceof Error ? error.message : 'Failed to start training';
-        showToast(message, 'error');
-        setOperationState({ inProgress: false, type: 'none', progress: { percent: 0, message: '' }, result: { success: false, message: message, data: null } });
-    }
-  }, [selectedIds, transactions, showToast, setOperationState, resetOperationState, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp]);
+    } catch (error) {
+         const message = error instanceof Error ? error.message : 'Failed to start training for selected transactions.';
+         showToast(message, 'error');
+        setOperationState({ inProgress: false, type: 'training', progress: { percent: 0, message: '' }, result: { success: false, message: message, data: null } });
+        setTimeout(resetOperationState, 3000);
+     }
+  }, [selectedIds, transactions, showToast, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp, resetOperationState]);
 
   const trainAllReviewed = useCallback(async () => {
-      setOperationState({ inProgress: true, type: 'training', progress: { percent: 0, message: 'Fetching cleared transactions...' }, result: { success: false, message: null, data: null } });
-      try {
+     setOperationState({ inProgress: true, type: 'training', progress: { percent: 0, message: 'Fetching all reviewed (cleared) transactions for training...' }, result: { success: false, message: null, data: null } });
+     let allEligibleTransactions: Transaction[] = [];
+     try {
+          // 1. Fetch transactions over a wide date range
           const endDate = new Date();
-          const startDate = subMonths(endDate, 60);
+          const startDate = new Date();
+          startDate.setFullYear(startDate.getFullYear() - 5); // 5 years back
+          const wideDateRange = {
+            startDate: format(startDate, 'yyyy-MM-dd'),
+            endDate: format(endDate, 'yyyy-MM-dd')
+          };
+          console.log(`[Train All Hook] Fetching transactions from ${wideDateRange.startDate} to ${wideDateRange.endDate}`);
           const params = new URLSearchParams({
-              start_date: format(startDate, 'yyyy-MM-dd'),
-              end_date: format(endDate, 'yyyy-MM-dd'),
-              status: 'cleared',
+            start_date: wideDateRange.startDate,
+            end_date: wideDateRange.endDate,
+            // No status filter here, fetch all and filter locally or rely on backend to handle if it can filter by 'categorized' efficiently
           });
-          const fetchResponse = await fetch(`/api/lunch-money/transactions?${params}`);
-          if (!fetchResponse.ok) throw new Error('Failed to fetch cleared transactions');
+          const fetchResponse = await fetch(`/api/lunch-money/transactions?${params.toString()}`);
+          if (!fetchResponse.ok) {
+            const data = await fetchResponse.json().catch(() => ({}));
+            throw new Error(data.error || `Failed to fetch transactions (${fetchResponse.status})`);
+          }
           const fetchData = await fetchResponse.json();
-          const clearedTransactions = fetchData.transactions as Transaction[];
-
-          const trainingPayloadItems = clearedTransactions.map(tx => {
-             const categoryId = tx.originalData?.category_id?.toString();
-             if (!categoryId) return null;
-             return { description: tx.description, Category: categoryId, money_in: tx.is_income, amount: tx.amount };
-          }).filter(item => item !== null) as TrainingDataItem[];
-
-          if (trainingPayloadItems.length < 10) {
-              throw new Error(`Need at least 10 'cleared' transactions with category IDs. Found ${trainingPayloadItems.length}.`);
+          if (!fetchData.transactions || !Array.isArray(fetchData.transactions)) {
+            throw new Error('Received invalid transaction data format from server');
           }
 
-          setOperationState(prev => ({ ...prev, progress: { ...prev.progress, message: 'Starting training (all reviewed)...' } }));
-          const apiPayload = { transactions: trainingPayloadItems };
-          await new Promise(res => setTimeout(res, 1000)); 
-          const simulatedResponse = { status: 202, json: async () => ({ prediction_id: `train-all-${Date.now()}` }) };
+          // 2. Filter for reviewed (cleared and categorized) transactions
+          // Assuming Transaction type has originalData.category_id and originalData.status
+          allEligibleTransactions = (fetchData.transactions as Transaction[]).filter(
+              (tx: Transaction) => tx.originalData?.status === 'cleared' && !!tx.originalData?.category_id
+          );
+          console.log(`[Train All Hook] Found ${allEligibleTransactions.length} cleared and categorized transactions.`);
 
-          if (simulatedResponse.status === 403) throw new Error('Subscription inactive');
-          
-          if (simulatedResponse.status === 202) {
-            const data = await simulatedResponse.json();
-            const predictionId = data.prediction_id;
-            if (!predictionId) throw new Error('No prediction ID received');
-            await pollForCompletion(predictionId, 'training', 
-                async () => { 
-                    const tagResult = await tagTransactionsAsTrained(clearedTransactions);
-                    showToast(`Tagging: ${tagResult.successCount} OK, ${tagResult.failCount} failed`, tagResult.failCount > 0 ? 'error' : 'success');
-                    fetchLastTrainedTimestamp();
-                    setTimeout(resetOperationState, 2000);
-                }, 
-                (errorMessage) => { 
-                    showToast(`Training failed: ${errorMessage}`, 'error');
-                    setOperationState({ inProgress: false, type: 'none', progress: { percent: 0, message: '' }, result: { success: false, message: errorMessage, data: null } });
-                }
-             );
-          } else { throw new Error('Training request failed'); }
+         if (allEligibleTransactions.length < 10) {
+             throw new Error(`Need at least 10 'cleared' transactions with categories across your data for training. Found ${allEligibleTransactions.length}.`);
+         }
 
-      } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to train all reviewed';
-          showToast(message, 'error');
-          setOperationState({ inProgress: false, type: 'none', progress: { percent: 0, message: '' }, result: { success: false, message: message, data: null } });
-      }
-  }, [showToast, setOperationState, resetOperationState, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp]);
+         const trainingPayloadItems = allEligibleTransactions.map(tx => {
+            return { 
+              description: tx.description, 
+              Category: tx.originalData!.category_id!.toString(),
+              money_in: tx.is_income, 
+              amount: tx.amount 
+            };
+         }).filter(item => item !== null) as TrainingDataItem[];
+
+         setOperationState(prev => ({ ...prev, progress: { percent: 5, message: `Submitting ${allEligibleTransactions.length} reviewed transactions for training...` } }));
+         
+         const response = await fetch('/api/classify/train', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ transactions: trainingPayloadItems }),
+         });
+
+         if (response.status === 403) {
+          const errorData = await response.json().catch(() => ({ error: 'Subscription check failed' }));
+          throw new Error(errorData.error || 'Subscription inactive or trial expired. Cannot start training.');
+         }
+         
+         if (response.status === 200) { // Synchronous completion
+            const syncResult = await response.json();
+            if (syncResult.status === 'completed') {
+                setOperationState(prev => ({ ...prev, progress: { percent: 95, message: 'Training (all reviewed) completed. Tagging transactions...' } }));
+                const tagResult = await tagTransactionsAsTrained(allEligibleTransactions);
+                const finalMessage = `Training (all reviewed) complete. Tagged ${tagResult.successCount} of ${allEligibleTransactions.length}. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed.` : ''}`;
+                showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
+                setOperationState(prev => ({ 
+                    ...prev, 
+                    inProgress: false,
+                    type: 'training',
+                    progress: { percent: 100, message: finalMessage }, 
+                    result: { success: tagResult.failCount === 0, message: finalMessage, data: null }
+                }));
+                fetchLastTrainedTimestamp();
+                setTimeout(resetOperationState, 3000);
+            } else {
+                throw new Error(syncResult.message || 'Training API (all reviewed) returned success status but unexpected content.');
+            }
+         } else if (response.status === 202) { // Asynchronous, polling required
+           const asyncResult = await response.json();
+           const predictionId = asyncResult.prediction_id || asyncResult.predictionId;
+           if (!predictionId) throw new Error('Training API (all reviewed) did not return a prediction ID.');
+
+           setOperationState(prev => ({ ...prev, progress: { ...prev.progress, message: `Training job ${predictionId} (all reviewed) submitted. Polling...`}}));
+
+           await pollForCompletion(predictionId, 'training', 
+               async () => { // onSuccess for polling
+                   setOperationState(prev => ({ ...prev, type:'training', progress: { percent: 95, message: 'Training API (all reviewed) complete. Tagging transactions...' } }));
+                   const tagResult = await tagTransactionsAsTrained(allEligibleTransactions);
+                   const finalMessage = `Training (all reviewed) complete. Tagged ${tagResult.successCount} of ${allEligibleTransactions.length}. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed.` : ''}`;
+                   showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
+                   setOperationState(prev => ({ 
+                      ...prev, 
+                      inProgress: false,
+                      progress: { percent: 100, message: finalMessage }, 
+                      result: { success: tagResult.failCount === 0, message: finalMessage, data: null }
+                   }));
+                   fetchLastTrainedTimestamp();
+                   setTimeout(resetOperationState, 3000);
+               }, 
+               (errorMessage) => { // onError for polling
+                   showToast(`Training job ${predictionId} (all reviewed) failed: ${errorMessage}`, 'error');
+                   setOperationState({ inProgress: false, type: 'training', progress: { percent: 0, message: '' }, result: { success: false, message: `Polling failed: ${errorMessage}`, data: null } });
+                   setTimeout(resetOperationState, 3000);
+               }
+            );
+         } else { 
+            const errorData = await response.json().catch(() => ({ error: 'Failed to parse error from training API' }));
+            throw new Error(errorData.error || `Training request (all reviewed) failed with status: ${response.status}`); 
+         }
+
+     } catch (error) {
+         const message = error instanceof Error ? error.message : 'Failed to train all reviewed transactions.';
+         showToast(message, 'error');
+        setOperationState({ inProgress: false, type: 'training', progress: { percent: 0, message: '' }, result: { success: false, message: message, data: null } });
+        setTimeout(resetOperationState, 3000);
+     }
+  }, [showToast, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp, resetOperationState, transactions /* Added transactions here as a fallback if API fetch fails, though primary source is new fetch */]);
 
   const categorizeSelected = useCallback(async () => {
     if (selectedIds.length === 0) {
@@ -326,42 +459,86 @@ export function useTraining({
       return;
     }
     const transactionsToCategorize = transactions.filter(tx => selectedIds.includes(tx.lunchMoneyId));
-    if (transactionsToCategorize.length === 0) return;
+
+    if (transactionsToCategorize.length === 0) {
+       showToast("No valid transactions found for categorization among selected.", 'info');
+       return;
+    }
 
     const categorizationPayload = transactionsToCategorize.map(tx => ({
-        description: tx.description, money_in: tx.is_income, amount: tx.amount
+     description: tx.description,
+     money_in: tx.is_income,
+     amount: tx.amount
     })) as CategorizationDataItem[];
+ 
+    setOperationState({ inProgress: true, type: 'categorizing', progress: { percent: 0, message: 'Submitting selected for categorization...' }, result: { success: false, message: null, data: null } });
+ 
+     try {
+      // Assuming categorization endpoint is /api/classify/classify
+      const response = await fetch('/api/classify/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactions: categorizationPayload }),
+      });
 
-    setOperationState({ inProgress: true, type: 'categorizing', progress: { percent: 0, message: 'Starting categorization...' }, result: { success: false, message: null, data: null } });
-
-    try {
-      await new Promise(res => setTimeout(res, 1000)); 
-      const simulatedResponse = { status: 202, json: async () => ({ prediction_id: `cat-${Date.now()}` }) };
-
-      if (simulatedResponse.status === 403) throw new Error('Subscription inactive');
+      if (response.status === 403) {
+        const errorData = await response.json().catch(() => ({ error: 'Subscription check failed' }));
+        throw new Error(errorData.error || 'Subscription inactive or trial expired. Cannot categorize.');
+      }
       
-      if (simulatedResponse.status === 202) {
-        const data = await simulatedResponse.json();
-        const predictionId = data.prediction_id;
-        if (!predictionId) throw new Error('No prediction ID received');
+      if (response.status === 200) { // Synchronous completion
+        const syncResult = await response.json();
+         // Assuming syncResult for categorization contains { status: 'completed', data: [] }
+        if (syncResult.status === 'completed' && syncResult.data) {
+          showToast('Categorization complete! Review suggestions.', 'success');
+          if (onCategorizationComplete) onCategorizationComplete(syncResult.data);
+          setOperationState(prev => ({
+            ...prev,
+            inProgress: false, 
+            type: 'categorizing',
+            progress: { percent: 100, message: 'Categorization successful.' },
+            result: { success: true, message: 'Categorization successful', data: syncResult.data }
+          }));
+          // No automatic resetOperationState, parent component manages this based on user action
+        } else {
+          throw new Error(syncResult.message || 'Categorization API returned success but unexpected content.');
+        }
+      } else if (response.status === 202) { // Asynchronous, polling required
+        const asyncResult = await response.json();
+        const predictionId = asyncResult.prediction_id || asyncResult.predictionId;
+        if (!predictionId) throw new Error('Categorization API started but did not return a prediction ID.');
+
+        setOperationState(prev => ({ ...prev, progress: { ...prev.progress, message: `Categorization job ${predictionId} submitted. Polling...`}}));
+
         await pollForCompletion(predictionId, 'categorizing', 
-            (results) => {
-                showToast('Categorization complete!', 'success');
+            (results) => { // onSuccess for polling
+                showToast('Categorization complete! Review suggestions.', 'success');
                 if (onCategorizationComplete) onCategorizationComplete(results || []); 
-                setTimeout(resetOperationState, 2000);
+                setOperationState(prev => ({
+                  ...prev,
+                   inProgress: false, 
+                   type: 'categorizing', 
+                   progress: { percent: 100, message: 'Categorization API process complete.' },
+                   result: { success: true, message: 'Categorization successful', data: results || [] }
+                }));
             }, 
-            (errorMessage) => {
-                showToast(`Categorization failed: ${errorMessage}`, 'error');
-                setOperationState({ inProgress: false, type: 'none', progress: { percent: 0, message: '' }, result: { success: false, message: errorMessage, data: null } });
+            (errorMessage) => { // onError for polling
+                showToast(`Categorization job ${predictionId} failed: ${errorMessage}`, 'error');
+                setOperationState({ inProgress: false, type: 'categorizing', progress: { percent: 0, message: '' }, result: { success: false, message: `Polling failed: ${errorMessage}`, data: null } });
+                setTimeout(resetOperationState, 3000); 
             }
-         );
-      } else { throw new Error('Categorization request failed'); }
+        );
+      } else {
+       const errorData = await response.json().catch(() => ({ error: 'Failed to parse error from categorization API' }));
+       throw new Error(errorData.error || `Categorization request failed with status: ${response.status}`); 
+      }
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to start categorization';
-        showToast(message, 'error');
-        setOperationState({ inProgress: false, type: 'none', progress: { percent: 0, message: '' }, result: { success: false, message: message, data: null } });
-    }
-  }, [selectedIds, transactions, showToast, setOperationState, resetOperationState, pollForCompletion, onCategorizationComplete]);
+         const message = error instanceof Error ? error.message : 'Failed to start categorization for selected transactions.';
+         showToast(message, 'error');
+        setOperationState({ inProgress: false, type: 'categorizing', progress: { percent: 0, message: '' }, result: { success: false, message: message, data: null } });
+        setTimeout(resetOperationState, 3000);
+     }
+  }, [selectedIds, transactions, showToast, pollForCompletion, onCategorizationComplete, resetOperationState]);
 
   return {
     operationState,

@@ -51,7 +51,7 @@ export function useTransactionData() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortField, setSortField] = useState<string>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
+  
   // === TanStack Query for Transactions ===
   const transactionQueryKey: TransactionQueryKey = ['lunchMoneyTransactions', dateFilter.startDate, dateFilter.endDate, statusFilter];
 
@@ -165,7 +165,7 @@ export function useTransactionData() {
       showError(`Failed to load categories: ${errorCategories.message}`);
     }
   }, [isErrorCategories, errorCategories, showError]);
-
+  
   // Use memoized categories from query data
   const categories = useMemo(() => categoriesData?.categories || [], [categoriesData]);
 
@@ -271,10 +271,10 @@ export function useTransactionData() {
       const result = aValue > bValue ? 1 : -1;
       return sortDirection === 'asc' ? result : -result;
     });
-
+    
     setFilteredTransactions(filtered);
   }, [allTransactions, categoryFilter, searchTerm, sortField, sortDirection]);
-
+  
   useEffect(() => {
     filterAndSortTransactions();
   }, [filterAndSortTransactions]);
@@ -329,7 +329,7 @@ export function useTransactionData() {
       return [];
     }
   }, [dateFilter.startDate, dateFilter.endDate]);
-
+  
   // === Local State Update Functions (Needs Refactoring for TanStack Query later) ===
   const updateTransaction = useCallback((updatedTransaction: Transaction) => {
     console.log('[useTransactionData] Invalidating transaction query due to single update trigger.');
@@ -347,7 +347,7 @@ export function useTransactionData() {
     const category = categories.find(c => c.id === categoryId);
     return category?.name || categoryId; // Fallback to ID if name not found
   }, [categories]);
-
+  
   return {
     transactions: filteredTransactions,
     allTransactions: allTransactions,
