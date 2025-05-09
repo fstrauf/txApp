@@ -4,25 +4,13 @@ import CategorySelect from './category-select';
 import { Transaction, Category } from './types';
 import NoteInput from './note-input'; // Import the new component
 import TransactionRow from './TransactionRow'; // Import the new Row component
-// import { PendingUpdateInfo } from '../hooks/use-categorization'; // Import PendingUpdateInfo
-
-// Define PendingUpdateInfo directly if import is problematic
-interface PendingUpdateInfo {
-  predictedCategoryId: string | null;
-  predictedCategoryName: string | null;
-  originalCategoryId: string | null;
-  originalCategoryName: string | null;
-  score?: number;
-  is_low_confidence?: boolean;
-  low_confidence_reason?: string;
-}
 
 type TransactionTableProps = {
   filteredTransactions: Transaction[];
   selectedTransactions: string[];
   handleSelectTransaction: (txId: string) => void;
   handleSelectAll: () => void;
-  pendingCategoryUpdates: Record<string, PendingUpdateInfo>;
+  pendingCategoryUpdates: Record<string, {categoryId: string | null, score: number}>;
   categories: (string | Category)[];
   handleCategoryChange: (transactionId: string, categoryValue: string) => void;
   updatingCategory: string | null;

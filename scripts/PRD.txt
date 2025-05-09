@@ -1,0 +1,24 @@
+
+## MVP
+1. Simple chat window on expense sorted
+2. Connect to neon db that stores all of my bank transaction https://neon.tech/docs/ai/connect-mcp-clients-to-neon
+3. Commands
+	1. import new transactions (by selecting a bank file) --> could be linked to AMRs service later
+	2. categorise bank transactions and ask for feedback on ones that it is uncertain of
+	3. prebuilt reports:
+		1. Generate a monthly report (calls the db and aggregates)
+		2. shows the annual overview chart
+	4. Ability to generate custom repots by fetching data from the db and generating charts with it.
+
+
+## Ideas
+* or i could simplify the UI of what we currently have for expenses
+		* What if a single user had access to their bank transactions via an app
+		* The app would be a bit like Chatgpt and would be able to read transactions, and store them in a database; it would also be able to read that database and produce charts
+		* This could be a whole MCP architecture around this. store transactions, GPT reads them, converts them and then produces insights.
+		* An AI version of this could look really simple and potentially later integrate into Google Sheets, a db, a chart framework have a set of prefab reports, but then also dynamically able to answer questions about the current expenses.
+		* I could build this for myself
+		* Tasks
+			* Kind of like a ceo would ask his staff: "Give me an overview of how much I've been spending on groceries over the months"
+			* How much has my rent been going up?
+		* Can we have this with a voice interface

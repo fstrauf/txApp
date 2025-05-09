@@ -1,19 +1,13 @@
-import { useState, useCallback } from 'react';
-import { Transaction, Category } from '../types';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Transaction } from '../types';
 
-export interface PendingUpdateInfo {
-  predictedCategoryId: string | null;
-  predictedCategoryName: string | null;
-  originalCategoryId: string | null;
-  originalCategoryName: string | null;
-  score?: number; // Optional: if your API provides a confidence score
-  is_low_confidence?: boolean;
-  low_confidence_reason?: string;
-}
+type PendingUpdate = {
+  categoryId: string;
+  score: number;
+};
 
 export interface CategorizationState {
-  pendingUpdates: Record<string, PendingUpdateInfo>;
+  pendingUpdates: Record<string, PendingUpdate>;
   applying: {
     all: boolean;
     individual: string | null;
@@ -27,7 +21,7 @@ export interface CategorizationState {
 }
 
 export function useCategorization() {
-  const queryClient = useQueryClient();
+  // Consolidated categorization state
   const [categorizationState, setCategorizationState] = useState<CategorizationState>({
     pendingUpdates: {},
     applying: {
@@ -42,116 +36,105 @@ export function useCategorization() {
     }
   });
 
+  // Update local transaction data with predicted categories
   const updateTransactionsWithPredictions = (
-    apiResults: any[], 
-    processedTransactionIds: string[],
-    allTransactions: Transaction[],
+    results: any[], 
+    transactions: Transaction[], 
+    selectedTransactions: string[], 
     categories: any[],
     onSuccess: (message: string) => void
   ) => {
-    if (!apiResults || apiResults.length === 0) {
-      console.log("[useCategorization] No API results to update transactions with");
-      onSuccess("No new category predictions received.");
+    if (!results || results.length === 0) {
+      console.log("No results to update transactions with");
       return;
     }
-    if (!processedTransactionIds || processedTransactionIds.length === 0) {
-      console.log("[useCategorization] No transaction IDs provided for API results");
-      onSuccess("No transactions were processed for categorization predictions.");
-      return;
-    }
-    if (apiResults.length !== processedTransactionIds.length) {
-      console.warn(
-        `[useCategorization] Mismatch between API results count (${apiResults.length}) and transaction IDs count (${processedTransactionIds.length}). Proceeding with the shorter length.`
-      );
+    
+    console.log(`Processing ${results.length} prediction results to update transactions`);
+    
+    // Special case for the API format
+    const hasCorrectFormat = results.length > 0 && 
+      results[0] && 
+      (results[0].narrative !== undefined && results[0].predicted_category !== undefined);
+    
+    if (hasCorrectFormat) {
+      console.log("Results appear to be in the correct format!");
     }
     
-    console.log(`[useCategorization] Processing ${apiResults.length} prediction results for ${processedTransactionIds.length} transactions.`);
-    console.log("[useCategorization] updateTransactionsWithPredictions called. Categories available locally:", JSON.stringify(categories.slice(0, 5)));
+    // Create a new map for categorized transactions
+    const newCategorizedTransactions = new Map();
     
-    const newPendingUpdates: Record<string, PendingUpdateInfo> = {};
-
-    const getCategoryNameById_local = (id: string | null): string | null => {
-      if (!id) return null;
-      const category = categories.find(cat => typeof cat === 'object' && cat.id === id);
-      return category && typeof category === 'object' ? category.name : null;
-    };
-
-    const numToProcess = Math.min(apiResults.length, processedTransactionIds.length);
-
-    for (let i = 0; i < numToProcess; i++) {
-      const prediction = apiResults[i];
-      const transactionId = processedTransactionIds[i];
-
-      if (!transactionId) {
-        console.warn(`[useCategorization] Missing transaction ID at index ${i}`);
-        continue;
-      }
-
-      const originalTransaction = allTransactions.find(t => t.lunchMoneyId === transactionId);
-      if (!originalTransaction) {
-        console.warn(`[useCategorization] Original transaction not found for ID: ${transactionId}`);
-        continue;
-      }
-
-      let predictedCatId: string | null = prediction.category_id || prediction.predicted_category_id || prediction.predicted_category || null;
-      let predictedCatName: string | null = prediction.category_name || prediction.predicted_category_name || null;
-      const score = prediction.score || prediction.similarity_score;
+    // Process results and build prediction map
+    results.forEach((result, index) => {
+      // The API might return results with different field names, so we handle both formats
+      const narrative = result.narrative || result.Narrative || result.description || '';
+      let predictedCategory = result.predicted_category || result.category || result.Category || '';
+      const similarityScore = result.similarity_score || result.score || 0;
       
-      const adjustmentInfo = prediction.adjustment_info || {};
-      const isLowConfidence = !!adjustmentInfo.is_low_confidence;
-      const lowConfidenceReason = adjustmentInfo.reason || (isLowConfidence ? 'Low confidence prediction' : undefined);
-
-      console.log(`[useCategorization] Processing prediction for TxID ${transactionId}: API raw predicted_category value: '${prediction.predicted_category}', Initial predictedCatId: '${predictedCatId}', Initial predictedCatName: '${predictedCatName}'`);
-
-      if (predictedCatId && !predictedCatName) {
-        console.log(`[useCategorization] TxID ${transactionId}: ID '${predictedCatId}' present, Name missing. Attempting lookup...`);
-        predictedCatName = getCategoryNameById_local(predictedCatId);
-        console.log(`[useCategorization] TxID ${transactionId}: Looked up ID '${predictedCatId}', got Name: '${predictedCatName}'`);
+      // Skip "None" categories or replace with a fallback
+      if (!predictedCategory || predictedCategory.toLowerCase() === 'none') {
+        console.log(`Result ${index+1}: "${narrative}" → "None" category detected, using fallback`);
+        predictedCategory = 'Uncategorized';
       }
       
-      if (!predictedCatId && (!predictedCatName || predictedCatName.toLowerCase() === 'none' || predictedCatName.toLowerCase() === 'unknown')) {
-        console.log(`[useCategorization] Prediction for ${transactionId} is 'None' or empty. Setting to null.`);
-        predictedCatId = null;
-        predictedCatName = null; 
+      if (narrative && predictedCategory) {
+        console.log(`Result ${index+1}: "${narrative}" → "${predictedCategory}" (${similarityScore})`);
+        newCategorizedTransactions.set(narrative, {
+          category: predictedCategory,
+          score: similarityScore
+        });
+      } else {
+        console.log(`Result ${index+1} is missing required fields:`, result);
       }
-
-      const originalCatId = originalTransaction.originalData?.category_id || null;
-      const originalCatName = getCategoryNameById_local(originalCatId) || originalTransaction.lunchMoneyCategory || null;
-
-      newPendingUpdates[transactionId] = {
-        predictedCategoryId: predictedCatId,
-        predictedCategoryName: predictedCatName,
-        originalCategoryId: originalCatId,
-        originalCategoryName: originalCatName,
-        ...(score !== undefined && { score: parseFloat(String(score)) }),
-        ...(isLowConfidence && { is_low_confidence: true }),
-        ...(isLowConfidence && lowConfidenceReason && { low_confidence_reason: lowConfidenceReason })
-      };
-      console.log(`[useCategorization] Stored for TxID ${transactionId}: PredictedID='${predictedCatId}', PredictedName='${predictedCatName}', LowConfidence=${isLowConfidence}`);
-    }
-        
+    });
+    
+    console.log("Built categorization map with", newCategorizedTransactions.size, "entries");
+    
+    // Create a mapping of transaction IDs to predicted categories and scores for easier access
+    const pendingUpdates: Record<string, PendingUpdate> = {};
+    
+    // Map the predictions to transaction IDs
+    selectedTransactions.forEach(txId => {
+      const tx = transactions.find(t => t.lunchMoneyId === txId);
+      if (tx && tx.description) {
+        const prediction = newCategorizedTransactions.get(tx.description);
+        if (prediction) {
+          // Find the category ID for this predicted category name
+          const categoryObj = categories.find(cat => 
+            typeof cat !== 'string' && 
+            cat.name.toLowerCase() === prediction.category.toLowerCase()
+          );
+          
+          // Use the found category ID or the category name as fallback
+          const categoryId = categoryObj && typeof categoryObj !== 'string' 
+            ? categoryObj.id 
+            : prediction.category;
+          
+          pendingUpdates[txId] = {
+            categoryId,
+            score: prediction.score
+          };
+        }
+      }
+    });
+    
+    // Update categorization state
     setCategorizationState(prev => ({
       ...prev,
-      pendingUpdates: {
-        ...prev.pendingUpdates,
-        ...newPendingUpdates
-      },
+      pendingUpdates,
+      results: newCategorizedTransactions,
       stats: {
         ...prev.stats,
-        total: Object.keys(prev.pendingUpdates).length + Object.keys(newPendingUpdates).length
+        total: Object.keys(pendingUpdates).length
       }
     }));
     
-    const updatedPendingCount = Object.keys(newPendingUpdates).length;
-    console.log("[useCategorization] Prepared", updatedPendingCount, "new/updated pending category updates.");
+    console.log("Prepared", Object.keys(pendingUpdates).length, "pending category updates");
     
-    if (updatedPendingCount > 0) {
-        onSuccess(`${updatedPendingCount} transaction(s) have new category suggestions. Review and apply the changes.`);
-    } else {
-        onSuccess("No new category suggestions based on the latest predictions.");
-    }
+    // Show a success toast
+    onSuccess(`Categorized ${Object.keys(pendingUpdates).length} transactions. Review and apply the changes.`);
   };
 
+  // Reset categorization state to initial values
   const resetCategorizationState = () => {
     setCategorizationState({
       pendingUpdates: {},
@@ -168,202 +151,219 @@ export function useCategorization() {
     });
   };
 
+  // Function to apply a single predicted category
   const applyPredictedCategory = async (
     transactionId: string,
     categories: any[],
-    updateTransaction: (txId: string, categoryId: string | null, categoryName: string | null) => void,
+    updateTransaction: (txId: string, categoryId: string, categoryName: string) => void,
     onSuccess: (message: string) => void,
     onError: (message: string) => void
   ) => {
     const update = categorizationState.pendingUpdates[transactionId];
     if (!update) {
-      console.error(`[useCategorization - applySingle] No pending update found for transaction ${transactionId}`);
-      onError("No prediction found for this transaction.");
+      console.error(`No pending update found for transaction ${transactionId}`);
       return;
     }
 
-    const categoryIdToApply = update.predictedCategoryId;
-    const categoryNameToApply = update.predictedCategoryName;
-
+    // Set loading state for this specific transaction
     setCategorizationState(prev => ({
       ...prev,
-      applying: { ...prev.applying, individual: transactionId }
+      applying: {
+        ...prev.applying,
+        individual: transactionId
+      }
     }));
 
     try {
+      // Send update to the API
       const response = await fetch('/api/lunch-money/transactions', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           transactionId,
-          categoryId: categoryIdToApply,
+          categoryId: update.categoryId === "none" ? null : update.categoryId
         })
       });
       
-      const responseData = await response.json().catch(() => ({}));
+      const responseData = await response.json();
       
       if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to update category via API');
+        throw new Error(responseData.error || 'Failed to update category');
       }
       
-      updateTransaction(transactionId, categoryIdToApply, categoryNameToApply);
+      // Find category name for display
+      let categoryName = update.categoryId;
+      const selectedCategory = categories.find(cat => 
+        typeof cat !== 'string' && cat.id === update.categoryId
+      );
+      if (selectedCategory && typeof selectedCategory !== 'string') {
+        categoryName = selectedCategory.name;
+      }
       
+      // Call the update function passed from the parent
+      updateTransaction(transactionId, update.categoryId, categoryName);
+      
+      // Clear this pending update and update stats
       setCategorizationState(prev => {
         const newPendingUpdates = {...prev.pendingUpdates};
         delete newPendingUpdates[transactionId];
-        console.log(`[applyPredictedCategory] State Updater: Removing ${transactionId}. New count should be ${Object.keys(newPendingUpdates).length}`);
         
         return {
           ...prev,
           pendingUpdates: newPendingUpdates,
-          applying: { ...prev.applying, individual: null },
-          stats: { ...prev.stats, applied: prev.stats.applied + 1, total: prev.stats.total -1 }
+          applying: {
+            ...prev.applying,
+            individual: null
+          },
+          stats: {
+            ...prev.stats,
+            applied: prev.stats.applied + 1
+          }
         };
       });
       
-      queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
-      
+      // Show success toast
       onSuccess('Category updated in Lunch Money');
       
     } catch (error) {
-      console.error('[useCategorization - applySingle] Error updating category:', error);
+      console.error('Error updating category:', error);
+      
       setCategorizationState(prev => ({
         ...prev,
-        applying: { ...prev.applying, individual: null },
-        stats: { ...prev.stats, failed: prev.stats.failed + 1 }
+        applying: {
+          ...prev.applying,
+          individual: null
+        },
+        stats: {
+          ...prev.stats,
+          failed: prev.stats.failed + 1
+        }
       }));
+      
       onError(error instanceof Error ? error.message : 'Failed to update category');
     }
   };
 
+  // Function to apply all predicted categories
   const applyAllPredictedCategories = async (
-    categoriesList: any[],
-    updateTransaction: (txId: string, categoryId: string | null, categoryName: string | null) => void,
+    categories: any[],
+    updateTransaction: (txId: string, categoryId: string, categoryName: string) => void,
     onSuccess: (message: string) => void,
     onError: (message: string) => void
   ) => {
-    const transactionIdsWithPendingUpdates = Object.keys(categorizationState.pendingUpdates);
-    if (transactionIdsWithPendingUpdates.length === 0) {
-      onSuccess("No category predictions to apply.");
+    const pendingUpdates = categorizationState.pendingUpdates;
+    const transactionIds = Object.keys(pendingUpdates);
+    
+    if (transactionIds.length === 0) {
+      onError("No categorizations to apply");
       return;
     }
 
-    setCategorizationState(prev => ({ ...prev, applying: { ...prev.applying, all: true } }));
-
-    let successCount = 0;
-    let failCount = 0;
-    const batchSize = 10;
-    const appliedTxIdsForLocalUpdate: Array<{txId: string, catId: string | null, catName: string | null}> = [];
-
-    for (let i = 0; i < transactionIdsWithPendingUpdates.length; i += batchSize) {
-      const batchTxIds = transactionIdsWithPendingUpdates.slice(i, i + batchSize);
-      
-      const promises = batchTxIds.map(async (txId) => {
-        const update = categorizationState.pendingUpdates[txId];
-        if (!update) return { success: false, txId, error: "No pending update found during batch." };
-
-        const categoryIdToApply = update.predictedCategoryId;
-        const categoryNameToApply = update.predictedCategoryName;
-
-        try {
-          const response = await fetch('/api/lunch-money/transactions', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              transactionId: txId,
-              categoryId: categoryIdToApply,
-            }),
-          });
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `API error for ${txId}`);
-          }
-          return { success: true, txId, appliedCategoryId: categoryIdToApply, appliedCategoryName: categoryNameToApply };
-        } catch (error) {
-          console.error(`[useCategorization - applyAll] Error updating transaction ${txId}:`, error);
-          return { success: false, txId, error: error instanceof Error ? error.message : "Unknown API error" };
-        }
-      });
-      
-      const results = await Promise.allSettled(promises);
-      
-      results.forEach(result => {
-        if (result.status === 'fulfilled' && result.value.success) {
-          successCount++;
-          const appliedCatId = result.value.appliedCategoryId !== undefined ? result.value.appliedCategoryId : null;
-          const appliedCatName = result.value.appliedCategoryName !== undefined ? result.value.appliedCategoryName : null;
-
-          appliedTxIdsForLocalUpdate.push({
-            txId: result.value.txId,
-            catId: appliedCatId,
-            catName: appliedCatName
-          });
-        } else {
-          failCount++;
-          if (result.status === 'rejected') {
-            console.error(`[useCategorization - applyAll] Batch item rejected:`, result.reason);
-          } else if (result.status === 'fulfilled' && !result.value.success) {
-            console.error(`[useCategorization - applyAll] Batch item failed for ${result.value.txId}:`, result.value.error);
-          }
-        }
-      });
-    }
-
-    appliedTxIdsForLocalUpdate.forEach(item => {
-      updateTransaction(item.txId, item.catId ?? null, item.catName ?? null);
-    });
-
-    const newPendingUpdates = { ...categorizationState.pendingUpdates };
-    appliedTxIdsForLocalUpdate.forEach(item => {
-      delete newPendingUpdates[item.txId];
-    });
-
+    // Set global loading state
     setCategorizationState(prev => ({
       ...prev,
-      pendingUpdates: newPendingUpdates,
-      applying: { ...prev.applying, all: false },
-      stats: {
-        ...prev.stats,
-        applied: prev.stats.applied + successCount,
-        failed: prev.stats.failed + failCount,
-        total: Object.keys(newPendingUpdates).length
+      applying: {
+        ...prev.applying,
+        all: true
       }
     }));
-    
-    if (failCount > 0) {
-      onError(`Applied ${successCount} categories. ${failCount} failed.`);
-    } else {
-      onSuccess(`Successfully applied ${successCount} category predictions.`);
-    }
 
-    if (successCount > 0) {
-      console.log('[applyAllPredictedCategories] Invalidating counts query...');
-      queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
-    }
-  };
-
-  const cancelSinglePrediction = (
-    transactionId: string,
-    onSuccess?: (message: string) => void
-  ) => {
-    if (!categorizationState.pendingUpdates[transactionId]) {
-      console.warn(`[useCategorization - cancelSingle] No pending update for ${transactionId} to cancel.`);
-      return;
-    }
-    setCategorizationState(prev => {
-      const newPendingUpdates = { ...prev.pendingUpdates };
-      delete newPendingUpdates[transactionId];
-      return {
+    try {
+      // Process in batches of 5 to avoid overwhelming the API
+      const batchSize = 5;
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (let i = 0; i < transactionIds.length; i += batchSize) {
+        const batch = transactionIds.slice(i, i + batchSize);
+        
+        // Create an array of promises for the batch
+        const promises = batch.map(async (txId) => {
+          const update = pendingUpdates[txId];
+          
+          try {
+            const response = await fetch('/api/lunch-money/transactions', {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                transactionId: txId,
+                categoryId: update.categoryId === "none" ? null : update.categoryId
+              })
+            });
+            
+            if (!response.ok) {
+              throw new Error('Failed to update category');
+            }
+            
+            return { success: true, txId, update };
+          } catch (error) {
+            console.error(`Error updating transaction ${txId}:`, error);
+            return { success: false, txId, update };
+          }
+        });
+        
+        // Wait for all promises in this batch to complete
+        const results = await Promise.all(promises);
+        
+        // Count successes and failures
+        results.forEach(result => {
+          if (result.success) {
+            successCount++;
+            
+            // Get the update info
+            const update = result.update;
+            
+            // Find category name for display
+            let categoryName = update.categoryId;
+            const selectedCategory = categories.find(cat => 
+              typeof cat !== 'string' && cat.id === update.categoryId
+            );
+            if (selectedCategory && typeof selectedCategory !== 'string') {
+              categoryName = selectedCategory.name;
+            }
+            
+            // Call the update function passed from the parent
+            updateTransaction(result.txId, update.categoryId, categoryName);
+          } else {
+            failCount++;
+          }
+        });
+      }
+      
+      // Update categorization state with results
+      setCategorizationState(prev => ({
         ...prev,
-        pendingUpdates: newPendingUpdates,
+        pendingUpdates: {},
+        applying: {
+          all: false,
+          individual: null
+        },
         stats: {
           ...prev.stats,
-          total: prev.stats.total - 1
+          applied: prev.stats.applied + successCount,
+          failed: prev.stats.failed + failCount
         }
-      };
-    });
-    if (onSuccess) {
-      onSuccess("Category suggestion discarded.");
+      }));
+      
+      // Show success toast
+      onSuccess(`Updated ${successCount} categories${failCount > 0 ? `, ${failCount} failed` : ''}`);
+      
+    } catch (error) {
+      console.error('Error applying all categories:', error);
+      
+      setCategorizationState(prev => ({
+        ...prev,
+        applying: {
+          ...prev.applying,
+          all: false
+        }
+      }));
+      
+      onError(error instanceof Error ? error.message : 'Failed to apply categories');
     }
   };
 
@@ -373,7 +373,6 @@ export function useCategorization() {
     resetCategorizationState,
     updateTransactionsWithPredictions,
     applyPredictedCategory,
-    applyAllPredictedCategories,
-    cancelSinglePrediction,
+    applyAllPredictedCategories
   };
 } 

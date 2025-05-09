@@ -5,26 +5,13 @@ import { format } from 'date-fns';
 import CategorySelect from './category-select';
 import NoteInput from './note-input';
 import { Transaction, Category } from './types';
-import HelpTooltip from '@/components/shared/HelpTooltip';
-// import { PendingUpdateInfo } from '../hooks/use-categorization';
-
-// Define PendingUpdateInfo directly if import is problematic
-interface PendingUpdateInfo {
-  predictedCategoryId: string | null;
-  predictedCategoryName: string | null;
-  originalCategoryId: string | null;
-  originalCategoryName: string | null;
-  score?: number;
-  is_low_confidence?: boolean;
-  low_confidence_reason?: string;
-}
 
 // Define props for the new Row component
 type TransactionRowProps = {
   transaction: Transaction;
   isSelected: boolean;
   handleSelectTransaction: (txId: string) => void;
-  pendingUpdate: PendingUpdateInfo | undefined;
+  pendingUpdate: { categoryId: string | null; score: number } | undefined;
   categories: (string | Category)[];
   handleCategoryChange: (transactionId: string, categoryValue: string) => void;
   updatingCategory: string | null;
@@ -61,11 +48,12 @@ const TransactionRow = React.memo((
   }: TransactionRowProps
 ) => {
   const hasPendingUpdate = !!pendingUpdate;
-  const predictedCategoryIsDifferent = hasPendingUpdate && pendingUpdate && pendingUpdate.predictedCategoryId !== pendingUpdate.originalCategoryId;
+  
+  console.log(`Rendering Row: ${transaction.lunchMoneyId}`); // Add log for debugging re-renders
 
   return (
     <tr className={`hover:bg-gray-50 ${ 
-      predictedCategoryIsDifferent ? 'bg-secondary/5' : 'bg-surface'
+      hasPendingUpdate ? 'bg-secondary/5' : 'bg-surface'
     }`}>
       <td className="px-4 py-3 align-top">
         <input
@@ -141,24 +129,20 @@ const TransactionRow = React.memo((
       </td>
       <td className="px-4 py-3 align-top">
         {/* Predicted Category Display */} 
-        {hasPendingUpdate && pendingUpdate ? (
-          <div className="flex items-center gap-x-1">
-            <span className={`font-medium ${pendingUpdate.is_low_confidence ? 'text-orange-600' : 'text-secondary-dark'}`}>
-              {pendingUpdate.predictedCategoryName || 
-               (pendingUpdate.predictedCategoryId ? getCategoryNameById(pendingUpdate.predictedCategoryId) : null) || 
-               'Uncategorized'}
+        {hasPendingUpdate ? (
+          <div className="flex items-center">
+            <span className="font-medium text-secondary-dark">
+              {pendingUpdate?.categoryId === "none" ? "Uncategorized" : 
+                getCategoryNameById(pendingUpdate?.categoryId) || pendingUpdate?.categoryId}
             </span>
-            {pendingUpdate.is_low_confidence && (
-              <HelpTooltip content={pendingUpdate.low_confidence_reason || 'Low confidence prediction'} />
-            )}
-            {pendingUpdate.score !== undefined && !pendingUpdate.is_low_confidence && (
-              <span className="ml-1 text-xs text-gray-500">
+            {pendingUpdate?.score > 0 && (
+              <span className="ml-2 text-xs text-gray-500">
                 ({Math.round(pendingUpdate.score * 100)}% match)
               </span>
             )}
           </div>
         ) : (
-          <span className="text-gray-400 italic"></span>
+          transaction.predictedCategory || <span className="text-gray-400 italic">Not predicted</span>
         )}
       </td>
       

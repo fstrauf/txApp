@@ -1,13 +1,14 @@
-import React, { Dispatch, SetStateAction, useMemo, useState, useEffect, Fragment } from 'react';
+import React, { Dispatch, SetStateAction, useMemo } from 'react';
+import { DateRange } from './types';
 import { format } from 'date-fns';
 import { Tab, TabGroup, TabList } from '@headlessui/react';
 
 type TransactionFiltersProps = {
-  initialStartDate: string;
-  initialEndDate: string;
-  onApplyDates: (startDate: string, endDate: string) => void;
-  isApplying: boolean;
+  pendingDateRange: DateRange;
+  handleDateRangeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  applyDateFilter: () => void;
   operationInProgress: boolean;
+  isApplying: boolean;
   trainedCount: number;
   clearedCount: number;
   unclearedCount: number;
@@ -17,11 +18,11 @@ type TransactionFiltersProps = {
 };
 
 const TransactionFilters = React.memo(({
-  initialStartDate,
-  initialEndDate,
-  onApplyDates,
-  isApplying,
+  pendingDateRange,
+  handleDateRangeChange,
+  applyDateFilter,
   operationInProgress,
+  isApplying,
   trainedCount,
   clearedCount,
   unclearedCount,
@@ -29,17 +30,6 @@ const TransactionFilters = React.memo(({
   statusFilter,
   setStatusFilter
 }: TransactionFiltersProps) => {
-  const [pendingStartDate, setPendingStartDate] = useState(initialStartDate);
-  const [pendingEndDate, setPendingEndDate] = useState(initialEndDate);
-
-  useEffect(() => {
-    setPendingStartDate(initialStartDate);
-  }, [initialStartDate]);
-
-  useEffect(() => {
-    setPendingEndDate(initialEndDate);
-  }, [initialEndDate]);
-
   const formattedTimestamp = useMemo(() => {
     if (!lastTrainedTimestamp) return 'Never';
     try {
@@ -50,29 +40,16 @@ const TransactionFilters = React.memo(({
     }
   }, [lastTrainedTimestamp]);
 
+  const selectedIndex = statusFilter === 'cleared' ? 1 : 0;
+
   const handleTabChange = (index: number) => {
     setStatusFilter(index === 1 ? 'cleared' : 'uncleared');
-  };
-
-  const handlePendingDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    if (name === 'startDate') {
-      setPendingStartDate(value);
-    } else if (name === 'endDate') {
-      setPendingEndDate(value);
-    }
-  };
-
-  const handleApplyClick = () => {
-    onApplyDates(pendingStartDate, pendingEndDate);
   };
 
   const tabBaseStyle = "px-4 py-2 text-sm font-medium rounded-lg border focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed";
   const tabInactiveStyle = "bg-white border-gray-300 text-gray-700 hover:bg-gray-50";
   const tabActiveSecondaryStyle = "bg-secondary border-secondary text-white";
   const tabActivePrimaryStyle = "bg-primary border-primary text-white";
-
-  const isDisabled = operationInProgress || isApplying;
 
   return (
     <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 h-full">
@@ -84,10 +61,10 @@ const TransactionFilters = React.memo(({
               type="date"
               id="startDate"
               name="startDate"
-              value={pendingStartDate}
-              onChange={handlePendingDateChange}
-              className="p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm disabled:opacity-50 disabled:bg-gray-100"
-              disabled={isDisabled}
+              value={pendingDateRange.startDate}
+              onChange={handleDateRangeChange}
+              className="p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm"
+              disabled={operationInProgress || isApplying}
             />
           </div>
           <div>
@@ -96,16 +73,16 @@ const TransactionFilters = React.memo(({
               type="date"
               id="endDate"
               name="endDate"
-              value={pendingEndDate}
-              onChange={handlePendingDateChange}
-              className="p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm disabled:opacity-50 disabled:bg-gray-100"
-              disabled={isDisabled}
+              value={pendingDateRange.endDate}
+              onChange={handleDateRangeChange}
+              className="p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm"
+              disabled={operationInProgress || isApplying}
             />
           </div>
           <button
-            onClick={handleApplyClick}
+            onClick={applyDateFilter}
             className="inline-flex items-center justify-center px-4 py-2 bg-primary text-white font-semibold rounded-lg shadow-sm hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
-            disabled={isDisabled}
+            disabled={operationInProgress || isApplying}
           >
             {isApplying ? (
               <>
@@ -125,25 +102,19 @@ const TransactionFilters = React.memo(({
       </div>
 
       <div className="flex flex-row items-center justify-between">
-      <TabGroup defaultIndex={statusFilter === 'cleared' ? 1 : 0} onChange={handleTabChange}>
+      <TabGroup selectedIndex={selectedIndex} onChange={handleTabChange}>
         <TabList className="flex space-x-2">
-          <Tab as={Fragment}>
-            {({ selected }) => (
-              <button
-                className={`${tabBaseStyle} ${selected ? tabActiveSecondaryStyle : tabInactiveStyle}`}
+          <Tab 
+            className={`${tabBaseStyle} ${selectedIndex === 0 ? tabActiveSecondaryStyle : tabInactiveStyle}`}
+            disabled={operationInProgress}
           >
             Unreviewed ({unclearedCount})
-              </button>
-            )}
           </Tab>
-          <Tab as={Fragment}>
-            {({ selected }) => (
-              <button
-                className={`${tabBaseStyle} ${selected ? tabActivePrimaryStyle : tabInactiveStyle}`}
+          <Tab 
+             className={`${tabBaseStyle} ${selectedIndex === 1 ? tabActivePrimaryStyle : tabInactiveStyle}`}
+             disabled={operationInProgress}
           >
             Reviewed ({clearedCount})
-              </button>
-            )}
           </Tab>
         </TabList>
       </TabGroup>
