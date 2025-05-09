@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { format, subMonths } from 'date-fns';
 import { Transaction, Category } from '../types';
+import { useQueryClient } from '@tanstack/react-query';
 
 export type OperationType = 'none' | 'training' | 'categorizing';
 
@@ -50,6 +51,7 @@ export function useTraining({
   updateTransactions, 
   onCategorizationComplete 
 }: UseTrainingProps) {
+  const queryClient = useQueryClient();
   const [operationState, setOperationState] = useState<OperationState>({
     inProgress: false,
     type: 'none',
@@ -281,13 +283,16 @@ export function useTraining({
           const tagResult = await tagTransactionsAsTrained(transactionsToTrain);
           const finalMessage = `Training complete. Tagged ${tagResult.successCount} of ${transactionsToTrain.length} transactions. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed.` : ''}`;
           showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
+          if (tagResult.successCount > 0 || tagResult.failCount === 0) {
+            queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
+            fetchLastTrainedTimestamp();
+          }
           setOperationState({
             inProgress: false, 
             type: 'training',
             progress: { percent: 100, message: finalMessage }, 
             result: { success: tagResult.failCount === 0, message: finalMessage, data: null }
           });
-          fetchLastTrainedTimestamp();
           setTimeout(resetOperationState, 3000);
         } else {
           throw new Error(syncResult.message || 'Training API returned success status but unexpected content.');
@@ -305,13 +310,16 @@ export function useTraining({
                 const tagResult = await tagTransactionsAsTrained(transactionsToTrain);
                 const finalMessage = `Training complete. Tagged ${tagResult.successCount} of ${transactionsToTrain.length} transactions. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed.` : ''}`;
                 showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
+                if (tagResult.successCount > 0 || tagResult.failCount === 0) {
+                  queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
+                  fetchLastTrainedTimestamp();
+                }
                 setOperationState(prev => ({
                   ...prev,
                    inProgress: false, 
                    progress: { percent: 100, message: finalMessage }, 
                    result: { success: tagResult.failCount === 0, message: finalMessage, data: null }
                 }));
-                fetchLastTrainedTimestamp();
                 setTimeout(resetOperationState, 3000);
             }, 
             (errorMessage) => { // onError for polling
@@ -330,7 +338,7 @@ export function useTraining({
         setOperationState({ inProgress: false, type: 'training', progress: { percent: 0, message: '' }, result: { success: false, message: message, data: null } });
         setTimeout(resetOperationState, 3000);
      }
-  }, [selectedIds, transactions, showToast, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp, resetOperationState]);
+  }, [selectedIds, transactions, showToast, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp, resetOperationState, queryClient]);
 
   const trainAllReviewed = useCallback(async () => {
      setOperationState({ inProgress: true, type: 'training', progress: { percent: 0, message: 'Fetching all reviewed (cleared) transactions for training...' }, result: { success: false, message: null, data: null } });
@@ -400,6 +408,10 @@ export function useTraining({
                 const tagResult = await tagTransactionsAsTrained(allEligibleTransactions);
                 const finalMessage = `Training (all reviewed) complete. Tagged ${tagResult.successCount} of ${allEligibleTransactions.length}. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed.` : ''}`;
                 showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
+                if (tagResult.successCount > 0 || tagResult.failCount === 0) {
+                  queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
+                  fetchLastTrainedTimestamp();
+                }
                 setOperationState(prev => ({ 
                     ...prev, 
                     inProgress: false,
@@ -407,7 +419,6 @@ export function useTraining({
                     progress: { percent: 100, message: finalMessage }, 
                     result: { success: tagResult.failCount === 0, message: finalMessage, data: null }
                 }));
-                fetchLastTrainedTimestamp();
                 setTimeout(resetOperationState, 3000);
             } else {
                 throw new Error(syncResult.message || 'Training API (all reviewed) returned success status but unexpected content.');
@@ -425,13 +436,16 @@ export function useTraining({
                    const tagResult = await tagTransactionsAsTrained(allEligibleTransactions);
                    const finalMessage = `Training (all reviewed) complete. Tagged ${tagResult.successCount} of ${allEligibleTransactions.length}. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed.` : ''}`;
                    showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
+                   if (tagResult.successCount > 0 || tagResult.failCount === 0) {
+                     queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
+                     fetchLastTrainedTimestamp();
+                   }
                    setOperationState(prev => ({ 
                       ...prev, 
                       inProgress: false,
                       progress: { percent: 100, message: finalMessage }, 
                       result: { success: tagResult.failCount === 0, message: finalMessage, data: null }
                    }));
-                   fetchLastTrainedTimestamp();
                    setTimeout(resetOperationState, 3000);
                }, 
                (errorMessage) => { // onError for polling
@@ -451,7 +465,7 @@ export function useTraining({
         setOperationState({ inProgress: false, type: 'training', progress: { percent: 0, message: '' }, result: { success: false, message: message, data: null } });
         setTimeout(resetOperationState, 3000);
      }
-  }, [showToast, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp, resetOperationState, transactions /* Added transactions here as a fallback if API fetch fails, though primary source is new fetch */]);
+  }, [showToast, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp, resetOperationState, queryClient, transactions /* Added transactions here as a fallback if API fetch fails, though primary source is new fetch */]);
 
   const categorizeSelected = useCallback(async () => {
     if (selectedIds.length === 0) {
