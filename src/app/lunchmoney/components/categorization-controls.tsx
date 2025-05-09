@@ -43,6 +43,9 @@ const CategorizationControls = React.memo(({
 }: CategorizationControlsProps) => {
   const hasPendingUpdates = Object.keys(pendingCategoryUpdates).length > 0;
 
+  // Log received props on render
+  console.log('[CategorizationControls Render] Received pending updates count:', Object.keys(pendingCategoryUpdates).length, 'Prop Object:', pendingCategoryUpdates);
+
   return (
     <div className="flex flex-col gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 shadow-sm h-full">
       <div className="flex items-start gap-4">

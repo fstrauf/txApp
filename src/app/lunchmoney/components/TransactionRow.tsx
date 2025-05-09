@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import CategorySelect from './category-select';
 import NoteInput from './note-input';
 import { Transaction, Category } from './types';
+import HelpTooltip from '@/components/shared/HelpTooltip';
 // import { PendingUpdateInfo } from '../hooks/use-categorization';
 
 // Define PendingUpdateInfo directly if import is problematic
@@ -14,6 +15,8 @@ interface PendingUpdateInfo {
   originalCategoryId: string | null;
   originalCategoryName: string | null;
   score?: number;
+  is_low_confidence?: boolean;
+  low_confidence_reason?: string;
 }
 
 // Define props for the new Row component
@@ -139,14 +142,17 @@ const TransactionRow = React.memo((
       <td className="px-4 py-3 align-top">
         {/* Predicted Category Display */} 
         {hasPendingUpdate && pendingUpdate ? (
-          <div className="flex items-center">
-            <span className="font-medium text-secondary-dark">
+          <div className="flex items-center gap-x-1">
+            <span className={`font-medium ${pendingUpdate.is_low_confidence ? 'text-orange-600' : 'text-secondary-dark'}`}>
               {pendingUpdate.predictedCategoryName || 
                (pendingUpdate.predictedCategoryId ? getCategoryNameById(pendingUpdate.predictedCategoryId) : null) || 
                'Uncategorized'}
             </span>
-            {pendingUpdate.score !== undefined && (
-              <span className="ml-2 text-xs text-gray-500">
+            {pendingUpdate.is_low_confidence && (
+              <HelpTooltip content={pendingUpdate.low_confidence_reason || 'Low confidence prediction'} />
+            )}
+            {pendingUpdate.score !== undefined && !pendingUpdate.is_low_confidence && (
+              <span className="ml-1 text-xs text-gray-500">
                 ({Math.round(pendingUpdate.score * 100)}% match)
               </span>
             )}

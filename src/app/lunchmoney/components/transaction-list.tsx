@@ -210,6 +210,9 @@ export default function TransactionList() {
 
   const overallIsLoading = isLoading || trainingOperationState.inProgress || categorizationState.applying.all || !!categorizationState.applying.individual || isTransferringNames;
 
+  // Add this log before the return statement
+  console.log('[TransactionList Render] Pending Updates Count:', Object.keys(categorizationState.pendingUpdates).length, 'State Object:', categorizationState.pendingUpdates);
+
   return (
     <div className="text-gray-900 text-sm bg-white min-h-screen p-4">
       <ToastNotification toastMessage={currentToastMessage} />

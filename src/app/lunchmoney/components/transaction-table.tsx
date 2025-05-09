@@ -13,6 +13,8 @@ interface PendingUpdateInfo {
   originalCategoryId: string | null;
   originalCategoryName: string | null;
   score?: number;
+  is_low_confidence?: boolean;
+  low_confidence_reason?: string;
 }
 
 type TransactionTableProps = {
