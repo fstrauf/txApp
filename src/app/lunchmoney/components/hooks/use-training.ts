@@ -525,6 +525,20 @@ export function useTraining({
         return;
       }
 
+      if (response.status === 409) { // Specific handling for 409 Conflict
+        const errorData = await response.json().catch(() => ({ error: 'An error occurred processing the server response. Please try again.' }));
+        const message = errorData.error || 'Embedding dimension mismatch. Please re-train your model to continue classifying transactions.';
+        setOperationState(prev => ({
+          ...prev,
+          inProgress: false,
+          type: 'none',
+          result: { success: false, message, data: null },
+          progress: { percent: 0, message: '' }
+        }));
+        showToast(message, 'error');
+        return; // Stop further processing for 409
+      }
+
       if (!response.ok && response.status !== 202) { // 202 is for async, other non-ok are errors
         const errorData = await response.json().catch(() => ({ error: `Request failed with status ${response.status}` }));
         throw new Error(errorData.error || `Categorization request failed with status ${response.status}`);
@@ -533,8 +547,8 @@ export function useTraining({
       const responseData = await response.json();
 
       if (response.status === 200 && responseData.status === 'completed') { // Synchronous success
-        setOperationState(prev => ({ 
-          ...prev, 
+        setOperationState(prev => ({
+          ...prev,
           inProgress: false, 
           type: 'none',
           result: { success: true, message: 'Categorization completed synchronously.', data: responseData.results || [] },
