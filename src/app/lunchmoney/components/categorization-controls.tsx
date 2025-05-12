@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSelectionContext } from './SelectionContext';
 // import { ImportStatus } from './types'; // Type no longer needed
 // import HelpTooltip from '@/components/shared/HelpTooltip'; // No longer needed
 
@@ -19,7 +20,6 @@ interface CategorizationControlsProps {
   handleTrainSelected: () => void;
   handleCategorizeSelected: () => void;
   handleTrainAllReviewed: () => void;
-  selectedTransactionsCount: number;
   loading: boolean;
   operationInProgress: boolean;
   // importStatus: ImportStatus; // Removed
@@ -35,13 +35,14 @@ const CategorizationControls = React.memo(({
   handleTrainSelected,
   handleCategorizeSelected,
   handleTrainAllReviewed,
-  selectedTransactionsCount,
   operationInProgress,
   // importStatus, // Removed
   // importMessage, // Removed
   handleCancelCategorization
 }: CategorizationControlsProps) => {
   const hasPendingUpdates = Object.keys(pendingCategoryUpdates).length > 0;
+  const { selectedIds } = useSelectionContext();
+  const selectedTransactionsCount = selectedIds.size;
 
   // Log received props on render
   console.log('[CategorizationControls Render] Received pending updates count:', Object.keys(pendingCategoryUpdates).length, 'Prop Object:', pendingCategoryUpdates);
