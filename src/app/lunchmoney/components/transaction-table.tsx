@@ -4,7 +4,7 @@ import CategorySelect from './category-select';
 import { Transaction, Category } from './types';
 import NoteInput from './note-input'; // Import the new component
 import TransactionRow from './TransactionRow'; // Import the new Row component
-import { useSelectionContext, useIsTransactionSelected } from './SelectionContext';
+import { useSelectionContext } from './SelectionContext';
 // import { PendingUpdateInfo } from '../hooks/use-categorization'; // Import PendingUpdateInfo
 
 // Define PendingUpdateInfo directly if import is problematic
@@ -53,18 +53,21 @@ const TransactionTable = React.memo(({
 }: TransactionTableProps) => {
   const { toggleSelection, selectedIds, clearSelection } = useSelectionContext();
 
-  // Select all logic
+  // Select all logic - use selectedIds.has(id) instead of the hook
   const allIds = filteredTransactions.map(tx => tx.lunchMoneyId);
-  const allSelected = allIds.every(id => useIsTransactionSelected(id));
-  const someSelected = allIds.some(id => useIsTransactionSelected(id));
+  const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
+  const someSelected = allIds.some(id => selectedIds.has(id));
 
   const handleSelectAll = () => {
     if (allSelected) {
       clearSelection();
     } else {
-      allIds.forEach(id => {
-        if (!useIsTransactionSelected(id)) toggleSelection(id);
-      });
+      // Select only those not already selected from the current filtered view
+      const idsToSelect = allIds.filter(id => !selectedIds.has(id));
+      idsToSelect.forEach(id => toggleSelection(id));
+      // If some were selected but not all, this logic might need refinement
+      // depending on desired behavior (e.g. toggle all filtered to selected vs add filtered to selection)
+      // For simplicity, current: if not all selected, select all *visible* unselected.
     }
   };
 
@@ -133,6 +136,7 @@ const TransactionTable = React.memo(({
                 <TransactionRow
                   key={transaction.lunchMoneyId}
                   transaction={transaction}
+                  isSelected={selectedIds.has(transaction.lunchMoneyId)}
                   handleSelectTransaction={toggleSelection}
                   pendingUpdate={pendingUpdate}
                   categories={categories}
