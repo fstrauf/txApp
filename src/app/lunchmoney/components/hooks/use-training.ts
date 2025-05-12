@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { format, subMonths } from 'date-fns';
+import { format } from 'date-fns';
 import { Transaction, Category } from '../types';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -88,8 +88,9 @@ export function useTraining({
       const response = await fetch('/api/classify/last-trained');
       if (!response.ok) throw new Error('Failed to fetch last trained timestamp');
       const data = await response.json();
-      if (data.lastTrained) {
-        setLastTrainedTimestamp(data.lastTrained);
+      console.log('[fetchLastTrainedTimestamp] Response:', data); // Debug log
+      if (data.lastTrainedAt) { // Changed from lastTrained to lastTrainedAt
+        setLastTrainedTimestamp(data.lastTrainedAt);
       }
     } catch (error) {
       console.error("Error fetching last trained timestamp:", error);
@@ -105,7 +106,7 @@ export function useTraining({
     async (
     predictionId: string, 
     type: 'training' | 'categorizing',
-      onSuccess: (results?: any[]) => void, 
+      onSuccess: (results?: any) => void,
     onError: (message: string) => void
   ) => {
       const maxPolls = 120; // 120 * 5s = 10 minutes
@@ -115,16 +116,24 @@ export function useTraining({
        setOperationState(prev => ({ ...prev, progress: { percent, message } }));
       };
 
-      updateProgress(5, `Job submitted. Polling for status of ${type} job ${predictionId}...`);
+      updateProgress(5, `Job submitted. Polling for status of ${type} job`);
 
       const executePoll = async () => {
     while (pollCount < maxPolls) {
         pollCount++;
         await new Promise(resolve => setTimeout(resolve, pollInterval));
         
+          const pollingUrl = `/api/classify/status/${predictionId}`;
+          console.log(`[Poll Client Side] Attempting fetch (${pollCount}/${maxPolls}): ${pollingUrl}`);
+
           try {
-            const response = await fetch(`/api/classify/status/${predictionId}`);
-        if (!response.ok) {
+            const response = await fetch(pollingUrl);
+            console.log(`[Poll Client Side] Response Status for ${pollingUrl}: ${response.status}`);
+
+            const responseText = await response.text();
+            console.log(`[Poll Client Side] Response Text for ${pollingUrl}:`, responseText);
+
+            if (!response.ok) {
               // If the status endpoint itself fails (e.g., 500, 404 for the ID),
               // we might want to retry a few times or fail fast.
               // For now, we'll treat non-200 as a polling error after first attempt.
@@ -141,30 +150,32 @@ export function useTraining({
               }
             }
 
-            const data = await response.json();
+            let data;
+            try {
+              data = JSON.parse(responseText);
+              console.log(`[Poll Client Side] Parsed JSON data for ${pollingUrl}:`, data);
 
-            if (data.status === 'completed') {
-              updateProgress(100, `${type === 'training' ? 'Training' : 'Categorization'} job ${predictionId} completed.`);
-              onSuccess(data.data || (type === 'categorizing' ? [] : undefined)); // Pass data for categorization
-              return;
-            } else if (data.status === 'failed') {
-              console.error(`[Poll] ${type} job ${predictionId} failed:`, data.message);
-              onError(data.message || `${type === 'training' ? 'Training' : 'Categorization'} job failed.`);
-              return;
-            } else if (data.status === 'pending') {
-              // Calculate progress: make it somewhat representative of polls, but don't promise 100% until 'completed'
-              const simulatedProgress = Math.min(95, 5 + Math.floor((pollCount / (maxPolls / 1.5)) * 90)); // Gradual progress
-              updateProgress(simulatedProgress, `${type === 'training' ? 'Training' : 'Categorization'} job ${predictionId} is still pending (poll ${pollCount})...`);
-            } else {
-              console.warn(`[Poll] Unknown status for ${predictionId}: ${data.status}`);
-              // Treat unknown status like pending for a few attempts
-              if (pollCount > 5) {
-                throw new Error(`Unknown status '${data.status}' received for job ${predictionId} after multiple polls.`);
+              if (data.status === 'completed') {
+                console.log(`[Poll Client Side] Job completed. Data:`, data);
+                showToast('Training completed successfully!', 'success');
+                
+                if (onSuccess) {
+                  await onSuccess(data);
+                }
+                return;
+              } else if (data.status === 'failed') {
+                const errorMessage = data.error || 'Job failed';
+                console.error(`[Poll Client Side] Job failed:`, errorMessage);
+                showToast(`Training failed: ${errorMessage}`, 'error');
+                if (onError) {
+                  onError(errorMessage);
+                }
+                return;
               }
-               updateProgress(
-                Math.min(95, 5 + Math.floor((pollCount / (maxPolls / 2)) * 90)),
-                `${type === 'training' ? 'Training' : 'Categorization'} job ${predictionId} status unknown (poll ${pollCount})...`
-              );
+            } catch (parseError) {
+              const errorMessage = parseError instanceof Error ? parseError.message : 'Failed to parse response';
+              console.error(`[Poll Client Side] Failed to parse JSON response:`, errorMessage);
+              throw new Error(errorMessage);
             }
           } catch (error) {
             console.error(`[Poll] Error polling for ${predictionId} (attempt ${pollCount}):`, error);
@@ -249,96 +260,176 @@ export function useTraining({
       tx.originalData?.status === 'cleared' && 
       tx.originalData?.category_id
     );
-     
-     if (transactionsToTrain.length < 10) {
-      showToast(`Need at least 10 selected 'cleared' transactions with categories for training. Found ${transactionsToTrain.length} eligible.`, 'error');
+
+    if (transactionsToTrain.length === 0) {
+      showToast("No suitable transactions selected for training. Ensure they are cleared and have a category.", 'info');
       return;
     }
 
-     const trainingPayloadItems = transactionsToTrain.map(tx => ({
-       description: tx.description,
-       Category: tx.originalData!.category_id!.toString(), 
-       money_in: tx.is_income,
-       amount: tx.amount
-     })) as TrainingDataItem[];
-     
-    setOperationState({ inProgress: true, type: 'training', progress: { percent: 0, message: 'Submitting selected transactions for training...' }, result: { success: false, message: null, data: null } });
+    const trainingData: TrainingDataItem[] = transactionsToTrain.map(tx => ({
+      description: tx.originalData!.payee,
+      Category: categories.find(c => c.id === tx.originalData!.category_id)?.name || 'Unknown',
+      money_in: tx.originalData!.amount > 0,
+      amount: tx.originalData!.amount
+    }));
 
-     try {
+    setOperationState({
+      inProgress: true,
+      type: 'training',
+      progress: { percent: 0, message: 'Submitting training data...' },
+      result: { success: false, message: null, data: null }
+    });
+
+    try {
       const response = await fetch('/api/classify/train', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions: trainingPayloadItems }),
+        body: JSON.stringify({ training_data: trainingData }),
       });
 
-      if (response.status === 403) {
-        const errorData = await response.json().catch(() => ({ error: 'Subscription check failed' }));
-        throw new Error(errorData.error || 'Subscription inactive or trial expired. Cannot start training.');
-      }
+      if (response.status === 200) { 
+        const result = await response.json();
+        if (response.ok && result.success) { 
+          setOperationState(prev => ({
+            ...prev,
+            progress: { percent: 90, message: result.message || 'Training successful. Now tagging transactions...' },
+          }));
+          showToast(result.message || 'Training completed successfully! Now tagging...', 'success');
+          
+          const successfullyTrainedTransactions = transactionsToTrain;
+          let finalMessage = result.message || 'Training successful.';
+          let overallSuccess = true;
 
-      if (response.status === 200) { // Synchronous completion
-        const syncResult = await response.json();
-        if (syncResult.status === 'completed') {
-          setOperationState(prev => ({ ...prev, progress: { percent: 95, message: 'Training completed. Tagging transactions...' } }));
-          const tagResult = await tagTransactionsAsTrained(transactionsToTrain);
-          const finalMessage = `Training complete. Tagged ${tagResult.successCount} of ${transactionsToTrain.length} transactions. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed.` : ''}`;
-          showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
-          if (tagResult.successCount > 0 || tagResult.failCount === 0) {
-            queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
+          if(successfullyTrainedTransactions.length > 0) {
+            const tagResult = await tagTransactionsAsTrained(successfullyTrainedTransactions);
+            finalMessage = `Training complete. Tagged ${tagResult.successCount} of ${successfullyTrainedTransactions.length}. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed tagging.` : ''}`;
+            showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
+            if (tagResult.failCount > 0) overallSuccess = false;
+            if (tagResult.successCount > 0 || tagResult.failCount === 0) {
+              queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
+            }
+          }
+          
+          // Update last trained timestamp if it's in the response
+          if (result.lastTrainedAt) {
+            console.log('[Sync Success] Setting lastTrainedAt:', result.lastTrainedAt);
+            setLastTrainedTimestamp(result.lastTrainedAt);
+          } else {
+            console.log('[Sync Success] No lastTrainedAt in response, fetching from API');
             fetchLastTrainedTimestamp();
           }
-          setOperationState({
-            inProgress: false, 
-            type: 'training',
-            progress: { percent: 100, message: finalMessage }, 
-            result: { success: tagResult.failCount === 0, message: finalMessage, data: null }
-          });
-          setTimeout(resetOperationState, 3000);
+          
+          setOperationState(prev => ({
+            ...prev,
+            inProgress: false,
+            progress: { percent: 100, message: finalMessage },
+            result: { success: overallSuccess, message: finalMessage, data: result.data },
+          }));
+          queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactions'] }); 
         } else {
-          throw new Error(syncResult.message || 'Training API returned success status but unexpected content.');
+          // Handle cases where status is 200 but body indicates an error (e.g. result.success === false)
+          const errorMessage = result.message || 'Training failed despite a 200 OK response.';
+          console.error('Training failed (200 OK but error in body):', result);
+          setOperationState(prev => ({
+            ...prev,
+            inProgress: false,
+            result: { success: false, message: errorMessage, data: null },
+          }));
+          showToast(errorMessage, 'error');
         }
-      } else if (response.status === 202) { // Asynchronous, polling required
-         const asyncResult = await response.json();
-         const predictionId = asyncResult.prediction_id || asyncResult.predictionId;
-         if (!predictionId) throw new Error('Training API started but did not return a prediction ID.');
+      } else if (response.status === 202) { 
+        const { prediction_id, message: acceptanceMessage } = await response.json();
+        showToast(acceptanceMessage || `Training job submitted. ID: ${prediction_id}`, 'info');
+        setOperationState(prev => ({
+          ...prev,
+          type: 'training',
+          progress: { percent: 5, message: `Training job ${prediction_id} submitted. Awaiting completion...` }
+        }));
 
-         setOperationState(prev => ({ ...prev, progress: { ...prev.progress, message: `Training job ${predictionId} submitted. Polling for completion...`}}));
+        pollForCompletion(
+          prediction_id,
+          'training',
+          async (pollingData) => { // onSuccess for poll
+            let finalMessage = 'Training completed successfully via polling.'; // Default if no specific message from pollingData
+            let overallSuccess = true;
+            let detailedResultsData = null; // To hold specific results like counts
 
-         await pollForCompletion(predictionId, 'training', 
-            async () => { // onSuccess for polling
-                setOperationState(prev => ({ ...prev, type: 'training', progress: { percent: 95, message: 'Training API complete. Now tagging transactions...' } }));
-                const tagResult = await tagTransactionsAsTrained(transactionsToTrain);
-                const finalMessage = `Training complete. Tagged ${tagResult.successCount} of ${transactionsToTrain.length} transactions. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed.` : ''}`;
-                showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
-                if (tagResult.successCount > 0 || tagResult.failCount === 0) {
-                  queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
-                  fetchLastTrainedTimestamp();
-                }
-                setOperationState(prev => ({
-                  ...prev,
-                   inProgress: false, 
-                   progress: { percent: 100, message: finalMessage }, 
-                   result: { success: tagResult.failCount === 0, message: finalMessage, data: null }
-                }));
-                setTimeout(resetOperationState, 3000);
-            }, 
-            (errorMessage) => { // onError for polling
-                showToast(`Training job ${predictionId} failed during polling: ${errorMessage}`, 'error');
-                setOperationState({ inProgress: false, type: 'training', progress: { percent: 0, message: '' }, result: { success: false, message: `Polling failed: ${errorMessage}`, data: null } });
-                setTimeout(resetOperationState, 3000);
+            // If pollingData contains the full response from the status endpoint for training:
+            if (pollingData && typeof pollingData === 'object') {
+              finalMessage = pollingData.message || finalMessage;
+              detailedResultsData = pollingData;
+
+              // Handle lastTrainedAt timestamp
+              if (pollingData.lastTrainedAt) {
+                console.log('[Poll Success] Setting lastTrainedAt:', pollingData.lastTrainedAt);
+                setLastTrainedTimestamp(pollingData.lastTrainedAt);
+              } else {
+                console.log('[Poll Success] No lastTrainedAt in response, fetching from API');
+                fetchLastTrainedTimestamp();
+              }
             }
-         );
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error from training API' }));
-        throw new Error(errorData.error || `Training request failed with status: ${response.status}`);
+
+            setOperationState(prev => ({
+              ...prev,
+              progress: { percent: 90, message: 'Training completed via polling. Now tagging transactions...' },
+            }));
+            showToast('Training completed successfully via polling! Now tagging...', 'success');
+            
+            const successfullyTrainedTransactions = transactionsToTrain; 
+            if(successfullyTrainedTransactions.length > 0) {
+              const tagResult = await tagTransactionsAsTrained(successfullyTrainedTransactions);
+              // Update finalMessage based on tagging result, potentially incorporating original training message
+              const baseTrainingMessage = (pollingData && pollingData.message) ? pollingData.message : 'Training (polled) complete.';
+              finalMessage = `${baseTrainingMessage} Tagged ${tagResult.successCount} of ${successfullyTrainedTransactions.length}. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed tagging.` : ''}`;
+              showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
+              if (tagResult.failCount > 0) overallSuccess = false;
+              if (tagResult.successCount > 0 || tagResult.failCount === 0) {
+                queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
+              }
+            }
+            
+            console.log('[Poll Success - Training]', { pollingData, finalMessage, overallSuccess, detailedResultsData }); // DEBUG LOG
+
+            setOperationState(prev => ({
+              ...prev,
+              inProgress: false,
+              progress: { percent: 100, message: finalMessage },
+              result: { success: overallSuccess, message: finalMessage, data: detailedResultsData }, // Store potentially richer data
+            }));
+            fetchLastTrainedTimestamp();
+            queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactions'] });
+          },
+          (errorMessage) => { // onError for poll
+            setOperationState(prev => ({
+              ...prev,
+              inProgress: false,
+              result: { success: false, message: errorMessage, data: null },
+            }));
+            showToast(errorMessage, 'error');
+          }
+        );
+      } else { 
+        const errorData = await response.json().catch(() => ({ message: `Training request failed with status ${response.status}.` }));
+        const message = errorData.message || errorData.error || `Training request failed: ${response.statusText}`;
+        console.error('Training request failed:', message);
+        setOperationState(prev => ({
+            ...prev,
+            inProgress: false,
+            result: { success: false, message: message, data: null },
+          }));
+        showToast(message, 'error');
       }
     } catch (error) {
-         const message = error instanceof Error ? error.message : 'Failed to start training for selected transactions.';
-         showToast(message, 'error');
-        setOperationState({ inProgress: false, type: 'training', progress: { percent: 0, message: '' }, result: { success: false, message: message, data: null } });
-        setTimeout(resetOperationState, 3000);
-     }
-  }, [selectedIds, transactions, showToast, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp, resetOperationState, queryClient]);
+      console.error('Error during training submission or initial response handling:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during training.';
+      setOperationState(prev => ({
+        ...prev,
+        inProgress: false,
+        result: { success: false, message: errorMessage, data: null },
+      }));
+      showToast(errorMessage, 'error');
+    }
+  }, [transactions, categories, selectedIds, showToast, queryClient, pollForCompletion, fetchLastTrainedTimestamp, tagTransactionsAsTrained]);
 
   const trainAllReviewed = useCallback(async () => {
      setOperationState({ inProgress: true, type: 'training', progress: { percent: 0, message: 'Fetching all reviewed (cleared) transactions for training...' }, result: { success: false, message: null, data: null } });
@@ -404,22 +495,30 @@ export function useTraining({
          if (response.status === 200) { // Synchronous completion
             const syncResult = await response.json();
             if (syncResult.status === 'completed') {
-                setOperationState(prev => ({ ...prev, progress: { percent: 95, message: 'Training (all reviewed) completed. Tagging transactions...' } }));
-                const tagResult = await tagTransactionsAsTrained(allEligibleTransactions);
-                const finalMessage = `Training (all reviewed) complete. Tagged ${tagResult.successCount} of ${allEligibleTransactions.length}. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed.` : ''}`;
-                showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
-                if (tagResult.successCount > 0 || tagResult.failCount === 0) {
-                  queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
-                  fetchLastTrainedTimestamp();
+                setOperationState(prev => ({ ...prev, progress: { percent: 95, message: 'Training (all reviewed) completed. Now tagging transactions...' } }));
+                
+                let finalMessage = syncResult.message || 'Training (all reviewed) successful.';
+                let overallSuccess = true;
+
+                if(allEligibleTransactions.length > 0) {
+                  const tagResult = await tagTransactionsAsTrained(allEligibleTransactions);
+                  finalMessage = `Training (all reviewed) complete. Tagged ${tagResult.successCount} of ${allEligibleTransactions.length}. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed tagging.` : ''}`;
+                  showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
+                  if (tagResult.failCount > 0) overallSuccess = false;
+                  if (tagResult.successCount > 0 || tagResult.failCount === 0) {
+                    queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
+                  }
                 }
+
                 setOperationState(prev => ({ 
                     ...prev, 
                     inProgress: false,
                     type: 'training',
                     progress: { percent: 100, message: finalMessage }, 
-                    result: { success: tagResult.failCount === 0, message: finalMessage, data: null }
+                    result: { success: overallSuccess, message: finalMessage, data: syncResult.data === undefined ? null : syncResult.data }
                 }));
-                setTimeout(resetOperationState, 3000);
+                fetchLastTrainedTimestamp();
+                queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactions'] }); 
             } else {
                 throw new Error(syncResult.message || 'Training API (all reviewed) returned success status but unexpected content.');
             }
@@ -431,27 +530,50 @@ export function useTraining({
            setOperationState(prev => ({ ...prev, progress: { ...prev.progress, message: `Training job ${predictionId} (all reviewed) submitted. Polling...`}}));
 
            await pollForCompletion(predictionId, 'training', 
-               async () => { // onSuccess for polling
-                   setOperationState(prev => ({ ...prev, type:'training', progress: { percent: 95, message: 'Training API (all reviewed) complete. Tagging transactions...' } }));
-                   const tagResult = await tagTransactionsAsTrained(allEligibleTransactions);
-                   const finalMessage = `Training (all reviewed) complete. Tagged ${tagResult.successCount} of ${allEligibleTransactions.length}. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed.` : ''}`;
-                   showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
-                   if (tagResult.successCount > 0 || tagResult.failCount === 0) {
-                     queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
-                     fetchLastTrainedTimestamp();
+               async (pollingData) => { // onSuccess for polling
+                   let finalMessage = 'Training (all reviewed) via polling successful.';
+                   let overallSuccess = true;
+                   let detailedResultsData = null;
+
+                   if (pollingData && typeof pollingData === 'object') {
+                     finalMessage = pollingData.message || finalMessage;
+                     detailedResultsData = pollingData; 
                    }
+
+                   // It's important that allEligibleTransactions is correctly captured in this closure
+                   console.log(`[Poll Success - Train All Reviewed] About to tag ${allEligibleTransactions?.length || 0} transactions.`);
+
+                   setOperationState(prev => ({ ...prev, type:'training', progress: { percent: 95, message: 'Training API (all reviewed) complete. Now tagging transactions...' } }));
+                   
+                   if(allEligibleTransactions && allEligibleTransactions.length > 0) {
+                     const tagResult = await tagTransactionsAsTrained(allEligibleTransactions);
+                     const baseTrainingMessage = (pollingData && pollingData.message) ? pollingData.message : 'Training (all reviewed, polled) complete.';
+                     finalMessage = `${baseTrainingMessage} Tagged ${tagResult.successCount} of ${allEligibleTransactions.length}. ${tagResult.failCount > 0 ? `${tagResult.failCount} failed tagging.` : ''}`;
+                     showToast(finalMessage, tagResult.failCount > 0 ? 'error' : 'success');
+                     if (tagResult.failCount > 0) overallSuccess = false;
+                     if (tagResult.successCount > 0 || tagResult.failCount === 0) {
+                       queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactionCounts'] });
+                     }
+                   } else {
+                     console.warn('[Poll Success - Train All Reviewed] No eligible transactions found for tagging at polling completion.');
+                   }
+                   
+                   console.log('[Poll Success - Train All Reviewed] Data:', { pollingData, finalMessage, overallSuccess, detailedResultsData });
+
                    setOperationState(prev => ({ 
                       ...prev, 
                       inProgress: false,
                       progress: { percent: 100, message: finalMessage }, 
-                      result: { success: tagResult.failCount === 0, message: finalMessage, data: null }
+                      result: { success: overallSuccess, message: finalMessage, data: detailedResultsData }
                    }));
-                   setTimeout(resetOperationState, 3000);
+                   fetchLastTrainedTimestamp();
+                   queryClient.invalidateQueries({ queryKey: ['lunchMoneyTransactions'] });
                }, 
                (errorMessage) => { // onError for polling
+                   console.error('[Poll Error - Train All Reviewed] Error:', errorMessage);
                    showToast(`Training job ${predictionId} (all reviewed) failed: ${errorMessage}`, 'error');
                    setOperationState({ inProgress: false, type: 'training', progress: { percent: 0, message: '' }, result: { success: false, message: `Polling failed: ${errorMessage}`, data: null } });
-                   setTimeout(resetOperationState, 3000);
+                   // setTimeout(resetOperationState, 3000); // Consider if this auto-reset is still desired
                }
             );
          } else { 
@@ -467,7 +589,7 @@ export function useTraining({
      }
   }, [showToast, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp, resetOperationState, queryClient, transactions /* Added transactions here as a fallback if API fetch fails, though primary source is new fetch */]);
 
-  const categorizeSelected = useCallback(async () => {
+  const categorizeSelected = useCallback(async (useEnhancedLogic: boolean = false) => {
     if (selectedIds.length === 0) {
       showToast("Please select transactions to categorize.", 'info');
       return;
@@ -511,9 +633,10 @@ export function useTraining({
         body: JSON.stringify({ transactions: categorizationData }),
       });
 
+      // Handle specific error codes first
       if (response.status === 403) {
         const errorData = await response.json().catch(() => ({ error: 'Subscription check failed or access denied.' }));
-        const message = errorData.error || 'Categorization failed: Subscription inactive or trial expired.';
+        const message = errorData.message || errorData.error || 'Categorization failed: Subscription inactive or trial expired.';
         setOperationState(prev => ({ 
           ...prev, 
           inProgress: false, 
@@ -525,9 +648,9 @@ export function useTraining({
         return;
       }
 
-      if (response.status === 409) { // Specific handling for 409 Conflict
-        const errorData = await response.json().catch(() => ({ error: 'An error occurred processing the server response. Please try again.' }));
-        const message = errorData.error || 'Embedding dimension mismatch. Please re-train your model to continue classifying transactions.';
+      if (response.status === 409) { 
+        const errorData = await response.json().catch(() => ({ error: 'An error occurred processing the server response.' }));
+        const message = errorData.message || errorData.error || 'Embedding dimension mismatch. Please re-train your model.';
         setOperationState(prev => ({
           ...prev,
           inProgress: false,
@@ -536,41 +659,57 @@ export function useTraining({
           progress: { percent: 0, message: '' }
         }));
         showToast(message, 'error');
-        return; // Stop further processing for 409
+        return; 
       }
 
-      if (!response.ok && response.status !== 202) { // 202 is for async, other non-ok are errors
-        const errorData = await response.json().catch(() => ({ error: `Request failed with status ${response.status}` }));
-        throw new Error(errorData.error || `Categorization request failed with status ${response.status}`);
-      }
-
-      const responseData = await response.json();
-
-      if (response.status === 200 && responseData.status === 'completed') { // Synchronous success
-        setOperationState(prev => ({
-          ...prev,
-          inProgress: false, 
-          type: 'none',
-          result: { success: true, message: 'Categorization completed synchronously.', data: responseData.results || [] },
-          progress: { percent: 100, message: 'Completed!' }
-        }));
-        if (onCategorizationComplete && responseData.results) {
-          onCategorizationComplete(responseData.results, transactionsToCategorizeIds);
-        } else if (onCategorizationComplete) {
-          onCategorizationComplete([], transactionsToCategorizeIds); // Pass empty results if none
+      // Process successful responses (200 or 202)
+      if (response.status === 200) {
+        const responseData = await response.json();
+        // Expecting responseData to be the direct result for synchronous completion
+        // e.g. { success: true, message: "...", results: [...] } or similar to backend structure
+        if (response.ok && responseData.success) { // Check for overall success flag from backend
+            setOperationState(prev => ({
+              ...prev,
+              inProgress: false, 
+              type: 'none',
+              result: { success: true, message: responseData.message || 'Categorization completed synchronously.', data: responseData.results || [] },
+              progress: { percent: 100, message: 'Completed!' }
+            }));
+            if (onCategorizationComplete) {
+              onCategorizationComplete(responseData.results || [], transactionsToCategorizeIds);
+            }
+            showToast(responseData.message || 'Categorization completed!', 'success');
+        } else {
+            // Handle 200 OK but error in body (e.g., responseData.success === false)
+            const errorMessage = responseData.message || 'Categorization failed despite a 200 OK response.';
+            console.error('Categorization failed (200 OK but error in body):', responseData);
+            setOperationState(prev => ({
+                ...prev,
+                inProgress: false,
+                type: 'none',
+                result: { success: false, message: errorMessage, data: null },
+                progress: { percent: 0, message: '' }
+            }));
+            showToast(errorMessage, 'error');
         }
-        showToast('Categorization completed!', 'success');
-        // Clear selection? This might be handled by the calling component.
 
-      } else if (response.status === 202 && responseData.prediction_id) { // Asynchronous started
+      } else if (response.status === 202) { 
+        const responseData = await response.json();
+        const predictionId = responseData.prediction_id;
+        const acceptanceMessage = responseData.message;
+
+        if (!predictionId) {
+            throw new Error('Categorization job started but did not return a prediction ID.');
+        }
+
+        showToast(acceptanceMessage || `Categorization job submitted. ID: ${predictionId}`, 'info');
         setOperationState(prev => ({ 
           ...prev, 
-          // inProgress remains true
-          progress: { percent: 10, message: `Categorization job ${responseData.prediction_id} started. Waiting for results...` }
+          progress: { percent: 10, message: `Categorization job ${predictionId} started. Waiting for results...` }
         }));
 
         await pollForCompletion(
-          responseData.prediction_id,
+          predictionId,
           'categorizing',
           (pollingResults) => { // onSuccess from poll
             setOperationState(prev => ({ 
@@ -596,8 +735,10 @@ export function useTraining({
             showToast(pollingError, 'error');
           }
         );
-      } else { // Unexpected response
-        throw new Error(responseData.message || responseData.error || 'Unexpected response from categorization server.');
+      } else { // Other non-200/202 errors
+        const errorData = await response.json().catch(() => ({ message: `Categorization request failed with status ${response.status}.` }));
+        const message = errorData.message || errorData.error || `Categorization request failed: ${response.statusText}`;
+        throw new Error(message);
       }
 
     } catch (error) {

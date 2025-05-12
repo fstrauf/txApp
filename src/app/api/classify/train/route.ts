@@ -76,12 +76,13 @@ export async function POST(request: NextRequest) {
 
     if (!externalResponse.ok) {
        console.error(`External training service error for user ${userId}: Status ${externalResponse.status}`, responseData);
-       // Ensure the response status from the external service is forwarded
        return NextResponse.json(responseData, { status: externalResponse.status });
     }
 
-    console.log(`External training service success for user ${userId}`);
-    return NextResponse.json(responseData);
+    // Log the actual status received from the Python backend
+    console.log(`External training service response for user ${userId} - Status: ${externalResponse.status}, Body:`, responseData);
+    // Forward the response data AND THE ORIGINAL STATUS CODE from the Python backend
+    return NextResponse.json(responseData, { status: externalResponse.status });
 
   } catch (error) {
     console.error(`Error in /api/classify/train proxy for user ${userId}:`, error);
@@ -91,4 +92,4 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ error: 'Internal Server Error during training proxy' }, { status: 500 });
   }
-} 
+}
