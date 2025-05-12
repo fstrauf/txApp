@@ -9,6 +9,7 @@ import { Tab, TabGroup, TabList, TabPanels, TabPanel } from '@headlessui/react';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import LunchMoneySettingsClientPage from './settings/LunchMoneySettingsClientPage';
 import AnalyzeTabContent from './components/AnalyzeTabContent';
+import { SelectionProvider } from './components/SelectionContext';
 
 // Minimal interface for the key check
 interface UserProfileCheck {
@@ -174,7 +175,9 @@ export default function LunchMoneyPage() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <LunchMoneyDashboardContent />
+      <SelectionProvider>
+        <LunchMoneyDashboardContent />
+      </SelectionProvider>
     </QueryClientProvider>
   );
 } 

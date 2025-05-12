@@ -43,8 +43,8 @@ type TransactionRowProps = {
 const TransactionRow = React.memo((
   { 
     transaction, 
-    isSelected, 
-    handleSelectTransaction, 
+    isSelected,
+    handleSelectTransaction,
     pendingUpdate, 
     categories, 
     handleCategoryChange, 
@@ -70,7 +70,7 @@ const TransactionRow = React.memo((
       <td className="px-4 py-3 align-top">
         <input
           type="checkbox"
-          checked={isSelected} // Use the isSelected prop
+          checked={isSelected}
           onChange={() => handleSelectTransaction(transaction.lunchMoneyId)}
           className="h-4 w-4 accent-primary border-gray-300 rounded"
         />

@@ -20,12 +20,12 @@ import { Switch } from '@headlessui/react';
 
 // Import Hooks
 import { useToast } from './hooks';
-import { useSelection } from './hooks';
 import { useTransactionData } from './hooks'; // Import the main data hook
 import { useCategorization } from './hooks'; // Added useCategorization
 import { useTraining } from './hooks'; // Added useTraining
 import { useManualTransactionActions } from './hooks'; // Added useManualTransactionActions
 import { useAdminOperations } from './hooks'; // Added useAdminOperations
+import { SelectionProvider, useSelectionContext } from './SelectionContext'; // <-- ADD THIS
 // Import other hooks as needed later (useTraining, useCategorization, etc.)
 
 const EXPENSE_SORTED_TRAINED_TAG = 'expense-sorted-trained';
@@ -40,12 +40,7 @@ export default function TransactionList() {
     showInfo // Added showInfo for general messages
   } = useToast();
 
-  const { 
-    selectedIds,
-    toggleSelection, 
-    selectAll: selectAllTransactions, 
-    clearSelection 
-  } = useSelection();
+  const { selectedIds } = useSelectionContext();
 
   const { 
     transactions: hookTransactions,
@@ -82,7 +77,7 @@ export default function TransactionList() {
     setFilterNoPayee,
     handleTransferOriginalNames,
     isTransferringNames,
-  } = useAdminOperations({ allTransactions: hookTransactions, selectedIds });
+  } = useAdminOperations({ allTransactions: hookTransactions, selectedIds: [] });
 
   // === Calculations ===
   // Calculate transaction stats using hookTransactions
@@ -108,6 +103,12 @@ export default function TransactionList() {
   // const updateTransactionsWithPredictions = useCallback((results: any[]) => { /* ... */ }, [selectedIds, hookCategories, showSuccess, setPendingCategoryUpdates]);
   // Hook version will be passed to useTraining
   const handleAIUpdateWithPredictionsForTraining = useCallback((results: any[], processedTransactionIds: string[]) => {
+    console.log('[handleAIUpdateWithPredictionsForTraining]', { 
+      results, 
+      processedTransactionIds,
+      resultsLength: results?.length || 0,
+      idsLength: processedTransactionIds?.length || 0
+    });
     // Pass: API results, the IDs for these results, all transactions, all categories, and the success callback.
     // `selectedIds` from the outer scope is not directly needed here anymore, as `processedTransactionIds` is more specific.
     hookUpdateTransactionsWithPredictions(results, processedTransactionIds, hookTransactions, hookCategories, showSuccess);
@@ -123,7 +124,7 @@ export default function TransactionList() {
   } = useTraining({
     transactions: hookTransactions,
     categories: hookCategories,
-    selectedIds,
+    selectedIds: Array.from(selectedIds),
     showToast: showSuccess,
     updateTransactions,
     onCategorizationComplete: handleAIUpdateWithPredictionsForTraining,
@@ -238,35 +239,32 @@ export default function TransactionList() {
                           inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
           />
         </Switch>
-                  <Switch.Label className="ml-2 text-sm text-gray-700">Admin Mode</Switch.Label>
-              </div>
-          </Switch.Group>
+                    <Switch.Label className="ml-2 text-sm text-gray-700">Admin Mode</Switch.Label>
+                </div>
+            </Switch.Group>
 
-          {/* Button to transfer original names, visible only in Admin Mode */}
-          {isAdminMode && (
-            <button
-              onClick={() => {
-                console.log('[TransactionList] Admin "Transfer Names" BUTTON CLICKED! Now calling handleTransferOriginalNames...');
-                // First, verify this log appears in the console when the button is clicked.
-                // If it does, then uncomment the line below to call the actual function.
-                handleTransferOriginalNames(); 
-              }}
-              disabled={isTransferringNames || selectedIds.length === 0}
-              className="ml-4 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {isTransferringNames ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Transferring...
-                </span>
-              ) : (
-                'Transfer Original Names to Description'
-              )}
-            </button>
-          )}
+            {/* Button to transfer original names, visible only in Admin Mode */}
+            {isAdminMode && (
+              <button
+                onClick={() => {
+                  console.log('[TransactionList] Admin "Transfer Names" BUTTON CLICKED! Now calling handleTransferOriginalNames...');
+                  handleTransferOriginalNames(); 
+                }}
+                className="ml-4 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {isTransferringNames ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Transferring...
+                  </span>
+                ) : (
+                  'Transfer Original Names to Description'
+                )}
+              </button>
+            )}
       </div>
 
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-row items-stretch gap-6">
@@ -297,7 +295,6 @@ export default function TransactionList() {
             handleTrainSelected={handleTrainSelected}
             handleCategorizeSelected={handleCategorizeSelected}
             handleTrainAllReviewed={handleTrainAllReviewed}
-            selectedTransactionsCount={selectedIds.length} 
             loading={overallIsLoading}
             operationInProgress={trainingOperationState.inProgress || isTransferringNames} 
             handleCancelCategorization={handleCancelAllCategorizations} 
@@ -308,9 +305,6 @@ export default function TransactionList() {
 
       <TransactionTable
         filteredTransactions={displayedTransactions}
-        selectedTransactions={selectedIds} 
-        handleSelectTransaction={toggleSelection} 
-        handleSelectAll={() => selectAllTransactions(displayedTransactions.map(tx => ({id: tx.lunchMoneyId || ''})))} 
         pendingCategoryUpdates={categorizationState.pendingUpdates}
         categories={hookCategories}
         handleCategoryChange={handleManualCategoryChange}
@@ -322,7 +316,7 @@ export default function TransactionList() {
         handleNoteChange={handleNoteChange}
         isAdminMode={isAdminMode}
         updatingCategory={categorizationState.applying.individual}
-        successfulUpdates={{}}
+        successfulUpdates={categorizationState.successfulUpdates}
         updatingNoteId={null}
       />
     </div>

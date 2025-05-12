@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { format } from 'date-fns';
 import CategorySelect from './category-select';
 import { Transaction, Category } from './types';
 import NoteInput from './note-input'; // Import the new component
 import TransactionRow from './TransactionRow'; // Import the new Row component
+import { useSelectionContext } from './SelectionContext';
 // import { PendingUpdateInfo } from '../hooks/use-categorization'; // Import PendingUpdateInfo
 
 // Define PendingUpdateInfo directly if import is problematic
@@ -19,43 +20,65 @@ interface PendingUpdateInfo {
 
 type TransactionTableProps = {
   filteredTransactions: Transaction[];
-  selectedTransactions: string[];
-  handleSelectTransaction: (txId: string) => void;
-  handleSelectAll: () => void;
   pendingCategoryUpdates: Record<string, PendingUpdateInfo>;
   categories: (string | Category)[];
   handleCategoryChange: (transactionId: string, categoryValue: string) => void;
-  updatingCategory: string | null;
-  successfulUpdates: Record<string, boolean>;
   applyPredictedCategory: (transactionId: string) => void;
   applyingIndividual: string | null;
   cancelSinglePrediction: (transactionId: string) => void;
   getCategoryNameById: (categoryId: string | null) => string | null;
   loading: boolean;
   handleNoteChange: (transactionId: string, newNote: string) => Promise<void>; // Add prop for handling note changes
-  updatingNoteId: string | null; // Add prop for loading state
   isAdminMode: boolean; // Add Admin Mode prop
+  updatingCategory: string | null;
+  successfulUpdates: Record<string, boolean>;
+  updatingNoteId: string | null; // Add prop for loading state
 };
 
 const TransactionTable = React.memo(({
   filteredTransactions,
-  selectedTransactions,
-  handleSelectTransaction,
-  handleSelectAll,
   pendingCategoryUpdates,
   categories,
   handleCategoryChange,
-  updatingCategory,
-  successfulUpdates,
   applyPredictedCategory,
   applyingIndividual,
   cancelSinglePrediction,
   getCategoryNameById,
   loading,
-  handleNoteChange, // Destructure new prop
-  updatingNoteId,  // Destructure new prop
-  isAdminMode, // Destructure Admin Mode prop
+  handleNoteChange,
+  isAdminMode,
+  updatingCategory,
+  successfulUpdates,
+  updatingNoteId,
 }: TransactionTableProps) => {
+  const { toggleSelection, selectedIds, clearSelection } = useSelectionContext();
+
+  // Select all logic - use selectedIds.has(id) instead of the hook
+  const allIds = filteredTransactions.map(tx => tx.lunchMoneyId);
+  const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
+  const someSelected = allIds.some(id => selectedIds.has(id));
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      clearSelection();
+    } else {
+      // Select only those not already selected from the current filtered view
+      const idsToSelect = allIds.filter(id => !selectedIds.has(id));
+      idsToSelect.forEach(id => toggleSelection(id));
+      // If some were selected but not all, this logic might need refinement
+      // depending on desired behavior (e.g. toggle all filtered to selected vs add filtered to selection)
+      // For simplicity, current: if not all selected, select all *visible* unselected.
+    }
+  };
+
+  // Ref and effect for indeterminate state
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someSelected && !allSelected;
+    }
+  }, [someSelected, allSelected]);
+
   // Determine if the Actions column should be shown based on pending updates
   const showActionsColumn = Object.keys(pendingCategoryUpdates).length > 0;
 
@@ -75,11 +98,9 @@ const TransactionTable = React.memo(({
             <th className="px-4 py-3 text-left">
               <label className="inline-flex items-center">
                 <input
+                  ref={selectAllRef}
                   type="checkbox"
-                  checked={
-                    filteredTransactions.length > 0 && 
-                    filteredTransactions.every(tx => selectedTransactions.includes(tx.lunchMoneyId))
-                  }
+                  checked={allSelected}
                   onChange={handleSelectAll}
                   className="h-4 w-4 accent-primary border-gray-300 rounded"
                 />
@@ -109,15 +130,14 @@ const TransactionTable = React.memo(({
             </tr>
           ) : (
             filteredTransactions.map((transaction) => {
-              const isSelected = selectedTransactions.includes(transaction.lunchMoneyId);
               const pendingUpdate = pendingCategoryUpdates[transaction.lunchMoneyId];
               
               return (
                 <TransactionRow
                   key={transaction.lunchMoneyId}
                   transaction={transaction}
-                  isSelected={isSelected}
-                  handleSelectTransaction={handleSelectTransaction}
+                  isSelected={selectedIds.has(transaction.lunchMoneyId)}
+                  handleSelectTransaction={toggleSelection}
                   pendingUpdate={pendingUpdate}
                   categories={categories}
                   handleCategoryChange={handleCategoryChange}
@@ -130,7 +150,7 @@ const TransactionTable = React.memo(({
                   handleNoteChange={handleNoteChange}
                   updatingNoteId={updatingNoteId}
                   showActionsColumn={showActionsColumn}
-                  isAdminMode={isAdminMode} // Pass Admin Mode down to Row
+                  isAdminMode={isAdminMode}
                 />
               );
             })
