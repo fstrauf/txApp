@@ -13,7 +13,6 @@ export async function GET(request: NextRequest) {
   }
 
   const userId = session.user.id;
-  console.log(`Fetching last trained timestamp for user ${userId}`);
   try {
     // Find the specific training embedding record for the user
     // We match both userId and the embedding id itself to the userId
