@@ -620,6 +620,12 @@ export function useTraining({
       amount: typeof tx.amount === 'number' ? tx.amount : parseFloat(String(tx.amount || '0')),
     }));
 
+    // Prepare user_categories for the backend
+    const user_categories_for_api = categories?.map(cat => ({
+      id: String(cat.id), // Ensure id is a string
+      name: cat.name
+    })) || [];
+
     setOperationState({
       inProgress: true,
       type: 'categorizing',
@@ -630,10 +636,18 @@ export function useTraining({
     try {
       setOperationState(prev => ({ ...prev, progress: { percent: 5, message: 'Sending categorization request...' }}));
       
+      const requestBody: { transactions: CategorizationDataItem[], user_categories?: {id: string, name: string}[]} = { 
+        transactions: categorizationData 
+      };
+
+      if (user_categories_for_api.length > 0) {
+        requestBody.user_categories = user_categories_for_api;
+      }
+      
       const response = await fetch('/api/classify/classify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions: categorizationData }),
+        body: JSON.stringify(requestBody),
       });
 
       // Handle specific error codes first
@@ -768,7 +782,7 @@ export function useTraining({
       }));
       showToast(errorMessage, 'error');
     }
-  }, [selectedIds, transactions, showToast, onCategorizationComplete, pollForCompletion]);
+  }, [selectedIds, transactions, categories, showToast, onCategorizationComplete, pollForCompletion]);
 
   return {
     operationState,
