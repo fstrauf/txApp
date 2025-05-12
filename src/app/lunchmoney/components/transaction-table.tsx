@@ -4,7 +4,7 @@ import CategorySelect from './category-select';
 import { Transaction, Category } from './types';
 import NoteInput from './note-input'; // Import the new component
 import TransactionRow from './TransactionRow'; // Import the new Row component
-import { useSelectionContext } from './SelectionContext';
+import { useSelectionContext, useIsTransactionSelected } from './SelectionContext';
 // import { PendingUpdateInfo } from '../hooks/use-categorization'; // Import PendingUpdateInfo
 
 // Define PendingUpdateInfo directly if import is problematic
@@ -51,19 +51,19 @@ const TransactionTable = React.memo(({
   successfulUpdates,
   updatingNoteId,
 }: TransactionTableProps) => {
-  const { isSelected, toggleSelection, selectedIds, clearSelection } = useSelectionContext();
+  const { toggleSelection, selectedIds, clearSelection } = useSelectionContext();
 
   // Select all logic
   const allIds = filteredTransactions.map(tx => tx.lunchMoneyId);
-  const allSelected = allIds.every(id => isSelected(id));
-  const someSelected = allIds.some(id => isSelected(id));
+  const allSelected = allIds.every(id => useIsTransactionSelected(id));
+  const someSelected = allIds.some(id => useIsTransactionSelected(id));
 
   const handleSelectAll = () => {
     if (allSelected) {
       clearSelection();
     } else {
       allIds.forEach(id => {
-        if (!isSelected(id)) toggleSelection(id);
+        if (!useIsTransactionSelected(id)) toggleSelection(id);
       });
     }
   };
@@ -133,7 +133,6 @@ const TransactionTable = React.memo(({
                 <TransactionRow
                   key={transaction.lunchMoneyId}
                   transaction={transaction}
-                  isSelected={isSelected(transaction.lunchMoneyId)}
                   handleSelectTransaction={toggleSelection}
                   pendingUpdate={pendingUpdate}
                   categories={categories}
@@ -147,7 +146,7 @@ const TransactionTable = React.memo(({
                   handleNoteChange={handleNoteChange}
                   updatingNoteId={updatingNoteId}
                   showActionsColumn={showActionsColumn}
-                  isAdminMode={isAdminMode} // Pass Admin Mode down to Row
+                  isAdminMode={isAdminMode}
                 />
               );
             })

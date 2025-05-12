@@ -24,6 +24,7 @@ export interface CategorizationState {
     applied: number;
     failed: number;
   };
+  successfulUpdates: Record<string, boolean>;
 }
 
 export function useCategorization() {
@@ -39,7 +40,8 @@ export function useCategorization() {
       total: 0,
       applied: 0,
       failed: 0
-    }
+    },
+    successfulUpdates: {}
   });
 
   const updateTransactionsWithPredictions = (
@@ -164,7 +166,8 @@ export function useCategorization() {
         total: 0,
         applied: 0,
         failed: 0
-      }
+      },
+      successfulUpdates: {}
     });
   };
 
@@ -217,7 +220,11 @@ export function useCategorization() {
           ...prev,
           pendingUpdates: newPendingUpdates,
           applying: { ...prev.applying, individual: null },
-          stats: { ...prev.stats, applied: prev.stats.applied + 1, total: prev.stats.total -1 }
+          stats: { ...prev.stats, applied: prev.stats.applied + 1, total: prev.stats.total -1 },
+          successfulUpdates: {
+            ...prev.successfulUpdates,
+            [transactionId]: true
+          }
         };
       });
       
@@ -327,6 +334,13 @@ export function useCategorization() {
         applied: prev.stats.applied + successCount,
         failed: prev.stats.failed + failCount,
         total: Object.keys(newPendingUpdates).length
+      },
+      successfulUpdates: {
+        ...prev.successfulUpdates,
+        ...appliedTxIdsForLocalUpdate.reduce((acc, item) => {
+          acc[item.txId] = true;
+          return acc;
+        }, {} as Record<string, boolean>)
       }
     }));
     

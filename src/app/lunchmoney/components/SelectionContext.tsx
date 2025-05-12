@@ -36,4 +36,9 @@ export const useSelectionContext = () => {
   const ctx = useContext(SelectionContext);
   if (!ctx) throw new Error('useSelectionContext must be used within a SelectionProvider');
   return ctx;
+};
+
+export const useIsTransactionSelected = (id: string) => {
+  const { selectedIds } = useSelectionContext();
+  return selectedIds.has(id);
 }; 

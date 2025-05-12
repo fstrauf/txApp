@@ -6,6 +6,7 @@ import CategorySelect from './category-select';
 import NoteInput from './note-input';
 import { Transaction, Category } from './types';
 import HelpTooltip from '@/components/shared/HelpTooltip';
+import { useIsTransactionSelected } from './SelectionContext';
 // import { PendingUpdateInfo } from '../hooks/use-categorization';
 
 // Define PendingUpdateInfo directly if import is problematic
@@ -43,7 +44,6 @@ type TransactionRowProps = {
 const TransactionRow = React.memo((
   { 
     transaction, 
-    isSelected, 
     handleSelectTransaction, 
     pendingUpdate, 
     categories, 
@@ -58,8 +58,9 @@ const TransactionRow = React.memo((
     updatingNoteId, 
     showActionsColumn, 
     isAdminMode 
-  }: TransactionRowProps
+  }: Omit<TransactionRowProps, 'isSelected'>
 ) => {
+  const isSelected = useIsTransactionSelected(transaction.lunchMoneyId);
   const hasPendingUpdate = !!pendingUpdate;
   const predictedCategoryIsDifferent = hasPendingUpdate && pendingUpdate && pendingUpdate.predictedCategoryId !== pendingUpdate.originalCategoryId;
 
@@ -70,7 +71,7 @@ const TransactionRow = React.memo((
       <td className="px-4 py-3 align-top">
         <input
           type="checkbox"
-          checked={isSelected} // Use the isSelected prop
+          checked={isSelected}
           onChange={() => handleSelectTransaction(transaction.lunchMoneyId)}
           className="h-4 w-4 accent-primary border-gray-300 rounded"
         />

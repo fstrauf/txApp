@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Transaction, Category } from '../types';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSelectionContext } from '../SelectionContext';
 
 export type OperationType = 'none' | 'training' | 'categorizing';
 
@@ -46,7 +47,7 @@ const EXPENSE_SORTED_TRAINED_TAG = 'expense-sorted-trained';
 export function useTraining({
   transactions, 
   categories,
-  selectedIds, 
+  selectedIds: _selectedIds, // unused, kept for API compatibility
   showToast, 
   updateTransactions, 
   onCategorizationComplete 
@@ -66,6 +67,8 @@ export function useTraining({
     }
   });
   const [lastTrainedTimestamp, setLastTrainedTimestamp] = useState<string | null>(null);
+
+  const { selectedIds } = useSelectionContext();
 
   const resetOperationState = useCallback(() => {
     setOperationState({
@@ -250,13 +253,13 @@ export function useTraining({
   }, [updateTransactions]);
 
   const trainSelected = useCallback(async () => {
-    if (selectedIds.length === 0) {
+    if (selectedIds.size === 0) {
       showToast("Please select at least one transaction.", 'info');
       return;
     }
 
     const transactionsToTrain = transactions.filter(tx =>
-      selectedIds.includes(tx.lunchMoneyId) && 
+      selectedIds.has(tx.lunchMoneyId) && 
       tx.originalData?.status === 'cleared' && 
       tx.originalData?.category_id
     );
@@ -590,7 +593,7 @@ export function useTraining({
   }, [showToast, pollForCompletion, tagTransactionsAsTrained, fetchLastTrainedTimestamp, resetOperationState, queryClient, transactions /* Added transactions here as a fallback if API fetch fails, though primary source is new fetch */]);
 
   const categorizeSelected = useCallback(async (useEnhancedLogic: boolean = false) => {
-    if (selectedIds.length === 0) {
+    if (selectedIds.size === 0) {
       showToast("Please select transactions to categorize.", 'info');
       return;
     }
@@ -599,7 +602,7 @@ export function useTraining({
     // or are not suitable for categorization (e.g., already categorized and locked).
     // For this example, we'll assume all selected are uncategorized or eligible.
     const transactionsToCategorize = transactions.filter(tx => 
-      selectedIds.includes(tx.lunchMoneyId) 
+      selectedIds.has(tx.lunchMoneyId)
       // && !tx.originalData?.category_id // Example: Only uncategorized
     );
 
@@ -665,24 +668,36 @@ export function useTraining({
       // Process successful responses (200 or 202)
       if (response.status === 200) {
         const responseData = await response.json();
-        // Expecting responseData to be the direct result for synchronous completion
-        // e.g. { success: true, message: "...", results: [...] } or similar to backend structure
-        if (response.ok && responseData.success) { // Check for overall success flag from backend
+        
+        // --- BEGIN DEBUG LOGGING ---
+        console.log('[DEBUG] Checking sync categorize response:', {
+            responseOk: response.ok,
+            status: responseData.status,
+            statusType: typeof responseData.status,
+            results: responseData.results,
+            resultsType: typeof responseData.results,
+            isResultsArray: Array.isArray(responseData.results),
+            conditionResult: (response.ok && responseData.status === 'completed' && responseData.results) 
+        });
+        // --- END DEBUG LOGGING ---
+
+        // Check for status:"completed" and presence of results for synchronous success
+        if (response.ok && responseData.status === 'completed' && responseData.results) { 
             setOperationState(prev => ({
               ...prev,
               inProgress: false, 
               type: 'none',
-              result: { success: true, message: responseData.message || 'Categorization completed synchronously.', data: responseData.results || [] },
+              result: { success: true, message: responseData.message || 'Categorization completed synchronously.', data: responseData.results },
               progress: { percent: 100, message: 'Completed!' }
             }));
             if (onCategorizationComplete) {
-              onCategorizationComplete(responseData.results || [], transactionsToCategorizeIds);
+              onCategorizationComplete(responseData.results, transactionsToCategorizeIds);
             }
             showToast(responseData.message || 'Categorization completed!', 'success');
         } else {
-            // Handle 200 OK but error in body (e.g., responseData.success === false)
-            const errorMessage = responseData.message || 'Categorization failed despite a 200 OK response.';
-            console.error('Categorization failed (200 OK but error in body):', responseData);
+            // Handle 200 OK but unexpected body (e.g., status not 'completed', or no results)
+            const errorMessage = responseData.message || 'Categorization completed synchronously but with unexpected response format.';
+            console.error('Categorization failed (200 OK but unexpected body):', responseData);
             setOperationState(prev => ({
                 ...prev,
                 inProgress: false,
@@ -753,14 +768,7 @@ export function useTraining({
       }));
       showToast(errorMessage, 'error');
     }
-  }, [
-    selectedIds, 
-    transactions, 
-    showToast, 
-    onCategorizationComplete, 
-    pollForCompletion, 
-    // No need for `categories` or `updateTransactions` here as this hook only triggers it
-  ]);
+  }, [selectedIds, transactions, showToast, onCategorizationComplete, pollForCompletion]);
 
   return {
     operationState,

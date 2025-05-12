@@ -25,7 +25,7 @@ import { useCategorization } from './hooks'; // Added useCategorization
 import { useTraining } from './hooks'; // Added useTraining
 import { useManualTransactionActions } from './hooks'; // Added useManualTransactionActions
 import { useAdminOperations } from './hooks'; // Added useAdminOperations
-import { SelectionProvider } from './SelectionContext'; // <-- ADD THIS
+import { SelectionProvider, useSelectionContext } from './SelectionContext'; // <-- ADD THIS
 // Import other hooks as needed later (useTraining, useCategorization, etc.)
 
 const EXPENSE_SORTED_TRAINED_TAG = 'expense-sorted-trained';
@@ -39,6 +39,8 @@ export default function TransactionList() {
     showError, 
     showInfo // Added showInfo for general messages
   } = useToast();
+
+  const { selectedIds } = useSelectionContext();
 
   const { 
     transactions: hookTransactions,
@@ -101,6 +103,12 @@ export default function TransactionList() {
   // const updateTransactionsWithPredictions = useCallback((results: any[]) => { /* ... */ }, [selectedIds, hookCategories, showSuccess, setPendingCategoryUpdates]);
   // Hook version will be passed to useTraining
   const handleAIUpdateWithPredictionsForTraining = useCallback((results: any[], processedTransactionIds: string[]) => {
+    console.log('[handleAIUpdateWithPredictionsForTraining]', { 
+      results, 
+      processedTransactionIds,
+      resultsLength: results?.length || 0,
+      idsLength: processedTransactionIds?.length || 0
+    });
     // Pass: API results, the IDs for these results, all transactions, all categories, and the success callback.
     // `selectedIds` from the outer scope is not directly needed here anymore, as `processedTransactionIds` is more specific.
     hookUpdateTransactionsWithPredictions(results, processedTransactionIds, hookTransactions, hookCategories, showSuccess);
@@ -116,7 +124,7 @@ export default function TransactionList() {
   } = useTraining({
     transactions: hookTransactions,
     categories: hookCategories,
-    selectedIds: [], // Will update this in the next step
+    selectedIds: Array.from(selectedIds),
     showToast: showSuccess,
     updateTransactions,
     onCategorizationComplete: handleAIUpdateWithPredictionsForTraining,
@@ -207,31 +215,30 @@ export default function TransactionList() {
   console.log('[TransactionList Render] Pending Updates Count:', Object.keys(categorizationState.pendingUpdates).length, 'State Object:', categorizationState.pendingUpdates);
 
   return (
-    <SelectionProvider>
-      <div className="text-gray-900 text-sm bg-white min-h-screen p-4">
-        <ToastNotification toastMessage={currentToastMessage} />
-        <ProgressModal
-          operationInProgress={trainingOperationState.inProgress || isTransferringNames}
-          operationType={isTransferringNames ? 'admin' as OperationType : trainingOperationState.type}
-          progressPercent={trainingOperationState.progress.percent}
-          progressMessage={isTransferringNames ? 'Transferring original names...' : trainingOperationState.progress.message}
-          isComplete={(trainingOperationState.result.success && !trainingOperationState.inProgress && trainingOperationState.type !== 'none') || (!isTransferringNames && trainingOperationState.type === 'none' && trainingOperationState.result.success)}
-          onClose={resetTrainingOperationState}
-        />
-        <div className="my-4 flex items-center space-x-4 mb-2">
-            <Switch.Group>
-                <div className="flex items-center">
-          <Switch
-            checked={isAdminMode}
-            onChange={setIsAdminMode}
-                        className={`${isAdminMode ? 'bg-blue-600' : 'bg-gray-200'}
-                        relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
-          >
-            <span
-                            className={`${isAdminMode ? 'translate-x-6' : 'translate-x-1'}
-                            inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-            />
-          </Switch>
+    <div className="text-gray-900 text-sm bg-white min-h-screen p-4">
+      <ToastNotification toastMessage={currentToastMessage} />
+      <ProgressModal
+        operationInProgress={trainingOperationState.inProgress || isTransferringNames}
+        operationType={isTransferringNames ? 'admin' as OperationType : trainingOperationState.type}
+        progressPercent={trainingOperationState.progress.percent}
+        progressMessage={isTransferringNames ? 'Transferring original names...' : trainingOperationState.progress.message}
+        isComplete={(trainingOperationState.result.success && !trainingOperationState.inProgress && trainingOperationState.type !== 'none') || (!isTransferringNames && trainingOperationState.type === 'none' && trainingOperationState.result.success)}
+        onClose={resetTrainingOperationState}
+      />
+      <div className="my-4 flex items-center space-x-4 mb-2">
+          <Switch.Group>
+              <div className="flex items-center">
+        <Switch
+          checked={isAdminMode}
+          onChange={setIsAdminMode}
+                      className={`${isAdminMode ? 'bg-blue-600' : 'bg-gray-200'}
+                      relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
+        >
+          <span
+                          className={`${isAdminMode ? 'translate-x-6' : 'translate-x-1'}
+                          inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+          />
+        </Switch>
                     <Switch.Label className="ml-2 text-sm text-gray-700">Admin Mode</Switch.Label>
                 </div>
             </Switch.Group>
@@ -241,11 +248,8 @@ export default function TransactionList() {
               <button
                 onClick={() => {
                   console.log('[TransactionList] Admin "Transfer Names" BUTTON CLICKED! Now calling handleTransferOriginalNames...');
-                  // First, verify this log appears in the console when the button is clicked.
-                  // If it does, then uncomment the line below to call the actual function.
                   handleTransferOriginalNames(); 
                 }}
-                disabled={isTransferringNames || selectedIds.length === 0}
                 className="ml-4 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {isTransferringNames ? (
@@ -261,62 +265,60 @@ export default function TransactionList() {
                 )}
               </button>
             )}
-        </div>
-
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-row items-stretch gap-6">
-          <div className="flex-1">
-            <TransactionFilters
-              // Pass the actual filter dates as initial values
-              initialStartDate={dateFilter.startDate} 
-              initialEndDate={dateFilter.endDate}
-              // Pass the callback for the Apply button
-              onApplyDates={handleApplyDateFilter} 
-              // Pass loading state for disabling inputs/button during fetch
-              isApplying={isLoading} 
-              trainedCount={hookCounts.trained} 
-              clearedCount={hookCounts.cleared} 
-              unclearedCount={hookCounts.uncleared} 
-              operationInProgress={trainingOperationState.inProgress || isTransferringNames}
-              lastTrainedTimestamp={trainingLastTrainedTimestamp}
-              statusFilter={statusFilter}
-              setStatusFilter={setStatusFilter}
-            />
-          </div>
-
-          <div className="flex-1 flex flex-col gap-4">
-            <CategorizationControls
-              pendingCategoryUpdates={categorizationState.pendingUpdates} 
-              applyingAll={categorizationState.applying.all}
-              applyAllPredictedCategories={applyAllPredictedCategories}
-              handleTrainSelected={handleTrainSelected}
-              handleCategorizeSelected={handleCategorizeSelected}
-              handleTrainAllReviewed={handleTrainAllReviewed}
-              selectedTransactionsCount={0}
-              loading={overallIsLoading}
-              operationInProgress={trainingOperationState.inProgress || isTransferringNames} 
-              handleCancelCategorization={handleCancelAllCategorizations} 
-              lastTrainedTimestamp={trainingLastTrainedTimestamp} 
-            />
-          </div>
-        </div>
-
-        <TransactionTable
-          filteredTransactions={displayedTransactions}
-          pendingCategoryUpdates={categorizationState.pendingUpdates}
-          categories={hookCategories}
-          handleCategoryChange={handleManualCategoryChange}
-          applyPredictedCategory={applyPredictedCategory}
-          applyingIndividual={categorizationState.applying.individual}
-          cancelSinglePrediction={cancelSinglePrediction}
-          getCategoryNameById={getCategoryNameById}
-          loading={isLoading || trainingOperationState.inProgress || isTransferringNames}
-          handleNoteChange={handleNoteChange}
-          isAdminMode={isAdminMode}
-          updatingCategory={categorizationState.applying.individual}
-          successfulUpdates={{}}
-          updatingNoteId={null}
-        />
       </div>
-    </SelectionProvider>
+
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-row items-stretch gap-6">
+        <div className="flex-1">
+          <TransactionFilters
+            // Pass the actual filter dates as initial values
+            initialStartDate={dateFilter.startDate} 
+            initialEndDate={dateFilter.endDate}
+            // Pass the callback for the Apply button
+            onApplyDates={handleApplyDateFilter} 
+            // Pass loading state for disabling inputs/button during fetch
+            isApplying={isLoading} 
+            trainedCount={hookCounts.trained} 
+            clearedCount={hookCounts.cleared} 
+            unclearedCount={hookCounts.uncleared} 
+            operationInProgress={trainingOperationState.inProgress || isTransferringNames}
+            lastTrainedTimestamp={trainingLastTrainedTimestamp}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+          />
+        </div>
+
+        <div className="flex-1 flex flex-col gap-4">
+          <CategorizationControls
+            pendingCategoryUpdates={categorizationState.pendingUpdates} 
+            applyingAll={categorizationState.applying.all}
+            applyAllPredictedCategories={applyAllPredictedCategories}
+            handleTrainSelected={handleTrainSelected}
+            handleCategorizeSelected={handleCategorizeSelected}
+            handleTrainAllReviewed={handleTrainAllReviewed}
+            loading={overallIsLoading}
+            operationInProgress={trainingOperationState.inProgress || isTransferringNames} 
+            handleCancelCategorization={handleCancelAllCategorizations} 
+            lastTrainedTimestamp={trainingLastTrainedTimestamp} 
+          />
+        </div>
+      </div>
+
+      <TransactionTable
+        filteredTransactions={displayedTransactions}
+        pendingCategoryUpdates={categorizationState.pendingUpdates}
+        categories={hookCategories}
+        handleCategoryChange={handleManualCategoryChange}
+        applyPredictedCategory={applyPredictedCategory}
+        applyingIndividual={categorizationState.applying.individual}
+        cancelSinglePrediction={cancelSinglePrediction}
+        getCategoryNameById={getCategoryNameById}
+        loading={isLoading || trainingOperationState.inProgress || isTransferringNames}
+        handleNoteChange={handleNoteChange}
+        isAdminMode={isAdminMode}
+        updatingCategory={categorizationState.applying.individual}
+        successfulUpdates={categorizationState.successfulUpdates}
+        updatingNoteId={null}
+      />
+    </div>
   );
 }
