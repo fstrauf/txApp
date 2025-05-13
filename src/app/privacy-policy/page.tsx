@@ -10,7 +10,7 @@ export default function PivacyPolicy() {
           <div className="mx-auto max-w-7xl py-16 px-4 sm:px-6 lg:px-8">
             <h1 className="mb-8 text-3xl font-bold">Privacy Policy</h1>
             <p className="mb-4">
-              Thank you for visiting Expense Sorter. Your privacy is important
+              Thank you for visiting Expense Sorted. Your privacy is important
               to us, and we want you to feel comfortable using our website. This
               Privacy Policy will inform you about what information we collect,
               how we use it, and what choices you have regarding the use of your
@@ -18,7 +18,7 @@ export default function PivacyPolicy() {
             </p>
             <h2 className="mb-4 text-xl font-bold">Information We Collect</h2>
             <p className="mb-4">
-              When you use Expense Sorter, we may collect certain information
+              When you use Expense Sorted, we may collect certain information
               about you, including:
             </p>
             <ul className="mb-4 ml-6 list-disc">
