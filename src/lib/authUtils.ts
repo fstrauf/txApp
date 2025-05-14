@@ -143,4 +143,67 @@ export function hasActiveSubscriptionOrTrial(userData: UserSubscriptionData | nu
 
   // Return true if the app trial is valid (covers cases where Stripe sub wasn't active)
   return isAppTrialDateValid;
+}
+
+// Interface for the detailed subscription status
+export interface SubscriptionStatusDetails {
+  // Original data points that might come from an API or be processed
+  subscriptionPlanName: string | null; // e.g., 'SILVER', 'GOLD', 'FREE'
+  apiSubscriptionStatus: typeof subscriptionStatusEnum.enumValues[number] | null; // Raw status from API like 'ACTIVE', 'TRIALING'
+  apiCurrentPeriodEndsAt: Date | null;
+  apiTrialEndsAt: Date | null;
+
+  // Derived boolean flags for easier consumption
+  isActivePaidPlan: boolean;
+  isActiveTrial: boolean;
+  hasExpiredTrial: boolean;
+  hasAnyActiveAccess: boolean; // True if paid plan is active OR trial is active
+  canStartNewTrial: boolean;   // True if user has a session, no active access, and no trial history (apiTrialEndsAt is null)
+}
+
+/**
+ * Analyzes raw subscription data and session status to provide a detailed status object.
+ * @param rawSubData The raw subscription data, typically from /api/user-subscription.
+ * @param planNameFromApi The plan name associated with the subscription (e.g., 'SILVER', 'GOLD').
+ * @param hasSession Boolean indicating if there is an active user session.
+ * @returns A SubscriptionStatusDetails object.
+ */
+export function getUserSubscriptionStatusDetails(
+  rawSubData: UserSubscriptionData | null,
+  planNameFromApi: string | null, // Plan name from the API (e.g., data.subscriptionPlan)
+  hasSession: boolean
+): SubscriptionStatusDetails {
+  const now = Date.now();
+
+  const apiStatus = rawSubData?.subscriptionStatus || null;
+  const apiTrialEnds = rawSubData?.trialEndsAt ? new Date(rawSubData.trialEndsAt) : null;
+  const apiPeriodEnds = rawSubData?.currentPeriodEndsAt ? new Date(rawSubData.currentPeriodEndsAt) : null;
+
+  const isActivePaidPlan = apiStatus === 'ACTIVE' && !!apiPeriodEnds && apiPeriodEnds.getTime() > now;
+  
+  // An active trial can be from Stripe ('TRIALING' status) or an app-managed trial (trialEndsAt is future)
+  const isStripeTrial = apiStatus === 'TRIALING' && !!apiPeriodEnds && apiPeriodEnds.getTime() > now;
+  const isAppTrial = !!apiTrialEnds && apiTrialEnds.getTime() > now; // App-managed trial (even if Stripe status isn't TRIALING)
+  const isActiveTrial = isStripeTrial || isAppTrial;
+  
+  const hasExpiredTrial = !!apiTrialEnds && apiTrialEnds.getTime() <= now;
+  const hasAnyActiveAccess = isActivePaidPlan || isActiveTrial;
+  
+  // User can start a new trial if:
+  // 1. They are logged in (hasSession)
+  // 2. They don't have any currently active plan or trial (!hasAnyActiveAccess)
+  // 3. They have never used a trial before (apiTrialEnds is null - this is the key)
+  const canStartNewTrial = hasSession && !hasAnyActiveAccess && apiTrialEnds === null;
+
+  return {
+    subscriptionPlanName: planNameFromApi,
+    apiSubscriptionStatus: apiStatus,
+    apiCurrentPeriodEndsAt: apiPeriodEnds,
+    apiTrialEndsAt: apiTrialEnds,
+    isActivePaidPlan,
+    isActiveTrial,
+    hasExpiredTrial,
+    hasAnyActiveAccess,
+    canStartNewTrial,
+  };
 } 
