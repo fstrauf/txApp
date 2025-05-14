@@ -1,5 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [
+      {
+        source: '/demo',
+        destination: '/integrations',
+        permanent: true,
+      },
+    ]
+  },
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'tx-app.vercel.app'],
