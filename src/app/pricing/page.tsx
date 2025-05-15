@@ -4,33 +4,28 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { hasActiveSubscriptionOrTrial, type UserSubscriptionData } from '@/lib/authUtils';
+import { getUserSubscriptionStatusDetails, type SubscriptionStatusDetails, type UserSubscriptionData } from '@/lib/authUtils';
 import { toast, Toaster } from 'react-hot-toast';
-
-interface SubscriptionInfo extends UserSubscriptionData {
-  subscriptionPlan: string;
-  billingCycle: string | null;
-}
 
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [isLoading, setIsLoading] = useState<{silver: boolean, gold: boolean}>({ silver: false, gold: false });
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [subscriptionDetails, setSubscriptionDetails] = useState<SubscriptionStatusDetails | null>(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
   const [isStartingTrial, setIsStartingTrial] = useState(false);
   const { data: session } = useSession();
   const router = useRouter();
   
-  // Pricing calculation with 20% discount for annual plans
   const silverMonthly = 2;
   const goldMonthly = 10;
   const silverAnnual = silverMonthly * 12 * 0.8;
   const goldAnnual = goldMonthly * 12 * 0.8;
 
   useEffect(() => {
-    // Fetch current subscription info if user is logged in
     if (session?.user) {
       fetchSubscriptionInfo();
+    } else {
+      setSubscriptionDetails(null);
     }
   }, [session]);
 
@@ -41,22 +36,26 @@ export default function PricingPage() {
       
       if (response.ok) {
         const data = await response.json();
-        // Convert dates from API response
-        const subData: SubscriptionInfo = {
-          ...data,
+        
+        const rawSubData: UserSubscriptionData = {
+          subscriptionStatus: data.subscriptionStatus,
           currentPeriodEndsAt: data.currentPeriodEndsAt ? new Date(data.currentPeriodEndsAt) : null,
           trialEndsAt: data.trialEndsAt ? new Date(data.trialEndsAt) : null,
         };
-        setSubscription(subData);
+        
+        const details = getUserSubscriptionStatusDetails(rawSubData, data.subscriptionPlan, !!session);
+        setSubscriptionDetails(details);
+      } else {
+        setSubscriptionDetails(getUserSubscriptionStatusDetails(null, null, !!session));
       }
     } catch (error) {
       console.error('Error fetching subscription info:', error);
+      setSubscriptionDetails(getUserSubscriptionStatusDetails(null, null, !!session));
     } finally {
       setIsLoadingSubscription(false);
     }
   };
 
-  // Function to handle starting the free trial via API
   const handleStartFreeTrial = async () => {
     if (!session) {
       router.push(`/auth/signin?callbackUrl=/pricing`);
@@ -85,7 +84,6 @@ export default function PricingPage() {
     }
   };
 
-  // Function to handle subscription
   const handleSubscribe = async (plan: string) => {
     if (!session) {
       router.push(`/auth/signin?callbackUrl=/pricing`);
@@ -94,13 +92,10 @@ export default function PricingPage() {
 
     try {
       setIsLoading(prev => ({ ...prev, [plan.toLowerCase()]: true }));
-      
-      // Call the checkout API
       const response = await fetch(`/api/stripe/checkout?plan=${plan.toLowerCase()}&billing=${isAnnual ? "annual" : "monthly"}`);
       const data = await response.json();
       
       if (data.url) {
-        // Redirect to Stripe checkout
         window.location.href = data.url;
       } else {
         console.error("No checkout URL returned");
@@ -112,34 +107,29 @@ export default function PricingPage() {
     }
   };
 
-  // Helper to format dates
   const formatDate = (date: Date | null): string => {
     if (!date) return '';
     return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  // Helper to get subscription badge
   const getSubscriptionBadge = () => {
-    if (!subscription) return null;
+    if (!subscriptionDetails) return null;
     
-    const plan = subscription.subscriptionPlan;
-    const status = subscription.subscriptionStatus || '';
+    const plan = subscriptionDetails.subscriptionPlanName;
+    const status = subscriptionDetails.apiSubscriptionStatus || '';
     
-    let badgeColor = 'bg-gray-100 text-gray-800'; // Default for FREE
+    let badgeColor = 'bg-gray-100 text-gray-800';
     
-    if (plan === 'SILVER') {
-      badgeColor = 'bg-blue-100 text-blue-800';
-    } else if (plan === 'GOLD') {
-      badgeColor = 'bg-yellow-100 text-yellow-800';
-    }
+    if (plan === 'SILVER') badgeColor = 'bg-blue-100 text-blue-800';
+    else if (plan === 'GOLD') badgeColor = 'bg-yellow-100 text-yellow-800';
     
-    if (status === 'TRIALING') {
+    if (status === 'TRIALING' || subscriptionDetails.isActiveTrial) {
       badgeColor = 'bg-purple-100 text-purple-800';
     } else if (status === 'PAST_DUE') {
       badgeColor = 'bg-red-100 text-red-800';
     }
     
-    if (plan === 'FREE' && !status) {
+    if (plan === 'FREE' && !status && !subscriptionDetails.hasAnyActiveAccess) {
       return (
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
           Free Plan
@@ -147,25 +137,17 @@ export default function PricingPage() {
       );
     }
     
+    if (!plan && !subscriptionDetails.hasAnyActiveAccess) return null;
+
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${badgeColor}`}>
-        {plan}{status === 'TRIALING' ? ' (Trial)' : ''}
+        {plan}{subscriptionDetails.isActiveTrial ? ' (Trial)' : ''}
       </span>
     );
   };
 
-  // Determine user status flags, handling null subscription state
-  const now = Date.now();
-  const isActiveSub = !!subscription && subscription.subscriptionStatus === 'ACTIVE';
-  const isActiveTrial = !!subscription && !!subscription.trialEndsAt && subscription.trialEndsAt.getTime() > now;
-  const hasExpiredTrial = !!subscription && !!subscription.trialEndsAt && subscription.trialEndsAt.getTime() <= now;
-  // Can start trial only if subscription is loaded and user has no active/expired access
-  const canStartTrial = subscription !== null && !isActiveSub && !isActiveTrial && !hasExpiredTrial; 
-
-  // Combine active check
-  const hasAnyActiveAccess = isActiveSub || isActiveTrial;
-  const isPlanActive = (plan: string): boolean => {
-    return hasAnyActiveAccess && subscription?.subscriptionPlan === plan;
+  const isPlanCurrentlyActive = (planName: string): boolean => {
+    return !!subscriptionDetails && subscriptionDetails.hasAnyActiveAccess && subscriptionDetails.subscriptionPlanName === planName;
   };
 
   return (
@@ -183,27 +165,25 @@ export default function PricingPage() {
             Choose the plan that best fits your needs. Get started with a free trial, no credit card required.
           </p>
 
-          {/* Current Subscription Banner (if logged in and has subscription) */}
-          {session && subscription && hasActiveSubscriptionOrTrial(subscription) && (
+          {session && subscriptionDetails?.hasAnyActiveAccess && (
             <div className="mt-6 bg-white rounded-xl p-4 max-w-md mx-auto border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-medium text-gray-900">Current Plan:</span>
                 {getSubscriptionBadge()}
               </div>
-              {subscription.trialEndsAt && (
+              {subscriptionDetails.apiTrialEndsAt && (
                 <p className="text-sm text-gray-700 mb-1">
-                  Trial ends: {formatDate(subscription.trialEndsAt)}
+                  Trial ends: {formatDate(subscriptionDetails.apiTrialEndsAt)}
                 </p>
               )}
-              {subscription.currentPeriodEndsAt && (
+              {subscriptionDetails.isActivePaidPlan && subscriptionDetails.apiCurrentPeriodEndsAt && (
                 <p className="text-sm text-gray-700">
-                  Next billing: {formatDate(subscription.currentPeriodEndsAt)}
+                  Next billing: {formatDate(subscriptionDetails.apiCurrentPeriodEndsAt)}
                 </p>
               )}
             </div>
           )}
 
-          {/* Billing toggle */}
           <div className="flex items-center justify-center mt-8">
             <span className={`mr-3 text-sm ${!isAnnual ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
               Monthly
@@ -223,14 +203,13 @@ export default function PricingPage() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {/* Silver Plan */}
-          <div className={`bg-white rounded-2xl shadow-soft p-8 ${isPlanActive('SILVER') ? 'border-2 border-blue-400' : 'border border-gray-100'} flex flex-col`}>
+          <div className={`bg-white rounded-2xl shadow-soft p-8 ${isPlanCurrentlyActive('SILVER') ? 'border-2 border-blue-400' : 'border border-gray-100'} flex flex-col`}>
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Silver</h2>
                 <p className="text-gray-600 mt-2">Perfect for personal budgeting</p>
               </div>
-              {isPlanActive('SILVER') && (
+              {isPlanCurrentlyActive('SILVER') && (
                 <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
                   Current Plan
                 </span>
@@ -274,8 +253,7 @@ export default function PricingPage() {
               </li>
             </ul>
             
-            {/* --- Refined Silver Button Logic --- */}
-            {isPlanActive('SILVER') ? (
+            {isPlanCurrentlyActive('SILVER') ? (
               <button disabled className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed text-center">
                 Current Plan
               </button>
@@ -284,17 +262,13 @@ export default function PricingPage() {
                 Sign in to Subscribe
               </button>
             ) : (
-              // Logged in, Silver not active -> Subscribe
-              <button onClick={() => handleSubscribe('silver')} disabled={isLoading.silver} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70">
-                {isLoading.silver ? 'Processing...' : 'Subscribe Now'}
+              <button onClick={() => handleSubscribe('silver')} disabled={isLoading.silver || isLoadingSubscription} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70">
+                {isLoading.silver || isLoadingSubscription ? 'Processing...' : 'Subscribe Now'}
               </button>
             )}
-            {/* Removed redundant trial text for Silver */}
-            {/* <p className="text-sm text-center mt-4 text-gray-600">Start with a free trial!</p> */}
           </div>
           
-          {/* Gold Plan */}
-          <div className={`bg-white rounded-2xl shadow-soft p-8 ${isPlanActive('GOLD') ? 'border-2 border-yellow-400' : 'border-2 border-primary/20'} flex flex-col relative overflow-hidden`}>
+          <div className={`bg-white rounded-2xl shadow-soft p-8 ${isPlanCurrentlyActive('GOLD') ? 'border-2 border-yellow-400' : 'border-2 border-primary/20'} flex flex-col relative overflow-hidden`}>
             <div className="absolute top-3 right-2 translate-x-[30%] translate-y-[-10%] rotate-45">
               <div className="bg-primary text-white text-xs px-8 py-1 shadow-md">
                 Popular
@@ -306,7 +280,7 @@ export default function PricingPage() {
                 <h2 className="text-2xl font-bold text-gray-900">Gold</h2>
                 <p className="text-gray-600 mt-2">For serious budget management</p>
               </div>
-              {isPlanActive('GOLD') && (
+              {isPlanCurrentlyActive('GOLD') && (
                 <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-medium">
                   Current Plan
                 </span>
@@ -356,36 +330,43 @@ export default function PricingPage() {
               </li>
             </ul>
             
-            {/* === Refined Gold Plan Button Logic === */}
-            {isPlanActive('GOLD') ? (
-              // Case 1: Current plan is Gold (or active trial on Gold)
+            {isLoadingSubscription ? (
+                 <button disabled className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed text-center">
+                    Loading...
+                 </button>
+            ) : isPlanCurrentlyActive('GOLD') ? (
               <button disabled className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed text-center">
                 Current Plan
               </button>
             ) : !session ? (
-                // Case 2: Logged out
                 <button onClick={() => handleSubscribe('gold')} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center">
                   Sign in to Subscribe
                 </button>
-            ) : isLoadingSubscription ? (
-                 // Case 3: Still loading subscription status
-                 <button disabled className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed text-center">
-                    Loading...
-                 </button>
-            ) : canStartTrial ? (
-              // Case 4: Logged in, loaded, eligible for trial (no active sub/trial, no expired trial)
+            ) : subscriptionDetails?.canStartNewTrial ? ( 
               <button onClick={handleStartFreeTrial} disabled={isStartingTrial} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70">
                 {isStartingTrial ? 'Starting Trial...' : "Start 14-Day Free Trial"}
               </button>
             ) : (
-              // Case 5: Logged in, loaded, but NOT eligible for trial (e.g., expired trial, active Silver sub)
               <button onClick={() => handleSubscribe('gold')} disabled={isLoading.gold} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70">
                 {isLoading.gold ? 'Processing...' : 'Subscribe Now'}
               </button>
             )}
-            {/* === End Refined Gold Plan Button Logic === */}
           </div>
         </div>
+        
+        {/* MODIFIED: Centered Free Trial Button below cards */}
+        {/* Show this button if user is NOT logged in OR if logged in AND can start a new trial */}
+        {(!session || (subscriptionDetails && subscriptionDetails.canStartNewTrial)) && (
+          <div className="mt-12 text-center">
+            <button 
+              onClick={handleStartFreeTrial} 
+              disabled={isStartingTrial || isLoadingSubscription} 
+              className="inline-flex justify-center items-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-lg disabled:opacity-70"
+            >
+              {isLoadingSubscription ? 'Loading...' : isStartingTrial ? 'Starting Trial...' : "Start 14-Day Free Trial"}
+            </button>
+          </div>
+        )}
         
         <div className="mt-16 max-w-3xl mx-auto text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>

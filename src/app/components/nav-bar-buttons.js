@@ -27,6 +27,14 @@ export const NavBarButtons = () => {
       >
         Free Template
       </Link>
+      <Link
+        href="/api-landing"
+        className={`text-sm font-medium transition-colors hover:text-primary ${
+          pathname === "/api-landing" ? "text-primary" : "text-gray-700"
+        }`}
+      >
+        Try Our API
+      </Link>
       
       <Link
         href="/pricing"
