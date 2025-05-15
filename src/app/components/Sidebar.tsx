@@ -26,6 +26,10 @@ const sidebarNavItems = [
     featureFlag: 'betaFeature'
   },
   {
+    title: "Try Our API",
+    href: "/api-landing",
+  },
+  {
     title: "API Key",
     href: "/api-key",
   },
