@@ -5,9 +5,9 @@ import "swagger-ui-react/swagger-ui.css";
 import Link from 'next/link';
 
 const APIDocsPage = () => {
-  // Assuming your Python backend (txClassify) serves its Swagger/OpenAPI spec
-  // from /apispec.json and is running on http://localhost
-  const specUrl = "http://localhost/apispec.json";
+  
+  const EXPENSE_SORTED_API_URL = process.env.NEXT_PUBLIC_EXPENSE_SORTED_API || "http://localhost:5003";
+  const specUrl = `${EXPENSE_SORTED_API_URL}/apispec.json`;
 
   return (
     <div className="min-h-screen bg-gray-100">
