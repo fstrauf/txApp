@@ -1,18 +1,17 @@
-"use client";
 import Image from "next/image";
 import References from "./components/References.js";
 import FAQ from "./components/FAQ.js";
 import Link from "next/link";
 import Head from "next/head";
-import AppBetaPopup from "@/components/shared/AppBetaPopup";
-import { useSession } from 'next-auth/react';
+import { getLatestPosts, type BlogPostMetadata } from '@/lib/blog-utils';
+import HomePageClientContent from "@/app/components/page/HomePageClientContent";
 
 export default function Home() {
-  const { data: session, status: sessionStatus } = useSession();
+  // const { data: session, status: sessionStatus } = useSession();
 
   return (
     <div className="min-h-screen bg-background-default">
-      <AppBetaPopup />
+      {/* <AppBetaPopup /> */}
       <div className="container">
         <Head>
           <link rel="canonical" href="https://www.expensesorted.com/" />
@@ -50,41 +49,8 @@ export default function Home() {
               {/* <Image src="/monarchmoney_logo.png" alt="Monarch Money" width={24} height={24} className="h-6 w-auto rounded-sm" title="Monarch Money"/> */}
             </div>
 
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start items-center mb-4">
-              {/* Conditional CTA Button/Link */}
-              {sessionStatus === 'loading' && (
-                <button
-                  disabled
-                  className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-gray-300 text-gray-500 cursor-not-allowed text-lg w-full sm:w-auto"
-                >
-                  Loading...
-                </button>
-              )}
-              {sessionStatus === 'unauthenticated' && (
-                <Link
-                  href="/auth/signup?callbackUrl=/integrations"
-                  className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-lg w-full sm:w-auto"
-                >
-                  Start Free Trial
-                </Link>
-              )}
-              {sessionStatus === 'authenticated' && (
-                <Link
-                  href="/integrations" // Link directly to integrations if logged in
-                  className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-lg w-full sm:w-auto"
-                >
-                  Get Started
-                </Link>
-              )}
-              
-            </div>
-            {/* Hide trial text if authenticated or loading */}
-            {sessionStatus === 'unauthenticated' && (
-               <p className="text-xs text-gray-500 text-center md:text-left">
-                  Free trial. No credit card required.
-              </p>
-            )}
+            {/* CTAs - Replaced with Client Component */}
+            <HomePageClientContent />
           </div>
 
           {/* Right Column: Hero Image/GIF */}
@@ -459,6 +425,14 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Blog Teaser Section */}
+        <div className="bg-surface rounded-2xl p-8 shadow-soft mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+            Latest Insights
+          </h2>
+          <LatestBlogPosts /> 
+        </div>
+
         {/* Founder Message */}
         <div className="bg-surface rounded-2xl p-8 shadow-soft mb-16">
           <div className="max-w-3xl mx-auto">
@@ -624,5 +598,40 @@ export default function Home() {
         </div>
       </main>
     </div>
+  );
+}
+
+async function LatestBlogPosts() {
+  const latestPosts = await getLatestPosts();
+
+  if (!latestPosts || latestPosts.length === 0) {
+    return null; // Or some placeholder if no posts are found
+  }
+
+  return (
+    <section className="py-12 md:py-16 bg-gray-50">
+      <div className="container mx-auto px-4">
+        <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Latest Insights from Our Blog</h2>
+        <div className="grid md:grid-cols-3 gap-8">
+          {latestPosts.map((post: BlogPostMetadata) => (
+            <Link href={`/blog/${post.slug}`} key={post.slug} className="block bg-white rounded-lg shadow-soft hover:shadow-lg transition-shadow duration-300 overflow-hidden">
+              <div className="p-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">{post.title}</h3>
+                <p className="text-sm text-gray-500 mb-1">{new Date(post.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <p className="text-gray-700 mb-4 text-sm leading-relaxed">{post.summary}</p>
+                <span className="text-primary font-semibold hover:underline text-sm">Read more &rarr;</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+        <div className="text-center mt-10">
+          <Link href="/blog"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-base"
+          >
+            View All Posts
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
