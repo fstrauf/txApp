@@ -13,6 +13,8 @@ export interface PostData {
   date: string;
   summary?: string;
   author?: string;
+  image?: string; // For Open Graph image
+  keywords?: string | string[]; // For meta keywords
   contentHtml?: string;
   [key: string]: any; // Allow other frontmatter fields
 }
@@ -48,6 +50,8 @@ export function getSortedPostsData(): PostData[] {
         date: matterResult.data.date || new Date().toISOString().split('T')[0],
         summary: matterResult.data.summary || '',
         author: matterResult.data.author || 'Anonymous',
+        image: matterResult.data.image || undefined,
+        keywords: matterResult.data.keywords || undefined,
         ...matterResult.data,
       } as PostData;
     });
@@ -123,6 +127,8 @@ export async function getPostData(slug: string): Promise<PostData | null> {
     date: matterResult.data.date || new Date().toISOString().split('T')[0],
     summary: matterResult.data.summary || '',
     author: matterResult.data.author || 'Anonymous',
+    image: matterResult.data.image || undefined,
+    keywords: matterResult.data.keywords || undefined,
     ...matterResult.data,
   } as PostData;
 } 
