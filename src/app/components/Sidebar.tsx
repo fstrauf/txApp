@@ -16,6 +16,10 @@ const sidebarNavItems = [
     href: "/lunchmoney",
   },
   {
+    title: "Blog",
+    href: "/blog",
+  },
+  {
     title: "AutoAccountant",
     href: "/auto-accountant", // Placeholder path
     featureFlag: 'betaFeature'

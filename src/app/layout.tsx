@@ -1,9 +1,11 @@
 import "./globals.css";
+import "./blog-styles.css";
 import { Inter } from "next/font/google";
 import Header from "./components/Header.js";
 import Footer from "./components/Footer.js";
 import { SessionProvider } from "@/app/providers";
 import { ClientSidebarWrapper } from "./components/ClientSidebarWrapper";
+import type { Metadata } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
 
