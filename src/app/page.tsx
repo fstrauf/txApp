@@ -459,6 +459,27 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Blog Section */}
+        <div className="bg-white rounded-2xl shadow-soft p-8 mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
+            Our Latest Insights
+          </h2>
+          <p className="text-lg text-gray-700 mb-8 text-center max-w-2xl mx-auto">
+            Check out our blog for articles on expense management, financial freedom, AI in finance, and product updates.
+          </p>
+          <div className="text-center">
+            <Link
+              href="/blog"
+              className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-lg"
+            >
+              Visit Our Blog
+              <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+
         {/* Founder Message */}
         <div className="bg-surface rounded-2xl p-8 shadow-soft mb-16">
           <div className="max-w-3xl mx-auto">
