@@ -108,15 +108,19 @@ export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps)
       const data = await response.json();
 
       if (response.ok && data.success) {
-        toast.success('Free trial started successfully!');
+        toast.success('Free trial started successfully!'); // Toast for trial success
         queryClient.invalidateQueries({ queryKey: ['accountInfo', userId] });
+        // Also invalidate the general subscription status for other components
+        queryClient.invalidateQueries({ queryKey: ['userSubscriptionStatus'] }); 
+        
         // --- New: Automatically generate API key after starting trial --- 
         try {
           await generateApiKeyUtil(userId, queryClient); 
-          toast.success('Free trial started and API key generated!'); // Combined message
+          // Assuming generateApiKeyUtil handles its own success toast for API key generation.
+          // No additional combined toast here to prevent doubling if generateApiKeyUtil toasts.
         } catch (apiKeyError) {
           // Log error from util, show specific toast
-          toast.error(`Trial started, but failed to generate API key: ${apiKeyError instanceof Error ? apiKeyError.message : 'Please generate manually'}`);
+          toast.error(`Trial started, but API key generation failed: ${apiKeyError instanceof Error ? apiKeyError.message : 'Please generate manually'}`);
         }
         // --- End New --- 
         onSuccess?.(); // Call original onSuccess after everything

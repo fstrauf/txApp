@@ -1,110 +1,108 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { getUserSubscriptionStatusDetails, type SubscriptionStatusDetails, type UserSubscriptionData } from '@/lib/authUtils';
 import { toast, Toaster } from 'react-hot-toast';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSubscriptionStatus } from '@/lib/hooks/useSubscriptionStatus';
+
+interface StartTrialResponse {
+  success: boolean;
+  error?: string;
+}
+
+interface CheckoutResponse {
+  url: string;
+  error?: string;
+}
+
+interface CheckoutVariables {
+  plan: string;
+}
 
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false);
-  const [isLoading, setIsLoading] = useState<{silver: boolean, gold: boolean}>({ silver: false, gold: false });
-  const [subscriptionDetails, setSubscriptionDetails] = useState<SubscriptionStatusDetails | null>(null);
-  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
-  const [isStartingTrial, setIsStartingTrial] = useState(false);
+  const [isLoadingCheckout, setIsLoadingCheckout] = useState<{silver: boolean, gold: boolean}>({ silver: false, gold: false });
+  
   const { data: session } = useSession();
   const router = useRouter();
-  
+  const queryClient = useQueryClient();
+
+  const { 
+    subscriptionDetails, 
+    isLoading: isLoadingSubscription, 
+    error: subscriptionError, 
+    refetchSubscriptionStatus 
+  } = useSubscriptionStatus();
+
   const silverMonthly = 2;
   const goldMonthly = 10;
   const silverAnnual = silverMonthly * 12 * 0.8;
   const goldAnnual = goldMonthly * 12 * 0.8;
 
-  useEffect(() => {
-    if (session?.user) {
-      fetchSubscriptionInfo();
-    } else {
-      setSubscriptionDetails(null);
-    }
-  }, [session]);
-
-  const fetchSubscriptionInfo = async () => {
-    try {
-      setIsLoadingSubscription(true);
-      const response = await fetch('/api/user-subscription');
-      
-      if (response.ok) {
-        const data = await response.json();
-        
-        const rawSubData: UserSubscriptionData = {
-          subscriptionStatus: data.subscriptionStatus,
-          currentPeriodEndsAt: data.currentPeriodEndsAt ? new Date(data.currentPeriodEndsAt) : null,
-          trialEndsAt: data.trialEndsAt ? new Date(data.trialEndsAt) : null,
-        };
-        
-        const details = getUserSubscriptionStatusDetails(rawSubData, data.subscriptionPlan, !!session);
-        setSubscriptionDetails(details);
-      } else {
-        setSubscriptionDetails(getUserSubscriptionStatusDetails(null, null, !!session));
-      }
-    } catch (error) {
-      console.error('Error fetching subscription info:', error);
-      setSubscriptionDetails(getUserSubscriptionStatusDetails(null, null, !!session));
-    } finally {
-      setIsLoadingSubscription(false);
-    }
-  };
-
-  const handleStartFreeTrial = async () => {
-    if (!session) {
-      router.push(`/auth/signin?callbackUrl=/pricing`);
-      return;
-    }
-
-    setIsStartingTrial(true);
-    try {
+  const { mutate: startFreeTrial, isPending: isStartingTrial } = useMutation<StartTrialResponse, Error, void>({
+    mutationFn: async (): Promise<StartTrialResponse> => {
       const response = await fetch('/api/user/start-trial', {
         method: 'POST',
       });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        toast.success('Free trial started successfully!');
-        await fetchSubscriptionInfo();
-      } else {
+      const data: StartTrialResponse = await response.json();
+      if (!response.ok || !data.success) {
         throw new Error(data.error || 'Failed to start trial');
       }
-    } catch (error) {
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Free trial started successfully!');
+      queryClient.invalidateQueries({ queryKey: ['userSubscriptionStatus'] });
+      if (session?.user?.id) {
+        queryClient.invalidateQueries({ queryKey: ['accountInfo', session.user.id] });
+      }
+    },
+    onError: (error: Error) => {
       console.error("Error starting free trial:", error);
-      toast.error(`Failed to start trial: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsStartingTrial(false);
-    }
-  };
+      toast.error(`Failed to start trial: ${error.message}`);
+    },
+  });
 
-  const handleSubscribe = async (plan: string) => {
+  const handleStartFreeTrial = () => {
     if (!session) {
       router.push(`/auth/signin?callbackUrl=/pricing`);
       return;
     }
+    startFreeTrial();
+  };
 
-    try {
-      setIsLoading(prev => ({ ...prev, [plan.toLowerCase()]: true }));
+  const { mutate: subscribeToPlan, isPending: isProcessingSubscription } = useMutation<CheckoutResponse, Error, CheckoutVariables>({
+    mutationFn: async ({ plan }: CheckoutVariables): Promise<CheckoutResponse> => {
+      setIsLoadingCheckout(prev => ({ ...prev, [plan.toLowerCase()]: true }));
       const response = await fetch(`/api/stripe/checkout?plan=${plan.toLowerCase()}&billing=${isAnnual ? "annual" : "monthly"}`);
-      const data = await response.json();
-      
+      const data: CheckoutResponse = await response.json();
+      if (!response.ok || !data.url) {
+        setIsLoadingCheckout(prev => ({ ...prev, [plan.toLowerCase()]: false }));
+        throw new Error(data.error || 'No checkout URL returned');
+      }
+      return data;
+    },
+    onSuccess: (data: CheckoutResponse) => {
       if (data.url) {
         window.location.href = data.url;
-      } else {
-        console.error("No checkout URL returned");
-        setIsLoading(prev => ({ ...prev, [plan.toLowerCase()]: false }));
-      }
-    } catch (error) {
+      }        
+    },
+    onError: (error: Error, variables: CheckoutVariables) => {
       console.error("Error creating checkout session:", error);
-      setIsLoading(prev => ({ ...prev, [plan.toLowerCase()]: false }));
+      toast.error(`Checkout failed: ${error.message}`);
+      setIsLoadingCheckout(prev => ({ ...prev, [variables.plan.toLowerCase()]: false }));
+    },
+  });
+
+  const handleSubscribe = (plan: string) => {
+    if (!session) {
+      router.push(`/auth/signin?callbackUrl=/pricing`);
+      return;
     }
+    subscribeToPlan({ plan });
   };
 
   const formatDate = (date: Date | null): string => {
@@ -113,7 +111,7 @@ export default function PricingPage() {
   };
 
   const getSubscriptionBadge = () => {
-    if (!subscriptionDetails) return null;
+    if (isLoadingSubscription || !subscriptionDetails) return null;
     
     const plan = subscriptionDetails.subscriptionPlanName;
     const status = subscriptionDetails.apiSubscriptionStatus || '';
@@ -150,6 +148,18 @@ export default function PricingPage() {
     return !!subscriptionDetails && subscriptionDetails.hasAnyActiveAccess && subscriptionDetails.subscriptionPlanName === planName;
   };
 
+  if (subscriptionError) {
+    return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-background-default py-12">
+            <Toaster position="bottom-center" />
+            <p className="text-red-500 text-lg">Error loading subscription details: {subscriptionError.message}</p>
+            <button onClick={() => refetchSubscriptionStatus()} className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark">
+                Try Again
+            </button>
+        </div>
+    );
+  }
+
   return (
     <div className="bg-background-default min-h-screen py-12">
       <Toaster position="bottom-center" />
@@ -165,7 +175,7 @@ export default function PricingPage() {
             Choose the plan that best fits your needs. Get started with a free trial, no credit card required.
           </p>
 
-          {session && subscriptionDetails?.hasAnyActiveAccess && (
+          {session && !isLoadingSubscription && subscriptionDetails?.hasAnyActiveAccess && (
             <div className="mt-6 bg-white rounded-xl p-4 max-w-md mx-auto border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-medium text-gray-900">Current Plan:</span>
@@ -181,6 +191,12 @@ export default function PricingPage() {
                   Next billing: {formatDate(subscriptionDetails.apiCurrentPeriodEndsAt)}
                 </p>
               )}
+            </div>
+          )}
+          
+          {isLoadingSubscription && session && (
+            <div className="mt-6 bg-white rounded-xl p-4 max-w-md mx-auto border border-gray-200 shadow-sm">
+                <p className="text-center text-gray-600">Loading subscription details...</p>
             </div>
           )}
 
@@ -262,8 +278,8 @@ export default function PricingPage() {
                 Sign in to Subscribe
               </button>
             ) : (
-              <button onClick={() => handleSubscribe('silver')} disabled={isLoading.silver || isLoadingSubscription} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70">
-                {isLoading.silver || isLoadingSubscription ? 'Processing...' : 'Subscribe Now'}
+              <button onClick={() => handleSubscribe('silver')} disabled={isLoadingCheckout.silver || isLoadingSubscription || isProcessingSubscription} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70">
+                {isLoadingCheckout.silver || isProcessingSubscription ? 'Processing...' : 'Subscribe Now'}
               </button>
             )}
           </div>
@@ -347,16 +363,14 @@ export default function PricingPage() {
                 {isStartingTrial ? 'Starting Trial...' : "Start 14-Day Free Trial"}
               </button>
             ) : (
-              <button onClick={() => handleSubscribe('gold')} disabled={isLoading.gold} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70">
-                {isLoading.gold ? 'Processing...' : 'Subscribe Now'}
+              <button onClick={() => handleSubscribe('gold')} disabled={isLoadingCheckout.gold || isProcessingSubscription} className="inline-flex justify-center items-center px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow text-center disabled:opacity-70">
+                {isLoadingCheckout.gold || isProcessingSubscription ? 'Processing...' : 'Subscribe Now'}
               </button>
             )}
           </div>
         </div>
         
-        {/* MODIFIED: Centered Free Trial Button below cards */}
-        {/* Show this button if user is NOT logged in OR if logged in AND can start a new trial */}
-        {(!session || (subscriptionDetails && subscriptionDetails.canStartNewTrial)) && (
+        {(!session || (subscriptionDetails && subscriptionDetails.canStartNewTrial && !subscriptionDetails.hasAnyActiveAccess)) && (
           <div className="mt-12 text-center">
             <button 
               onClick={handleStartFreeTrial} 

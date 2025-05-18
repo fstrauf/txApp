@@ -4,12 +4,13 @@ import { Inter } from "next/font/google";
 import Header from "./components/Header.js";
 import Footer from "./components/Footer.js";
 import { SessionProvider } from "@/app/providers";
+import QueryProvider from "@/providers/QueryProvider";
 import { ClientSidebarWrapper } from "./components/ClientSidebarWrapper";
 import type { Metadata } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata = {
+export const metadata: Metadata = {
   metadataBase: new URL("https://www.expensesorted.com/"),
   title: "Expense Sorted - Categorise your expenses",
   description:
@@ -27,14 +28,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body className={`${inter.className} flex flex-col min-h-screen`}>
         <SessionProvider>
-          <Header />
-          <div className="flex flex-1">
-            {/* Render the client wrapper unconditionally */}
-            {/* It will handle showing/hiding the Sidebar based on client session */}
-            <ClientSidebarWrapper />
-            <main className="flex-grow">{children}</main>
-          </div>
-          <Footer />
+          <QueryProvider>
+            <Header />
+            <div className="flex flex-1">
+              {/* Render the client wrapper unconditionally */}
+              {/* It will handle showing/hiding the Sidebar based on client session */}
+              <ClientSidebarWrapper />
+              <main className="flex-grow">{children}</main>
+            </div>
+            <Footer />
+          </QueryProvider>
         </SessionProvider>
       </body>
     </html>

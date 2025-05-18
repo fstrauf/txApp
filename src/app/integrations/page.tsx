@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaGoogle, FaSpinner, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
-import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast, Toaster } from 'react-hot-toast';
-import type { UserSubscriptionData as SubscriptionDataType } from '@/lib/authUtils';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSubscriptionStatus } from '@/lib/hooks/useSubscriptionStatus';
 import ApiKeyManager from '@/app/api-key/ApiKeyManager';
 import IntegrationsPageClientWrapper from './IntegrationsPageClientWrapper';
-import { Suspense } from 'react';
+import type { UserSubscriptionData as SubscriptionDataType } from '@/lib/authUtils';
 
 interface Platform {
   name: string;
@@ -73,17 +73,74 @@ interface WaitlistFormState {
   success: boolean;
 }
 
+// Copied from PricingPage for consistency - consider moving to a shared types file if used in more places
+interface StartTrialResponse {
+  success: boolean;
+  error?: string;
+  trialEndsAt?: string; // Expecting trial end date from API upon successful trial start
+}
+
 function IntegrationsPageContent() {
   const [waitlistForms, setWaitlistForms] = useState<{ [key: string]: WaitlistFormState }>({});
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
+  const queryClient = useQueryClient();
 
-  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [showStatusBanner, setShowStatusBanner] = useState(false);
-  const [bannerType, setBannerType] = useState<'loading' | 'success' | 'warning' | 'error'>('loading');
-  const [subscriptionData, setSubscriptionData] = useState<SubscriptionDataType | null>(null);
+  const {
+    subscriptionDetails,
+    isLoading: isLoadingSubscriptionStatus,
+    error: subscriptionError,
+    // refetchSubscriptionStatus // Available if needed
+  } = useSubscriptionStatus();
+
+  const { mutate: startFreeTrial, isPending: isStartingTrial, data: trialMutationData } = useMutation<StartTrialResponse, Error, void>({
+    mutationFn: async (): Promise<StartTrialResponse> => {
+      const response = await fetch('/api/user/start-trial', { method: 'POST' });
+      const data: StartTrialResponse = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to start trial');
+      }
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success('Free trial started successfully!');
+      queryClient.invalidateQueries({ queryKey: ['userSubscriptionStatus'] });
+      if (session?.user?.id) {
+        queryClient.invalidateQueries({ queryKey: ['accountInfo', session.user.id] });
+      }
+      // Potentially use data.trialEndsAt here if needed immediately for the banner
+    },
+    onError: (error: Error) => {
+      console.error('Trial start API error:', error);
+      // Avoid duplicate toasts if the error is specifically about trial already used.
+      if (!error.message.toLowerCase().includes('trial already activated or used')) {
+        toast.error(error.message || 'Failed to start trial.');
+      }
+    },
+  });
+
+  // Effect to automatically try starting a trial if user is authenticated,
+  // has no active subscription/trial, and can start a new trial.
+  useEffect(() => {
+    // Wait until loading is complete and no trial is currently being started.
+    if (isLoadingSubscriptionStatus || isStartingTrial) {
+      return; 
+    }
+
+    // Proceed only if authenticated and subscriptionDetails are available.
+    if (sessionStatus === 'authenticated' && subscriptionDetails) {
+      if (!subscriptionDetails.hasAnyActiveAccess && subscriptionDetails.canStartNewTrial) {
+        console.log('[Integrations Page Effect] Conditions met. Attempting to start trial...');
+        startFreeTrial();
+      }
+    }
+  }, [
+    sessionStatus,
+    subscriptionDetails,
+    isLoadingSubscriptionStatus, 
+    isStartingTrial,             
+    startFreeTrial               
+  ]);
+  
 
   useEffect(() => {
     const initialState: { [key: string]: WaitlistFormState } = {};
@@ -101,114 +158,58 @@ function IntegrationsPageContent() {
     setWaitlistForms(initialState);
   }, []);
 
-  useEffect(() => {
-    console.log(`[Integrations Page Effect] Running. Session status: ${sessionStatus}`);
-    let isMounted = true;
+  const formatDate = (date: Date | null): string => {
+    if (!date) return '';
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  };
+  
+  // Determine banner state based on subscriptionDetails and mutation states
+  let bannerType: 'loading' | 'success' | 'warning' | 'error' | null = null;
+  let statusMessage: string | null = null;
+  let showStatusBanner = false;
 
-    const checkSubscriptionAndStartTrial = async () => {
-      if (sessionStatus === 'authenticated' && isMounted) {
-        console.log('[Integrations Page Effect] User authenticated. Checking subscription...');
-        setIsLoadingStatus(true);
-        setShowStatusBanner(true);
-        setBannerType('loading');
-        setStatusMessage('Checking your subscription status...');
-        setSubscriptionData(null);
-
-        try {
-          const response = await fetch('/api/user-subscription');
-          if (!isMounted) return;
-          
-          if (!response.ok) {
-            throw new Error('Failed to fetch subscription status');
-          }
-          const subData: SubscriptionDataType = await response.json();
-          const currentSub = {
-              ...subData,
-              currentPeriodEndsAt: subData.currentPeriodEndsAt ? new Date(subData.currentPeriodEndsAt) : null,
-              trialEndsAt: subData.trialEndsAt ? new Date(subData.trialEndsAt) : null,
-          };
-
-          console.log('[Integrations Page Effect] Fetched subscription data:', currentSub);
-          setSubscriptionData(currentSub);
-
-          const now = Date.now();
-          const isActiveSub = currentSub.subscriptionStatus === 'ACTIVE';
-          const isActiveTrial = currentSub.trialEndsAt && currentSub.trialEndsAt.getTime() > now;
-          const hasExpiredTrial = currentSub.trialEndsAt && currentSub.trialEndsAt.getTime() <= now;
-
-          if (isActiveSub) {
-            console.log('[Integrations Page Effect] Active subscription found.');
-            setStatusMessage('Your subscription is active!');
-            setBannerType('success');
-          } else if (isActiveTrial) {
-            console.log('[Integrations Page Effect] Active trial found.');
-            setStatusMessage(`Your trial is active! (Ends: ${formatDate(currentSub.trialEndsAt)})`);
-            setBannerType('success');
-          } else if (hasExpiredTrial) {
-            console.log('[Integrations Page Effect] Expired trial found.');
-            setStatusMessage('Your free trial has expired.');
-            setBannerType('warning');
-          } else {
-            console.log('[Integrations Page Effect] No trial/sub found. Attempting to start trial...');
-            setStatusMessage('Starting your free trial...');
-
-            const trialResponse = await fetch('/api/user/start-trial', { method: 'POST' });
-            if (!isMounted) return;
-            const trialData = await trialResponse.json();
-
-            if (trialResponse.ok && trialData.success) {
-              toast.success('Free trial started successfully!');
-              setStatusMessage('Your 14-day free trial has started!');
-              setBannerType('success');
-              try {
-                 const updatedResponse = await fetch('/api/user-subscription');
-                 if (updatedResponse.ok && isMounted) {
-                    const updatedSubData = await updatedResponse.json();
-                     setSubscriptionData({
-                         ...updatedSubData,
-                         currentPeriodEndsAt: updatedSubData.currentPeriodEndsAt ? new Date(updatedSubData.currentPeriodEndsAt) : null,
-                         trialEndsAt: updatedSubData.trialEndsAt ? new Date(updatedSubData.trialEndsAt) : null,
-                     });
-                     const newTrialEndDate = updatedSubData.trialEndsAt ? new Date(updatedSubData.trialEndsAt) : null;
-                     if(newTrialEndDate) {
-                         setStatusMessage(`Your 14-day free trial has started! (Ends: ${formatDate(newTrialEndDate)})`);
-                     }
-                 } 
-              } catch(fetchError) {
-                  console.error("Error fetching updated subscription data:", fetchError);
-              }
-            } else {
-              console.error('Trial start API error:', trialData.error);
-              toast.error(trialData.error || 'Failed to start trial.');
-              setStatusMessage('Could not start free trial.');
-              setBannerType('error');
-            }
-          }
-        } catch (error) {
-          if (!isMounted) return;
-          console.error("[Integrations Page Effect] Error:", error);
-          toast.error('An error occurred while checking status or starting trial.');
-          setStatusMessage('Error checking status.');
-          setBannerType('error');
-        } finally {
-          if (isMounted) {
-             setIsLoadingStatus(false); 
-          }
-        }
-      }
-    };
-
-    if (sessionStatus !== 'loading') { 
-      checkSubscriptionAndStartTrial();
-    } else {
-      console.log(`[Integrations Page Effect] Session still loading...`);
+  if (isLoadingSubscriptionStatus || (sessionStatus === 'authenticated' && isStartingTrial && !subscriptionDetails?.hasAnyActiveAccess)) {
+    bannerType = 'loading';
+    statusMessage = isLoadingSubscriptionStatus ? 'Checking your subscription status...' : 'Starting your free trial...';
+    showStatusBanner = true;
+  } else if (subscriptionError) {
+    bannerType = 'error';
+    // Display a generic error, specific trial error is handled by mutation's onError toast.
+    statusMessage = `Error loading subscription details.`; 
+    showStatusBanner = true;
+  } else if (sessionStatus === 'authenticated' && subscriptionDetails) {
+    if (subscriptionDetails.isActivePaidPlan) {
+      bannerType = 'success';
+      statusMessage = 'Your subscription is active!';
+      showStatusBanner = true;
+    } else if (subscriptionDetails.isActiveTrial) {
+      bannerType = 'success';
+      statusMessage = `Your trial is active! (Ends: ${formatDate(subscriptionDetails.apiTrialEndsAt)})`;
+      showStatusBanner = true;
+    } else if (subscriptionDetails.apiTrialEndsAt && subscriptionDetails.apiTrialEndsAt.getTime() <= Date.now() && !subscriptionDetails.isActivePaidPlan) { // Expired trial
+      bannerType = 'warning';
+      statusMessage = 'Your free trial has expired.';
+      showStatusBanner = true;
+    } else if (isStartingTrial) { // Trial is being started, but not yet reflected in subscriptionDetails
+        bannerType = 'loading';
+        statusMessage = 'Starting your free trial...';
+        showStatusBanner = true;
+    } else if (trialMutationData?.success && trialMutationData.trialEndsAt && !subscriptionDetails.isActiveTrial && !subscriptionDetails.isActivePaidPlan) {
+        bannerType = 'success';
+        statusMessage = `Your 14-day free trial has started! (Ends: ${formatDate(new Date(trialMutationData.trialEndsAt))})`;
+        showStatusBanner = true;
+    } else if (!subscriptionDetails.hasAnyActiveAccess && !subscriptionDetails.canStartNewTrial && !isStartingTrial) {
+      // User is authenticated, has no active access, cannot start a new trial (already used), and no trial is pending.
+      // This might happen if the API for /user-subscription correctly reflects an expired/used trial
+      // that `getUserSubscriptionStatusDetails` interprets as canStartNewTrial = false.
+      // This could be a more specific state like "Free plan, trial used."
+      // For now, if it doesn't fall into other categories, no specific banner is shown here,
+      // relying on other UI elements (like pricing page links) to guide the user.
     }
-    
-    return () => {
-        isMounted = false;
-    };
-  }, [sessionStatus]);
-
+    // If none of the above, and user is authenticated but has no active access and can't start a new trial (e.g. already used), no specific banner might be needed
+    // or a generic message could be shown.
+  }
+  
   const handleShowWaitlistInput = (tag: string) => {
     setWaitlistForms(prev => ({
       ...prev,
@@ -259,11 +260,6 @@ function IntegrationsPageContent() {
     }
   };
 
-  const formatDate = (date: Date | null): string => {
-    if (!date) return '';
-    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-  };
-
   return (
     <div className="min-h-screen bg-background-default py-12 md:py-20">
       <Toaster position="bottom-center" />
@@ -277,22 +273,25 @@ function IntegrationsPageContent() {
           </p>
         </div>
 
-        {showStatusBanner && (
+        {showStatusBanner && bannerType && (
           <div className={`mb-8 p-4 border rounded-lg flex items-center justify-center max-w-2xl mx-auto shadow-sm ${ 
             bannerType === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 
             bannerType === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 
             bannerType === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 
-            'bg-blue-50 border-blue-200 text-blue-800'
+            'bg-blue-50 border-blue-200 text-blue-800' // loading
           }`}>
             {bannerType === 'success' && <FaCheckCircle className="h-5 w-5 mr-3 flex-shrink-0" />}
-            {bannerType === 'warning' && <FaExclamationCircle className="h-5 w-5 mr-3 flex-shrink-0" />}
-            {bannerType === 'error' && <FaExclamationCircle className="h-5 w-5 mr-3 flex-shrink-0" />}
+            {(bannerType === 'warning' || bannerType === 'error') && <FaExclamationCircle className="h-5 w-5 mr-3 flex-shrink-0" />}
             {bannerType === 'loading' && <FaSpinner className="animate-spin h-5 w-5 mr-3 flex-shrink-0" />}
             
             <div className="text-center">
               <span>{statusMessage}</span>
               {bannerType === 'warning' && (
                  <Link href="/pricing" className="ml-2 underline font-medium">View Plans</Link>
+              )}
+              {/* Link to API key section added in previous step, ensure it's still relevant with new state logic */}
+              {bannerType === 'success' && (subscriptionDetails?.isActiveTrial || subscriptionDetails?.isActivePaidPlan) && (
+                <a href="#api-key-section" className="ml-2 underline font-medium">Get your API Key</a>
               )}
             </div>
           </div>
@@ -380,7 +379,7 @@ function IntegrationsPageContent() {
 
         <hr className="my-12 md:my-16 border-gray-200" />
 
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto" id="api-key-section">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-3">Your Expense Sorted API Key</h2>
             <p className="text-gray-600">
