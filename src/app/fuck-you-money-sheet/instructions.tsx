@@ -6,7 +6,9 @@ export default function Instructions() {
     <section id="instructions">
       <h2>Instructions</h2>
       <p className="text-gray-700">The sheet below is all you need to get tracking.</p>
-      <GetItHereButton />
+      <div className="not-prose">
+        <GetItHereButton />
+      </div>
       <p className="text-gray-700">Hop in and make a copy.</p>
       <div className="mt-6">
         <Image

@@ -2,123 +2,47 @@
 
 import Image from "next/image";
 import { signOut } from "next-auth/react";
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { SubscriptionCancellation } from '@/components/profile/SubscriptionCancellation';
 import { Toaster } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
+import { useSubscriptionStatus } from '@/lib/hooks/useSubscriptionStatus';
 
 // Use a data URL for the default avatar to avoid domain configuration issues
 const defaultPicture = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
 
 export default function ProfileClient({ user: initialUser }) {
-  const [user, setUser] = useState(initialUser);
-  const [isLoading, setIsLoading] = useState(!initialUser?.subscription);
-  const [error, setError] = useState(null);
+  const [user] = useState(initialUser);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (user?.subscription) {
-        setIsLoading(false);
-        return;
-      }
-      
-      setIsLoading(true);
-      setError(null);
-      try {
-        // First attempt without authorization header (relies on session cookies)
-        let response = await fetch('/api/user/profile');
-        
-        // If that fails with 401, try with the auth token from localStorage
-        if (response.status === 401) {
-          const authToken = localStorage.getItem('authToken');
-          if (authToken) {
-            response = await fetch('/api/user/profile', {
-              headers: {
-                'Authorization': `Bearer ${authToken}`
-              }
-            });
-          }
-        }
-        
-        if (!response.ok) {
-          if (response.headers.get('content-type')?.includes('application/json')) {
-            const data = await response.json();
-            throw new Error(data.error || 'Failed to fetch profile data');
-          } else {
-            const text = await response.text();
-            throw new Error(`Failed to fetch profile data: ${text}`);
-          }
-        }
-        
-        const data = await response.json();
-        setUser(data.user);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-        console.error('Error fetching profile:', errorMessage);
-        setError(errorMessage);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [user?.subscription]);
+  const { 
+    subscriptionDetails, 
+    isLoading: isLoadingSubscription, 
+    error: subscriptionError, 
+    refetchSubscriptionStatus 
+  } = useSubscriptionStatus();
 
   const handleLogout = async () => {
     localStorage.removeItem('authToken'); // Clear the token on logout
     await signOut({ callbackUrl: '/' });
   };
 
-  const refreshProfileData = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // First attempt without authorization header (relies on session cookies)
-      let response = await fetch('/api/user/profile');
-      
-      // If that fails with 401, try with the auth token from localStorage
-      if (response.status === 401) {
-        const authToken = localStorage.getItem('authToken');
-        if (authToken) {
-          response = await fetch('/api/user/profile', {
-            headers: {
-              'Authorization': `Bearer ${authToken}`
-            }
-          });
-        }
-      }
-      
-      if (!response.ok) {
-        if (response.headers.get('content-type')?.includes('application/json')) {
-          const data = await response.json();
-          throw new Error(data.error || 'Failed to refresh profile data');
-        } else {
-          const text = await response.text();
-          throw new Error(`Failed to refresh profile data: ${text}`);
-        }
-      }
-      
-      const data = await response.json();
-      setUser(data.user);
-    } catch (err) {
-      console.error('Error refreshing profile:', err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   if (!user) {
-    return <div>Loading profile...</div>;
+    // This should ideally not happen if initialUser is always provided
+    return <div>Loading basic profile...</div>;
   }
 
-  const subscription = user.subscription;
-  const isSubscribed = subscription && (
-    subscription.status === 'ACTIVE' || 
-    subscription.status === 'TRIALING' || 
-    subscription.status === 'PAST_DUE'
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString();
+  };
+  
+  const isSubscribed = subscriptionDetails && (
+    subscriptionDetails.apiSubscriptionStatus === 'ACTIVE' ||
+    subscriptionDetails.apiSubscriptionStatus === 'TRIALING' ||
+    subscriptionDetails.apiSubscriptionStatus === 'PAST_DUE' ||
+    subscriptionDetails.isActiveTrial 
   );
-  const isCancellationPending = subscription?.cancelAtPeriodEnd === true;
+  const isCancellationPending = subscriptionDetails?.apiCancelAtPeriodEnd === true;
 
   return (
     <>
@@ -142,27 +66,46 @@ export default function ProfileClient({ user: initialUser }) {
 
           <div className="mt-6 border-t border-gray-200 pt-6">
             <h3 className="text-lg font-semibold mb-3 text-gray-800">Subscription</h3>
-            {isLoading && <p>Loading subscription details...</p>}
-            {error && <p className="text-red-500">Error loading details: {error}</p>}
-            {!isLoading && !error && (
+            {isLoadingSubscription && <p>Loading subscription details...</p>}
+            {subscriptionError && <p className="text-red-500">Error loading details: {subscriptionError.message}</p>}
+            {!isLoadingSubscription && !subscriptionError && subscriptionDetails && (
               <>
                 {isSubscribed ? (
                   <div>
-                    <p>Status: <span className={`font-medium ${subscription.status === 'ACTIVE' || subscription.status === 'TRIALING' ? 'text-green-600' : 'text-yellow-600'}`}>{subscription.status}</span></p>
-                    <p>Plan: {subscription.plan} ({subscription.billingCycle})</p>
-                    {subscription.status === 'TRIALING' && subscription.trialEndsAt && <p>Trial ends: {new Date(subscription.trialEndsAt).toLocaleDateString()}</p>}
-                    {subscription.currentPeriodEnd && !isCancellationPending && <p>Renews on: {new Date(subscription.currentPeriodEnd).toLocaleDateString()}</p>}
+                    <p>Status: <span className={`font-medium ${
+                      subscriptionDetails.apiSubscriptionStatus === 'ACTIVE' || subscriptionDetails.apiSubscriptionStatus === 'TRIALING' || subscriptionDetails.isActiveTrial
+                        ? 'text-green-600' 
+                        : subscriptionDetails.apiSubscriptionStatus === 'PAST_DUE' 
+                        ? 'text-yellow-600' 
+                        : 'text-gray-600'
+                    }`}>
+                      {subscriptionDetails.apiSubscriptionStatus}{subscriptionDetails.isActiveTrial && !subscriptionDetails.apiSubscriptionStatus ? ' (Trial)' : ''}
+                    </span></p>
+                    <p>Plan: {subscriptionDetails.subscriptionPlanName || 'N/A'} ({subscriptionDetails.billingCycle || 'N/A'})</p>
+                    
+                    {subscriptionDetails.isActiveTrial && subscriptionDetails.apiTrialEndsAt && (
+                      <p>Trial ends: {formatDate(subscriptionDetails.apiTrialEndsAt)}</p>
+                    )}
+                    
+                    {!isCancellationPending && subscriptionDetails.apiCurrentPeriodEndsAt && subscriptionDetails.isActivePaidPlan && (
+                       <p>Renews on: {formatDate(subscriptionDetails.apiCurrentPeriodEndsAt)}</p>
+                    )}
                     
                     <SubscriptionCancellation 
                       isCancellationPending={isCancellationPending}
-                      currentPeriodEnd={subscription.currentPeriodEnd}
-                      onSubscriptionCancelled={refreshProfileData}
+                      currentPeriodEnd={subscriptionDetails.apiCurrentPeriodEndsAt}
+                      onSubscriptionCancelled={refetchSubscriptionStatus}
+                      isActiveTrial={subscriptionDetails.isActiveTrial}
+                      trialEndsAt={subscriptionDetails.apiTrialEndsAt}
                     />
                   </div>
                 ) : (
                   <p>You do not have an active subscription.</p>
                 )}
               </>
+            )}
+            {!isLoadingSubscription && !subscriptionError && !subscriptionDetails && (
+                 <p>No subscription details found.</p>
             )}
           </div>
 
