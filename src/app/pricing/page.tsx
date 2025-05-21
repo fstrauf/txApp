@@ -191,6 +191,9 @@ export default function PricingPage() {
                   Next billing: {formatDate(subscriptionDetails.apiCurrentPeriodEndsAt)}
                 </p>
               )}
+                      <p className="text-sm text-gray-700 mb-1 mt-6">
+          You can find your API key on the <Link href="/api-key" className="text-blue-600 hover:underline font-medium">API Key page</Link>.
+        </p>
             </div>
           )}
           

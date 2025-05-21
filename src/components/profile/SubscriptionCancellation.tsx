@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Button } from '@/components/ui/button'; // Correct import path
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 interface SubscriptionCancellationProps {
   // Pass any necessary props, e.g., if you need to update parent state on success
@@ -11,14 +12,44 @@ interface SubscriptionCancellationProps {
   isCancellationPending: boolean;
   // Add prop for current period end date if cancellation is pending
   currentPeriodEnd: string | null;
+  // Added prop
+  isActiveTrial?: boolean;
+  // Added prop
+  trialEndsAt?: string | null;
 }
 
 export function SubscriptionCancellation({ 
   onSubscriptionCancelled, 
   isCancellationPending, 
-  currentPeriodEnd 
+  currentPeriodEnd,
+  isActiveTrial,
+  trialEndsAt
 }: SubscriptionCancellationProps) {
   const [isLoading, setIsLoading] = useState(false);
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    });
+  };
+
+  // Handle trial users first
+  if (isActiveTrial) {
+    return (
+      <div className="mt-4 p-4 border rounded-md bg-blue-50 border-blue-200 text-blue-800">
+        <p className="font-medium">Free Trial Active</p>
+        {trialEndsAt ? (
+          <p>Your free trial is active and will automatically end on {formatDate(trialEndsAt)}. No cancellation is needed.</p>
+        ) : (
+          <p>You are currently on a free trial. It will end automatically.</p>
+        )}
+        <p className="mt-2">
+          You can find your API key on the <Link href="/api-key" className="text-blue-600 hover:underline font-medium">API Key page</Link>.
+        </p>
+      </div>
+    );
+  }
 
   const handleCancelSubscription = async () => {
     setIsLoading(true);
@@ -51,13 +82,6 @@ export function SubscriptionCancellation({
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric'
-    });
   };
 
   if (isCancellationPending) {
