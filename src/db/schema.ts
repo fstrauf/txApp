@@ -7,6 +7,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  index, // Added for explicit index definition
   json,
   uuid,
   pgEnum,
@@ -54,6 +55,10 @@ export const users = pgTable('users', {
   categoriesResetDate: timestamp('categoriesResetDate', { mode: 'date', withTimezone: true }),
   // Add beta opt-in status directly to users table
   appBetaOptIn: appBetaOptInStatusEnum('appBetaOptIn'),
+}, (table) => {
+  return {
+    emailIdx: index('users_email_idx').on(table.email),
+  };
 });
 
 // Email subscribers table
