@@ -1,7 +1,7 @@
 ---
 title: "Supercharge Your Google Sheets Expense Tracking with AI Categorization"
 date: "2025-05-20"
-summary: "Learn how to transform your basic Google Sheets expense tracking spreadsheet into an intelligent system that automatically categorizes transactions and saves you hours of manual work."
+summary: "Transform Google Sheets expense tracking into an AI-powered system. Auto-categorize transactions & save hours of manual work. Learn how."
 ---
 
 # Supercharge Your Google Sheets Expense Tracking with AI Categorization
