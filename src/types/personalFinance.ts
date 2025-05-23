@@ -47,12 +47,12 @@ export const initialUserData: UserData = {
 };
 
 // Define types for screen names/IDs for better type safety
-export type ScreenId = 
+export type ScreenId =
   | 'welcome' // screen1
   | 'income' // screen2
   | 'spending' // screen3
   | 'savings' // screen4
-  | 'initialInsights' // screen5
+  | 'initialInsights' // screen5 - This will be our main results screen
   | 'goalPlanning' // screen6 (also used by goToGoalsPlanning)
   | 'finalSummary' // screen7 (jumpToEnd target)
   | 'spendingAnalysisUpload' // screen8
