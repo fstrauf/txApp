@@ -73,7 +73,7 @@ module.exports = {
     },
   },
   plugins: [
-    require('@tailwindcss/typography'),
+    // require('@tailwindcss/typography'), // Temporarily disabled for testing
   ],
   // variants: {
   //   extend: {

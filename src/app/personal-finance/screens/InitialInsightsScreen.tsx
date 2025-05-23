@@ -1,3 +1,4 @@
+// src/app/personal-finance/screens/InitialInsightsScreen.tsx
 'use client';
 
 import React from 'react';
@@ -34,7 +35,7 @@ const InitialInsightsScreen: React.FC = () => {
     } else if (savingsRate >= 15) {
       insights.push({
         type: "success" as const,
-        icon: "👍",
+        icon: "✅",
         title: "Great savings rate!",
         text: `Your ${savingsRate.toFixed(1)}% savings rate is above the NZ average of 12%.`,
         action: "You're doing well! Consider bumping it up to 20% if possible.",
@@ -73,7 +74,7 @@ const InitialInsightsScreen: React.FC = () => {
     if (monthsOfExpenses >= 6) {
       insights.push({
         type: "success" as const,
-        icon: "🛡️",
+        icon: "💪",
         title: "Excellent emergency fund!",
         text: `Your savings would last ${monthsOfExpenses.toFixed(1)} months if income stopped.`,
         action: "Consider investing excess savings for higher returns.",
@@ -95,7 +96,7 @@ const InitialInsightsScreen: React.FC = () => {
         title: "Build your emergency fund",
         text: `Your savings would last ${monthsOfExpenses.toFixed(1)} months if income stopped.`,
         action: `Build emergency fund to $${(spending * 3).toLocaleString()} (3 months expenses) before other goals.`,
-        benchmark: `Timeline: ${Math.ceil((spending * 3 - savings) / monthlySavings)} months at current savings rate`
+        benchmark: monthlySavings > 0 ? `Timeline: ${Math.ceil((spending * 3 - savings) / monthlySavings)} months at current savings rate` : "Focus on saving first"
       });
     } else {
       insights.push({
@@ -114,7 +115,7 @@ const InitialInsightsScreen: React.FC = () => {
         type: "optimize" as const,
         icon: "📈",
         title: "Optimize your excess savings",
-        text: `Your $${savings.toLocaleString()} in savings could earn more with better returns.`,
+        text: `Your ${savings.toLocaleString()} in savings could earn more with better returns.`,
         action: "Consider high-interest savings accounts or investments for excess funds.",
         benchmark: "Best NZ savings rates: Heartland Bank 4.1%, Rabobank 4.0%"
       });
@@ -146,117 +147,117 @@ const InitialInsightsScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
+    <div className="max-w-6xl mx-auto p-8">
+      {/* Header - Matching Artifact Style */}
+      <div className="text-center mb-12">
+        <div className="text-sm text-gray-500 uppercase tracking-wide mb-2">Your Financial Health Report</div>
+        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+          Here's what we found
+        </h1>
+        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          Personalized insights based on your situation
+        </p>
+      </div>
+
+      {/* Financial Snapshot */}
+      <ParametersReview
+        income={income}
+        spending={spending}
+        savings={savings}
+        onEdit={handleEditNumbers}
+        className="mb-12"
+      />
+
+      {/* Insights Section */}
+      <div className="mb-12">
+        <div className="space-y-4">
+          {insights.map((insight, index) => (
+            <InsightCard
+              key={index}
+              type={insight.type}
+              icon={insight.icon}
+              title={insight.title}
+              text={insight.text}
+              action={insight.action}
+              benchmark={insight.benchmark}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Dive Deeper Section - Matching Artifact Layout */}
+      <div className="mb-12">
         <div className="text-center mb-8">
-          <div className="text-sm text-gray-500 mb-2">Step 5 of 7</div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Your Financial Health Report
-          </h1>
-          <p className="text-lg text-gray-600">
-            Here's what we discovered about your money situation
-          </p>
-        </div>
-
-        {/* Financial Snapshot */}
-        <ParametersReview
-          income={income}
-          spending={spending}
-          savings={savings}
-          onEdit={handleEditNumbers}
-          className="mb-8"
-        />
-
-        {/* Insights Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            💡 Key Insights
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">
+            🔍 Dive Deeper Into Your Finances
           </h2>
-          <div className="space-y-4">
-            {insights.map((insight, index) => (
-              <InsightCard
-                key={index}
-                type={insight.type}
-                icon={insight.icon}
-                title={insight.title}
-                text={insight.text}
-                action={insight.action}
-                benchmark={insight.benchmark}
-              />
-            ))}
-          </div>
         </div>
-
-        {/* Dive Deeper Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            🔍 Want to dive deeper?
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <DiveDeeperCard
-              type="spending"
-              icon="💳"
-              title="Analyze Your Spending"
-              description="Upload bank transactions and discover exactly where your money goes"
-              features={[
-                "Automatic categorization",
-                "Spending trends over time", 
-                "Compare to benchmarks",
-                "Find saving opportunities"
-              ]}
-              actionText="Upload CSV from your bank →"
-              onClick={() => handleDiveDeeper('spending')}
-            />
-            
-            <DiveDeeperCard
-              type="savings"
-              icon="🏦"
-              title="Optimize Your Savings"
-              description="Analyze where you keep your money and maximize returns"
-              features={[
-                "Savings account analysis",
-                "Interest rate comparison",
-                "Investment opportunities", 
-                "Emergency fund strategy"
-              ]}
-              actionText="Analyze your savings →"
-              onClick={() => handleDiveDeeper('savings')}
-            />
-            
-            <DiveDeeperCard
-              type="goals"
-              icon="🎯"
-              title="Plan Your Goals"
-              description="Set specific targets and get a roadmap to achieve them"
-              features={[
-                "Custom goal timelines",
-                "Monthly savings targets",
-                "Progress tracking",
-                "Milestone celebrations"
-              ]}
-              actionText="Set your goals →"
-              onClick={() => handleDiveDeeper('goals')}
-            />
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <PrimaryButton
-            variant="secondary"
-            onClick={handleEditNumbers}
-            className="sm:w-auto"
-          >
-            ← Edit My Numbers
-          </PrimaryButton>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <DiveDeeperCard
+            type="spending"
+            icon="💳"
+            title="Breakdown Your Expenses"
+            description="Upload your bank transactions and discover exactly where your money goes"
+            features={[
+              "Automatic categorization",
+              "Spending trends over time", 
+              "Compare to benchmarks",
+              "Find saving opportunities"
+            ]}
+            actionText="Upload CSV from your bank →"
+            onClick={() => handleDiveDeeper('spending')}
+          />
           
-          <PrimaryButton
-            onClick={nextScreen}
-            className="sm:flex-1"
+          <DiveDeeperCard
+            type="savings"
+            icon="🏦"
+            title="Optimize Your Savings"
+            description="Analyze where you keep your money and maximize your returns"
+            features={[
+              "Savings account analysis",
+              "Interest rate comparison",
+              "Investment opportunities", 
+              "Emergency fund strategy"
+            ]}
+            actionText="Analyze your savings →"
+            onClick={() => handleDiveDeeper('savings')}
+          />
+          
+          <DiveDeeperCard
+            type="goals"
+            icon="🎯"
+            title="Plan Your Goals"
+            description="Set specific targets and get a roadmap to achieve them"
+            features={[
+              "Custom goal timelines",
+              "Monthly savings targets",
+              "Progress tracking",
+              "Milestone celebrations"
+            ]}
+            actionText="Set your goals →"
+            onClick={() => handleDiveDeeper('goals')}
+          />
+        </div>
+      </div>
+
+      {/* Action Buttons - Fixed Layout */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between">
+        <PrimaryButton
+          variant="secondary"
+          onClick={handleEditNumbers}
+          className="w-full sm:w-auto"
+        >
+          ← Back to Insights
+        </PrimaryButton>
+        
+        <div className="flex gap-4">
+          <button
+            onClick={() => handleDiveDeeper('spending')}
+            className="text-sm text-gray-500 hover:text-gray-700 underline"
           >
-            Continue to Goal Planning →
-          </PrimaryButton>
+            Skip for now
+          </button>
         </div>
       </div>
     </div>

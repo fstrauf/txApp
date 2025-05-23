@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { CurrencyInput, QuickAmountSelector, PrimaryButton } from '../shared/FinanceComponents';
+import React, { useState } from 'react';
+import { QuickAmountSelector, PrimaryButton } from '../shared/FinanceComponents';
 import { usePersonalFinanceStore } from '../../../store/personalFinanceStore';
+import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 
 interface SavingsScreenProps {
   onNext: () => void;
@@ -26,8 +27,6 @@ export const SavingsScreen: React.FC<SavingsScreenProps> = ({ onNext, onBack }) 
   const handleQuickSelect = (selectedAmount: number) => {
     setAmount(selectedAmount.toString());
     setSelectedQuickAmount(selectedAmount);
-    updateSavings(selectedAmount);
-    onNext();
   };
 
   const handleContinue = () => {
@@ -69,76 +68,13 @@ export const SavingsScreen: React.FC<SavingsScreenProps> = ({ onNext, onBack }) 
       </div>
 
       {/* Quick Amount Selector */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 gap-4 mb-8">
-        {savingsAmounts.map((amount) => (
-          <button
-            key={amount}
-            type="button"
-            onClick={() => handleQuickSelect(amount)}
-            className={`w-full py-3 border border-gray-200 rounded-lg text-center cursor-pointer transition-all duration-200 font-medium text-base
-              hover:border-indigo-500 hover:bg-indigo-50
-              ${selectedQuickAmount === amount ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-700'}`}
-          >
-            ${amount >= 1000 ? `${amount/1000}k` : amount}
-            {amount >= 50000 && '+'}
-          </button>
-        ))}
+      <div className="mb-12 flex-1">
+        <QuickAmountSelector
+          amounts={savingsAmounts}
+          selectedAmount={selectedQuickAmount}
+          onSelect={handleQuickSelect}
+        />
       </div>
-
-      {/* Contextual Information */}
-      {currentAmount >= 0 && (
-        <div className="mb-8 space-y-4">
-          {/* Emergency Fund Status */}
-          {userData.spending && (
-            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-semibold text-gray-800">Emergency Fund Status</h4>
-                  <p className="text-sm text-gray-600">
-                    Target: ${emergencyFundTarget.toLocaleString()} (3 months expenses)
-                  </p>
-                </div>
-                <div className="text-right">
-                  {currentAmount >= emergencyFundTarget ? (
-                    <div className="text-green-600 font-semibold flex items-center">
-                      ✓ Covered
-                    </div>
-                  ) : (
-                    <div className="text-orange-600 font-semibold">
-                      ${(emergencyFundTarget - currentAmount).toLocaleString()} to go
-                    </div>
-                  )}
-                </div>
-              </div>
-              {currentAmount > 0 && (
-                <div className="mt-2">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min((currentAmount / emergencyFundTarget) * 100, 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Savings Rate Insight */}
-          {monthlyIncome > 0 && currentAmount > 0 && (
-            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-              <h4 className="font-semibold text-gray-800">Annual Savings Rate</h4>
-              <p className="text-2xl font-bold text-green-600">
-                {savingsRate.toFixed(1)}%
-              </p>
-              <p className="text-sm text-gray-600">
-                {savingsRate >= 20 ? "Excellent! You're on track for financial independence." :
-                 savingsRate >= 10 ? "Good start! Consider increasing your savings rate." :
-                 "Room for improvement. Every dollar saved counts!"}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Savings Tips */}
       <div className="mb-8 p-6 bg-yellow-50 rounded-2xl border border-yellow-200">

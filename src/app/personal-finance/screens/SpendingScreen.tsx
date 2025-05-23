@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CurrencyInput, QuickAmountSelector, PrimaryButton } from '../shared/FinanceComponents';
+import { QuickAmountSelector, PrimaryButton } from '../shared/FinanceComponents';
+import { CurrencyInput } from '../shared/CurrencyInput';
 import { usePersonalFinanceStore } from '../../../store/personalFinanceStore';
 
 interface SpendingScreenProps {
@@ -26,8 +27,6 @@ export const SpendingScreen: React.FC<SpendingScreenProps> = ({ onNext, onBack }
   const handleQuickSelect = (selectedAmount: number) => {
     setAmount(selectedAmount.toString());
     setSelectedQuickAmount(selectedAmount);
-    updateSpending(selectedAmount);
-    onNext();
   };
 
   const handleContinue = () => {

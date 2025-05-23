@@ -1,8 +1,10 @@
+// src/app/personal-finance/screens/IncomeScreen.tsx
 'use client';
 
 import React, { useState } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { CurrencyInput, QuickAmountSelector, PrimaryButton } from '@/app/personal-finance/shared/FinanceComponents';
+import { QuickAmountSelector, PrimaryButton } from '@/app/personal-finance/shared/FinanceComponents';
+import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 
 const IncomeScreen: React.FC = () => {
   const { nextScreen, prevScreen, updateIncome, userData } = usePersonalFinanceStore();
@@ -10,7 +12,7 @@ const IncomeScreen: React.FC = () => {
   const [income, setIncome] = useState<number | string>(userData.income || '');
   const [selectedAmount, setSelectedAmount] = useState<number | null>(userData.income || null);
 
-  const quickAmounts = [3000, 4000, 6000, 7000, 9000, 12000];
+  const quickAmounts = [3000, 4500, 6000, 7500, 9000, 12000];
 
   const handleIncomeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -31,8 +33,6 @@ const IncomeScreen: React.FC = () => {
   const handleQuickAmountSelect = (amount: number) => {
     setSelectedAmount(amount);
     setIncome(amount);
-    updateIncome(amount);
-    nextScreen();
   };
 
   const handleNext = () => {
@@ -44,38 +44,51 @@ const IncomeScreen: React.FC = () => {
   const isValid = income && (typeof income === 'number' ? income > 0 : parseInt(income) > 0);
 
   return (
-    <div className="max-w-2xl mx-auto p-8 min-h-[500px] flex flex-col bg-white">
-      <div className="text-left mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-1">
+    <div className="max-w-4xl mx-auto p-12 min-h-[600px] flex flex-col">
+      {/* Header Section - Matching Artifact */}
+      <div className="text-center mb-10">
+        <div className="text-sm text-gray-500 uppercase tracking-wide mb-2">Question 1 of 3</div>
+        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
           What's your monthly take-home income?
-        </h2>
-        <p className="text-base text-gray-500 mb-4">
+        </h1>
+        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
           After tax, KiwiSaver, and student loan payments
         </p>
       </div>
-      <div className="mb-6">
+
+      {/* Input Section */}
+      <div className="mb-10">
         <CurrencyInput
           value={income}
           onChange={handleIncomeChange}
-          placeholder="5,000"
-          label={undefined}
-          helperText={undefined}
+          placeholder="4,500"
           className="mb-0"
         />
       </div>
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-800 mb-3">Quick select</h3>
+
+      {/* Quick Amount Selector */}
+      <div className="mb-12 flex-1">
         <QuickAmountSelector
           amounts={quickAmounts}
           selectedAmount={selectedAmount}
           onSelect={handleQuickAmountSelect}
         />
       </div>
-      <div className="flex flex-row justify-end gap-4 mt-auto">
-        <PrimaryButton onClick={prevScreen} variant="secondary" className="w-32">
+
+      {/* Navigation Buttons - Fixed styling */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-auto">
+        <PrimaryButton 
+          onClick={prevScreen} 
+          variant="secondary" 
+          className="w-full sm:w-32 order-2 sm:order-1"
+        >
           Back
         </PrimaryButton>
-        <PrimaryButton onClick={handleNext} disabled={!isValid} className="w-32">
+        <PrimaryButton 
+          onClick={handleNext} 
+          disabled={!isValid} 
+          className="w-full sm:w-32 order-1 sm:order-2"
+        >
           Continue
         </PrimaryButton>
       </div>

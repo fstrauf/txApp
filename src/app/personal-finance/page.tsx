@@ -1,3 +1,4 @@
+// src/app/personal-finance/page.tsx
 'use client';
 
 import React from 'react';
@@ -27,19 +28,22 @@ const PersonalFinancePage: React.FC = () => {
         return <InitialInsightsScreen />;
       case 'spendingAnalysisUpload':
         return <SpendingAnalysisUploadScreen />;
-      // Add more cases as we create more screens
       default:
-        // Fallback to WelcomeScreen
         return <WelcomeScreen />;
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-8 bg-gray-50 min-h-screen">
-      <div className="bg-white rounded-2xl p-8 shadow-xl overflow-hidden">
-        <ProgressBar />
-        <div className="min-h-[calc(100vh-10rem)]">
-          {renderScreen()}
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      {/* Progress Bar - Fixed Position */}
+      <ProgressBar />
+      
+      {/* Main Container - Matching Artifact */}
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden min-h-screen">
+          <div className="min-h-screen flex flex-col">
+            {renderScreen()}
+          </div>
         </div>
       </div>
     </div>
@@ -47,4 +51,3 @@ const PersonalFinancePage: React.FC = () => {
 };
 
 export default PersonalFinancePage;
-
