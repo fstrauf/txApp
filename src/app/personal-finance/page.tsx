@@ -6,6 +6,7 @@ import ProgressBar from '@/app/personal-finance/shared/ProgressBar';
 import WelcomeScreen from '@/app/personal-finance/screens/WelcomeScreen';
 // We will import other screen components here as they are created, for example:
 import IncomeScreen from '@/app/personal-finance/screens/IncomeScreen';
+import InsightsScreen from '@/app/personal-finance/screens/InsightsScreen'; // <-- New Import
 
 const PersonalFinancePage: React.FC = () => {
   const currentScreen = usePersonalFinanceStore((state) => state.currentScreen);
@@ -17,6 +18,8 @@ const PersonalFinancePage: React.FC = () => {
       // Add cases for other screens here as we build them
       case 'income':
         return <IncomeScreen />;
+      case 'insights': // <-- New Case
+        return <InsightsScreen />;
       default:
         // Fallback to WelcomeScreen or a loading indicator
         return <WelcomeScreen />;

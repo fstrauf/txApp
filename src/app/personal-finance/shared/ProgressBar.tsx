@@ -3,13 +3,18 @@
 import React from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 
-const ProgressBar: React.FC = () => {
+// Define props type to include className
+interface ProgressBarProps {
+  className?: string;
+}
+
+const ProgressBar: React.FC<ProgressBarProps> = ({ className = "" }) => {
   const progress = usePersonalFinanceStore((state) => state.progress);
 
   return (
-    <div className="w-full h-1 bg-gray-200 fixed top-0 left-0 z-50">
+    <div className={`w-full h-1 bg-gray-200 ${className}`}> {/* Removed fixed positioning, added className */}
       <div
-        className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-300 ease-out"
+        className="h-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-300 ease-out" // Updated to-green-600
         style={{ width: `${progress}%` }}
       />
     </div>
