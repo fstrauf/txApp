@@ -32,6 +32,16 @@ module.exports = {
           light: "#A78BFA",
           dark: "#7C3AED",
         },
+        // --- Workaround for default palette gradients ---
+        'gradient-indigo-500': '#6366f1', 
+        'gradient-purple-600': '#9333ea',
+        // --- End workaround ---
+
+        // --- Explicit definitions for problematic default colors ---
+        'custom-green-500': '#22c55e',
+        'custom-orange-500': '#f97316',
+        'custom-red-500': '#ef4444',
+        // --- End explicit definitions ---
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

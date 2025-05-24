@@ -3,7 +3,8 @@
 
 import React from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { PrimaryButton } from '@/app/personal-finance/shared/FinanceComponents';
+import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
+import { Box } from '@/components/ui/Box';
 
 const WelcomeScreen: React.FC = () => {
   const nextScreen = usePersonalFinanceStore((state) => state.nextScreen);
@@ -20,24 +21,38 @@ const WelcomeScreen: React.FC = () => {
         </p>
       </div>
 
+      <div className="p-4 space-y-2">
+  <div className="bg-red-500 text-white p-2">Red test</div>
+  <div className="bg-orange-600 text-white p-2">Orange test</div>
+  <div className="bg-green-500 text-white p-2">Green test</div>
+  <div className="bg-primary text-white p-2">Primary test</div>
+  <div className="bg-secondary text-white p-2">Secondary test</div>
+  <div className="bg-accent text-white p-2">Accent test</div>
+  <div style={{ backgroundColor: 'var(--color-orange-600)' }} className="p-2 text-white">
+    Direct CSS var test
+  </div>
+</div>
+
       <div className="my-16">
         <div className="text-8xl md:text-9xl mb-8">💰</div>
-        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-8 rounded-2xl shadow-lg max-w-lg mx-auto border border-indigo-100">
-          <h3 className="text-xl font-semibold text-gray-800 mb-6">You&apos;ll discover:</h3>
-          <ul className="text-base text-gray-600 space-y-3 text-left">
-            {[
-              "How you compare to other Kiwis",
-              "Your biggest money-saving opportunities", 
-              "A personalized action plan",
-              "Timeline to reach your goals"
-            ].map((item, index) => (
-              <li key={index} className="flex items-center">
-                <span className="text-green-500 mr-3 text-lg">✓</span>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/* <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-8 rounded-2xl shadow-lg max-w-lg mx-auto border border-indigo-100"> */}
+        <Box variant="gradient" className="max-w-lg mx-auto">
+        <h3 className="text-xl font-semibold text-gray-800 mb-6">You'll discover:</h3>
+        <ul className="text-base text-gray-600 space-y-3 text-left">
+          {[
+            "How you compare to other Kiwis",
+            "Your biggest money-saving opportunities", 
+            "A personalized action plan",
+            "Timeline to reach your goals"
+          ].map((item, index) => (
+            <li key={index} className="flex items-center">
+              <span className="text-green-500 mr-3 text-lg">✓</span>
+              {item}
+            </li>
+          ))}
+        </ul>
+      </Box>
+        {/* </div> */}
       </div>
 
       <PrimaryButton

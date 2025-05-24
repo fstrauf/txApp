@@ -92,7 +92,7 @@ const formatNumberWithCommas = (value: number | string): string => {
             onBlur={() => setIsFocused(false)}
             placeholder={placeholder}
             className={`
-              relative w-full pl-12 pr-6 py-5 
+              relative w-full pl-12 pr-6 py-4 px-4
               border-2 rounded-xl text-2xl font-semibold
               transition-all duration-300 ease-out
               placeholder-gray-400 bg-white/90 backdrop-blur-sm

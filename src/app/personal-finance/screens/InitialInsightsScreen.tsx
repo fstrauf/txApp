@@ -3,15 +3,14 @@
 
 import React from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { 
-  ParametersReview, 
-  InsightCard, 
-  DiveDeeperCard, 
-  PrimaryButton 
-} from '@/app/personal-finance/shared/FinanceComponents';
+import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
+import { Box } from '@/components/ui/Box';
+import { ParametersReview } from '@/app/personal-finance/shared/ParametersReview';
+import { InsightCard } from '@/app/personal-finance/shared/InsightCard';
+import {DiveDeeperCard} from '@/app/personal-finance/shared/DiveDeeperCard';
 
 const InitialInsightsScreen: React.FC = () => {
-  const { userData, nextScreen, setCurrentScreen } = usePersonalFinanceStore();
+  const { userData, setCurrentScreen } = usePersonalFinanceStore();
   const { income, spending, savings } = userData;
 
   // Calculate insights
@@ -115,7 +114,7 @@ const InitialInsightsScreen: React.FC = () => {
         type: "optimize" as const,
         icon: "📈",
         title: "Optimize your excess savings",
-        text: `Your ${savings.toLocaleString()} in savings could earn more with better returns.`,
+        text: `Your $${savings.toLocaleString()} in savings could earn more with better returns.`,
         action: "Consider high-interest savings accounts or investments for excess funds.",
         benchmark: "Best NZ savings rates: Heartland Bank 4.1%, Rabobank 4.0%"
       });
@@ -127,7 +126,7 @@ const InitialInsightsScreen: React.FC = () => {
   const insights = generateInsights();
 
   const handleEditNumbers = () => {
-    setCurrentScreen('income'); // Go back to income screen to edit
+    setCurrentScreen('income');
   };
 
   const handleDiveDeeper = (type: string) => {
@@ -147,120 +146,170 @@ const InitialInsightsScreen: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-8">
-      {/* Header - Matching Artifact Style */}
-      <div className="text-center mb-12">
-        <div className="text-sm text-gray-500 uppercase tracking-wide mb-2">Your Financial Health Report</div>
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-          Here's what we found
-        </h1>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Personalized insights based on your situation
-        </p>
-      </div>
+    <Box variant="gradient" className="max-w-6xl mx-auto mb-4">
+      <div className="max-w-6xl mx-auto p-4 sm:p-8 animate-fadeIn">
+        {/* Enhanced Header with gradient text */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 backdrop-blur-sm mb-6">
+            <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+            <span className="text-sm font-medium text-primary uppercase tracking-wide">
+              Your Financial Health Report
+            </span>
+          </div>
+          
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            Here's what we found
+          </h1>
+          
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Personalized insights based on your unique situation
+          </p>
+        </div>
 
-      {/* Financial Snapshot */}
-      <ParametersReview
-        income={income}
-        spending={spending}
-        savings={savings}
-        onEdit={handleEditNumbers}
-        className="mb-12"
-      />
+        {/* Enhanced Financial Snapshot */}
 
-      {/* Insights Section */}
-      <div className="mb-12">
-        <div className="space-y-4">
-          {insights.map((insight, index) => (
-            <InsightCard
-              key={index}
-              type={insight.type}
-              icon={insight.icon}
-              title={insight.title}
-              text={insight.text}
-              action={insight.action}
-              benchmark={insight.benchmark}
+          <ParametersReview
+            income={income}
+            spending={spending}
+            savings={savings}
+            onEdit={handleEditNumbers}            
+          />
+
+
+        {/* Enhanced Insights Section */}
+        <div className="mb-16">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">
+                Your Key Insights
+              </h2>
+              <p className="text-gray-600 mt-1">
+                The most important things to focus on right now
+              </p>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 text-sm text-gray-500">
+              <span className="w-2 h-2 bg-green-500 rounded-full"><span className="text-xs">Success</span></span>
+              
+              <span className="w-2 h-2 bg-orange-500 rounded-full ml-3"><span className="text-xs">Optimize</span></span>
+              
+              <span className="w-2 h-2 bg-red-500 rounded-full ml-3"><span className="text-xs">Action needed</span></span>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            {insights.map((insight, index) => (
+              <div
+                key={index}
+                className="transform transition-all duration-300 hover:translate-x-2"
+                style={{ animationDelay: `${index * 150}ms` }}
+              >
+                <InsightCard
+                  type={insight.type}
+                  icon={insight.icon}
+                  title={insight.title}
+                  text={insight.text}
+                  action={insight.action}
+                  benchmark={insight.benchmark}
+                  className="hover:shadow-lg transition-shadow duration-300"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Enhanced Dive Deeper Section */}
+        <div className="mb-16">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 mb-4">
+              <span className="text-2xl">🔍</span>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">
+              Ready to dive deeper?
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Choose an area to explore and get actionable recommendations
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+            <DiveDeeperCard
+              type="spending"
+              icon="💳"
+              title="Analyze Spending"
+              description="Upload your bank transactions and discover exactly where your money goes"
+              features={[
+                "Automatic categorization",
+                "Spending trends over time", 
+                "Compare to benchmarks",
+                "Find saving opportunities"
+              ]}
+              actionText="Upload CSV →"
+              onClick={() => handleDiveDeeper('spending')}
+              className="group"
             />
-          ))}
+            
+            <DiveDeeperCard
+              type="savings"
+              icon="🏦"
+              title="Optimize Savings"
+              description="Analyze where you keep your money and maximize your returns"
+              features={[
+                "Savings account analysis",
+                "Interest rate comparison",
+                "Investment opportunities", 
+                "Emergency fund strategy"
+              ]}
+              actionText="Analyze savings →"
+              onClick={() => handleDiveDeeper('savings')}
+              className="group"
+            />
+            
+            <DiveDeeperCard
+              type="goals"
+              icon="🎯"
+              title="Set Goals"
+              description="Set specific targets and get a roadmap to achieve them"
+              features={[
+                "Custom goal timelines",
+                "Monthly savings targets",
+                "Progress tracking",
+                "Milestone celebrations"
+              ]}
+              actionText="Plan goals →"
+              onClick={() => handleDiveDeeper('goals')}
+              className="group"
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Dive Deeper Section - Matching Artifact Layout */}
-      <div className="mb-12">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">
-            🔍 Dive Deeper Into Your Finances
-          </h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <DiveDeeperCard
-            type="spending"
-            icon="💳"
-            title="Breakdown Your Expenses"
-            description="Upload your bank transactions and discover exactly where your money goes"
-            features={[
-              "Automatic categorization",
-              "Spending trends over time", 
-              "Compare to benchmarks",
-              "Find saving opportunities"
-            ]}
-            actionText="Upload CSV from your bank →"
-            onClick={() => handleDiveDeeper('spending')}
-          />
-          
-          <DiveDeeperCard
-            type="savings"
-            icon="🏦"
-            title="Optimize Your Savings"
-            description="Analyze where you keep your money and maximize your returns"
-            features={[
-              "Savings account analysis",
-              "Interest rate comparison",
-              "Investment opportunities", 
-              "Emergency fund strategy"
-            ]}
-            actionText="Analyze your savings →"
-            onClick={() => handleDiveDeeper('savings')}
-          />
-          
-          <DiveDeeperCard
-            type="goals"
-            icon="🎯"
-            title="Plan Your Goals"
-            description="Set specific targets and get a roadmap to achieve them"
-            features={[
-              "Custom goal timelines",
-              "Monthly savings targets",
-              "Progress tracking",
-              "Milestone celebrations"
-            ]}
-            actionText="Set your goals →"
-            onClick={() => handleDiveDeeper('goals')}
-          />
-        </div>
-      </div>
-
-      {/* Action Buttons - Fixed Layout */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between">
-        <PrimaryButton
-          variant="secondary"
-          onClick={handleEditNumbers}
-          className="w-full sm:w-auto"
-        >
-          ← Back to Insights
-        </PrimaryButton>
-        
-        <div className="flex gap-4">
+        {/* Enhanced Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
           <button
-            onClick={() => handleDiveDeeper('spending')}
-            className="text-sm text-gray-500 hover:text-gray-700 underline"
+            onClick={handleEditNumbers}
+            className="group flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors duration-200"
           >
-            Skip for now
+            <span className="transform group-hover:-translate-x-1 transition-transform duration-200">←</span>
+            <span className="font-medium">Edit my numbers</span>
           </button>
+          
+          <div className="flex items-center gap-6">
+            <button
+              onClick={() => handleDiveDeeper('spending')}
+              className="text-sm text-gray-500 hover:text-primary transition-colors duration-200 font-medium"
+            >
+              Skip for now
+            </button>
+            
+            <PrimaryButton
+              onClick={() => handleDiveDeeper('spending')}
+              className="px-8 py-4 bg-gradient-to-r from-primary to-secondary hover:from-primary-dark hover:to-secondary-dark transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              Get Started →
+            </PrimaryButton>
+          </div>
         </div>
       </div>
-    </div>
+    </Box>
   );
 };
 

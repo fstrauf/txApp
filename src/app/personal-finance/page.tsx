@@ -34,14 +34,15 @@ const PersonalFinancePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="mt-4 mb-10 bg-gradient-to-br from-indigo-50 via-white to-purple-50 min-h-screen px-2 md:px-6 lg:px-12">
       {/* Progress Bar - Fixed Position */}
-      <ProgressBar />
-      
+      <div className="max-w-6xl mx-auto pt-6 pb-2 px-2 md:px-0">
+        <ProgressBar />
+      </div>
       {/* Main Container - Matching Artifact */}
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden min-h-screen">
-          <div className="min-h-screen flex flex-col">
+      <div className="max-w-6xl mx-auto my-8">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden min-h-[600px] p-4 md:p-8">
+          <div className="flex flex-col">
             {renderScreen()}
           </div>
         </div>

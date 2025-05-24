@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { QuickAmountSelector, PrimaryButton } from '../shared/FinanceComponents';
+import { QuickAmountSelector } from '@/app/personal-finance/shared/QuickAmountSelector';
+import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { usePersonalFinanceStore } from '../../../store/personalFinanceStore';
 import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
+import { Box } from '@/components/ui/Box';
 
 interface SavingsScreenProps {
   onNext: () => void;
@@ -35,14 +37,9 @@ export const SavingsScreen: React.FC<SavingsScreenProps> = ({ onNext, onBack }) 
     onNext();
   };
 
-  const currentAmount = parseFloat(amount) || 0;
   const canContinue = true; // Allow 0 savings
 
-  // Calculate some helpful context based on income
-  const monthlyIncome = userData.income || 0;
-  const emergencyFundTarget = (userData.spending || 0) * 3; // 3 months expenses
-  const savingsRate = monthlyIncome > 0 ? (currentAmount / (monthlyIncome * 12)) * 100 : 0;
-
+  
   return (
     <div className="max-w-2xl mx-auto p-6">
       {/* Header */}
@@ -77,7 +74,7 @@ export const SavingsScreen: React.FC<SavingsScreenProps> = ({ onNext, onBack }) 
       </div>
 
       {/* Savings Tips */}
-      <div className="mb-8 p-6 bg-yellow-50 rounded-2xl border border-yellow-200">
+      <Box variant="gradient" className="max-w-lg mx-auto mb-4">
         <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
           💡 What counts as savings?
         </h4>
@@ -110,7 +107,7 @@ export const SavingsScreen: React.FC<SavingsScreenProps> = ({ onNext, onBack }) 
         <p className="text-xs text-gray-500 mt-3 italic">
           Don't include retirement accounts (KiwiSaver) or long-term investments that are hard to access
         </p>
-      </div>
+      </Box>
 
       {/* Navigation Buttons */}
       <div className="flex flex-col sm:flex-row gap-4">

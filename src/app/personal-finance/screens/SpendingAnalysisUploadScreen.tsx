@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { CSVUploadArea, PrimaryButton } from '@/app/personal-finance/shared/FinanceComponents';
+import { CSVUploadArea } from '@/app/personal-finance/shared/CSVUploadArea';
+import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 
 const SpendingAnalysisUploadScreen: React.FC = () => {
   const { prevScreen, setCurrentScreen } = usePersonalFinanceStore();

@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { QuickAmountSelector, PrimaryButton } from '../shared/FinanceComponents';
-import { CurrencyInput } from '../shared/CurrencyInput';
+import React, { useState } from 'react';
+import { QuickAmountSelector } from '@/app/personal-finance/shared/QuickAmountSelector';
+import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
+import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 import { usePersonalFinanceStore } from '../../../store/personalFinanceStore';
+import { Box } from '@/components/ui/Box';
 
 interface SpendingScreenProps {
   onNext: () => void;
@@ -16,7 +18,7 @@ export const SpendingScreen: React.FC<SpendingScreenProps> = ({ onNext, onBack }
   const [selectedQuickAmount, setSelectedQuickAmount] = useState<number | null>(userData.spending || null);
 
   // Use the same quick amounts and order as IncomeScreen
-  const spendingAmounts = [0, 1000, 5000, 10000, 25000, 50000];
+  const spendingAmounts = [0, 1000, 5000, 7000, 10000, 12000];
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -72,7 +74,7 @@ export const SpendingScreen: React.FC<SpendingScreenProps> = ({ onNext, onBack }
       </div>
 
       {/* Spending Categories Hint */}
-      <div className="mb-8 p-6 bg-blue-50 rounded-2xl border border-blue-200">
+      <Box variant="gradient" className="max-w-lg mx-auto mb-4">
         <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
           💡 Common spending categories
         </h4>
@@ -105,7 +107,7 @@ export const SpendingScreen: React.FC<SpendingScreenProps> = ({ onNext, onBack }
         <p className="text-xs text-gray-500 mt-3 italic">
           Don't worry about being exact - you can always adjust this later
         </p>
-      </div>
+      </Box>
 
       {/* Navigation Buttons */}
       <div className="flex flex-col sm:flex-row gap-4">

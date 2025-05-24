@@ -3,7 +3,8 @@
 
 import React, { useState } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { QuickAmountSelector, PrimaryButton } from '@/app/personal-finance/shared/FinanceComponents';
+import { QuickAmountSelector } from '@/app/personal-finance/shared/QuickAmountSelector';
+import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 
 const IncomeScreen: React.FC = () => {
