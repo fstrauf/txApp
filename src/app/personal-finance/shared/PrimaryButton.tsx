@@ -21,7 +21,7 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   
   const variants: Record<PrimaryButtonVariant, string> = {
     primary: `${baseClasses} bg-linear-to-r from-primary to-secondary text-white 
-              hover:from-secondary hover:to-primary hover:transform hover:-translate-y-0.5 hover:shadow-lg
+              hover:from-primary hover:to-secondary hover:transform hover:-translate-y-0.5 hover:shadow-lg
               focus:ring-primary disabled:opacity-10 disabled:cursor-not-allowed disabled:transform-none disabled:hover:from-primary disabled:hover:to-secondary`,
     secondary: `${baseClasses} bg-gray-100 text-gray-700 border-2 border-gray-200
                 hover:bg-gray-200 hover:border-gray-300 focus:ring-gray-400`,

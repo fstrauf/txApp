@@ -146,7 +146,7 @@ const InitialInsightsScreen: React.FC = () => {
   };
 
   return (
-    <Box variant="gradient" className="max-w-6xl mx-auto mb-4">
+    <div className="max-w-6xl mx-auto mb-4">
       <div className="max-w-6xl mx-auto p-4 sm:p-8 animate-fadeIn">
         {/* Enhanced Header with gradient text */}
         <div className="text-center mb-12">
@@ -187,12 +187,19 @@ const InitialInsightsScreen: React.FC = () => {
                 The most important things to focus on right now
               </p>
             </div>
-            <div className="hidden sm:flex items-center gap-2 text-sm text-gray-500">
-              <span className="w-2 h-2 bg-green-500 rounded-full"><span className="text-xs">Success</span></span>
-              
-              <span className="w-2 h-2 bg-orange-500 rounded-full ml-3"><span className="text-xs">Optimize</span></span>
-              
-              <span className="w-2 h-2 bg-red-500 rounded-full ml-3"><span className="text-xs">Action needed</span></span>
+            <div className="hidden sm:flex items-center gap-4 text-sm text-gray-700 dark:text-gray-300">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 bg-green-500 rounded-full"></span>
+                <span className="text-xs font-medium">Success</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 bg-orange-500 rounded-full"></span>
+                <span className="text-xs font-medium">Optimize</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 bg-red-500 rounded-full"></span>
+                <span className="text-xs font-medium">Action needed</span>
+              </div>
             </div>
           </div>
           
@@ -309,7 +316,7 @@ const InitialInsightsScreen: React.FC = () => {
           </div>
         </div>
       </div>
-    </Box>
+    </div>
   );
 };
 

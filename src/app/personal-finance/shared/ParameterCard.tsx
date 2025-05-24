@@ -13,7 +13,7 @@ export const ParameterCard: React.FC<ParameterCardProps> = ({
   subtext, 
 }) => {
   return (
-    <Box variant="gradient" className="rounded-xl p-6 text-center">
+    <Box variant="glass" className="rounded-xl p-6 text-center">
       <div className="text-sm text-gray-500 uppercase tracking-wide font-semibold mb-2">
         {label}
       </div>
