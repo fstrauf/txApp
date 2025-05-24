@@ -34,7 +34,7 @@ const PersonalFinancePage: React.FC = () => {
   };
 
   return (
-    <div className="mt-4 mb-10 bg-gradient-to-br from-indigo-50 via-white to-purple-50 min-h-screen px-2 md:px-6 lg:px-12">
+    <div className="mt-4 mb-10 bg-linear-to-br from-indigo-50 via-white to-purple-50 min-h-screen px-2 md:px-6 lg:px-12">
       {/* Progress Bar - Fixed Position */}
       <div className="max-w-6xl mx-auto pt-6 pb-2 px-2 md:px-0">
         <ProgressBar />

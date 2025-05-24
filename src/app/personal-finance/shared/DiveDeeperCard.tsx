@@ -22,10 +22,10 @@ export const DiveDeeperCard: React.FC<DiveDeeperCardProps> = ({
   className = "" 
 }) => {
   const typeStyles: Record<DiveDeeperCardProps['type'] & string, string> = {
-    spending: "bg-gradient-to-r from-red-50 to-pink-50 hover:border-red-400 hover:shadow-red-100",
-    savings: "bg-gradient-to-r from-green-50 to-emerald-50 hover:border-green-400 hover:shadow-green-100",
-    goals: "bg-gradient-to-r from-orange-50 to-yellow-50 hover:border-orange-400 hover:shadow-orange-100",
-    default: "bg-gradient-to-r from-indigo-50 to-purple-50 hover:border-indigo-400 hover:shadow-indigo-100"
+    spending: "bg-linear-to-r from-red-50 to-pink-50 hover:border-red-400 hover:shadow-red-100",
+    savings: "bg-linear-to-r from-green-50 to-emerald-50 hover:border-green-400 hover:shadow-green-100",
+    goals: "bg-linear-to-r from-orange-50 to-yellow-50 hover:border-orange-400 hover:shadow-orange-100",
+    default: "bg-linear-to-r from-indigo-50 to-purple-50 hover:border-indigo-400 hover:shadow-indigo-100"
   };
 
   return (
@@ -50,7 +50,7 @@ export const DiveDeeperCard: React.FC<DiveDeeperCardProps> = ({
           <ul className="text-xs text-gray-500 space-y-2">
             {features.map((feature, index) => (
               <li key={index} className="flex items-center">
-                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-3 flex-shrink-0"></span>
+                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-3 shrink-0"></span>
                 {feature}
               </li>
             ))}

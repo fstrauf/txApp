@@ -50,7 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {/* Render the client wrapper unconditionally */}
               {/* It will handle showing/hiding the Sidebar based on client session */}
               <ClientSidebarWrapper />
-              <main className="flex-grow">{children}</main>
+              <main className="grow">{children}</main>
             </div>
             <Footer />
           </QueryProvider>

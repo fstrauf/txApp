@@ -35,7 +35,7 @@ const WelcomeScreen: React.FC = () => {
 
       <div className="my-16">
         <div className="text-8xl md:text-9xl mb-8">💰</div>
-        {/* <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-8 rounded-2xl shadow-lg max-w-lg mx-auto border border-indigo-100"> */}
+        {/* <div className="bg-linear-to-r from-indigo-50 to-purple-50 p-8 rounded-2xl shadow-lg max-w-lg mx-auto border border-indigo-100"> */}
         <Box variant="gradient" className="max-w-lg mx-auto">
         <h3 className="text-xl font-semibold text-gray-800 mb-6">You'll discover:</h3>
         <ul className="text-base text-gray-600 space-y-3 text-left">

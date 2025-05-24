@@ -64,7 +64,7 @@ export function Sidebar() {
   });
 
   return (
-    <aside className="hidden md:block md:w-64 flex-shrink-0 border-r border-gray-200 bg-white p-4">
+    <aside className="hidden md:block md:w-64 shrink-0 border-r border-gray-200 bg-white p-4">
       <nav className="flex flex-col space-y-2">
         {/* Map over the FILTERED items */}
         {enabledNavItems.map((item) => (

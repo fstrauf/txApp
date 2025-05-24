@@ -20,10 +20,10 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   className = "" 
 }) => {
   const typeStyles: Record<InsightCardProps['type'] & string, string> = {
-    warning: "bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-500",
-    success: "bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500", 
-    optimize: "bg-gradient-to-r from-orange-50 to-yellow-50 border-l-4 border-orange-500",
-    default: "bg-gradient-to-r from-indigo-50 to-purple-50 border-l-4 border-indigo-500"
+    warning: "bg-linear-to-r from-red-50 to-pink-50 border-l-4 border-red-500",
+    success: "bg-linear-to-r from-green-50 to-emerald-50 border-l-4 border-green-500", 
+    optimize: "bg-linear-to-r from-orange-50 to-yellow-50 border-l-4 border-orange-500",
+    default: "bg-linear-to-r from-indigo-50 to-purple-50 border-l-4 border-indigo-500"
   };
 
   return (

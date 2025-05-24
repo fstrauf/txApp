@@ -157,7 +157,7 @@ const InitialInsightsScreen: React.FC = () => {
             </span>
           </div>
           
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-linear-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
             Here's what we found
           </h1>
           
@@ -220,7 +220,7 @@ const InitialInsightsScreen: React.FC = () => {
         {/* Enhanced Dive Deeper Section */}
         <div className="mb-16">
           <div className="text-center mb-10">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-linear-to-br from-primary/20 to-secondary/20 mb-4">
               <span className="text-2xl">🔍</span>
             </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-4">
@@ -302,7 +302,7 @@ const InitialInsightsScreen: React.FC = () => {
             
             <PrimaryButton
               onClick={() => handleDiveDeeper('spending')}
-              className="px-8 py-4 bg-gradient-to-r from-primary to-secondary hover:from-primary-dark hover:to-secondary-dark transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="px-8 py-4 bg-linear-to-r from-primary to-secondary hover:from-primary-dark hover:to-secondary-dark transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               Get Started →
             </PrimaryButton>

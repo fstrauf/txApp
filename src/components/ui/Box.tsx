@@ -32,7 +32,7 @@ export const Box: React.FC<BoxProps> = ({
       border border-gray-100/50
     `,
     gradient: `
-      bg-gradient-to-br from-primary/5 via-white to-secondary/5
+      bg-linear-to-br from-primary/5 via-white to-secondary/5
       shadow-lg shadow-primary/10
       backdrop-blur-sm
     `,

@@ -27,7 +27,7 @@ export default function Home() {
             <h1 style={{ overflowWrap: 'anywhere' }} className="text-4xl md:text-5xl font-bold text-gray-900 mb-5 md:mb-6 leading-tight break-words min-w-0">
               Effortless Expense Categorization
               <br className="hidden md:block" />
-              <span className="inline-block bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <span className="inline-block bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent">
                 Across Your Favorite Tools
               </span>
             </h1>
@@ -116,7 +116,7 @@ export default function Home() {
             {/* Step 1: Import */}
             <div className="flex flex-col items-center relative bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow h-full">
               <div className="flex items-center mb-4 md:mb-6">
-                <div className="bg-primary/10 rounded-full h-10 w-10 md:h-16 md:w-16 flex items-center justify-center mr-3 flex-shrink-0">
+                <div className="bg-primary/10 rounded-full h-10 w-10 md:h-16 md:w-16 flex items-center justify-center mr-3 shrink-0">
                   <span className="text-primary font-bold text-xl md:text-2xl">1</span>
                 </div>
                 <h3 className="text-lg md:text-xl font-semibold md:hidden">Import Transactions</h3>
@@ -143,7 +143,7 @@ export default function Home() {
             {/* Step 2: Auto-Categorize */}
             <div className="flex flex-col items-center relative bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow h-full">
               <div className="flex items-center mb-4 md:mb-6">
-                <div className="bg-primary/10 rounded-full h-10 w-10 md:h-16 md:w-16 flex items-center justify-center mr-3 flex-shrink-0">
+                <div className="bg-primary/10 rounded-full h-10 w-10 md:h-16 md:w-16 flex items-center justify-center mr-3 shrink-0">
                   <span className="text-primary font-bold text-xl md:text-2xl">2</span>
                 </div>
                 <h3 className="text-lg md:text-xl font-semibold md:hidden">Auto-Categorize with AI</h3>
@@ -170,7 +170,7 @@ export default function Home() {
             {/* Step 3: Review */}
             <div className="flex flex-col items-center bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow h-full">
               <div className="flex items-center mb-4 md:mb-6">
-                <div className="bg-primary/10 rounded-full h-10 w-10 md:h-16 md:w-16 flex items-center justify-center mr-3 flex-shrink-0">
+                <div className="bg-primary/10 rounded-full h-10 w-10 md:h-16 md:w-16 flex items-center justify-center mr-3 shrink-0">
                   <span className="text-primary font-bold text-xl md:text-2xl">3</span>
                 </div>
                 <h3 className="text-lg md:text-xl font-semibold md:hidden">Review & Analyze</h3>
@@ -207,7 +207,7 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-6xl mx-auto">
             {/* Benefit 1: Save Hours Every Month */}
             <div className="bg-white rounded-xl p-6 border border-gray-100 hover:border-primary/20 transition-colors shadow-sm hover:shadow-md flex">
-              <div className="mr-5 flex-shrink-0">
+              <div className="mr-5 shrink-0">
                 <div className="bg-primary/10 rounded-full p-4 w-16 h-16 flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -222,7 +222,7 @@ export default function Home() {
             
             {/* Benefit 2: Easy & Effortless */}
             <div className="bg-white rounded-xl p-6 border border-gray-100 hover:border-primary/20 transition-colors shadow-sm hover:shadow-md flex">
-              <div className="mr-5 flex-shrink-0">
+              <div className="mr-5 shrink-0">
                 <div className="bg-primary/10 rounded-full p-4 w-16 h-16 flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 3.5L13.5 21.5M4 8.5H10M4 16.5H10" />
@@ -237,7 +237,7 @@ export default function Home() {
             
             {/* Benefit 3: Customized to You */}
             <div className="bg-white rounded-xl p-6 border border-gray-100 hover:border-primary/20 transition-colors shadow-sm hover:shadow-md flex">
-              <div className="mr-5 flex-shrink-0">
+              <div className="mr-5 shrink-0">
                 <div className="bg-primary/10 rounded-full p-4 w-16 h-16 flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
@@ -252,7 +252,7 @@ export default function Home() {
             
             {/* Benefit 4: Privacy First */}
             <div className="bg-white rounded-xl p-6 border border-gray-100 hover:border-primary/20 transition-colors shadow-sm hover:shadow-md flex">
-              <div className="mr-5 flex-shrink-0">
+              <div className="mr-5 shrink-0">
                 <div className="bg-primary/10 rounded-full p-4 w-16 h-16 flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -283,7 +283,7 @@ export default function Home() {
         </div>
 
         {/* Integrations Section (Lunch Money Focus - Updated) */}
-        <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-soft p-8 mb-16 border border-gray-100">
+        <div className="bg-linear-to-br from-gray-50 to-white rounded-2xl shadow-soft p-8 mb-16 border border-gray-100">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row gap-8 items-center">
               {/* Text Content - Updated for Live Lunch Money */}
@@ -326,7 +326,7 @@ export default function Home() {
         </div>
 
         {/* Free Spreadsheet Section */}
-        <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-soft p-8 mb-16 border border-gray-100">
+        <div className="bg-linear-to-br from-gray-50 to-white rounded-2xl shadow-soft p-8 mb-16 border border-gray-100">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row gap-8 items-center">
               {/* Text Content */}
@@ -640,7 +640,7 @@ export default function Home() {
         </div>
 
         {/* References Section */}
-        <div className="bg-gradient-to-br from-accent/5 to-primary/5 rounded-2xl p-8">
+        <div className="bg-linear-to-br from-accent/5 to-primary/5 rounded-2xl p-8">
           <References />
         </div>
       </main>

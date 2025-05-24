@@ -9,7 +9,7 @@ const ProgressBar: React.FC = () => {
   return (
     <div className="w-full h-2 bg-gray-200 rounded-full my-4">
       <div
-        className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300 ease-out rounded-full"
+        className="h-full bg-linear-to-r from-primary to-secondary transition-all duration-300 ease-out rounded-full"
         style={{ width: `${progress}%` }}
       />
     </div>

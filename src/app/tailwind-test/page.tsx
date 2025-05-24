@@ -96,19 +96,19 @@ const TailwindTestPage = () => {
         <h2 className="text-2xl font-semibold mb-4">Gradients</h2>
         <div>
           <h3 className="text-lg font-medium mb-2">Gradient Animation</h3>
-          <div className="p-8 h-32 w-full rounded bg-gradient-to-r from-gradient-indigo-500 via-gradient-purple-600 to-pink-500 animate-gradient">
+          <div className="p-8 h-32 w-full rounded bg-linear-to-r from-gradient-indigo-500 via-gradient-purple-600 to-pink-500 animate-gradient">
             <span className="text-white font-bold">Animated Gradient (Indigo-500 to Purple-600 to Pink-500)</span>
           </div>
         </div>
         <div className="mt-4">
           <h3 className="text-lg font-medium mb-2">Static Gradient with Primary/Secondary</h3>
-           <div className="p-8 h-32 w-full rounded bg-gradient-to-r from-primary to-secondary">
+           <div className="p-8 h-32 w-full rounded bg-linear-to-r from-primary to-secondary">
             <span className="text-white font-bold">Static Gradient (Primary to Secondary)</span>
           </div>
         </div>
          <div className="mt-4">
           <h3 className="text-lg font-medium mb-2">Static Gradient with Explicit Custom Colors</h3>
-           <div className="p-8 h-32 w-full rounded bg-gradient-to-r from-gradient-indigo-500 to-gradient-purple-600">
+           <div className="p-8 h-32 w-full rounded bg-linear-to-r from-gradient-indigo-500 to-gradient-purple-600">
             <span className="text-white font-bold">Static Gradient (gradient-indigo-500 to gradient-purple-600)</span>
           </div>
         </div>

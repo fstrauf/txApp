@@ -532,7 +532,7 @@ const ImportTransactionsPage: React.FC = () => {
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                    <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
                                         <Command>
                                             <CommandInput 
                                                 placeholder="Search account or type name..." 

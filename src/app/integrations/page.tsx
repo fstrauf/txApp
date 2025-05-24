@@ -280,9 +280,9 @@ function IntegrationsPageContent() {
             bannerType === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 
             'bg-blue-50 border-blue-200 text-blue-800' // loading
           }`}>
-            {bannerType === 'success' && <FaCheckCircle className="h-5 w-5 mr-3 flex-shrink-0" />}
-            {(bannerType === 'warning' || bannerType === 'error') && <FaExclamationCircle className="h-5 w-5 mr-3 flex-shrink-0" />}
-            {bannerType === 'loading' && <FaSpinner className="animate-spin h-5 w-5 mr-3 flex-shrink-0" />}
+            {bannerType === 'success' && <FaCheckCircle className="h-5 w-5 mr-3 shrink-0" />}
+            {(bannerType === 'warning' || bannerType === 'error') && <FaExclamationCircle className="h-5 w-5 mr-3 shrink-0" />}
+            {bannerType === 'loading' && <FaSpinner className="animate-spin h-5 w-5 mr-3 shrink-0" />}
             
             <div className="text-center">
               <span>{statusMessage}</span>
@@ -314,7 +314,7 @@ function IntegrationsPageContent() {
                   />
                 </div>
                 <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-2">{platform.name}</h2>
-                <p className="text-gray-600 mb-5 flex-grow min-h-[40px]">{platform.description}</p>
+                <p className="text-gray-600 mb-5 grow min-h-[40px]">{platform.description}</p>
 
                 <div className="mt-auto w-full max-w-xs mx-auto">
                   {platform.ctaType === 'link' && platform.ctaLink && (

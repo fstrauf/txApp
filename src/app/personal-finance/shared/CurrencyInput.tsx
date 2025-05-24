@@ -81,7 +81,7 @@ const formatNumberWithCommas = (value: number | string): string => {
           {/* Background gradient effect on focus */}
           <div className={`
             absolute inset-0 rounded-xl transition-all duration-300
-            ${isFocused ? 'bg-gradient-to-r from-indigo-50/50 to-purple-50/50' : ''}
+            ${isFocused ? 'bg-linear-to-r from-indigo-50/50 to-purple-50/50' : ''}
           `} />
           
           <Input
@@ -123,8 +123,8 @@ const formatNumberWithCommas = (value: number | string): string => {
           {/* Optional: Add a subtle shine effect on hover */}
           <div className={`
             absolute inset-0 rounded-xl pointer-events-none
-            bg-gradient-to-r from-transparent via-white/10 to-transparent
-            transform translate-x-[-100%] group-hover:translate-x-[100%]
+            bg-linear-to-r from-transparent via-white/10 to-transparent
+            transform -translate-x-full group-hover:translate-x-full
             transition-transform duration-1000 ease-out
           `} />
         </div>
