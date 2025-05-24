@@ -1,99 +1,128 @@
+// src/store/personalFinanceStore.ts
 import { create } from 'zustand';
-import { UserData, initialUserData, ScreenId, TOTAL_SCREENS_MAIN_FLOW } from '@/types/personalFinance';
+
+interface SavingsBreakdown {
+  checking: number;
+  savings: number;
+  termDeposit: number;
+  other: number;
+}
+
+interface UserData {
+  income: number;
+  spending: number;
+  savings: number;
+  savingsBreakdown?: SavingsBreakdown;
+  selectedBank?: string;
+}
 
 interface PersonalFinanceState {
-  currentScreen: ScreenId;
-  userData: UserData;
+  currentScreen: string;
   progress: number;
-  setCurrentScreen: (screen: ScreenId) => void;
+  userData: UserData;
+  setCurrentScreen: (screen: string) => void;
   nextScreen: () => void;
   prevScreen: () => void;
-  updateUserData: (data: Partial<UserData>) => void;
   updateIncome: (income: number) => void;
   updateSpending: (spending: number) => void;
   updateSavings: (savings: number) => void;
-  updateGoal: (goal: string) => void;
-  resetUserData: () => void;
-  // TODO: Add more specific actions for CSV data, savings breakdown, etc.
+  updateSavingsBreakdown: (breakdown: SavingsBreakdown) => void;
+  updateSelectedBank: (bank: string) => void;
 }
 
-const screenOrder: ScreenId[] = [
+const screenOrder = [
   'welcome',
   'income',
   'spending',
   'savings',
   'initialInsights',
-  'goalPlanning',
-  'finalSummary',
   'spendingAnalysisUpload',
   'spendingAnalysisResults',
   'savingsAnalysisInput',
   'savingsAnalysisResults',
-  'complete'
+  'goalPlanning'
 ];
 
-const calculateProgress = (currentScreen: ScreenId): number => {
-  const currentIndex = screenOrder.indexOf(currentScreen);
-  // Using TOTAL_SCREENS_MAIN_FLOW for the primary onboarding progress
-  // This might need adjustment depending on how deep dives are handled in progress bar
-  if (currentIndex < 0) return 0;
-  if (currentIndex < TOTAL_SCREENS_MAIN_FLOW) {
-    return ((currentIndex + 1) / TOTAL_SCREENS_MAIN_FLOW) * 100;
-  }
-  // For screens beyond the main flow, we can decide how to show progress
-  // For now, let's cap it or use a different total
-  return 100; 
+const progressMap: Record<string, number> = {
+  'welcome': 0,
+  'income': 25,
+  'spending': 50,
+  'savings': 75,
+  'initialInsights': 100,
+  'spendingAnalysisUpload': 100,
+  'spendingAnalysisResults': 100,
+  'savingsAnalysisInput': 100,
+  'savingsAnalysisResults': 100,
+  'goalPlanning': 100
 };
 
 export const usePersonalFinanceStore = create<PersonalFinanceState>((set, get) => ({
   currentScreen: 'welcome',
-  userData: initialUserData,
-  progress: calculateProgress('welcome'),
-
-  setCurrentScreen: (screen) => {
-    set({ currentScreen: screen, progress: calculateProgress(screen) });
+  progress: 0,
+  userData: {
+    income: 0,
+    spending: 0,
+    savings: 0,
   },
-
+  
+  setCurrentScreen: (screen: string) => {
+    set({ 
+      currentScreen: screen, 
+      progress: progressMap[screen] || 0 
+    });
+  },
+  
   nextScreen: () => {
-    console.log('Next screen');
     const { currentScreen } = get();
     const currentIndex = screenOrder.indexOf(currentScreen);
     if (currentIndex < screenOrder.length - 1) {
-      const nextScreenId = screenOrder[currentIndex + 1];
-      set({ currentScreen: nextScreenId, progress: calculateProgress(nextScreenId) });
+      const nextScreen = screenOrder[currentIndex + 1];
+      set({ 
+        currentScreen: nextScreen,
+        progress: progressMap[nextScreen] || 0
+      });
     }
   },
-
+  
   prevScreen: () => {
     const { currentScreen } = get();
     const currentIndex = screenOrder.indexOf(currentScreen);
     if (currentIndex > 0) {
-      const prevScreenId = screenOrder[currentIndex - 1];
-      set({ currentScreen: prevScreenId, progress: calculateProgress(prevScreenId) });
+      const prevScreen = screenOrder[currentIndex - 1];
+      set({ 
+        currentScreen: prevScreen,
+        progress: progressMap[prevScreen] || 0
+      });
     }
   },
-
-  updateUserData: (data) => {
-    set((state) => ({ userData: { ...state.userData, ...data } }));
+  
+  updateIncome: (income: number) => {
+    set((state) => ({
+      userData: { ...state.userData, income }
+    }));
   },
   
-  updateIncome: (income) => {
-    set((state) => ({ userData: { ...state.userData, income } }));
+  updateSpending: (spending: number) => {
+    set((state) => ({
+      userData: { ...state.userData, spending }
+    }));
   },
-
-  updateSpending: (spending) => {
-    set((state) => ({ userData: { ...state.userData, spending } }));
+  
+  updateSavings: (savings: number) => {
+    set((state) => ({
+      userData: { ...state.userData, savings }
+    }));
   },
-
-  updateSavings: (savings) => {
-    set((state) => ({ userData: { ...state.userData, savings } }));
+  
+  updateSavingsBreakdown: (breakdown: SavingsBreakdown) => {
+    set((state) => ({
+      userData: { ...state.userData, savingsBreakdown: breakdown }
+    }));
   },
-
-  updateGoal: (goal) => {
-    set((state) => ({ userData: { ...state.userData, goal } }));
-  },
-
-  resetUserData: () => {
-    set({ userData: initialUserData, currentScreen: 'welcome', progress: calculateProgress('welcome') });
-  },
+  
+  updateSelectedBank: (bank: string) => {
+    set((state) => ({
+      userData: { ...state.userData, selectedBank: bank }
+    }));
+  }
 }));
