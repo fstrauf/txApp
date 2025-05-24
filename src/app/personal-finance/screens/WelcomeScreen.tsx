@@ -10,7 +10,7 @@ const WelcomeScreen: React.FC = () => {
   const nextScreen = usePersonalFinanceStore((state) => state.nextScreen);
 
   return (
-    <div className="flex flex-col items-center justify-center text-center p-12 md:p-16 min-h-screen">
+    <div className="flex flex-col items-center justify-center text-center p-1 md:p-2">
       <div className="mb-12">
         <div className="text-sm text-gray-500 uppercase tracking-wider mb-4">Financial Health Check</div>
         <h1 className="text-5xl md:text-6xl font-bold text-gray-800 mb-6">
@@ -21,7 +21,7 @@ const WelcomeScreen: React.FC = () => {
         </p>
       </div>
 
-      <div className="my-16">
+      <div className="my-8">
         {/* <div className="bg-linear-to-r from-indigo-50 to-purple-50 p-8 rounded-2xl shadow-lg max-w-lg mx-auto border border-indigo-100"> */}
         <Box variant="gradient" className="max-w-lg mx-auto">
         <h3 className="text-xl font-semibold text-gray-800 mb-6">You'll discover:</h3>

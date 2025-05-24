@@ -45,7 +45,7 @@ const IncomeScreen: React.FC = () => {
   const isValid = income && (typeof income === 'number' ? income > 0 : parseInt(income) > 0);
 
   return (
-    <div className="max-w-4xl mx-auto p-12 min-h-[600px] flex flex-col">
+    <div className="max-w-4xl mx-auto p-6 flex flex-col">
       {/* Header Section - Matching Artifact */}
       <div className="text-center mb-10">
         <div className="text-sm text-gray-500 uppercase tracking-wide mb-2">Question 1 of 3</div>
