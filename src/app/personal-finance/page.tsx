@@ -4,6 +4,8 @@
 import React, { Suspense } from 'react';
 import { useScreenNavigation } from '@/app/personal-finance/hooks/useScreenNavigation';
 import ProgressBar from '@/app/personal-finance/shared/ProgressBar';
+import { PersonalFinanceSidebar } from '@/app/personal-finance/components/PersonalFinanceSidebar';
+import { Breadcrumbs } from '@/app/personal-finance/components/Breadcrumbs';
 import WelcomeScreen from '@/app/personal-finance/screens/WelcomeScreen';
 import IncomeScreen from '@/app/personal-finance/screens/IncomeScreen';
 import SpendingScreen from '@/app/personal-finance/screens/SpendingScreen';
@@ -16,9 +18,17 @@ import SavingsAnalysisResultsScreen from '@/app/personal-finance/screens/Savings
 
 const PersonalFinancePage: React.FC = () => {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <PersonalFinancePageContent />
-    </Suspense>
+    <div className="flex h-screen overflow-hidden">
+      {/* Personal Finance Context-Aware Sidebar */}
+      <PersonalFinanceSidebar />
+      
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col"> {/* ml-80 only on desktop */}
+        <Suspense fallback={<div>Loading...</div>}>
+          <PersonalFinancePageContent />
+        </Suspense>
+      </div>
+    </div>
   );
 };
 
@@ -51,10 +61,15 @@ function PersonalFinancePageContent() {
   };
 
   return (
-    <>
-      <ProgressBar />
-      {renderScreen()}
-    </>
+    <div className="flex-1 overflow-y-auto">
+      <div className="p-4">
+        <Breadcrumbs />
+        <ProgressBar />
+      </div>
+      <div className="px-4 pb-4">
+        {renderScreen()}
+      </div>
+    </div>
   );
 }
 

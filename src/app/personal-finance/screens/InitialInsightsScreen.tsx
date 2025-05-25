@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { ParametersReview } from '@/app/personal-finance/shared/ParametersReview';
 import { InsightCard } from '@/app/personal-finance/shared/InsightCard';
 import {DiveDeeperCard} from '@/app/personal-finance/shared/DiveDeeperCard';
@@ -231,27 +230,13 @@ const InitialInsightsScreen: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
           <button
             onClick={handleEditNumbers}
-            className="group flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+                      className="px-4 py-2 border-2 border-indigo-500 text-indigo-600 rounded-lg text-sm font-medium
+                   hover:bg-indigo-500 hover:text-white transition-colors duration-200
+                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-20"
           >
-            <span className="transform group-hover:-translate-x-1 transition-transform duration-200">←</span>
             <span className="font-medium">Edit my numbers</span>
           </button>
           
-          <div className="flex items-center gap-6">
-            <button
-              onClick={() => handleDiveDeeper('spending')}
-              className="text-sm text-gray-500 hover:text-primary transition-colors duration-200 font-medium"
-            >
-              Skip for now
-            </button>
-            
-            <PrimaryButton
-              onClick={() => handleDiveDeeper('spending')}
-              className="px-8 py-4 bg-linear-to-r from-primary to-secondary hover:from-primary-dark hover:to-secondary-dark transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              Get Started →
-            </PrimaryButton>
-          </div>
         </div>
       </div>
     </div>

@@ -7,8 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { financialAdvisorService } from './financial-advisor-service';
-import type { AIFinancialInsight, FinancialAdvisorQuery } from './index';
+import type { AIFinancialInsight } from './index';
 
 interface UseFinancialAdvisorOptions {
   autoLoad?: boolean;
