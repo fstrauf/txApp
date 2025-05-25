@@ -6,14 +6,11 @@ import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { usePersonalFinanceStore } from '../../../store/personalFinanceStore';
 import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 import { Box } from '@/components/ui/Box';
+import { useScreenNavigation } from '../hooks/useScreenNavigation';
 
-interface SavingsScreenProps {
-  onNext: () => void;
-  onBack: () => void;
-}
-
-export const SavingsScreen: React.FC<SavingsScreenProps> = ({ onNext, onBack }) => {
+const SavingsScreen: React.FC = () => {
   const { userData, updateSavings } = usePersonalFinanceStore();
+  const { goToScreen } = useScreenNavigation();
   const [amount, setAmount] = useState<string>(userData.savings?.toString() || '');
   const [selectedQuickAmount, setSelectedQuickAmount] = useState<number | null>(userData.savings || null);
 
@@ -34,7 +31,11 @@ export const SavingsScreen: React.FC<SavingsScreenProps> = ({ onNext, onBack }) 
   const handleContinue = () => {
     const savingsValue = parseFloat(amount) || 0;
     updateSavings(savingsValue);
-    onNext();
+    goToScreen('initialInsights');
+  };
+
+  const handleBack = () => {
+    goToScreen('spending');
   };
 
   const canContinue = true; // Allow 0 savings
@@ -109,34 +110,24 @@ export const SavingsScreen: React.FC<SavingsScreenProps> = ({ onNext, onBack }) 
         </p>
       </Box>
 
-      {/* Navigation Buttons */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <button
-          onClick={onBack}
-          className="flex-1 px-6 py-4 border-2 border-gray-300 text-gray-600 rounded-xl font-semibold
-                   hover:border-gray-400 hover:bg-gray-50 transition-all duration-200"
+      {/* Navigation Buttons - Consistent at Bottom */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
+        <PrimaryButton
+          onClick={handleBack}
+          variant="secondary"
+          className="w-full sm:w-48 order-1 sm:order-1"
         >
-          ← Back
-        </button>
-        <div className="flex-2">
-          <PrimaryButton
-            onClick={handleContinue}
-            disabled={!canContinue}
-          >
-            Continue to Insights →
-          </PrimaryButton>
-        </div>
-      </div>
-
-      {/* Progress Indicator */}
-      <div className="mt-8 flex justify-center">
-        <div className="flex space-x-2">
-          <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
-          <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
-          <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
-          <div className="w-3 h-3 rounded-full bg-gray-300"></div>
-        </div>
+          Back
+        </PrimaryButton>
+        <PrimaryButton
+          onClick={handleContinue}
+          className="w-full sm:w-48 order-2 sm:order-2"
+        >
+          Next
+        </PrimaryButton>
       </div>
     </div>
   );
 };
+
+export default SavingsScreen;

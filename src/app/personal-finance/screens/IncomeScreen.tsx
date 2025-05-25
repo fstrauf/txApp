@@ -1,4 +1,3 @@
-// src/app/personal-finance/screens/IncomeScreen.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -6,11 +5,13 @@ import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { QuickAmountSelector } from '@/app/personal-finance/shared/QuickAmountSelector';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
+import { useScreenNavigation } from '../hooks/useScreenNavigation';
 
 const IncomeScreen: React.FC = () => {
-  const { nextScreen, prevScreen, updateIncome, userData } = usePersonalFinanceStore();
+  const { updateIncome, userData } = usePersonalFinanceStore();
+  const { goToScreen } = useScreenNavigation();
   
-  const [income, setIncome] = useState<number | string>(userData.income || '');
+  const [income, setIncome] = useState<string>(userData.income !== undefined && userData.income !== null ? String(userData.income) : '');
   const [selectedAmount, setSelectedAmount] = useState<number | null>(userData.income || null);
 
   const quickAmounts = [3000, 4500, 6000, 7500, 9000, 12000];
@@ -21,8 +22,8 @@ const IncomeScreen: React.FC = () => {
       setIncome('');
       setSelectedAmount(null);
     } else {
+      setIncome(value);
       const numValue = parseInt(value, 10);
-      setIncome(numValue);
       if (quickAmounts.includes(numValue)) {
         setSelectedAmount(numValue);
       } else {
@@ -33,16 +34,24 @@ const IncomeScreen: React.FC = () => {
 
   const handleQuickAmountSelect = (amount: number) => {
     setSelectedAmount(amount);
-    setIncome(amount);
+    setIncome(String(amount));
   };
 
   const handleNext = () => {
-    const incomeValue = typeof income === 'string' ? parseInt(income) || 0 : income;
+    const incomeValue = parseInt(income) || 0;
     updateIncome(incomeValue);
-    nextScreen();
+    goToScreen('spending');
   };
 
-  const isValid = income && (typeof income === 'number' ? income > 0 : parseInt(income) > 0);
+  const handleContinue = () => {
+    const incomeValue = parseFloat(income) || 0;
+    updateIncome(incomeValue);
+    goToScreen('spending');
+  };
+
+  const handleBack = () => {
+    goToScreen('welcome');
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-6 flex flex-col">
@@ -76,21 +85,20 @@ const IncomeScreen: React.FC = () => {
         />
       </div>
 
-      {/* Navigation Buttons - Fixed styling */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-auto">
-        <PrimaryButton 
-          onClick={prevScreen} 
-          variant="secondary" 
-          className="w-full sm:w-32 order-2 sm:order-1"
+      {/* Navigation Buttons - Consistent at Bottom */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
+        <PrimaryButton
+          onClick={handleBack}
+          variant="secondary"
+          className="w-full sm:w-48 order-1 sm:order-1"
         >
           Back
         </PrimaryButton>
-        <PrimaryButton 
-          onClick={handleNext} 
-          disabled={!isValid} 
-          className="w-full sm:w-32 order-1 sm:order-2"
+        <PrimaryButton
+          onClick={handleNext}
+          className="w-full sm:w-48 order-2 sm:order-2"
         >
-          Continue
+          Next
         </PrimaryButton>
       </div>
     </div>

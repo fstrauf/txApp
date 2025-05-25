@@ -129,15 +129,7 @@ const formatNumberWithCommas = (value: number | string): string => {
             transition-transform duration-1000 ease-out
           `} />
         </div>
-        
-        {/* Optional: Add a subtle helper text with animation */}
-        {displayValue && (
-          <div className="mt-2 text-sm text-gray-500 animate-fade-in">
-            {parseFloat(parseFormattedNumberString(displayValue)) >= 10000 && 
-              `Nice! That's ${formatNumberWithCommas(displayValue)} dollars`
-            }
-          </div>
-        )}
+
       </div>
     );
   };

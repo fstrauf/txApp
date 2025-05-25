@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { CSVUploadArea } from '@/app/personal-finance/shared/CSVUploadArea';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
+import { useScreenNavigation } from '../hooks/useScreenNavigation';
 
 const SpendingAnalysisUploadScreen: React.FC = () => {
-  const { prevScreen, setCurrentScreen } = usePersonalFinanceStore();
+  const { goToScreen } = useScreenNavigation();
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -23,13 +23,16 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Navigate to results screen
-    setCurrentScreen('spendingAnalysisResults');
+    goToScreen('spendingAnalysisResults');
   };
 
   const handleSkip = () => {
-    setCurrentScreen('initialInsights');
+    goToScreen('initialInsights');
   };
 
+  function prevScreen(): void {
+    goToScreen('initialInsights');
+  }
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
@@ -170,6 +173,23 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
             className="sm:flex-1"
           >
             {isProcessing ? 'Analyzing...' : uploadedFile ? 'Analyze My Spending →' : 'Upload File First'}
+          </PrimaryButton>
+        </div>
+
+        {/* Navigation Buttons - Consistent at Bottom */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
+          <PrimaryButton
+            onClick={prevScreen}
+            variant="secondary"
+            className="w-full sm:w-48 order-1 sm:order-1"
+          >
+            Back
+          </PrimaryButton>
+          <PrimaryButton
+            onClick={handleSkip}
+            className="w-full sm:w-48 order-2 sm:order-2"
+          >
+            Skip for now
           </PrimaryButton>
         </div>
       </div>

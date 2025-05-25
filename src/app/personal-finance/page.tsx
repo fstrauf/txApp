@@ -2,19 +2,20 @@
 'use client';
 
 import React from 'react';
-import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
+import { useScreenNavigation } from '@/app/personal-finance/hooks/useScreenNavigation';
 import ProgressBar from '@/app/personal-finance/shared/ProgressBar';
 import WelcomeScreen from '@/app/personal-finance/screens/WelcomeScreen';
 import IncomeScreen from '@/app/personal-finance/screens/IncomeScreen';
-import { SpendingScreen } from '@/app/personal-finance/screens/SpendingScreen';
-import { SavingsScreen } from '@/app/personal-finance/screens/SavingsScreen';
+import SpendingScreen from '@/app/personal-finance/screens/SpendingScreen';
+import SavingsScreen from '@/app/personal-finance/screens/SavingsScreen';
 import InitialInsightsScreen from '@/app/personal-finance/screens/InitialInsightsScreen';
 import SpendingAnalysisUploadScreen from '@/app/personal-finance/screens/SpendingAnalysisUploadScreen';
+import SpendingAnalysisResultsScreen from '@/app/personal-finance/screens/SpendingAnalysisResultsScreen';
 import SavingsAnalysisInputScreen from '@/app/personal-finance/screens/SavingsAnalysisInputScreen';
 import SavingsAnalysisResultsScreen from '@/app/personal-finance/screens/SavingsAnalysisResultsScreen';
 
 const PersonalFinancePage: React.FC = () => {
-  const { currentScreen, nextScreen, prevScreen } = usePersonalFinanceStore();
+  const { currentScreen } = useScreenNavigation();
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -23,13 +24,15 @@ const PersonalFinancePage: React.FC = () => {
       case 'income':
         return <IncomeScreen />;
       case 'spending':
-        return <SpendingScreen onNext={nextScreen} onBack={prevScreen} />;
+        return <SpendingScreen />;
       case 'savings':
-        return <SavingsScreen onNext={nextScreen} onBack={prevScreen} />;
+        return <SavingsScreen />;
       case 'initialInsights':
         return <InitialInsightsScreen />;
       case 'spendingAnalysisUpload':
         return <SpendingAnalysisUploadScreen />;
+      case 'spendingAnalysisResults':
+        return <SpendingAnalysisResultsScreen />;
       case 'savingsAnalysisInput':
         return <SavingsAnalysisInputScreen />;
       case 'savingsAnalysisResults':

@@ -2,12 +2,12 @@
 'use client';
 
 import React from 'react';
-import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { Box } from '@/components/ui/Box';
+import { useScreenNavigation } from '../hooks/useScreenNavigation';
 
 const WelcomeScreen: React.FC = () => {
-  const nextScreen = usePersonalFinanceStore((state) => state.nextScreen);
+  const { goToScreen } = useScreenNavigation();
 
   return (
     <div className="flex flex-col items-center justify-center text-center p-1 md:p-2">
@@ -43,7 +43,7 @@ const WelcomeScreen: React.FC = () => {
       </div>
 
       <PrimaryButton
-        onClick={nextScreen}
+        onClick={() => goToScreen('income')}
         className="w-full max-w-sm mt-8"
       >
         Let&apos;s Get Started

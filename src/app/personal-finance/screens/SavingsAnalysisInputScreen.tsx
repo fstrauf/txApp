@@ -1,4 +1,3 @@
-// src/app/personal-finance/screens/SavingsAnalysisInputScreen.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -6,6 +5,8 @@ import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { Box } from '@/components/ui/Box';
 import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
+import { Disclosure } from '@/components/ui/Disclosure';
+import { useScreenNavigation } from '../hooks/useScreenNavigation';
 
 interface SavingsBreakdown {
   checking: number;
@@ -15,7 +16,8 @@ interface SavingsBreakdown {
 }
 
 const SavingsAnalysisInputScreen: React.FC = () => {
-  const { userData, setCurrentScreen, updateSavingsBreakdown } = usePersonalFinanceStore();
+  const { userData, updateSavingsBreakdown } = usePersonalFinanceStore();
+  const { goToScreen } = useScreenNavigation();
   const totalSavings = userData.savings || 0;
   
   const [breakdown, setBreakdown] = useState<SavingsBreakdown>({
@@ -37,11 +39,11 @@ const SavingsAnalysisInputScreen: React.FC = () => {
 
   const handleAnalyze = () => {
     updateSavingsBreakdown(breakdown);
-    setCurrentScreen('savingsAnalysisResults');
+    goToScreen('savingsAnalysisResults');
   };
 
   const handleBack = () => {
-    setCurrentScreen('initialInsights');
+    goToScreen('initialInsights');
   };
 
   // Quick allocation templates based on risk tolerance
@@ -86,102 +88,96 @@ const SavingsAnalysisInputScreen: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-12 min-h-[600px] flex flex-col">
+    <div className="max-w-[800px] mx-auto p-12 min-h-[600px] flex flex-col">
       {/* Header */}
       <div className="text-center mb-8">
         <div className="text-sm text-gray-500 uppercase tracking-wide mb-2">
           Asset Allocation Analysis
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-          Let's optimize your ${totalSavings.toLocaleString()}
+          Let's optimize your ${totalSavings.toLocaleString('en-NZ')}
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
           Learn how proper asset allocation can significantly boost your returns
         </p>
       </div>
 
-      {/* Educational Toggle */}
-      <div className="mb-6">
-        <button
-          onClick={() => setShowEducation(!showEducation)}
-          className="w-full px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl
-                     border-2 border-blue-200 hover:border-blue-300 transition-all duration-200
-                     flex items-center justify-between group"
-        >
-          <div className="flex items-center">
-            <span className="text-2xl mr-3">🎓</span>
-            <div className="text-left">
-              <h3 className="font-semibold text-gray-800">
-                New to investing?
-              </h3>
-              <p className="text-sm text-gray-600">
-                Learn about different asset types and their expected returns
-              </p>
+      {/* Educational Toggle (using Disclosure) */}
+      <div className="mb-6 max-w-4xl">
+        <Disclosure
+          buttonContent={
+            <div className="flex items-center">
+              <span className="text-2xl mr-3">🎓</span>
+              <div className="text-left">
+                <h3 className="font-semibold text-gray-800">
+                  New to investing?
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Learn about different asset types and their expected returns
+                </p>
+              </div>
             </div>
-          </div>
-          <span className={`text-2xl transition-transform duration-200 ${showEducation ? 'rotate-180' : ''}`}>
-            ⌄
-          </span>
-        </button>
+          }
+          panelContent={
+            <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
+              <Box variant="default" className="p-4">
+                <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                  <span className="text-xl mr-2">🏦</span>
+                  Savings Account (2-4% annually)
+                </h4>
+                <p className="text-sm text-gray-600 mb-2">
+                  Instant access, government insured up to $250k, but barely beats inflation.
+                </p>
+                <p className="text-xs text-gray-500">
+                  Best for: Emergency fund (3-6 months expenses)
+                </p>
+              </Box>
+
+              <Box variant="default" className="p-4">
+                <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                  <span className="text-xl mr-2">🔒</span>
+                  Term Deposits (4-5% annually)
+                </h4>
+                <p className="text-sm text-gray-600 mb-2">
+                  Fixed returns, locked for 6-12 months, safe but inflexible.
+                </p>
+                <p className="text-xs text-gray-500">
+                  Best for: Short-term goals (1-2 years)
+                </p>
+              </Box>
+
+              <Box variant="default" className="p-4">
+                <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                  <span className="text-xl mr-2">📈</span>
+                  Index Funds/ETFs (7-10% average)
+                </h4>
+                <p className="text-sm text-gray-600 mb-2">
+                  Diversified stock market exposure, historically strong returns over 5+ years.
+                </p>
+                <p className="text-xs text-gray-500">
+                  Best for: Long-term wealth building
+                </p>
+              </Box>
+
+              <Box variant="default" className="p-4">
+                <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                  <span className="text-xl mr-2">⚡</span>
+                  The Power of Compound Returns
+                </h4>
+                <p className="text-sm text-gray-600 mb-2">
+                  $10k at 3% = $13.4k after 10 years<br/>
+                  $10k at 8% = $21.6k after 10 years
+                </p>
+                <p className="text-xs text-gray-500">
+                  Small differences compound dramatically!
+                </p>
+              </Box>
+            </div>
+          }
+          className="w-full"
+          buttonClassName="w-full px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 hover:border-blue-300 transition-all duration-200 flex items-center justify-between group"
+        />
       </div>
-
-      {/* Educational Content */}
-      {showEducation && (
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
-          <Box variant="default" className="p-4">
-            <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-              <span className="text-xl mr-2">🏦</span>
-              Savings Account (2-4% annually)
-            </h4>
-            <p className="text-sm text-gray-600 mb-2">
-              Instant access, government insured up to $250k, but barely beats inflation.
-            </p>
-            <p className="text-xs text-gray-500">
-              Best for: Emergency fund (3-6 months expenses)
-            </p>
-          </Box>
-
-          <Box variant="default" className="p-4">
-            <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-              <span className="text-xl mr-2">🔒</span>
-              Term Deposits (4-5% annually)
-            </h4>
-            <p className="text-sm text-gray-600 mb-2">
-              Fixed returns, locked for 6-12 months, safe but inflexible.
-            </p>
-            <p className="text-xs text-gray-500">
-              Best for: Short-term goals (1-2 years)
-            </p>
-          </Box>
-
-          <Box variant="default" className="p-4">
-            <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-              <span className="text-xl mr-2">📈</span>
-              Index Funds/ETFs (7-10% average)
-            </h4>
-            <p className="text-sm text-gray-600 mb-2">
-              Diversified stock market exposure, historically strong returns over 5+ years.
-            </p>
-            <p className="text-xs text-gray-500">
-              Best for: Long-term wealth building
-            </p>
-          </Box>
-
-          <Box variant="default" className="p-4">
-            <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-              <span className="text-xl mr-2">⚡</span>
-              The Power of Compound Returns
-            </h4>
-            <p className="text-sm text-gray-600 mb-2">
-              $10k at 3% = $13.4k after 10 years<br/>
-              $10k at 8% = $21.6k after 10 years
-            </p>
-            <p className="text-xs text-gray-500">
-              Small differences compound dramatically!
-            </p>
-          </Box>
-        </div>
-      )}
 
       {/* Current Allocation */}
       <div className="mb-6">
@@ -265,11 +261,11 @@ const SavingsAnalysisInputScreen: React.FC = () => {
         <div className={`mt-4 p-4 rounded-lg ${isValid ? 'bg-green-50 border border-green-200' : 'bg-orange-50 border border-orange-200'}`}>
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-700">
-              Total allocated: ${totalAllocated.toLocaleString()} of ${totalSavings.toLocaleString()}
+              Total allocated: ${totalAllocated.toLocaleString('en-NZ')} of ${totalSavings.toLocaleString('en-NZ')}
             </span>
             {!isValid && (
               <span className="text-sm text-orange-600">
-                ${Math.abs(totalSavings - totalAllocated).toLocaleString()} difference
+                ${Math.abs(totalSavings - totalAllocated).toLocaleString('en-NZ')} difference
               </span>
             )}
           </div>
@@ -291,19 +287,19 @@ const SavingsAnalysisInputScreen: React.FC = () => {
         </ul>
       </Box>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-auto">
+      {/* Action Buttons - Consistent Navigation at Bottom */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
         <PrimaryButton 
           onClick={handleBack} 
           variant="secondary" 
-          className="w-full sm:w-32 order-2 sm:order-1"
+          className="w-full sm:w-48 order-1 sm:order-1"
         >
-          Back
+          Back to Insights
         </PrimaryButton>
         <PrimaryButton 
           onClick={handleAnalyze} 
           disabled={!isValid || totalAllocated === 0}
-          className="w-full sm:w-auto order-1 sm:order-2"
+          className="w-full sm:w-64 order-2 sm:order-2"
         >
           {!isValid 
             ? 'Fix allocation first' 

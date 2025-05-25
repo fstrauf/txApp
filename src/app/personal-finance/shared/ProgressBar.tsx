@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
-import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
+import { useScreenNavigation } from '../hooks/useScreenNavigation';
 
 const ProgressBar: React.FC = () => {
-  const progress = usePersonalFinanceStore((state) => state.progress);
+  const { getProgress } = useScreenNavigation();
+  const progress = getProgress();
 
   return (
     <div className="w-full h-2 bg-gray-200 rounded-full my-4">
