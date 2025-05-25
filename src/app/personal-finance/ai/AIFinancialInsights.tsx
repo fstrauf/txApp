@@ -5,7 +5,7 @@
  * alongside the rules-based engine insights.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box } from '@/components/ui/Box';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { useFinancialAdvisor, useFinancialHealth } from '../ai/useFinancialAdvisor';
@@ -31,11 +31,19 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
     getHealthCheck, 
     hasData,
     isReady 
-  } = useFinancialAdvisor({ context });
+  } = useFinancialAdvisor({ context }); // Removed userData prop
   
   const { score, getScoreColor, getScoreLabel } = useFinancialHealth();
   const [customQuestion, setCustomQuestion] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
+
+  // Auto-trigger AI advice when component mounts and has valid data
+  useEffect(() => {
+    if (hasData && !insight && !loading && !error) {
+      console.log('Auto-triggering AI advice for userData:', { hasData, insight: !!insight, loading, error });
+      getAdvice();
+    }
+  }, [hasData, insight, loading, error, getAdvice]);
 
   if (!hasData) {
     return (

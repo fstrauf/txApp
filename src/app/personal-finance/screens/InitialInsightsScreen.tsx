@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
-import { Box } from '@/components/ui/Box';
 import { ParametersReview } from '@/app/personal-finance/shared/ParametersReview';
 import { InsightCard } from '@/app/personal-finance/shared/InsightCard';
 import {DiveDeeperCard} from '@/app/personal-finance/shared/DiveDeeperCard';
@@ -11,8 +10,7 @@ import { AIFinancialInsights } from '../ai/AIFinancialInsights';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { 
   generateFinancialInsights, 
-  validateUserData,
-  formatCurrency 
+  validateUserData
 } from '../engine/FinancialRulesEngine';
 
 const InitialInsightsScreen: React.FC = () => {
@@ -20,6 +18,12 @@ const InitialInsightsScreen: React.FC = () => {
   const { goToScreen } = useScreenNavigation();
   const { income, spending, savings } = userData;
   const [showAIInsights, setShowAIInsights] = useState(false);
+
+  // Debug: Log userData in the screen
+  useEffect(() => {
+    console.log('InitialInsightsScreen - userData:', userData);
+    console.log('InitialInsightsScreen - income:', income, 'spending:', spending, 'savings:', savings);
+  }, [userData, income, spending, savings]);
 
   // Validate data first
   const validation = validateUserData(userData);

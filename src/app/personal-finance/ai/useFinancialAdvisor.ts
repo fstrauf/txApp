@@ -28,15 +28,27 @@ export function useFinancialAdvisor(options: UseFinancialAdvisorOptions = {}) {
 
   const { autoLoad = false, context = 'general' } = options;
 
+  // Debug: Log userData changes
+  useEffect(() => {
+    console.log('useFinancialAdvisor - userData changed:', userData);
+    console.log('useFinancialAdvisor - hasData:', Boolean(userData.income !== null && userData.income !== undefined && userData.spending !== null && userData.spending !== undefined));
+  }, [userData]);
+
   /**
    * Get personalized financial advice
    */
   const getAdvice = async (question?: string, specificContext?: string) => {
-    if (!userData.income || !userData.spending) {
+    // Only allow if user has configured values (allow 0 but not null/undefined)
+    if (
+      userData.income === undefined || userData.income === null ||
+      userData.spending === undefined || userData.spending === null
+    ) {
+      console.log('getAdvice blocked - incomplete data:', { income: userData.income, spending: userData.spending });
       setError('Complete financial data required for AI advice');
       return;
     }
 
+    console.log('getAdvice starting with userData:', { income: userData.income, spending: userData.spending, savings: userData.savings });
     setLoading(true);
     setError(null);
 
@@ -59,13 +71,18 @@ export function useFinancialAdvisor(options: UseFinancialAdvisorOptions = {}) {
         }),
       });
 
+      console.log('API response status:', response.status);
       if (!response.ok) {
-        throw new Error('Failed to get AI advice');
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        throw new Error(`Failed to get AI advice: ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('AI advice result:', result);
       setInsight(result);
     } catch (err) {
+      console.error('getAdvice error:', err);
       setError(err instanceof Error ? err.message : 'Failed to get AI advice');
     } finally {
       setLoading(false);
@@ -76,7 +93,11 @@ export function useFinancialAdvisor(options: UseFinancialAdvisorOptions = {}) {
    * Get financial health check
    */
   const getHealthCheck = async () => {
-    if (!userData.income || !userData.spending) {
+    // Only allow if user has configured values (allow 0 but not null/undefined)
+    if (
+      userData.income === undefined || userData.income === null ||
+      userData.spending === undefined || userData.spending === null
+    ) {
       setError('Complete financial data required for health check');
       return;
     }
@@ -128,10 +149,11 @@ export function useFinancialAdvisor(options: UseFinancialAdvisorOptions = {}) {
    * Auto-load advice when component mounts (if enabled)
    */
   useEffect(() => {
+    console.log('useFinancialAdvisor mounted with options:', userData);
     if (autoLoad && userData.income && userData.spending && !insight && !loading) {
       getAdvice();
     }
-  }, [autoLoad, userData.income, userData.spending]);
+  }, [autoLoad, userData.income, userData.spending, insight, loading]);
 
   return {
     insight,
@@ -141,9 +163,9 @@ export function useFinancialAdvisor(options: UseFinancialAdvisorOptions = {}) {
     getAdvice,
     getHealthCheck,
     clearInsight,
-    // Helper flags
-    hasData: Boolean(userData.income && userData.spending),
-    isReady: Boolean(userData.income && userData.spending && !loading),
+    // Helper flags - allow 0 values but not null/undefined
+    hasData: Boolean(userData.income !== null && userData.income !== undefined && userData.spending !== null && userData.spending !== undefined),
+    isReady: Boolean(userData.income !== null && userData.income !== undefined && userData.spending !== null && userData.spending !== undefined && !loading),
   };
 }
 
@@ -156,7 +178,7 @@ export function useFinancialHealth() {
   const [loading, setLoading] = useState(false);
 
   const calculateScore = async () => {
-    if (!userData.income || !userData.spending) return;
+    if (userData.income === null || userData.income === undefined || userData.spending === null || userData.spending === undefined) return;
 
     setLoading(true);
     try {
@@ -190,7 +212,7 @@ export function useFinancialHealth() {
   };
 
   useEffect(() => {
-    if (userData.income && userData.spending) {
+    if (userData.income !== null && userData.income !== undefined && userData.spending !== null && userData.spending !== undefined) {
       calculateScore();
     }
   }, [userData.income, userData.spending, userData.savings]);
