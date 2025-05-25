@@ -66,23 +66,161 @@ const SavingsAnalysisResultsScreen: React.FC = () => {
   const returnAnalysis = calculateOptimizedReturns(userData);
   const optimizedAllocation = generateOptimizedAllocation(userData);
 
-  // Only show optimization if it's actually worthwhile
+  // Show detailed analysis even when already optimized
   if (!returnAnalysis.isOptimizationWorthwhile) {
+    const currentFutureValue = calculateCompoundGrowth(totalSavings, returnAnalysis.currentRate, selectedTimeframe);
+    const annualReturn = returnAnalysis.currentAnnualReturn;
+    
     return (
-      <div className="max-w-4xl mx-auto p-8">
-        <Box variant="default" className="p-6 text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Your allocation is already well optimized!</h2>
-          <p className="text-gray-600 mb-4">{returnAnalysis.rationale}</p>
-          <p className="text-sm text-gray-500 mb-6">
-            Current return: {formatPercentage(returnAnalysis.currentRate)} annually
+      <div className="max-w-6xl mx-auto p-4 sm:p-8 animate-fadeIn">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 mb-6">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            <span className="text-sm font-medium text-green-700 uppercase tracking-wide">
+              Excellent Portfolio Analysis
+            </span>
+          </div>
+          
+          <h1 className="text-4xl md:text-6xl font-bold mb-4">
+            Your allocation is{' '}
+            <span className="text-green-600">already optimized!</span>
+          </h1>
+          
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            You're earning {formatPercentage(returnAnalysis.currentRate)} annually with {formatCurrency(Math.round(annualReturn))} in returns per year
           </p>
+        </div>
+
+        {/* Performance Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <Box variant="default" className="p-6 text-center">
+            <div className="text-3xl mb-2">🎯</div>
+            <div className="text-2xl font-bold text-green-600 mb-1">
+              {formatPercentage(returnAnalysis.currentRate)}
+            </div>
+            <div className="text-sm text-gray-600">annual return</div>
+            <div className="text-xs text-gray-500 mt-2">
+              Above market average
+            </div>
+          </Box>
+
+          <Box variant="default" className="p-6 text-center">
+            <div className="text-3xl mb-2">💰</div>
+            <div className="text-2xl font-bold text-gray-800 mb-1">
+              {formatCurrency(Math.round(annualReturn))}
+            </div>
+            <div className="text-sm text-gray-600">yearly earnings</div>
+            <div className="text-xs text-gray-500 mt-2">
+              From your {formatCurrency(totalSavings)}
+            </div>
+          </Box>
+
+          <Box variant="default" className="p-6 text-center">
+            <div className="text-3xl mb-2">📈</div>
+            <div className="text-2xl font-bold text-gray-800 mb-1">
+              {formatCurrency(Math.round(currentFutureValue))}
+            </div>
+            <div className="text-sm text-gray-600">in {selectedTimeframe} years</div>
+            <div className="text-xs text-gray-500 mt-2">
+              With compound growth
+            </div>
+          </Box>
+        </div>
+
+        {/* Why It's Good */}
+        <Box variant="gradient" className="mb-10">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            🏆 Why your allocation is excellent
+          </h3>
+          
+          <div className="bg-white bg-opacity-50 rounded-lg p-6 mb-4">
+            <p className="text-gray-700 leading-relaxed">
+              {returnAnalysis.rationale}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white bg-opacity-50 rounded-lg p-4">
+              <h4 className="font-semibold text-gray-800 mb-2">✅ Smart diversification</h4>
+              <p className="text-sm text-gray-600">
+                Your portfolio balances growth potential with risk management effectively.
+              </p>
+            </div>
+            <div className="bg-white bg-opacity-50 rounded-lg p-4">
+              <h4 className="font-semibold text-gray-800 mb-2">✅ Above-average returns</h4>
+              <p className="text-sm text-gray-600">
+                At {formatPercentage(returnAnalysis.currentRate)}, you're beating typical savings rates by a significant margin.
+              </p>
+            </div>
+          </div>
+        </Box>
+
+        {/* Time Horizon Visualization */}
+        <Box variant="default" className="mb-10">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            📊 Your wealth projection
+          </h3>
+          
+          <div className="mb-4">
+            <label className="text-sm text-gray-600">Time horizon:</label>
+            <div className="flex gap-2 mt-2">
+              {[5, 10, 20, 30].map((years) => (
+                <button
+                  key={years}
+                  onClick={() => setSelectedTimeframe(years)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    selectedTimeframe === years 
+                      ? 'bg-indigo-500 text-white' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {years} years
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="text-center">
+            <div className="text-4xl font-bold text-green-600 mb-2">
+              {formatCurrency(Math.round(calculateCompoundGrowth(totalSavings, returnAnalysis.currentRate, selectedTimeframe)))}
+            </div>
+            <p className="text-gray-600">
+              Your projected wealth in {selectedTimeframe} years
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              That's {formatCurrency(Math.round(calculateCompoundGrowth(totalSavings, returnAnalysis.currentRate, selectedTimeframe) - totalSavings))} in compound growth!
+            </p>
+          </div>
+        </Box>
+
+        {/* Educational Insight */}
+        <InsightCard
+          type="optimize"
+          icon="🎓"
+          title="You're in the top tier of investors"
+          text="Most people keep money in low-yield savings accounts earning 0.5% or less. Your current allocation puts you ahead of 80% of savers."
+          action="Keep up the great work! Consider reviewing your allocation annually to maintain optimization."
+          benchmark="Your {formatPercentage(returnAnalysis.currentRate)} return vs. average savings rate of 0.5%"
+        />
+
+        {/* Navigation */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
           <button
             onClick={() => goToScreen('initialInsights')}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            className="w-full sm:w-48 order-1 sm:order-1 flex items-center gap-2 px-6 py-3 text-gray-500 hover:text-indigo-700 font-medium transition-colors border border-gray-200 rounded-lg bg-white"
           >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
             Back to Insights
           </button>
-        </Box>
+          <button
+            onClick={() => goToScreen('savingsAnalysisInput')}
+            className="w-full sm:w-48 order-2 sm:order-2 flex items-center gap-2 px-6 py-3 text-indigo-600 hover:text-indigo-800 font-medium transition-colors border border-indigo-100 rounded-lg bg-white"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            Review Allocation
+          </button>
+        </div>
       </div>
     );
   }
