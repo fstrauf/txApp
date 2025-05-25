@@ -10,6 +10,8 @@ import { SpendingScreen } from '@/app/personal-finance/screens/SpendingScreen';
 import { SavingsScreen } from '@/app/personal-finance/screens/SavingsScreen';
 import InitialInsightsScreen from '@/app/personal-finance/screens/InitialInsightsScreen';
 import SpendingAnalysisUploadScreen from '@/app/personal-finance/screens/SpendingAnalysisUploadScreen';
+import SavingsAnalysisInputScreen from '@/app/personal-finance/screens/SavingsAnalysisInputScreen';
+import SavingsAnalysisResultsScreen from '@/app/personal-finance/screens/SavingsAnalysisResultsScreen';
 
 const PersonalFinancePage: React.FC = () => {
   const { currentScreen, nextScreen, prevScreen } = usePersonalFinanceStore();
@@ -28,6 +30,10 @@ const PersonalFinancePage: React.FC = () => {
         return <InitialInsightsScreen />;
       case 'spendingAnalysisUpload':
         return <SpendingAnalysisUploadScreen />;
+      case 'savingsAnalysisInput':
+        return <SavingsAnalysisInputScreen />;
+      case 'savingsAnalysisResults':
+        return <SavingsAnalysisResultsScreen />;
       default:
         return <WelcomeScreen />;
     }

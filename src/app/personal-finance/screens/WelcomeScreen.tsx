@@ -37,7 +37,7 @@ const WelcomeScreen: React.FC = () => {
               {item}
             </li>
           ))}
-        </ul>
+          </ul>
       </Box>
         {/* </div> */}
       </div>
