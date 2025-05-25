@@ -14,6 +14,7 @@ interface UserData {
   savings: number;
   savingsBreakdown?: SavingsBreakdown;
   selectedBank?: string;
+  savingsGoal?: string; // Added for main savings goal
 }
 
 interface PersonalFinanceState {
@@ -23,6 +24,7 @@ interface PersonalFinanceState {
   updateSavings: (savings: number) => void;
   updateSavingsBreakdown: (breakdown: SavingsBreakdown) => void;
   updateSelectedBank: (bank: string) => void;
+  updateSavingsGoal: (goal: string) => void; // Added action
 }
 
 export const usePersonalFinanceStore = create<PersonalFinanceState>((set) => ({
@@ -60,5 +62,11 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>((set) => ({
     set((state) => ({
       userData: { ...state.userData, selectedBank: bank }
     }));
-  }
+  },
+  
+  updateSavingsGoal: (goal: string) => {
+    set((state) => ({
+      userData: { ...state.userData, savingsGoal: goal }
+    }));
+  },
 }));
