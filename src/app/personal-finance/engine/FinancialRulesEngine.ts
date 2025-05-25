@@ -13,6 +13,8 @@ export interface UserFinancialData {
   spending: number;
   savings: number;
   savingsBreakdown?: SavingsBreakdown;
+  selectedBank?: string;
+  savingsGoal?: string;
 }
 
 export interface SavingsBreakdown {

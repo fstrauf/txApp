@@ -1,7 +1,7 @@
 // src/app/personal-finance/page.tsx
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useScreenNavigation } from '@/app/personal-finance/hooks/useScreenNavigation';
 import ProgressBar from '@/app/personal-finance/shared/ProgressBar';
 import WelcomeScreen from '@/app/personal-finance/screens/WelcomeScreen';
@@ -15,6 +15,14 @@ import SavingsAnalysisInputScreen from '@/app/personal-finance/screens/SavingsAn
 import SavingsAnalysisResultsScreen from '@/app/personal-finance/screens/SavingsAnalysisResultsScreen';
 
 const PersonalFinancePage: React.FC = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PersonalFinancePageContent />
+    </Suspense>
+  );
+};
+
+function PersonalFinancePageContent() {
   const { currentScreen } = useScreenNavigation();
 
   const renderScreen = () => {
@@ -43,21 +51,11 @@ const PersonalFinancePage: React.FC = () => {
   };
 
   return (
-    <div className="mb-10 bg-linear-to-br from-indigo-50 via-white to-purple-50 min-h-screen px-2 md:px-6 lg:px-12">
-      {/* Progress Bar - Fixed Position */}
-      <div className="max-w-6xl mx-auto pt-2 pb-0 px-2 md:px-0">
-        <ProgressBar />
-      </div>
-      {/* Main Container - Matching Artifact */}
-      <div className="max-w-6xl mx-auto mb-8">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden p-4 md:p-8">
-          <div className="flex flex-col">
-            {renderScreen()}
-          </div>
-        </div>
-      </div>
-    </div>
+    <>
+      <ProgressBar />
+      {renderScreen()}
+    </>
   );
-};
+}
 
 export default PersonalFinancePage;

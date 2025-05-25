@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { Box } from '@/components/ui/Box';
 import { ParametersReview } from '@/app/personal-finance/shared/ParametersReview';
 import { InsightCard } from '@/app/personal-finance/shared/InsightCard';
 import {DiveDeeperCard} from '@/app/personal-finance/shared/DiveDeeperCard';
+import { AIFinancialInsights } from '../ai/AIFinancialInsights';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { 
   generateFinancialInsights, 
@@ -18,6 +19,7 @@ const InitialInsightsScreen: React.FC = () => {
   const { userData } = usePersonalFinanceStore();
   const { goToScreen } = useScreenNavigation();
   const { income, spending, savings } = userData;
+  const [showAIInsights, setShowAIInsights] = useState(false);
 
   // Validate data first
   const validation = validateUserData(userData);
@@ -84,44 +86,76 @@ const InitialInsightsScreen: React.FC = () => {
                 Your Key Insights
               </h2>
               <p className="text-gray-600 mt-1">
-                The most important things to focus on right now
+                {showAIInsights 
+                  ? "AI-powered personalized recommendations"
+                  : "The most important things to focus on right now"
+                }
               </p>
             </div>
-            <div className="hidden sm:flex items-center gap-4 text-sm text-gray-700 dark:text-gray-300">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 bg-green-500 rounded-full"></span>
-                <span className="text-xs font-medium">Success</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 bg-orange-500 rounded-full"></span>
-                <span className="text-xs font-medium">Optimize</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 bg-red-500 rounded-full"></span>
-                <span className="text-xs font-medium">Action needed</span>
+            
+            {/* AI Toggle Button */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowAIInsights(!showAIInsights)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${
+                  showAIInsights
+                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <span className="text-sm">🤖</span>
+                <span className="text-sm font-medium">
+                  {showAIInsights ? 'AI Insights' : 'Try AI Insights'}
+                </span>
+              </button>
+              
+              <div className="hidden sm:flex items-center gap-4 text-sm text-gray-700 dark:text-gray-300">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 bg-green-500 rounded-full"></span>
+                  <span className="text-xs font-medium">Success</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 bg-orange-500 rounded-full"></span>
+                  <span className="text-xs font-medium">Optimize</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 bg-red-500 rounded-full"></span>
+                  <span className="text-xs font-medium">Action needed</span>
+                </div>
               </div>
             </div>
           </div>
           
-          <div className="space-y-4">
-            {insights.map((insight, index) => (
-              <div
-                key={index}
-                className="transform transition-all duration-300 hover:translate-x-2"
-                style={{ animationDelay: `${index * 150}ms` }}
-              >
-                <InsightCard
-                  type={insight.type}
-                  icon={insight.icon}
-                  title={insight.title}
-                  text={insight.text}
-                  action={insight.action}
-                  benchmark={insight.benchmark}
-                  className="hover:shadow-lg transition-shadow duration-300"
-                />
-              </div>
-            ))}
-          </div>
+          {/* Conditional Insights Display */}
+          {showAIInsights ? (
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
+              <AIFinancialInsights 
+                context="general"
+                showHealthScore={true}
+                className="bg-transparent border-0 shadow-none"
+              />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {insights.map((insight, index) => (
+                <div
+                  key={index}
+                  className="transform transition-all duration-300 hover:translate-x-2"
+                  style={{ animationDelay: `${index * 150}ms` }}
+                >
+                  <InsightCard
+                    type={insight.type}
+                    icon={insight.icon}
+                    title={insight.title}
+                    text={insight.text}
+                    action={insight.action}
+                    benchmark={insight.benchmark}
+                    className="hover:shadow-lg transition-shadow duration-300"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Enhanced Dive Deeper Section */}

@@ -1,0 +1,342 @@
+/**
+ * AI-Powered Financial Insights Component
+ * 
+ * This component displays personalized financial advice from the AI advisor
+ * alongside the rules-based engine insights.
+ */
+
+import React, { useState } from 'react';
+import { Box } from '@/components/ui/Box';
+import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
+import { useFinancialAdvisor, useFinancialHealth } from '../ai/useFinancialAdvisor';
+import type { AIRecommendation } from '../ai/index';
+
+interface AIFinancialInsightsProps {
+  context?: 'general' | 'savings_optimization' | 'spending_analysis' | 'goal_planning';
+  showHealthScore?: boolean;
+  className?: string;
+}
+
+export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
+  context = 'general',
+  showHealthScore = true,
+  className = '',
+}) => {
+  const { 
+    insight, 
+    healthCheck, 
+    loading, 
+    error, 
+    getAdvice, 
+    getHealthCheck, 
+    hasData,
+    isReady 
+  } = useFinancialAdvisor({ context });
+  
+  const { score, getScoreColor, getScoreLabel } = useFinancialHealth();
+  const [customQuestion, setCustomQuestion] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
+
+  if (!hasData) {
+    return (
+      <Box variant="default" className={`p-6 ${className}`}>
+        <div className="text-center">
+          <div className="text-4xl mb-4">🤖</div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            AI Financial Advisor
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Complete your financial profile to get personalized AI-powered insights.
+          </p>
+        </div>
+      </Box>
+    );
+  }
+
+  const handleGetAdvice = () => {
+    if (showCustomInput && customQuestion.trim()) {
+      getAdvice(customQuestion);
+      setCustomQuestion('');
+      setShowCustomInput(false);
+    } else {
+      getAdvice();
+    }
+  };
+
+  const handleAskCustomQuestion = () => {
+    setShowCustomInput(!showCustomInput);
+  };
+
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'high': return '🔴';
+      case 'medium': return '🟡';
+      case 'low': return '🟢';
+      default: return '💡';
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'insight': return '💡';
+      case 'action': return '🎯';
+      case 'warning': return '⚠️';
+      case 'education': return '📚';
+      default: return '💬';
+    }
+  };
+
+  return (
+    <div className={`space-y-6 ${className}`}>
+      {/* Health Score Section */}
+      {showHealthScore && score !== null && (
+        <Box variant="gradient" className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Financial Health Score
+              </h3>
+              <p className="text-sm text-gray-600">
+                AI-powered assessment of your financial wellness
+              </p>
+            </div>
+            <div className="text-right">
+              <div className={`text-3xl font-bold ${getScoreColor(score)}`}>
+                {score}
+              </div>
+              <div className={`text-sm font-medium ${getScoreColor(score)}`}>
+                {getScoreLabel(score)}
+              </div>
+            </div>
+          </div>
+          
+          {!healthCheck && (
+            <PrimaryButton
+              onClick={getHealthCheck}
+              disabled={loading}
+              variant="secondary"
+              className="w-full"
+            >
+              {loading ? 'Analyzing...' : 'Get Detailed Health Check'}
+            </PrimaryButton>
+          )}
+        </Box>
+      )}
+
+      {/* Health Check Details */}
+      {healthCheck && (
+        <Box variant="default" className="p-6">
+          <h4 className="font-semibold text-gray-800 mb-3">
+            📊 Health Check Summary
+          </h4>
+          <p className="text-gray-700 mb-4">{healthCheck.summary}</p>
+          
+          <div className="space-y-2">
+            <h5 className="font-medium text-gray-800">Top Priorities:</h5>
+            {healthCheck.topPriorities.map((priority, index) => (
+              <div key={index} className="flex items-center text-sm text-gray-700">
+                <span className="w-2 h-2 bg-primary rounded-full mr-3"></span>
+                {priority}
+              </div>
+            ))}
+          </div>
+        </Box>
+      )}
+
+      {/* Main AI Insights */}
+      <Box variant="default" className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+              🤖 AI Financial Advisor
+              <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                Beta
+              </span>
+            </h3>
+            <p className="text-sm text-gray-600">
+              Personalized insights powered by AI and validated by our rules engine
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center">
+              <span className="text-red-500 mr-2">⚠️</span>
+              <span className="text-red-700 text-sm">{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Custom Question Input */}
+        {showCustomInput && (
+          <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Ask the AI advisor a specific question:
+            </label>
+            <textarea
+              value={customQuestion}
+              onChange={(e) => setCustomQuestion(e.target.value)}
+              placeholder="e.g., Should I pay off debt or invest first? How much should I save for a house deposit?"
+              className="w-full p-3 border border-gray-300 rounded-lg resize-none"
+              rows={3}
+            />
+            <div className="flex gap-2 mt-2">
+              <PrimaryButton
+                onClick={handleGetAdvice}
+                disabled={!customQuestion.trim() || loading}
+                className="flex-1"
+              >
+                {loading ? 'Getting Answer...' : 'Ask AI Advisor'}
+              </PrimaryButton>
+              <PrimaryButton
+                onClick={() => setShowCustomInput(false)}
+                variant="secondary"
+                className="px-4"
+              >
+                Cancel
+              </PrimaryButton>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        {!insight && (
+          <div className="flex gap-3 mb-4">
+            <PrimaryButton
+              onClick={handleGetAdvice}
+              disabled={loading || !isReady}
+              className="flex-1"
+            >
+              {loading ? 'Analyzing...' : 'Get AI Insights'}
+            </PrimaryButton>
+            <PrimaryButton
+              onClick={handleAskCustomQuestion}
+              variant="secondary"
+              className="px-4"
+            >
+              Ask Question
+            </PrimaryButton>
+          </div>
+        )}
+
+        {/* AI Insights Display */}
+        {insight && (
+          <div className="space-y-4">
+            {/* Personalized Message */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-blue-800">{insight.personalizedMessage}</p>
+            </div>
+
+            {/* Recommendations */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-800">🎯 Recommendations</h4>
+              {insight.recommendations.map((rec: AIRecommendation, index: number) => (
+                <div
+                  key={rec.id || index}
+                  className={`p-4 rounded-lg border ${
+                    rec.validatedByRules 
+                      ? 'bg-white border-gray-200' 
+                      : 'bg-yellow-50 border-yellow-200'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center">
+                      <span className="mr-2">{getTypeIcon(rec.type)}</span>
+                      <span className="mr-2">{getPriorityIcon(rec.priority)}</span>
+                      <h5 className="font-medium text-gray-800">{rec.title}</h5>
+                    </div>
+                    <div className="flex items-center text-xs">
+                      <span className={`px-2 py-1 rounded-full ${
+                        rec.confidence >= 0.8 
+                          ? 'bg-green-100 text-green-800' 
+                          : rec.confidence >= 0.6 
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {Math.round(rec.confidence * 100)}% confident
+                      </span>
+                      {!rec.validatedByRules && (
+                        <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
+                          Review needed
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <p className="text-gray-700 text-sm mb-2">{rec.description}</p>
+                  <p className="text-gray-600 text-xs mb-3">{rec.reasoning}</p>
+                  
+                  {rec.actionSteps && rec.actionSteps.length > 0 && (
+                    <div>
+                      <h6 className="text-xs font-medium text-gray-700 mb-1">Action Steps:</h6>
+                      <ul className="text-xs text-gray-600 space-y-1">
+                        {rec.actionSteps.map((step, stepIndex) => (
+                          <li key={stepIndex} className="flex items-start">
+                            <span className="mr-2">•</span>
+                            <span>{step}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Next Steps */}
+            {insight.nextSteps.length > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-semibold text-green-800 mb-2">📝 Next Steps</h4>
+                <ul className="space-y-1">
+                  {insight.nextSteps.map((step, index) => (
+                    <li key={index} className="text-green-700 text-sm flex items-start">
+                      <span className="mr-2">•</span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Educational Topics */}
+            {insight.educationalTopics.length > 0 && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h4 className="font-semibold text-purple-800 mb-2">📚 Learn More About</h4>
+                <div className="flex flex-wrap gap-2">
+                  {insight.educationalTopics.map((topic, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full"
+                    >
+                      {topic}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Get New Advice Button */}
+            <div className="flex gap-2 pt-2">
+              <PrimaryButton
+                onClick={() => setShowCustomInput(true)}
+                variant="secondary"
+                className="flex-1"
+              >
+                Ask Another Question
+              </PrimaryButton>
+              <PrimaryButton
+                onClick={() => getAdvice()}
+                disabled={loading}
+                variant="secondary"
+                className="flex-1"
+              >
+                {loading ? 'Refreshing...' : 'Refresh Insights'}
+              </PrimaryButton>
+            </div>
+          </div>
+        )}
+      </Box>
+    </div>
+  );
+};
