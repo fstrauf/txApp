@@ -18,17 +18,17 @@ import SavingsAnalysisResultsScreen from '@/app/personal-finance/screens/Savings
 
 const PersonalFinancePage: React.FC = () => {
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Personal Finance Context-Aware Sidebar */}
-      <PersonalFinanceSidebar />
-      
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col"> {/* ml-80 only on desktop */}
-        <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div>Loading...</div>}>
+      <div className="flex h-screen overflow-hidden">
+        {/* Personal Finance Context-Aware Sidebar */}
+        <PersonalFinanceSidebar />
+        
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col"> {/* ml-80 only on desktop */}
           <PersonalFinancePageContent />
-        </Suspense>
+        </div>
       </div>
-    </div>
+    </Suspense>
   );
 };
 
