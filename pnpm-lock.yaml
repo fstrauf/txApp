@@ -50,6 +50,9 @@ importers:
       ai:
         specifier: ^4.3.16
         version: 4.3.16(react@19.1.0)(zod@3.25.23)
+      akahu:
+        specifier: ^2.1.0
+        version: 2.1.0
       auth0:
         specifier: ^4.20.0
         version: 4.23.0
@@ -1864,6 +1867,9 @@ packages:
 
   ajv@6.12.6:
     resolution: {integrity: sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==}
+
+  akahu@2.1.0:
+    resolution: {integrity: sha512-dzyMjtmDFaUzvKDPVCP9X4MhORzzYKEkKjeNFKsu/ZzHJVOX2GlQriY9v+67vDI2nUF0vW+SwoTetzYbXc8ikw==}
 
   ansi-align@3.0.1:
     resolution: {integrity: sha512-IOfwwBF5iczOjp/WeY4YxyjqAFMQoZufdQWDd19SEExbVLNXqvpzSJ/M7Za4/sCPmQ0+GRquoA7bGcINcxew6w==}
@@ -6294,6 +6300,13 @@ snapshots:
       fast-json-stable-stringify: 2.1.0
       json-schema-traverse: 0.4.1
       uri-js: 4.4.1
+
+  akahu@2.1.0:
+    dependencies:
+      axios: 1.9.0
+      uuid: 8.3.2
+    transitivePeerDependencies:
+      - debug
 
   ansi-align@3.0.1:
     dependencies:

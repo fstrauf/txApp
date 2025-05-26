@@ -52,9 +52,17 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
     );
   }
 
-  // Use the rules engine for spending analysis
-  const spendingAnalysis = analyzeSpending(userData);
-  const runwayAnalysis = calculateFinancialRunway(userData.savings, userData.spending, userData.income);
+  // Use real transaction data or fallback to sample
+  const hasTransactionData = userData.transactions && userData.transactions.length > 0;
+  const spendingToAnalyze = hasTransactionData ? 
+    (userData.actualMonthlySpending || userData.spending) : userData.spending;
+
+  // Use the rules engine for spending analysis with actual data
+  const spendingAnalysis = analyzeSpending({
+    ...userData,
+    spending: spendingToAnalyze
+  });
+  const runwayAnalysis = calculateFinancialRunway(userData.savings, spendingToAnalyze, userData.income);
 
   // Get status color based on spending benchmark
   const getStatusColor = (benchmark: string) => {
@@ -77,66 +85,109 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
     }
   };
 
-  // Generate sample spending breakdown for demonstration
-  // In a real app, this would come from uploaded CSV data
-  const sampleSpendingBreakdown: SpendingCategoryCard[] = [
-    {
-      category: 'Housing',
-      amount: userData.spending * 0.35,
-      percentage: 35,
-      benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.housing,
-      status: 'good',
-      icon: '🏠'
-    },
-    {
-      category: 'Food',
-      amount: userData.spending * 0.15,
-      percentage: 15,
-      benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.food,
-      status: 'good',
-      icon: '🍽️'
-    },
-    {
-      category: 'Transportation',
-      amount: userData.spending * 0.18,
-      percentage: 18,
-      benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.transportation,
-      status: 'good',
-      icon: '🚗'
-    },
-    {
-      category: 'Entertainment',
-      amount: userData.spending * 0.12,
-      percentage: 12,
-      benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.entertainment,
-      status: 'high',
-      icon: '🎬'
-    },
-    {
-      category: 'Shopping',
-      amount: userData.spending * 0.10,
-      percentage: 10,
-      benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.shopping,
-      status: 'good',
-      icon: '🛍️'
-    },
-    {
-      category: 'Utilities',
-      amount: userData.spending * 0.06,
-      percentage: 6,
-      benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.utilities,
-      status: 'good',
-      icon: '⚡'
-    },
-    {
-      category: 'Healthcare',
-      amount: userData.spending * 0.04,
-      percentage: 4,
-      benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.healthcare,
-      status: 'low',
-      icon: '🏥'
+  // Generate category mapping for icons
+  const getCategoryIcon = (category: string): string => {
+    const lowerCategory = category.toLowerCase();
+    if (lowerCategory.includes('food') || lowerCategory.includes('grocery') || lowerCategory.includes('dining')) return '🍽️';
+    if (lowerCategory.includes('transport') || lowerCategory.includes('fuel') || lowerCategory.includes('car')) return '🚗';
+    if (lowerCategory.includes('housing') || lowerCategory.includes('rent') || lowerCategory.includes('mortgage')) return '🏠';
+    if (lowerCategory.includes('entertainment') || lowerCategory.includes('movie') || lowerCategory.includes('streaming')) return '🎬';
+    if (lowerCategory.includes('shopping') || lowerCategory.includes('retail') || lowerCategory.includes('clothing')) return '🛍️';
+    if (lowerCategory.includes('utilities') || lowerCategory.includes('power') || lowerCategory.includes('gas')) return '⚡';
+    if (lowerCategory.includes('health') || lowerCategory.includes('medical') || lowerCategory.includes('pharmacy')) return '🏥';
+    if (lowerCategory.includes('education') || lowerCategory.includes('school')) return '📚';
+    if (lowerCategory.includes('insurance')) return '🛡️';
+    if (lowerCategory.includes('travel') || lowerCategory.includes('vacation')) return '✈️';
+    return '💰';
+  };
+
+  // Get spending status based on benchmark comparison
+  const getCategoryStatus = (category: string, percentage: number): 'good' | 'high' | 'low' => {
+    const benchmarks = FINANCIAL_CONFIG.SPENDING_BENCHMARKS;
+    
+    if (category.toLowerCase().includes('housing')) {
+      return percentage <= benchmarks.housing.max ? 'good' : 'high';
+    } else if (category.toLowerCase().includes('food')) {
+      return percentage <= benchmarks.food.max ? 'good' : 'high';
+    } else if (category.toLowerCase().includes('transport')) {
+      return percentage <= benchmarks.transportation.max ? 'good' : 'high';
+    } else if (category.toLowerCase().includes('entertainment')) {
+      return percentage <= benchmarks.entertainment.max ? 'good' : 'high';
     }
-  ];
+    
+    // Default: consider anything over 15% of total spending as high
+    return percentage <= 15 ? 'good' : 'high';
+  };
+
+  // Create spending breakdown from real data or sample
+  const spendingBreakdown: SpendingCategoryCard[] = hasTransactionData && userData.categorySpending ? 
+    userData.categorySpending.map(cat => ({
+      category: cat.category,
+      amount: cat.amount,
+      percentage: cat.percentage,
+      benchmark: { min: 0, max: 15 }, // Generic benchmark
+      status: getCategoryStatus(cat.category, cat.percentage),
+      icon: getCategoryIcon(cat.category)
+    })) : 
+    // Fallback to sample data
+    [
+      {
+        category: 'Housing',
+        amount: userData.spending * 0.35,
+        percentage: 35,
+        benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.housing,
+        status: 'good',
+        icon: '🏠'
+      },
+      {
+        category: 'Food',
+        amount: userData.spending * 0.15,
+        percentage: 15,
+        benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.food,
+        status: 'good',
+        icon: '🍽️'
+      },
+      {
+        category: 'Transportation',
+        amount: userData.spending * 0.18,
+        percentage: 18,
+        benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.transportation,
+        status: 'good',
+        icon: '🚗'
+      },
+      {
+        category: 'Entertainment',
+        amount: userData.spending * 0.12,
+        percentage: 12,
+        benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.entertainment,
+        status: 'high',
+        icon: '🎬'
+      },
+      {
+        category: 'Shopping',
+        amount: userData.spending * 0.10,
+        percentage: 10,
+        benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.shopping,
+        status: 'good',
+        icon: '🛍️'
+      },
+      {
+        category: 'Utilities',
+        amount: userData.spending * 0.06,
+        percentage: 6,
+        benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.utilities,
+        status: 'good',
+        icon: '⚡'
+      },
+      {
+        category: 'Healthcare',
+        amount: userData.spending * 0.04,
+        percentage: 4,
+        benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.healthcare,
+        status: 'low',
+        icon: '🏥'
+      }
+    ];
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-8 animate-fadeIn">
@@ -251,7 +302,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sampleSpendingBreakdown.map((category, index) => (
+          {spendingBreakdown.map((category: SpendingCategoryCard, index: number) => (
             <Box key={index} variant="default" className="p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
@@ -286,8 +337,10 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
 
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-800">
-            💡 <strong>Note:</strong> This breakdown is estimated based on typical spending patterns. 
-            Upload your actual bank transactions for a personalized analysis.
+            💡 <strong>Note:</strong> {hasTransactionData 
+              ? `This breakdown is based on your actual imported transaction data (${userData.transactions?.length || 0} transactions analyzed).`
+              : 'This breakdown is estimated based on typical spending patterns. Upload your actual bank transactions for a personalized analysis.'
+            }
           </p>
         </div>
       </div>
