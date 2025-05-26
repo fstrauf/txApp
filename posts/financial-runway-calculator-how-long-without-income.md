@@ -1,6 +1,6 @@
 ---
 title: "Financial Runway Calculator: How Long Can You Go Without Income?"
-date: "2025-05-23"
+date: "2025-05-27"
 summary: "Calculate your financial runway—the ultimate measure of financial freedom. Discover how long your money would last and what it means for your life choices."
 keywords: "financial runway calculator, financial runway, how long will my money last, financial independence calculator, emergency fund vs financial runway"
 ---

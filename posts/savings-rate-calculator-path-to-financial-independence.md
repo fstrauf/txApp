@@ -1,6 +1,6 @@
 ---
 title: "Savings Rate Calculator: Your Path to Financial Independence (2025 Guide)"
-date: "2025-05-23"
+date: "2025-03-15"
 summary: "Calculate your personal savings rate and discover how this single metric determines your path to financial freedom. Includes FIRE timeline calculator and optimization strategies."
 keywords: "savings rate calculator, personal savings rate calculator, fire savings rate calculator, savings rate calculator fire, how to calculate savings rate"
 ---
