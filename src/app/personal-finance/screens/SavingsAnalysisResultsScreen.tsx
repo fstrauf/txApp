@@ -32,6 +32,53 @@ interface ActionStep {
   impact: string;
 }
 
+// --- Dynamic Recommended Allocation Helper ---
+type AllocationKey = 'checking' | 'savings' | 'termDeposit' | 'other';
+interface RecommendedAllocation {
+  checking: number;
+  savings: number;
+  termDeposit: number;
+  other: number;
+  percents: Record<AllocationKey, number>;
+}
+function getRecommendedAllocation({ age, riskTolerance, spending, savings }: {
+  age: number;
+  riskTolerance: 'conservative' | 'balanced' | 'growth';
+  spending: number;
+  savings: number;
+}): RecommendedAllocation {
+  const emergencyFund = Math.min(spending * 3, savings * 0.2);
+  let stockPct = 0.8, bondPct = 0.15, cashPct = 0.05;
+  if (riskTolerance === 'conservative') {
+    stockPct = 0.4; bondPct = 0.4; cashPct = 0.2;
+  } else if (riskTolerance === 'balanced') {
+    stockPct = 0.6; bondPct = 0.3; cashPct = 0.1;
+  } else if (riskTolerance === 'growth') {
+    stockPct = 0.8; bondPct = 0.15; cashPct = 0.05;
+  }
+  if (typeof age === 'number' && !isNaN(age)) {
+    stockPct = Math.max(0.2, Math.min(0.9, (110 - age) / 100));
+    bondPct = 1 - stockPct - cashPct;
+  }
+  const checking = Math.min(1000, savings * 0.05);
+  const savingsAccount = emergencyFund;
+  const investable = Math.max(0, savings - checking - savingsAccount);
+  const termDeposit = investable * bondPct;
+  const other = investable * stockPct;
+  return {
+    checking,
+    savings: savingsAccount,
+    termDeposit,
+    other,
+    percents: {
+      checking: savings > 0 ? checking / savings : 0,
+      savings: savings > 0 ? savingsAccount / savings : 0,
+      termDeposit: savings > 0 ? termDeposit / savings : 0,
+      other: savings > 0 ? other / savings : 0,
+    }
+  };
+}
+
 const SavingsAnalysisResultsScreen: React.FC = () => {
   const { userData } = usePersonalFinanceStore();
   const { goToScreen } = useScreenNavigation();
@@ -66,6 +113,14 @@ const SavingsAnalysisResultsScreen: React.FC = () => {
   // Use the rules engine for all calculations
   const returnAnalysis = calculateOptimizedReturns(userData);
   const optimizedAllocation = generateOptimizedAllocation(userData);
+
+  // Recommended allocation (dynamic)
+  const recommended = getRecommendedAllocation({
+    age: 35, // default age, since not in userData
+    riskTolerance: 'balanced', // default risk profile
+    spending: typeof userData.spending === 'number' ? userData.spending : 0,
+    savings: typeof userData.savings === 'number' ? userData.savings : 0,
+  });
 
   // Show detailed analysis even when already optimized
   if (!returnAnalysis.isOptimizationWorthwhile) {
@@ -128,6 +183,45 @@ const SavingsAnalysisResultsScreen: React.FC = () => {
             </div>
           </Box>
         </div>
+
+        {/* User vs. Recommended Allocation Comparison */}
+        <Box variant="default" className="mb-10">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            🧭 Allocation Comparison
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr>
+                  <th className="text-left py-2 pr-4">Category</th>
+                  <th className="text-center py-2 px-2">Your %</th>
+                  <th className="text-center py-2 px-2">Recommended %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {([
+                  { label: 'Checking', key: 'checking' },
+                  { label: 'Savings', key: 'savings' },
+                  { label: 'Term Deposit', key: 'termDeposit' },
+                  { label: 'Investments', key: 'other' },
+                ] as { label: string; key: AllocationKey }[]).map(row => (
+                  <tr key={row.key}>
+                    <td className="py-2 pr-4 font-medium text-gray-700">{row.label}</td>
+                    <td className="py-2 px-2 text-center text-indigo-700 font-semibold">
+                      {isFinite(userPercents[row.key]) ? Math.round(userPercents[row.key] * 100) : 0}%
+                    </td>
+                    <td className="py-2 px-2 text-center text-green-700 font-semibold">
+                      {isFinite(recommended.percents[row.key]) ? Math.round(recommended.percents[row.key] * 100) : 0}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Based on your profile (age, risk, and spending), this is a typical diversified allocation.
+          </p>
+        </Box>
 
         {/* Why It's Good */}
         <Box variant="gradient" className="mb-10">
@@ -235,6 +329,14 @@ const SavingsAnalysisResultsScreen: React.FC = () => {
     savings: totalSavings * 0.9,
     termDeposit: 0,
     other: 0
+  };
+
+  // Calculate user allocation percentages
+  const userPercents: Record<AllocationKey, number> = {
+    checking: totalSavings > 0 ? currentBreakdown.checking / totalSavings : 0,
+    savings: totalSavings > 0 ? currentBreakdown.savings / totalSavings : 0,
+    termDeposit: totalSavings > 0 ? currentBreakdown.termDeposit / totalSavings : 0,
+    other: totalSavings > 0 ? currentBreakdown.other / totalSavings : 0,
   };
 
   // Get investment recommendations
