@@ -14,6 +14,7 @@ import {
   formatCurrency,
   formatPercentage
 } from '../engine/FinancialRulesEngine';
+import { PrimaryButton } from '../shared/PrimaryButton';
 
 interface InvestmentOption {
   name: string;
@@ -206,20 +207,18 @@ const SavingsAnalysisResultsScreen: React.FC = () => {
 
         {/* Navigation */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
-          <button
+          <PrimaryButton
             onClick={() => goToScreen('initialInsights')}
-            className="w-full sm:w-48 order-1 sm:order-1 flex items-center gap-2 px-6 py-3 text-gray-500 hover:text-indigo-700 font-medium transition-colors border border-gray-200 rounded-lg bg-white"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            className="w-full sm:w-52 order-1 sm:order-1 flex items-center gap-2"
+          >            
             Back to Insights
-          </button>
-          <button
+          </PrimaryButton>
+          <PrimaryButton
             onClick={() => goToScreen('savingsAnalysisInput')}
-            className="w-full sm:w-48 order-2 sm:order-2 flex items-center gap-2 px-6 py-3 text-indigo-600 hover:text-indigo-800 font-medium transition-colors border border-indigo-100 rounded-lg bg-white"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            className="w-full sm:w-52 order-2 sm:order-2 flex items-center gap-2"
+          >            
             Review Allocation
-          </button>
+          </PrimaryButton>
         </div>
       </div>
     );
@@ -543,20 +542,18 @@ const SavingsAnalysisResultsScreen: React.FC = () => {
 
       {/* Consistent Navigation at Bottom */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
-        <button
+        <PrimaryButton
           onClick={() => goToScreen('initialInsights')}
-          className="w-full sm:w-48 order-1 sm:order-1 flex items-center gap-2 px-6 py-3 text-gray-500 hover:text-indigo-700 font-medium transition-colors border border-gray-200 rounded-lg bg-white"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          className="w-full sm:w-48 order-2 sm:order-2"
+        >          
           Back to Insights
-        </button>
-        <button
+        </PrimaryButton>
+        <PrimaryButton
           onClick={() => goToScreen('savingsAnalysisInput')}
-          className="w-full sm:w-48 order-2 sm:order-2 flex items-center gap-2 px-6 py-3 text-indigo-600 hover:text-indigo-800 font-medium transition-colors border border-indigo-100 rounded-lg bg-white"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          className="w-full sm:w-48 order-2 sm:order-2"
+        >        
           Back to Allocation
-        </button>
+        </PrimaryButton>
       </div>
     </div>
   );

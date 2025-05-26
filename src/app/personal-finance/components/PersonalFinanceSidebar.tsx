@@ -53,7 +53,10 @@ const navigationItems: NavigationItem[] = [
     icon: '💡',
     description: 'Financial health overview',
     category: 'analysis',
-    isAccessible: (userData) => userData.income && userData.spending && userData.savings !== null,
+    isAccessible: (userData) =>
+      userData.income !== null && userData.income !== undefined &&
+      userData.spending !== null && userData.spending !== undefined &&
+      userData.savings !== null && userData.savings !== undefined,
   },
   {
     screen: 'spendingAnalysisUpload',
@@ -61,7 +64,9 @@ const navigationItems: NavigationItem[] = [
     icon: '📊',
     description: 'Upload bank data',
     category: 'analysis',
-    isAccessible: (userData) => userData.income && userData.spending,
+    isAccessible: (userData) =>
+      userData.income !== null && userData.income !== undefined &&
+      userData.spending !== null && userData.spending !== undefined,
   },
   {
     screen: 'spendingAnalysisResults',
@@ -69,7 +74,9 @@ const navigationItems: NavigationItem[] = [
     icon: '📈',
     description: 'Spending breakdown',
     category: 'analysis',
-    isAccessible: (userData) => userData.income && userData.spending,
+    isAccessible: (userData) =>
+      userData.income !== null && userData.income !== undefined &&
+      userData.spending !== null && userData.spending !== undefined,
   },
   {
     screen: 'savingsAnalysisInput',
