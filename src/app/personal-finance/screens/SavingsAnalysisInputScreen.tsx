@@ -19,15 +19,6 @@ const SavingsAnalysisInputScreen: React.FC = () => {
   const { userData, updateSavingsBreakdown, updateSavingsGoal } = usePersonalFinanceStore();
   const { goToScreen } = useScreenNavigation();
   const totalSavings = userData.savings || 0;
-
-  const savingsGoals = [
-    { value: 'retirement', label: 'Retirement' },
-    { value: 'emergency', label: 'Emergency Fund' },
-    { value: 'home', label: 'Home Purchase' },
-    { value: 'travel', label: 'Travel' },
-    { value: 'education', label: 'Education' },
-    { value: 'other', label: 'Other' },
-  ];
   
   const [breakdown, setBreakdown] = useState<SavingsBreakdown>({
     checking: 0,
@@ -37,6 +28,7 @@ const SavingsAnalysisInputScreen: React.FC = () => {
   });
   
   const [showEducation, setShowEducation] = useState(false);
+  const [savingsGoal, setSavingsGoal] = useState<string>(userData.savingsGoal || 'retirement');
 
   const handleBreakdownChange = (type: keyof SavingsBreakdown, value: string) => {
     const numValue = parseFloat(value) || 0;
@@ -98,7 +90,37 @@ const SavingsAnalysisInputScreen: React.FC = () => {
 
   return (
     <div className="max-w-[800px] mx-auto p-12 min-h-[600px] flex flex-col">
-      {/* Savings Goal Selector */}
+      {/* Savings Goal Section */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-gray-800 mb-2">What's your main savings goal?</h2>
+        <div className="flex flex-wrap gap-4">
+          {[
+            { value: 'retirement', label: 'Retirement' },
+            { value: 'emergency', label: 'Emergency Fund' },
+            { value: 'home', label: 'Home Purchase' },
+            { value: 'travel', label: 'Travel' },
+            { value: 'other', label: 'Other' },
+          ].map(goal => (
+            <label key={goal.value} className={`px-4 py-2 rounded-lg border cursor-pointer transition-all ${savingsGoal === goal.value ? 'bg-indigo-100 border-indigo-400 font-semibold' : 'bg-white border-gray-300'}`}>
+              <input
+                type="radio"
+                name="savingsGoal"
+                value={goal.value}
+                checked={savingsGoal === goal.value}
+                onChange={() => {
+                  setSavingsGoal(goal.value);
+                  updateSavingsGoal(goal.value);
+                }}
+                className="mr-2"
+              />
+              {goal.label}
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          We'll tailor your asset allocation advice based on your goal.
+        </p>
+      </div>
 
       {/* Header */}
       <div className="text-center mb-8">
@@ -188,30 +210,6 @@ const SavingsAnalysisInputScreen: React.FC = () => {
           className="w-full"
           buttonClassName="w-full px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 hover:border-blue-300 transition-all duration-200 flex items-center justify-between group"
         />
-      </div>
-
-            <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          What is your main savings goal?
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {savingsGoals.map((goal) => (
-            <button
-              key={goal.value}
-              type="button"
-              className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${userData.savingsGoal === goal.value ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-700 border-gray-200 hover:bg-indigo-50'}`}
-              onClick={() => updateSavingsGoal(goal.value)}
-              aria-pressed={userData.savingsGoal === goal.value}
-            >
-              {goal.label}
-            </button>
-          ))}
-        </div>
-        {userData.savingsGoal && (
-          <div className="text-xs text-gray-500 mt-2">
-            Selected goal: <span className="font-semibold text-indigo-700">{savingsGoals.find(g => g.value === userData.savingsGoal)?.label || userData.savingsGoal}</span>
-          </div>
-        )}
       </div>
 
       {/* Current Allocation */}
