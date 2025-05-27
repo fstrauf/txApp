@@ -103,8 +103,20 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>((set) => ({
   },
 
   processTransactionData: (transactions: Transaction[]) => {
+    console.log('ProcessTransactionData called with:', {
+      transactionCount: transactions.length,
+      sampleTransactions: transactions.slice(0, 3),
+      transactionTypes: transactions.map(t => ({ isDebit: t.isDebit, amount: t.amount, category: t.category })).slice(0, 5)
+    });
+
     // Process transactions to calculate spending breakdown and categories
     const spendingTransactions = transactions.filter(t => t.isDebit && t.amount > 0);
+    
+    console.log('Filtered spending transactions:', {
+      originalCount: transactions.length,
+      spendingCount: spendingTransactions.length,
+      filteredOut: transactions.length - spendingTransactions.length
+    });
     
     // Calculate category breakdown
     const categoryMap = new Map<string, { amount: number; count: number }>();
@@ -133,6 +145,14 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>((set) => ({
     const monthsOfData = transactions.length > 0 ? 
       Math.max(1, Math.ceil(transactions.length / 100)) : 1; // Rough estimate
     const actualMonthlySpending = totalSpending / monthsOfData;
+
+    console.log('Final processing results:', {
+      totalSpending,
+      monthsOfData,
+      actualMonthlySpending,
+      categoryCount: categorySpending.length,
+      topCategories: categorySpending.slice(0, 5)
+    });
 
     set((state) => ({
       userData: { 

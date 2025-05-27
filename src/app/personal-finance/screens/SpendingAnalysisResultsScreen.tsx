@@ -54,8 +54,20 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
 
   // Use real transaction data or fallback to sample
   const hasTransactionData = userData.transactions && userData.transactions.length > 0;
-  const spendingToAnalyze = hasTransactionData ? 
+  let spendingToAnalyze = hasTransactionData ? 
     (userData.actualMonthlySpending || userData.spending) : userData.spending;
+
+  // Validate spending amount and provide fallback
+  if (spendingToAnalyze <= 0) {
+    // Use a reasonable default based on available data
+    if (userData.income > 0) {
+      // Assume 70% of income as spending if no valid spending data
+      spendingToAnalyze = userData.income * 0.7;
+    } else {
+      // Last resort: use a minimum realistic spending amount
+      spendingToAnalyze = 2000; // $2000/month as absolute minimum
+    }
+  }
 
   // Use the rules engine for spending analysis with actual data
   const spendingAnalysis = analyzeSpending({
@@ -341,6 +353,12 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
               ? `This breakdown is based on your actual imported transaction data (${userData.transactions?.length || 0} transactions analyzed).`
               : 'This breakdown is estimated based on typical spending patterns. Upload your actual bank transactions for a personalized analysis.'
             }
+            {(hasTransactionData ? (userData.actualMonthlySpending || userData.spending) : userData.spending) <= 0 && (
+              <span className="block mt-2">
+                ⚠️ <strong>Spending data validation:</strong> We detected invalid spending data (${formatCurrency(hasTransactionData ? (userData.actualMonthlySpending || userData.spending) : userData.spending)}). 
+                Analysis is based on {userData.income > 0 ? `estimated spending (70% of your ${formatCurrency(userData.income)} income)` : 'a minimum realistic spending amount ($2,000/month)'}.
+              </span>
+            )}
           </p>
         </div>
       </div>

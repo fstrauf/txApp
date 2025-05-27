@@ -59,15 +59,23 @@ function parseDate(dateStr: string, format: string): Date | null {
 
 // --- POST Handler ---
 export async function POST(request: NextRequest, { params }: { params: { action: string } }) {
-  const action = params.action;
+  const { action } = await params;
 
   // --- Authentication Check ---
   const session = await getServerSession(authConfig);
-  if (!session?.user?.id) {
+  
+  // Allow unauthenticated access for analyze and categorize actions (demo purposes)
+  if (!['categorize', 'analyze'].includes(action) && !session?.user?.id) {
     console.log(`[API /transactions/${action}] Unauthorized access attempt.`);
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const userId = session.user.id;
+  
+  // For import action that requires DB access, userId is required
+  const userId = session?.user?.id;
+  if (action === 'import' && !userId) {
+    console.log(`[API /transactions/${action}] Missing user ID for authenticated action.`);
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
 
   // --- Analyze Action ---
   if (action === 'analyze') {
@@ -172,7 +180,7 @@ export async function POST(request: NextRequest, { params }: { params: { action:
             else { amount = Math.abs(amount); }
           }
           const transactionData = {
-            id: uuidv4(), userId: userId, bankAccountId: config.bankAccountId, date: date, description: description.trim(), amount: String(amount.toFixed(2)), type: amount >= 0 ? 'credit' : 'debit',
+            id: uuidv4(), userId: userId!, bankAccountId: config.bankAccountId, date: date, description: description.trim(), amount: String(amount.toFixed(2)), type: amount >= 0 ? 'credit' : 'debit',
             categoryId: null, notes: null, lunchMoneyCategory: null, lunchMoneyId: null, isReconciled: false, isTrainingData: false,
           };
           preparedTransactions.push(transactionData);
@@ -187,6 +195,100 @@ export async function POST(request: NextRequest, { params }: { params: { action:
     } catch (error: any) {
       console.error('Import endpoint error:', error);
       return NextResponse.json({ error: error.message || 'Failed to import transactions' }, { status: 500 });
+    }
+  }
+
+  // --- Categorize Action ---
+  if (action === 'categorize') {
+    console.log(`>>> [API /transactions/categorize] Handling POST for user: ${userId || 'unauthenticated'}`);
+    try {
+      const body = await request.json();
+      const { transactions: transactionData } = body;
+
+      if (!transactionData || !Array.isArray(transactionData)) {
+        return NextResponse.json({ error: 'Transactions array is required' }, { status: 400 });
+      }
+
+      // Format transactions for the categorization service
+      const formattedTransactions = transactionData.map((tx: any) => ({
+        description: tx.description,
+        money_in: tx.money_in || false,
+        amount: tx.amount || 0
+      }));
+
+      // Get API key: Use demo key for unauthenticated users, user-specific key for authenticated users
+      let apiKey: string | undefined;
+      
+      if (!userId) {
+        // For unauthenticated users, use demo/generic API key
+        apiKey = process.env.EXPENSE_SORTED_API_KEY;
+        console.log('Using demo API key for unauthenticated user');
+      } else {
+        // For authenticated users, try to get their personal API key
+        // TODO: Implement user-specific API key retrieval from database
+        // For now, fall back to the default key
+        apiKey = process.env.EXPENSE_SORTED_API_KEY;
+        console.log('Using default API key for authenticated user');
+      }
+      
+      if (!apiKey) {
+        console.error('No EXPENSE_SORTED_API_KEY configured');
+        return NextResponse.json({ 
+          error: 'Categorization service temporarily unavailable. Please try again later.' 
+        }, { status: 503 });
+      }
+
+      // Call the categorization service
+      const categorizeResponse = await fetch(`${process.env.EXPENSE_SORTED_API}/categorize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+        },
+        body: JSON.stringify({
+          transactions: formattedTransactions
+        }),
+      });
+
+      if (!categorizeResponse.ok) {
+        const errorText = await categorizeResponse.text();
+        console.error('Categorization service error:', categorizeResponse.status, errorText);
+        
+        // Provide user-friendly error messages
+        if (categorizeResponse.status === 401) {
+          return NextResponse.json({ 
+            error: 'Service authentication failed. Please try again later.' 
+          }, { status: 503 });
+        } else if (categorizeResponse.status === 429) {
+          return NextResponse.json({ 
+            error: 'Service temporarily overloaded. Please try again in a few minutes.' 
+          }, { status: 429 });
+        } else {
+          return NextResponse.json({ 
+            error: 'Categorization service temporarily unavailable. Please try again later.' 
+          }, { status: 503 });
+        }
+      }
+
+      const categorizedResults = await categorizeResponse.json();
+      
+      // Add metadata about the request for analytics/debugging
+      const response = {
+        ...categorizedResults,
+        metadata: {
+          isAuthenticated: !!userId,
+          transactionCount: formattedTransactions.length,
+          timestamp: new Date().toISOString()
+        }
+      };
+      
+      return NextResponse.json(response);
+
+    } catch (error: any) {
+      console.error('Categorize endpoint error:', error);
+      return NextResponse.json({ 
+        error: 'Failed to categorize transactions. Please try again later.' 
+      }, { status: 500 });
     }
   }
 
