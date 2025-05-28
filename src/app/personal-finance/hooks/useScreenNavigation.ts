@@ -14,7 +14,8 @@ const SCREEN_ORDER = [
   'spendingAnalysisUpload',
   'spendingAnalysisResults',
   'savingsAnalysisInput', 
-  'savingsAnalysisResults'
+  'savingsAnalysisResults',
+  'dataManagement'
 ] as const;
 
 export type Screen = typeof SCREEN_ORDER[number];

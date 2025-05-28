@@ -15,6 +15,8 @@ import SpendingAnalysisUploadScreen from '@/app/personal-finance/screens/Spendin
 import SpendingAnalysisResultsScreen from '@/app/personal-finance/screens/SpendingAnalysisResultsScreen';
 import SavingsAnalysisInputScreen from '@/app/personal-finance/screens/SavingsAnalysisInputScreen';
 import SavingsAnalysisResultsScreen from '@/app/personal-finance/screens/SavingsAnalysisResultsScreen';
+import DataManagementScreen from '@/app/personal-finance/screens/DataManagementScreen';
+import { DataPersistenceIndicator } from '@/app/personal-finance/components/DataPersistenceIndicator';
 
 const PersonalFinancePage: React.FC = () => {
   return (
@@ -27,6 +29,9 @@ const PersonalFinancePage: React.FC = () => {
         <div className="flex-1 flex flex-col"> {/* ml-80 only on desktop */}
           <PersonalFinancePageContent />
         </div>
+        
+        {/* Data Persistence Indicator */}
+        <DataPersistenceIndicator />
       </div>
     </Suspense>
   );
@@ -55,6 +60,8 @@ function PersonalFinancePageContent() {
         return <SavingsAnalysisInputScreen />;
       case 'savingsAnalysisResults':
         return <SavingsAnalysisResultsScreen />;
+      case 'dataManagement':
+        return <DataManagementScreen />;
       default:
         return <WelcomeScreen />;
     }

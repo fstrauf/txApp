@@ -50,7 +50,17 @@ const WelcomeScreen: React.FC = () => {
       </PrimaryButton>
       
       <div className="text-center mt-6">
-        <small className="text-sm text-gray-500">Takes 2-3 minutes • Your data stays private</small>
+        <small className="text-sm text-gray-500">
+          Takes 2-3 minutes • Your data stays private
+        </small>
+        <div className="mt-3">
+          <button
+            onClick={() => goToScreen('dataManagement')}
+            className="text-xs text-gray-400 hover:text-gray-600 underline transition-colors"
+          >
+            Manage stored data
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { Box } from '@/components/ui/Box';
 import { InsightCard } from '@/app/personal-finance/shared/InsightCard';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+
 import { 
   analyzeSpending, 
   calculateFinancialRunway,
@@ -13,6 +14,7 @@ import {
   formatPercentage,
   FINANCIAL_CONFIG
 } from '../engine/FinancialRulesEngine';
+import { DonutChart } from '@/components/ui/DonutChart';
 
 interface SpendingCategoryCard {
   category: string;
@@ -21,13 +23,21 @@ interface SpendingCategoryCard {
   benchmark: { min: number; max: number };
   status: 'good' | 'high' | 'low';
   icon: string;
+  transactionCount?: number;
+  transactions?: Array<{
+    id: string;
+    date: string;
+    description: string;
+    amount: number;
+  }>;
 }
 
 const SpendingAnalysisResultsScreen: React.FC = () => {
   const { userData } = usePersonalFinanceStore();
   const { goToScreen } = useScreenNavigation();
-  const [showDetailedBreakdown, setShowDetailedBreakdown] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState(12);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'summary' | 'transactions'>('summary');
 
   // Validate user data first
   const validation = validateUserData(userData);
@@ -97,6 +107,41 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
     }
   };
 
+  // Helper function to format category names
+  const formatCategoryName = (category: string): string => {
+    // Handle specific problematic category names
+    const categoryMappings: { [key: string]: string } = {
+      'GOVERNMENT_AND_NON_PROFIT': 'Government & Non-Profit',
+      'FOOD_AND_DINING': 'Food & Dining',
+      'HEALTH_AND_FITNESS': 'Health & Fitness',
+      'HOME_AND_GARDEN': 'Home & Garden',
+      'KIDS_AND_PETS': 'Kids & Pets',
+      'BUSINESS_SERVICES': 'Business Services',
+      'FINANCIAL_SERVICES': 'Financial Services',
+      'PERSONAL_CARE': 'Personal Care',
+      'AUTO_AND_TRANSPORT': 'Auto & Transport',
+      'BILLS_AND_UTILITIES': 'Bills & Utilities',
+      'SHOPPING_AND_ENTERTAINMENT': 'Shopping & Entertainment'
+    };
+
+    // Check for exact matches first
+    if (categoryMappings[category.toUpperCase()]) {
+      return categoryMappings[category.toUpperCase()];
+    }
+
+    // Format general cases: replace underscores, capitalize words
+    return category
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Helper function to format percentage with 2 decimal places
+  const formatPercentageDisplay = (percentage: number): string => {
+    return `${percentage.toFixed(2)}%`;
+  };
+
   // Generate category mapping for icons
   const getCategoryIcon = (category: string): string => {
     const lowerCategory = category.toLowerCase();
@@ -133,14 +178,28 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
 
   // Create spending breakdown from real data or sample
   const spendingBreakdown: SpendingCategoryCard[] = hasTransactionData && userData.categorySpending ? 
-    userData.categorySpending.map(cat => ({
-      category: cat.category,
-      amount: cat.amount,
-      percentage: cat.percentage,
-      benchmark: { min: 0, max: 15 }, // Generic benchmark
-      status: getCategoryStatus(cat.category, cat.percentage),
-      icon: getCategoryIcon(cat.category)
-    })) : 
+    userData.categorySpending.map(cat => {
+      // Get transactions for this category
+      const categoryTransactions = userData.transactions?.filter(t => 
+        t.category === cat.category && t.isDebit && t.amount > 0
+      ).map(t => ({
+        id: t.id,
+        date: t.date,
+        description: t.description,
+        amount: t.amount
+      })) || [];
+
+      return {
+        category: formatCategoryName(cat.category),
+        amount: cat.amount,
+        percentage: cat.percentage,
+        benchmark: { min: 0, max: 15 }, // Generic benchmark
+        status: getCategoryStatus(cat.category, cat.percentage),
+        icon: getCategoryIcon(cat.category),
+        transactionCount: cat.transactionCount,
+        transactions: categoryTransactions
+      };
+    }) : 
     // Fallback to sample data
     [
       {
@@ -305,47 +364,228 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-800">
             Spending breakdown
           </h2>
-          <button
-            onClick={() => setShowDetailedBreakdown(!showDetailedBreakdown)}
-            className="text-indigo-600 hover:text-indigo-800 font-medium"
-          >
-            {showDetailedBreakdown ? 'Hide details' : 'Show details'}
-          </button>
+          {hasTransactionData && (
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('summary')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  viewMode === 'summary'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                📊 Summary
+              </button>
+              <button
+                onClick={() => setViewMode('transactions')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  viewMode === 'transactions'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                📋 All Transactions
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {spendingBreakdown.map((category: SpendingCategoryCard, index: number) => (
-            <Box key={index} variant="default" className="p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center">
-                  <span className="text-2xl mr-3">{category.icon}</span>
-                  <div>
-                    <h3 className="font-semibold text-gray-800">{category.category}</h3>
-                    <p className="text-sm text-gray-600">{category.percentage}% of spending</p>
+        {/* Summary stats for real transaction data */}
+        {hasTransactionData && userData.categorySpending && (
+          <div className="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-200">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-6">
+                <div>
+                  <span className="text-sm text-blue-600 font-medium">Total Analyzed</span>
+                  <div className="text-lg font-bold text-blue-800">
+                    {formatCurrency(userData.categorySpending.reduce((sum, cat) => sum + cat.amount, 0))}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-gray-800">
-                    {formatCurrency(category.amount)}
+                <div>
+                  <span className="text-sm text-blue-600 font-medium">Transactions</span>
+                  <div className="text-lg font-bold text-blue-800">
+                    {userData.transactions?.filter(t => t.isDebit).length || 0}
                   </div>
-                  <div className={`text-xs ${
-                    category.status === 'good' ? 'text-green-600' :
-                    category.status === 'high' ? 'text-red-600' : 'text-yellow-600'
-                  }`}>
-                    {category.status === 'good' ? '✓ Within range' :
-                     category.status === 'high' ? '⚠ Above benchmark' : '? Below typical'}
+                </div>
+                <div>
+                  <span className="text-sm text-blue-600 font-medium">Categories</span>
+                  <div className="text-lg font-bold text-blue-800">
+                    {userData.categorySpending.length}
                   </div>
                 </div>
               </div>
-              
-              {showDetailedBreakdown && (
-                <div className="text-xs text-gray-500 border-t pt-3">
-                  Benchmark: {formatPercentage(category.benchmark.min)} - {formatPercentage(category.benchmark.max)} of income
+              <div className="text-sm text-blue-700">
+                📊 Based on your imported transaction data
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Summary View with Donut Chart */}
+        {viewMode === 'summary' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Donut Chart */}
+            {hasTransactionData && spendingBreakdown.length > 0 && (
+              <Box variant="elevated" className="relative z-10">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+                  Spending Distribution
+                </h3>
+                <div className="flex justify-center items-center relative z-20 h-64 sm:h-80">
+                  <DonutChart 
+                    data={spendingBreakdown.map(cat => ({
+                      name: cat.category,
+                      amount: cat.amount,
+                      category: cat.category,
+                      icon: cat.icon
+                    }))}
+                    value='amount'
+                    category="category"
+                    colors={['blue', 'emerald', 'violet', 'amber', 'red', 'pink', 'teal', 'orange', 'indigo', 'cyan']}
+                    valueFormatter={(value: number) => formatCurrency(value)}
+                    className="w-64 h-64 sm:w-80 sm:h-80 relative z-30"
+                    showTooltip={true}
+                  />
                 </div>
-              )}
-            </Box>
-          ))}
-        </div>
+                {selectedCategory && (
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg text-center">
+                    <div className="font-medium text-gray-800">
+                      {selectedCategory}
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      Click on chart segments to highlight categories
+                    </div>
+                  </div>
+                )}
+              </Box>
+            )}
+
+            {/* Category List */}
+            <div className="space-y-3">
+              {spendingBreakdown.map((category: SpendingCategoryCard, index: number) => (
+                <Box
+                  key={index} 
+                  variant="elevated"
+                  className={`transition-all cursor-pointer ${
+                    selectedCategory === category.category 
+                      ? 'ring-2 ring-indigo-500 bg-indigo-50' 
+                      : 'hover:shadow-md'
+                  }`}
+                  onClick={() => setSelectedCategory(
+                    selectedCategory === category.category ? null : category.category
+                  )}
+                  hoverable={true}
+                  padding="md"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <span className="text-2xl mr-3">{category.icon}</span>
+                      <div>
+                        <h3 className="font-semibold text-gray-800">{category.category}</h3>
+                        <p className="text-sm text-gray-600">
+                          {formatPercentageDisplay(category.percentage)} of spending
+                          {category.transactionCount && (
+                            <span className="ml-2">• {category.transactionCount} transactions</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-gray-800">
+                        {formatCurrency(category.amount)}
+                      </div>
+                    </div>
+                  </div>
+                </Box>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Transactions Table View */}
+        {viewMode === 'transactions' && hasTransactionData && userData.transactions && (
+          <div className="bg-white rounded-lg border overflow-hidden">
+            <div className="p-4 border-b bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-800">
+                All Expense Transactions
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Showing {userData.transactions.filter(t => t.isDebit).length} expense transactions
+              </p>
+            </div>
+            
+            <div className="overflow-x-auto max-h-96 overflow-y-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Amount
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {userData.transactions
+                    .filter(t => t.isDebit)
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map((transaction, index) => (
+                      <tr key={transaction.id || index} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(transaction.date).toLocaleDateString('en-NZ', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
+                          {transaction.description}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            {formatCategoryName(transaction.category)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                          {formatCurrency(transaction.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Fallback for sample data */}
+        {!hasTransactionData && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {spendingBreakdown.map((category: SpendingCategoryCard, index: number) => (
+              <Box key={index} variant="default" className="p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <span className="text-2xl mr-3">{category.icon}</span>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">{category.category}</h3>
+                      <p className="text-sm text-gray-600">{formatPercentageDisplay(category.percentage)} of spending</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-gray-800">
+                      {formatCurrency(category.amount)}
+                    </div>
+                  </div>
+                </div>
+              </Box>
+            ))}
+          </div>
+        )}
 
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-800">
@@ -435,9 +675,22 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           Back to Upload
         </button>
+        
+        {hasTransactionData && (
+          <button
+            onClick={() => goToScreen('dataManagement')}
+            className="w-full sm:w-40 order-3 sm:order-2 flex items-center gap-2 px-4 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 1.79 4 4 4h8c2.21 0 4-1.79 4-4V7M4 7c0-2.21 1.79-4 4-4h8c2.21 0 4-1.79 4-4M4 7h16M10 11v6M14 11v6" />
+            </svg>
+            Manage Data
+          </button>
+        )}
+        
         <button
           onClick={() => goToScreen('savingsAnalysisInput')}
-          className="w-full sm:w-48 order-2 sm:order-2 flex items-center gap-2 px-6 py-3 text-white bg-indigo-600 hover:bg-indigo-700 font-medium transition-colors rounded-lg"
+          className="w-full sm:w-48 order-2 sm:order-3 flex items-center gap-2 px-6 py-3 text-white bg-indigo-600 hover:bg-indigo-700 font-medium transition-colors rounded-lg"
         >
           Continue to Savings
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
