@@ -166,6 +166,21 @@ const SavingsAnalysisInputScreen: React.FC = () => {
 
   return (
     <div className="max-w-[800px] mx-auto p-12 min-h-[600px] flex flex-col">
+
+
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div className="text-sm text-gray-500 uppercase tracking-wide mb-2">
+          Asset Allocation Analysis
+        </div>
+        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+          Let's optimize your ${totalSavings.toLocaleString('en-NZ')}
+        </h1>
+        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          Learn how proper asset allocation can significantly boost your returns
+        </p>
+      </div>
+
       {/* Savings Goal Section */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold text-gray-800 mb-2">What's your main savings goal?</h2>
@@ -195,19 +210,6 @@ const SavingsAnalysisInputScreen: React.FC = () => {
         </div>
         <p className="text-xs text-gray-500 mt-2">
           We'll tailor your asset allocation advice based on your goal.
-        </p>
-      </div>
-
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="text-sm text-gray-500 uppercase tracking-wide mb-2">
-          Asset Allocation Analysis
-        </div>
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-          Let's optimize your ${totalSavings.toLocaleString('en-NZ')}
-        </h1>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Learn how proper asset allocation can significantly boost your returns
         </p>
       </div>
 
@@ -529,7 +531,7 @@ const SavingsAnalysisInputScreen: React.FC = () => {
               <Box 
                 key={index} 
                 variant="default" 
-                className={`p-4 border-l-4 ${
+                className={`p-4 ${
                   suggestion.type === 'warning' ? 'border-orange-400 bg-orange-50' :
                   suggestion.type === 'important' ? 'border-red-400 bg-red-50' :
                   suggestion.type === 'opportunity' ? 'border-blue-400 bg-blue-50' :
@@ -583,7 +585,7 @@ const SavingsAnalysisInputScreen: React.FC = () => {
         <PrimaryButton 
           onClick={handleBack} 
           variant="secondary" 
-          className="w-full sm:w-48"
+          className="w-full sm:w-56"
         >
           ← Back to Insights
         </PrimaryButton>
