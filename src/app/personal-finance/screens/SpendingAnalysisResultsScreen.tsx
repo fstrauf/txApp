@@ -15,6 +15,8 @@ import {
   FINANCIAL_CONFIG
 } from '../engine/FinancialRulesEngine';
 import { DonutChart } from '@/components/ui/DonutChart';
+import { parseTransactionDate } from '@/lib/utils';
+import { constructCategoryColors, getColorClassName, AvailableChartColorsKeys } from '@/lib/chartUtils';
 
 interface SpendingCategoryCard {
   category: string;
@@ -260,6 +262,31 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
       }
     ];
 
+  // Create color mapping for categories to match the donut chart
+  // Use more app-consistent colors that match the design
+  const chartColors: AvailableChartColorsKeys[] = ['indigo', 'blue', 'emerald', 'amber', 'red', 'orange', 'teal', 'violet', 'pink', 'cyan'];
+  const categoryColors = constructCategoryColors(
+    spendingBreakdown.map(cat => cat.category),
+    chartColors
+  );
+
+  // Helper function to get category background color class
+  const getCategoryBgColor = (category: string): string => {
+    const color = categoryColors.get(category);
+    if (!color) return 'bg-gray-100 text-gray-800 border-gray-200';
+    
+    return getColorClassName(color, 'bg') + ' text-white border-transparent';
+  };
+
+  // Handler for chart segment selection
+  const handleChartValueChange = (value: any) => {
+    if (value && value.categoryClicked) {
+      setSelectedCategory(selectedCategory === value.categoryClicked ? null : value.categoryClicked);
+    } else {
+      setSelectedCategory(null);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-8 animate-fadeIn">
       {/* Header */}
@@ -440,10 +467,12 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                     }))}
                     value='amount'
                     category="category"
-                    colors={['blue', 'emerald', 'violet', 'amber', 'red', 'pink', 'teal', 'orange', 'indigo', 'cyan']}
+                    colors={chartColors}
                     valueFormatter={(value: number) => formatCurrency(value)}
                     className="w-64 h-64 sm:w-80 sm:h-80 relative z-30"
                     showTooltip={true}
+                    selectedCategory={selectedCategory}
+                    onValueChange={handleChartValueChange}
                   />
                 </div>
                 {selectedCategory && (
@@ -503,64 +532,57 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
 
         {/* Transactions Table View */}
         {viewMode === 'transactions' && hasTransactionData && userData.transactions && (
-          <div className="bg-white rounded-lg border overflow-hidden">
-            <div className="p-4 border-b bg-gray-50">
-              <h3 className="text-lg font-semibold text-gray-800">
-                All Expense Transactions
-              </h3>
-              <p className="text-sm text-gray-600 mt-1">
-                Showing {userData.transactions.filter(t => t.isDebit).length} expense transactions
-              </p>
-            </div>
-            
+          <Box variant="elevated" className="overflow-hidden p-0">
             <div className="overflow-x-auto max-h-96 overflow-y-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50 sticky top-0">
+              <table className="min-w-full divide-y divide-gray-100/50">
+                <thead className="bg-gray-50/80 sticky top-0 backdrop-blur-sm">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Date
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Description
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Category
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Amount
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-gray-100/50">
                   {userData.transactions
                     .filter(t => t.isDebit)
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .sort((a, b) => parseTransactionDate(b.date).getTime() - parseTransactionDate(a.date).getTime())
                     .map((transaction, index) => (
-                      <tr key={transaction.id || index} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(transaction.date).toLocaleDateString('en-NZ', {
+                      <tr key={transaction.id || index} className="hover:bg-gray-50/50 transition-colors duration-150">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {parseTransactionDate(transaction.date).toLocaleDateString('en-NZ', {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric'
                           })}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
+                        <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                           {transaction.description}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getCategoryBgColor(formatCategoryName(transaction.category))}`}>
                             {formatCategoryName(transaction.category)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
-                          {formatCurrency(transaction.amount)}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                          <span className={transaction.isDebit ? 'text-red-600' : 'text-green-600'}>
+                            {formatCurrency(transaction.isDebit ? -transaction.amount : transaction.amount)}
+                          </span>
                         </td>
                       </tr>
                     ))}
                 </tbody>
               </table>
             </div>
-          </div>
+          </Box>
         )}
 
         {/* Fallback for sample data */}
@@ -673,7 +695,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
           className="w-full sm:w-48 order-1 sm:order-1 flex items-center gap-2 px-6 py-3 text-gray-500 hover:text-indigo-700 font-medium transition-colors border border-gray-200 rounded-lg bg-white"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-          Back to Upload
+          Back to Fix Data
         </button>
         
         {hasTransactionData && (

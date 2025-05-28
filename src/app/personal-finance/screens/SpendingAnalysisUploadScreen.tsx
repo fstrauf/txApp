@@ -625,7 +625,7 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
                     <select
                       value={config.mappings?.[header] || 'none'}
                       onChange={(e) => handleMappingChange(header, e.target.value as MappedFieldType)}
-                      className="ml-4 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="ml-4 w-38 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option value="none">Not mapped</option>
                       <option value="date">Date</option>
@@ -870,12 +870,6 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
             className="w-full sm:w-48 order-1 sm:order-1"
           >
             Back
-          </PrimaryButton>
-          <PrimaryButton
-            onClick={handleSkip}
-            className="w-full sm:w-48 order-2 sm:order-2"
-          >
-            Skip for now
           </PrimaryButton>
         </div>
       </div>

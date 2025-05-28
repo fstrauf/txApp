@@ -125,19 +125,19 @@ const ChartTooltip = ({
 }
 
 const renderInactiveShape = (props: any) => {
-  const { cn, cy, innerRadius, outerRadius, startAngle, endAngle, className } =
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, className } =
     props
 
   return (
     <Sector
-      cx={cn}
+      cx={cx}
       cy={cy}
       innerRadius={innerRadius}
       outerRadius={outerRadius}
       startAngle={startAngle}
       endAngle={endAngle}
       className={className}
-      fill=""
+      fill={fill}
       opacity={0.3}
       style={{ outline: "none" }}
     />
@@ -164,6 +164,7 @@ interface DonutChartProps extends React.HTMLAttributes<HTMLDivElement> {
   label?: string
   showLabel?: boolean
   showTooltip?: boolean
+  selectedCategory?: string | null
   onValueChange?: (value: DonutChartEventProps) => void
   tooltipCallback?: (tooltipCallbackContent: TooltipProps) => void
   customTooltip?: React.ComponentType<TooltipProps>
@@ -181,6 +182,7 @@ const DonutChart = React.forwardRef<HTMLDivElement, DonutChartProps>(
       label,
       showLabel = false,
       showTooltip = true,
+      selectedCategory,
       onValueChange,
       tooltipCallback,
       customTooltip,
@@ -198,6 +200,16 @@ const DonutChart = React.forwardRef<HTMLDivElement, DonutChartProps>(
 
     const categories = Array.from(new Set(data.map((item) => item[category])))
     const categoryColors = constructCategoryColors(categories, colors)
+
+    // Update activeIndex when selectedCategory prop changes
+    React.useEffect(() => {
+      if (selectedCategory) {
+        const index = data.findIndex(item => item[category] === selectedCategory)
+        setActiveIndex(index !== -1 ? index : undefined)
+      } else {
+        setActiveIndex(undefined)
+      }
+    }, [selectedCategory, data, category])
 
     const prevActiveRef = React.useRef<boolean | undefined>(undefined)
     const prevCategoryRef = React.useRef<string | undefined>(undefined)
@@ -255,7 +267,7 @@ const DonutChart = React.forwardRef<HTMLDivElement, DonutChartProps>(
             )}
             <Pie
               className={cn(
-                "stroke-white dark:stroke-gray-950 [&_.recharts-pie-sector]:outline-hidden",
+                "stroke-white [&_.recharts-pie-sector]:outline-hidden",
                 onValueChange ? "cursor-pointer" : "cursor-default",
               )}
               data={parseData(data, categoryColors, category)}
