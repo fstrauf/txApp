@@ -42,7 +42,7 @@ const commonDateFormats = [
 const SpendingAnalysisUploadScreen: React.FC = () => {
   const { data: session, status: sessionStatus } = useSession();
   const { goToScreen } = useScreenNavigation();
-  const { processTransactionData } = usePersonalFinanceStore();
+  const { userData, processTransactionData } = usePersonalFinanceStore();
   const [uploadMethod, setUploadMethod] = useState<UploadMethod>('csv');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [importedTransactions, setImportedTransactions] = useState<any[] | null>(null);
@@ -431,6 +431,22 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
           <p className="text-lg text-gray-600">
             Get detailed insights into your spending patterns and discover opportunities to save
           </p>
+          
+          {/* Quick Navigation to Spending Analysis if data exists */}
+          {userData.transactions && userData.transactions.length > 0 && userData.categorySpending && (
+            <div className="mt-6">
+              <PrimaryButton
+                onClick={() => goToScreen('spendingAnalysisResults')}
+                variant="secondary"
+                className="text-sm px-6 py-2"
+              >
+                📊 View Your Spending Analysis →
+              </PrimaryButton>
+              <p className="text-xs text-gray-500 mt-2">
+                You have {userData.transactions.length} transactions analyzed
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Progress indicator */}
