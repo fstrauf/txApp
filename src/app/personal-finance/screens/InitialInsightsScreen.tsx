@@ -43,7 +43,7 @@ const InitialInsightsScreen: React.FC = () => {
         goToScreen('savingsAnalysisInput');
         break;
       case 'goals':
-        goToScreen('savingsAnalysisResults');
+        goToScreen('savingsAnalysisInput');
         break;
       default:
         break;
@@ -175,7 +175,7 @@ const InitialInsightsScreen: React.FC = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
             <DiveDeeperCard
               type="spending"
               icon="💳"
@@ -208,7 +208,7 @@ const InitialInsightsScreen: React.FC = () => {
               className="group"
             />
             
-            <DiveDeeperCard
+            {/* <DiveDeeperCard
               type="goals"
               icon="🎯"
               title="Set Goals"
@@ -222,7 +222,7 @@ const InitialInsightsScreen: React.FC = () => {
               actionText="Plan goals →"
               onClick={() => handleDiveDeeper('goals')}
               className="group"
-            />
+            /> */}
           </div>
         </div>
 

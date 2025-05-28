@@ -43,16 +43,11 @@ const screenBreadcrumbs: Record<string, BreadcrumbItem[]> = {
     { label: 'Personal Finance', isActive: false },
     { label: 'Analysis', isActive: false },
     { label: 'Spending Results', isActive: true },
-  ],
+    ],
   savingsAnalysisInput: [
     { label: 'Personal Finance', isActive: false },
     { label: 'Optimization', isActive: false },
     { label: 'Savings Analysis', isActive: true },
-  ],
-  savingsAnalysisResults: [
-    { label: 'Personal Finance', isActive: false },
-    { label: 'Optimization', isActive: false },
-    { label: 'Optimization Plan', isActive: true },
   ],
 };
 

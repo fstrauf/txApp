@@ -13,8 +13,7 @@ const SCREEN_ORDER = [
   'initialInsights',
   'spendingAnalysisUpload',
   'spendingAnalysisResults',
-  'savingsAnalysisInput', 
-  'savingsAnalysisResults',
+  'savingsAnalysisInput',
   'dataManagement'
 ] as const;
 

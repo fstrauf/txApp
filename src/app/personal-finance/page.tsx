@@ -14,7 +14,6 @@ import InitialInsightsScreen from '@/app/personal-finance/screens/InitialInsight
 import SpendingAnalysisUploadScreen from '@/app/personal-finance/screens/SpendingAnalysisUploadScreen';
 import SpendingAnalysisResultsScreen from '@/app/personal-finance/screens/SpendingAnalysisResultsScreen';
 import SavingsAnalysisInputScreen from '@/app/personal-finance/screens/SavingsAnalysisInputScreen';
-import SavingsAnalysisResultsScreen from '@/app/personal-finance/screens/SavingsAnalysisResultsScreen';
 import DataManagementScreen from '@/app/personal-finance/screens/DataManagementScreen';
 import { DataPersistenceIndicator } from '@/app/personal-finance/components/DataPersistenceIndicator';
 
@@ -58,8 +57,6 @@ function PersonalFinancePageContent() {
         return <SpendingAnalysisResultsScreen />;
       case 'savingsAnalysisInput':
         return <SavingsAnalysisInputScreen />;
-      case 'savingsAnalysisResults':
-        return <SavingsAnalysisResultsScreen />;
       case 'dataManagement':
         return <DataManagementScreen />;
       default:

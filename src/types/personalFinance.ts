@@ -48,7 +48,7 @@ export const initialUserData: UserData = {
 
 // Define types for screen names/IDs for better type safety
 export type ScreenId =
-  | 'welcome' // screen1
+    | 'welcome' // screen1
   | 'income' // screen2
   | 'spending' // screen3
   | 'savings' // screen4
@@ -58,7 +58,6 @@ export type ScreenId =
   | 'spendingAnalysisUpload' // screen8
   | 'spendingAnalysisResults' // screen9
   | 'savingsAnalysisInput' // screen10
-  | 'savingsAnalysisResults' // screen11
   | 'complete'; // screen12 (example, not explicitly in HTML but good for end state)
 
 export const TOTAL_SCREENS_MAIN_FLOW = 7; // Approximate total for progress bar (Welcome to Final Summary)

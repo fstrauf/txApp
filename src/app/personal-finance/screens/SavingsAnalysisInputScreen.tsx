@@ -20,31 +20,104 @@ const SavingsAnalysisInputScreen: React.FC = () => {
   const { goToScreen } = useScreenNavigation();
   const totalSavings = userData.savings || 0;
   
-  const [breakdown, setBreakdown] = useState<SavingsBreakdown>({
-    checking: 0,
-    savings: 0,
-    termDeposit: 0,
-    other: 0
-  });
+  const [breakdown, setBreakdown] = useState<SavingsBreakdown>(
+    userData.savingsBreakdown || {
+      checking: Math.min(1000, totalSavings * 0.1),
+      savings: totalSavings * 0.6,
+      termDeposit: totalSavings * 0.2,
+      other: totalSavings * 0.1
+    }
+  );
   
   const [showEducation, setShowEducation] = useState(false);
   const [savingsGoal, setSavingsGoal] = useState<string>(userData.savingsGoal || 'retirement');
 
   const handleBreakdownChange = (type: keyof SavingsBreakdown, value: string) => {
     const numValue = parseFloat(value) || 0;
-    setBreakdown(prev => ({ ...prev, [type]: numValue }));
+    const newBreakdown = { ...breakdown, [type]: numValue };
+    setBreakdown(newBreakdown);
+    // Auto-save breakdown when user changes values
+    updateSavingsBreakdown(newBreakdown);
   };
 
   const totalAllocated = Object.values(breakdown).reduce((sum, val) => sum + val, 0);
   const isValid = Math.abs(totalAllocated - totalSavings) < 1; // Allow for small rounding differences
 
-  const handleAnalyze = () => {
-    updateSavingsBreakdown(breakdown);
-    goToScreen('savingsAnalysisResults');
-  };
-
   const handleBack = () => {
     goToScreen('initialInsights');
+  };
+
+  // Calculate current weighted return
+  const getCurrentReturn = () => {
+    if (totalSavings === 0) return 0;
+    const checkingReturn = (breakdown.checking / totalSavings) * 0.002; // 0.2%
+    const savingsReturn = (breakdown.savings / totalSavings) * 0.025; // 2.5%
+    const termReturn = (breakdown.termDeposit / totalSavings) * 0.05; // 5%
+    const investmentReturn = (breakdown.other / totalSavings) * 0.08; // 8%
+    return checkingReturn + savingsReturn + termReturn + investmentReturn;
+  };
+
+  // Generate simple, logical suggestions
+  const generateSuggestions = () => {
+    const suggestions = [];
+    const emergencyFundNeeded = userData.spending * 3; // 3 months expenses
+    
+    // Too much in checking
+    if (breakdown.checking > 1000) {
+      suggestions.push({
+        type: 'warning',
+        title: 'Excess in Checking Account',
+        message: `You have ${((breakdown.checking / totalSavings) * 100).toFixed(1)}% in checking. Consider keeping only $500-$1,000 for daily expenses.`,
+        action: `Move $${(breakdown.checking - 1000).toLocaleString()} to savings or investments`,
+        impact: `Could earn 2.3%+ more on this money`
+      });
+    }
+
+    // No emergency fund
+    if (breakdown.savings < emergencyFundNeeded && userData.spending > 0) {
+      suggestions.push({
+        type: 'important',
+        title: 'Emergency Fund Gap',
+        message: `You should have ${((emergencyFundNeeded / totalSavings) * 100).toFixed(1)}% in emergency savings (3-6 months expenses).`,
+        action: `Consider increasing savings to $${emergencyFundNeeded.toLocaleString()}`,
+        impact: 'Provides financial security for unexpected events'
+      });
+    }
+
+    // No investments but good emergency fund
+    if (breakdown.other === 0 && breakdown.savings >= emergencyFundNeeded && totalSavings > 10000) {
+      suggestions.push({
+        type: 'opportunity',
+        title: 'Missing Growth Investments',
+        message: 'You have a solid emergency fund but no growth investments.',
+        action: 'Consider investing 20-40% in diversified ETFs for long-term growth',
+        impact: 'Could earn 8-10% annually vs 2.5% in savings'
+      });
+    }
+
+    // Too much in term deposits
+    if (breakdown.termDeposit > totalSavings * 0.4) {
+      suggestions.push({
+        type: 'info',
+        title: 'High Term Deposit Allocation',
+        message: `${((breakdown.termDeposit / totalSavings) * 100).toFixed(1)}% in term deposits limits flexibility.`,
+        action: 'Consider some ETFs for better returns and liquidity',
+        impact: 'More flexibility with potentially higher returns'
+      });
+    }
+
+    // Already well allocated
+    if (suggestions.length === 0) {
+      suggestions.push({
+        type: 'success',
+        title: 'Well-Balanced Allocation',
+        message: 'Your money allocation looks reasonable for your situation.',
+        action: 'Consider reviewing annually as your situation changes',
+        impact: `Current return: ${(getCurrentReturn() * 100).toFixed(1)}% annually`
+      });
+    }
+
+    return suggestions;
   };
 
   // Quick allocation templates based on risk tolerance
@@ -80,12 +153,14 @@ const SavingsAnalysisInputScreen: React.FC = () => {
   };
 
   const applyQuickAllocation = (allocation: any) => {
-    setBreakdown({
+    const newBreakdown = {
       checking: Math.round(allocation.checking),
       savings: Math.round(allocation.savings),
       termDeposit: Math.round(allocation.termDeposit),
       other: Math.round(allocation.other)
-    });
+    };
+    setBreakdown(newBreakdown);
+    updateSavingsBreakdown(newBreakdown);
   };
 
   return (
@@ -320,23 +395,132 @@ const SavingsAnalysisInputScreen: React.FC = () => {
         </ul>
       </Box>
 
-      {/* Action Buttons - Consistent Navigation at Bottom */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
+      {/* Analysis Results - Show when allocation is valid */}
+      {isValid && totalAllocated > 0 && (
+        <div className="mt-12 space-y-6 animate-fadeIn">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              📊 Your Allocation Analysis
+            </h2>
+            <p className="text-gray-600">
+              Current estimated annual return: <span className="font-bold text-green-600">{(getCurrentReturn() * 100).toFixed(1)}%</span>
+            </p>
+          </div>
+
+          {/* Current Allocation Breakdown */}
+          <Box variant="default" className="p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Your Current Allocation</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-blue-400 rounded mr-3"></div>
+                  <span className="text-sm font-medium">Checking Account</span>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold">{breakdown.checking.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}</div>
+                  <div className="text-xs text-gray-500">{((breakdown.checking / totalSavings) * 100).toFixed(1)}% • 0.2% APY</div>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-green-400 rounded mr-3"></div>
+                  <span className="text-sm font-medium">Savings Account</span>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold">{breakdown.savings.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}</div>
+                  <div className="text-xs text-gray-500">{((breakdown.savings / totalSavings) * 100).toFixed(1)}% • 2.5% APY</div>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-yellow-400 rounded mr-3"></div>
+                  <span className="text-sm font-medium">Term Deposits</span>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold">{breakdown.termDeposit.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}</div>
+                  <div className="text-xs text-gray-500">{((breakdown.termDeposit / totalSavings) * 100).toFixed(1)}% • 5.0% APY</div>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-purple-400 rounded mr-3"></div>
+                  <span className="text-sm font-medium">ETFs/Investments</span>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold">{breakdown.other.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}</div>
+                  <div className="text-xs text-gray-500">{((breakdown.other / totalSavings) * 100).toFixed(1)}% • 8.0% expected</div>
+                </div>
+              </div>
+            </div>
+          </Box>
+
+          {/* Suggestions */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800">💡 Recommendations</h3>
+            {generateSuggestions().map((suggestion, index) => (
+              <Box 
+                key={index} 
+                variant="default" 
+                className={`p-4 border-l-4 ${
+                  suggestion.type === 'warning' ? 'border-orange-400 bg-orange-50' :
+                  suggestion.type === 'important' ? 'border-red-400 bg-red-50' :
+                  suggestion.type === 'opportunity' ? 'border-blue-400 bg-blue-50' :
+                  suggestion.type === 'success' ? 'border-green-400 bg-green-50' :
+                  'border-gray-400 bg-gray-50'
+                }`}
+              >
+                <h4 className="font-semibold text-gray-800 mb-2">{suggestion.title}</h4>
+                <p className="text-sm text-gray-600 mb-2">{suggestion.message}</p>
+                <p className="text-sm font-medium text-gray-800 mb-1">
+                  <span className="text-blue-600">Action:</span> {suggestion.action}
+                </p>
+                <p className="text-xs text-green-600">
+                  <span className="font-medium">Impact:</span> {suggestion.impact}
+                </p>
+              </Box>
+            ))}
+          </div>
+
+          {/* Educational Content */}
+          <Box variant="gradient" className="p-6">
+            <h3 className="font-semibold text-gray-800 mb-3">
+              🎓 Quick Investment Guide
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h4 className="font-medium text-gray-800 mb-2">For Beginners:</h4>
+                <ul className="space-y-1 text-gray-600">
+                  <li>• Start with high-yield savings (emergency fund)</li>
+                  <li>• Consider index ETFs for growth (VTI, VOO)</li>
+                  <li>• Keep 3-6 months expenses accessible</li>
+                  <li>• Automate investments for consistency</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-800 mb-2">Risk Guidelines:</h4>
+                <ul className="space-y-1 text-gray-600">
+                  <li>• Conservative: 60% savings, 40% investments</li>
+                  <li>• Balanced: 40% savings, 60% investments</li>
+                  <li>• Growth: 20% savings, 80% investments</li>
+                  <li>• Always keep emergency fund first</li>
+                </ul>
+              </div>
+            </div>
+          </Box>
+        </div>
+      )}
+
+      {/* Back Button - Always at bottom */}
+      <div className="flex justify-center mt-12">
         <PrimaryButton 
           onClick={handleBack} 
           variant="secondary" 
-          className="w-full sm:w-48 order-1 sm:order-1"
+          className="w-full sm:w-48"
         >
-          Back to Insights
-        </PrimaryButton>
-        <PrimaryButton 
-          onClick={handleAnalyze} 
-          disabled={!isValid || totalAllocated === 0}
-          className="w-full sm:w-64 order-2 sm:order-2"
-        >
-          {!isValid 
-            ? 'Fix allocation first' 
-            : 'See Optimization Plan →'}
+          ← Back to Insights
         </PrimaryButton>
       </div>
     </div>

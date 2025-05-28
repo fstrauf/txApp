@@ -82,17 +82,9 @@ const navigationItems: NavigationItem[] = [
     screen: 'savingsAnalysisInput',
     title: 'Savings Analysis',
     icon: '🎯',
-    description: 'Asset allocation',
+    description: 'Asset allocation & optimization',
     category: 'optimization',
     isAccessible: (userData) => userData.savings > 0,
-  },
-  {
-    screen: 'savingsAnalysisResults',
-    title: 'Optimization Plan',
-    icon: '🚀',
-    description: 'Investment strategy',
-    category: 'optimization',
-    isAccessible: (userData) => userData.savings > 0 && userData.savingsBreakdown,
   },
 ];
 
