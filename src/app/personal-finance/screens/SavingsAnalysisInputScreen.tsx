@@ -7,6 +7,7 @@ import { Box } from '@/components/ui/Box';
 import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 import { Disclosure } from '@/components/ui/Disclosure';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { DonutChart } from '@/components/ui/DonutChart';
 
 interface SavingsBreakdown {
   checking: number;
@@ -408,54 +409,118 @@ const SavingsAnalysisInputScreen: React.FC = () => {
           </div>
 
           {/* Current Allocation Breakdown */}
-          <Box variant="default" className="p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Your Current Allocation</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-blue-400 rounded mr-3"></div>
-                  <span className="text-sm font-medium">Checking Account</span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Donut Chart */}
+            <Box variant="default" className="p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+                Allocation Distribution
+              </h3>
+              <div className="flex justify-center items-center h-64 sm:h-80">
+                {(() => {
+                  // Define consistent color mapping for each category
+                  const categoryColorMap = {
+                    'Checking Account': 'blue' as const,
+                    'Savings Account': 'emerald' as const,
+                    'Term Deposits': 'amber' as const,
+                    'ETFs/Investments': 'violet' as const
+                  };
+                  
+                  // Create data array and filter out zero amounts
+                  const allCategories = [
+                    {
+                      name: 'Checking Account',
+                      amount: breakdown.checking,
+                      category: 'Checking Account',
+                      icon: '💳'
+                    },
+                    {
+                      name: 'Savings Account',
+                      amount: breakdown.savings,
+                      category: 'Savings Account',
+                      icon: '🏦'
+                    },
+                    {
+                      name: 'Term Deposits',
+                      amount: breakdown.termDeposit,
+                      category: 'Term Deposits',
+                      icon: '🔒'
+                    },
+                    {
+                      name: 'ETFs/Investments',
+                      amount: breakdown.other,
+                      category: 'ETFs/Investments',
+                      icon: '📈'
+                    }
+                  ];
+                  
+                  const filteredData = allCategories.filter(item => item.amount > 0);
+                  const orderedColors = filteredData.map(item => categoryColorMap[item.category as keyof typeof categoryColorMap]);
+                  
+                  return (
+                    <DonutChart 
+                      data={filteredData}
+                      value='amount'
+                      category="category"
+                      colors={orderedColors}
+                      valueFormatter={(value: number) => value.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}
+                      className="w-64 h-64 sm:w-80 sm:h-80"
+                      showTooltip={true}
+                    />
+                  );
+                })()}
+              </div>
+            </Box>
+
+            {/* Allocation Details */}
+            <Box variant="default" className="p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Your Current Allocation</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-blue-500 rounded mr-3"></div>
+                    <span className="text-sm font-medium">Checking Account</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold">{breakdown.checking.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}</div>
+                    <div className="text-xs text-gray-500">{((breakdown.checking / totalSavings) * 100).toFixed(1)}% • 0.2% APY</div>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-bold">{breakdown.checking.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}</div>
-                  <div className="text-xs text-gray-500">{((breakdown.checking / totalSavings) * 100).toFixed(1)}% • 0.2% APY</div>
+                
+                <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-emerald-500 rounded mr-3"></div>
+                    <span className="text-sm font-medium">Savings Account</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold">{breakdown.savings.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}</div>
+                    <div className="text-xs text-gray-500">{((breakdown.savings / totalSavings) * 100).toFixed(1)}% • 2.5% APY</div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-amber-500 rounded mr-3"></div>
+                    <span className="text-sm font-medium">Term Deposits</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold">{breakdown.termDeposit.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}</div>
+                    <div className="text-xs text-gray-500">{((breakdown.termDeposit / totalSavings) * 100).toFixed(1)}% • 5.0% APY</div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center p-3 bg-violet-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-violet-500 rounded mr-3"></div>
+                    <span className="text-sm font-medium">ETFs/Investments</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold">{breakdown.other.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}</div>
+                    <div className="text-xs text-gray-500">{((breakdown.other / totalSavings) * 100).toFixed(1)}% • 8.0% expected</div>
+                  </div>
                 </div>
               </div>
-              
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-green-400 rounded mr-3"></div>
-                  <span className="text-sm font-medium">Savings Account</span>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold">{breakdown.savings.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}</div>
-                  <div className="text-xs text-gray-500">{((breakdown.savings / totalSavings) * 100).toFixed(1)}% • 2.5% APY</div>
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-yellow-400 rounded mr-3"></div>
-                  <span className="text-sm font-medium">Term Deposits</span>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold">{breakdown.termDeposit.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}</div>
-                  <div className="text-xs text-gray-500">{((breakdown.termDeposit / totalSavings) * 100).toFixed(1)}% • 5.0% APY</div>
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-purple-400 rounded mr-3"></div>
-                  <span className="text-sm font-medium">ETFs/Investments</span>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold">{breakdown.other.toLocaleString('en-NZ', {style: 'currency', currency: 'NZD', minimumFractionDigits: 0})}</div>
-                  <div className="text-xs text-gray-500">{((breakdown.other / totalSavings) * 100).toFixed(1)}% • 8.0% expected</div>
-                </div>
-              </div>
-            </div>
-          </Box>
+            </Box>
+          </div>
 
           {/* Suggestions */}
           <div className="space-y-4">

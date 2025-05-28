@@ -574,22 +574,6 @@ function generateEmergencyFundInsights(monthsOfExpenses: number, spending: numbe
 
 function generateOptimizationInsights(userData: UserFinancialData): FinancialInsight[] {
   const insights: FinancialInsight[] = [];
-  const returnAnalysis = calculateOptimizedReturns(userData);
-
-  if (returnAnalysis.isOptimizationWorthwhile) {
-    const annualGain = returnAnalysis.optimizedAnnualReturn - returnAnalysis.currentAnnualReturn;
-    
-    insights.push({
-      type: 'optimize',
-      icon: '📈',
-      title: 'Optimize your returns',
-      text: `Your savings could earn ${(returnAnalysis.optimizedRate * 100).toFixed(1)}% instead of ${(returnAnalysis.currentRate * 100).toFixed(1)}%.`,
-      action: `This could earn you an extra $${Math.round(annualGain).toLocaleString()} per year.`,
-      benchmark: returnAnalysis.rationale,
-      priority: 7
-    });
-  }
-
   return insights;
 }
 
