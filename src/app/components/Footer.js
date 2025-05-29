@@ -9,6 +9,12 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex flex-wrap gap-4 justify-center md:justify-start">
             <Link 
+              href="/pricing" 
+              className="text-gray-600 hover:text-primary transition-colors text-sm"
+            >
+              Pricing
+            </Link>
+            <Link 
               href="/privacy-policy" 
               className="text-gray-600 hover:text-primary transition-colors text-sm"
             >

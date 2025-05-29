@@ -9,7 +9,7 @@ export default function Header() {
 
   return (
     <header className="w-full bg-surface shadow-soft sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between">
+      <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between">
         <div className="flex items-center justify-between w-full sm:w-auto">
           <Link href="/" className="flex items-center">
             <Image
@@ -21,7 +21,7 @@ export default function Header() {
               priority
             />
           </Link>
-          <button className="sm:hidden block text-gray-600" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          <button className="sm:hidden block text-gray-600 hover:text-primary transition-colors" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             <svg className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
               {isMenuOpen ? (
                 <path
@@ -39,13 +39,13 @@ export default function Header() {
             </svg>
           </button>
         </div>
-        <div className="sm:flex hidden space-x-6">
+        <nav className="sm:flex hidden">
           <NavBarButtons />
-        </div>
+        </nav>
         {isMenuOpen && (
-          <div className="sm:hidden w-full mt-4 space-y-3">
+          <nav className="sm:hidden w-full mt-6 pb-2">
             <NavBarButtons />
-          </div>
+          </nav>
         )}
       </div>
     </header>
