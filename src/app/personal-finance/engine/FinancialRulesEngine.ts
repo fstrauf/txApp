@@ -848,35 +848,24 @@ export function validateSpendingBreakdown(
 }
 
 /**
- * Calculates financial runway (how long money will last)
+ * Calculates financial runway (how long money will last based purely on savings and spending, ignoring income)
+ * Simulates a scenario with no income to determine pure survival time
  */
 export function calculateFinancialRunway(
   currentSavings: number, 
-  monthlySpending: number,
-  monthlyIncome: number = 0
+  monthlySpending: number
 ): { months: number; years: number; isHealthy: boolean; recommendation: string } {
   if (monthlySpending <= 0) {
     throw new Error('Monthly spending must be greater than 0');
   }
 
-  const netMonthlyChange = monthlyIncome - monthlySpending;
-  
-  let months: number;
-  if (netMonthlyChange >= 0) {
-    // Income covers expenses, runway is indefinite
-    months = Infinity;
-  } else {
-    // Calculate how long savings will last
-    months = currentSavings / Math.abs(netMonthlyChange);
-  }
-
+  // Calculate how long savings will last based purely on spending (ignoring income)
+  const months = currentSavings / monthlySpending;
   const years = months / 12;
   const isHealthy = months >= FINANCIAL_CONFIG.SPENDING_ANALYSIS.recommendedRunwayMonths;
   
   let recommendation: string;
-  if (months === Infinity) {
-    recommendation = "Excellent! Your income covers expenses. Focus on optimizing savings and investments.";
-  } else if (months >= FINANCIAL_CONFIG.SPENDING_ANALYSIS.optimalRunwayMonths) {
+  if (months >= FINANCIAL_CONFIG.SPENDING_ANALYSIS.optimalRunwayMonths) {
     recommendation = "Outstanding financial runway! Consider investing excess savings for growth.";
   } else if (months >= FINANCIAL_CONFIG.SPENDING_ANALYSIS.recommendedRunwayMonths) {
     recommendation = "Good financial buffer. Maintain this level while optimizing spending.";
@@ -887,8 +876,8 @@ export function calculateFinancialRunway(
   }
 
   return {
-    months: months === Infinity ? 999 : months,
-    years: years === Infinity ? 999 : years,
+    months,
+    years,
     isHealthy,
     recommendation
   };

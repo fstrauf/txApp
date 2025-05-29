@@ -58,7 +58,7 @@ export class FinancialAdvisorService {
       const rulesInsights = generateFinancialInsights(query.userData);
       const spendingAnalysis = analyzeSpending(query.userData);
       const optimizedReturns = query.userData.savings >= 1000 ? calculateOptimizedReturns(query.userData) : null;
-      const runwayAnalysis = calculateFinancialRunway(query.userData.savings, query.userData.spending, query.userData.income);
+      const runwayAnalysis = calculateFinancialRunway(query.userData.savings, query.userData.spending);
 
       // Calculate key financial metrics
       const savingsRate = query.userData.income > 0 ? ((query.userData.income - query.userData.spending) / query.userData.income) * 100 : 0;

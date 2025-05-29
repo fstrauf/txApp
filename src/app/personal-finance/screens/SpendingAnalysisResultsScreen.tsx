@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { Box } from '@/components/ui/Box';
 import { InsightCard } from '@/app/personal-finance/shared/InsightCard';
@@ -109,11 +109,15 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
   }
 
   // Use the rules engine for spending analysis with actual data
-  const spendingAnalysis = analyzeSpending({
+  const spendingAnalysis = useMemo(() => analyzeSpending({
     ...userData,
     spending: spendingToAnalyze
-  });
-  const runwayAnalysis = calculateFinancialRunway(userData.savings, spendingToAnalyze, userData.income);
+  }), [userData, spendingToAnalyze]);
+  
+  const runwayAnalysis = useMemo(() => 
+    calculateFinancialRunway(userData.savings, spendingToAnalyze),
+    [userData.savings, spendingToAnalyze]
+  );
 
   // Get status color based on spending benchmark
   const getStatusColor = (benchmark: string) => {

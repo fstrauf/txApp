@@ -944,13 +944,6 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">
-          <PrimaryButton
-            variant="secondary"
-            onClick={handleSkip}
-            className="sm:w-auto"
-          >
-            Skip for Now
-          </PrimaryButton>
           
           {currentStep === 'configure' && (
             <PrimaryButton
