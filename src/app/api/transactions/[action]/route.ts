@@ -239,7 +239,7 @@ export async function POST(request: NextRequest, { params }: { params: { action:
       }
 
       // Call the categorization service
-      const categorizeResponse = await fetch(`${process.env.EXPENSE_SORTED_API}/categorize`, {
+      const categorizeResponse = await fetch(`${process.env.EXPENSE_SORTED_API}/auto-classify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
