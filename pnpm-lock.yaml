@@ -20,9 +20,6 @@ importers:
       '@auth/drizzle-adapter':
         specifier: ^1.8.0
         version: 1.9.1
-      '@auth/prisma-adapter':
-        specifier: ^2.8.0
-        version: 2.9.1(@prisma/client@6.8.2(prisma@6.8.2(typescript@5.8.3))(typescript@5.8.3))
       '@auth0/nextjs-auth0':
         specifier: ^4.2.1
         version: 4.6.0(next@15.2.3(@opentelemetry/api@1.9.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -32,9 +29,6 @@ importers:
       '@heroicons/react':
         specifier: ^2.2.0
         version: 2.2.0(react@19.1.0)
-      '@prisma/client':
-        specifier: ^6.5.0
-        version: 6.8.2(prisma@6.8.2(typescript@5.8.3))(typescript@5.8.3)
       '@remixicon/react':
         specifier: ^4.6.0
         version: 4.6.0(react@19.1.0)
@@ -155,9 +149,6 @@ importers:
       prettier:
         specifier: ^3.5.3
         version: 3.5.3
-      prisma:
-        specifier: ^6.5.0
-        version: 6.8.2(typescript@5.8.3)
       react:
         specifier: ^19.0.0
         version: 19.1.0
@@ -349,11 +340,6 @@ packages:
 
   '@auth/drizzle-adapter@1.9.1':
     resolution: {integrity: sha512-WQ4vtDxpo3jAPfSLJbrjFx++/lMO1HJbV7ZwzCUBEkhqYMTrqQBJhLb+vcusDu95wiekVOUCPe1y6QSNbMeeYA==}
-
-  '@auth/prisma-adapter@2.9.1':
-    resolution: {integrity: sha512-0ZfjOPt3Ci8yx8SMCydAuBAjR/exI/8SAr6JDVYtqDFhm0JaV1XuHYgEzgzXZZfW2+WKC29LowCWxdCjoAz9kQ==}
-    peerDependencies:
-      '@prisma/client': '>=2.26.0 || >=3 || >=4 || >=5 || >=6'
 
   '@auth0/nextjs-auth0@4.6.0':
     resolution: {integrity: sha512-HK+fcUW6P8/qUDQfOfntftMg6yzeZLtyfTxL/lyeOub1o/xTL9SZ2fF39nH0H6w1loB5SCAbyN1vD8xxBwINqQ==}
@@ -4986,15 +4972,6 @@ snapshots:
       - '@simplewebauthn/server'
       - nodemailer
 
-  '@auth/prisma-adapter@2.9.1(@prisma/client@6.8.2(prisma@6.8.2(typescript@5.8.3))(typescript@5.8.3))':
-    dependencies:
-      '@auth/core': 0.39.1
-      '@prisma/client': 6.8.2(prisma@6.8.2(typescript@5.8.3))(typescript@5.8.3)
-    transitivePeerDependencies:
-      - '@simplewebauthn/browser'
-      - '@simplewebauthn/server'
-      - nodemailer
-
   '@auth0/nextjs-auth0@4.6.0(next@15.2.3(@opentelemetry/api@1.9.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
       '@edge-runtime/cookies': 5.0.2
@@ -5546,14 +5523,18 @@ snapshots:
     optionalDependencies:
       prisma: 6.8.2(typescript@5.8.3)
       typescript: 5.8.3
+    optional: true
 
   '@prisma/config@6.8.2':
     dependencies:
       jiti: 2.4.2
+    optional: true
 
-  '@prisma/debug@6.8.2': {}
+  '@prisma/debug@6.8.2':
+    optional: true
 
-  '@prisma/engines-version@6.8.0-43.2060c79ba17c6bb9f5823312b6f6b7f4a845738e': {}
+  '@prisma/engines-version@6.8.0-43.2060c79ba17c6bb9f5823312b6f6b7f4a845738e':
+    optional: true
 
   '@prisma/engines@6.8.2':
     dependencies:
@@ -5561,16 +5542,19 @@ snapshots:
       '@prisma/engines-version': 6.8.0-43.2060c79ba17c6bb9f5823312b6f6b7f4a845738e
       '@prisma/fetch-engine': 6.8.2
       '@prisma/get-platform': 6.8.2
+    optional: true
 
   '@prisma/fetch-engine@6.8.2':
     dependencies:
       '@prisma/debug': 6.8.2
       '@prisma/engines-version': 6.8.0-43.2060c79ba17c6bb9f5823312b6f6b7f4a845738e
       '@prisma/get-platform': 6.8.2
+    optional: true
 
   '@prisma/get-platform@6.8.2':
     dependencies:
       '@prisma/debug': 6.8.2
+    optional: true
 
   '@radix-ui/primitive@1.1.2': {}
 
@@ -8886,6 +8870,7 @@ snapshots:
       '@prisma/engines': 6.8.2
     optionalDependencies:
       typescript: 5.8.3
+    optional: true
 
   prismjs@1.27.0: {}
 
