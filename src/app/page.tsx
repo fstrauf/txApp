@@ -5,11 +5,14 @@ import FAQ from "./components/FAQ.js";
 import Link from "next/link";
 import Head from "next/head";
 import AppBetaPopup from "@/components/shared/AppBetaPopup";
+import PremiumWaitlistDialog from "@/components/shared/PremiumWaitlistDialog";
 import { useSession } from 'next-auth/react';
+import { useState } from 'react';
 import { Box } from "@/components/ui/Box";
 
 export default function Home() {
   const { data: session, status: sessionStatus } = useSession();
+  const [isWaitlistDialogOpen, setIsWaitlistDialogOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background-default">
@@ -78,31 +81,25 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Right Column: Value Visual */}
+          {/* Right Column: Hero Image */}
           <div className="w-full md:w-1/2">
-            <Box variant="elevated" padding="md">
-              {/* Mock dashboard showing potential */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-100">
-                  <span className="font-medium text-gray-700">Current spending</span>
-                  <span className="text-red-600 font-bold">$4,500/mo</span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-100">
-                  <span className="font-medium text-gray-700">Potential savings</span>
-                  <span className="text-green-600 font-bold">+$675/mo</span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
-                  <span className="font-medium text-gray-700">Financial runway</span>
-                  <span className="text-primary font-bold">3.2 months</span>
-                </div>
-              </div>
-              
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
-                  Join 10,000+ users taking control of their finances
-                </p>
-              </div>
-            </Box>
+            <div className="mb-4">
+              <img
+                src="/expense-sorted_tx_analysis.png"
+                alt="Personal Finance Dashboard showing expense categorization and savings opportunities"
+                className="w-full h-auto rounded-xl shadow-lg"
+                loading="eager"
+                width={600}
+                height={400}
+              />
+            </div>
+            
+            {/* Social proof below image */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-md border border-gray-100">
+              <p className="text-sm text-gray-700 font-medium text-center">
+                Join 10,000+ users taking control of their finances
+              </p>
+            </div>
           </div>
         </div>
 
@@ -368,12 +365,12 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              <Link
-                href="/waitlist"
+              <button
+                onClick={() => setIsWaitlistDialogOpen(true)}
                 className="mt-4 inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-secondary text-white font-medium hover:shadow-lg transition-all text-sm"
               >
                 Join Waitlist →
-              </Link>
+              </button>
             </Box>
           </div>
 
@@ -484,15 +481,15 @@ export default function Home() {
               <p className="text-sm text-gray-600 mb-4">
                 <span className="font-medium">Join our waitlist</span> and be the first to know when premium features launch
               </p>
-              <Link
-                href="/waitlist"
+              <button
+                onClick={() => setIsWaitlistDialogOpen(true)}
                 className="inline-flex items-center px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold hover:shadow-lg transition-all duration-200"
               >
                 Join Premium Waitlist
                 <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </Link>
+              </button>
             </div>
           </div>
         </Box>
@@ -1052,6 +1049,12 @@ export default function Home() {
           <References />
         </Box>
       </main>
+
+      {/* Premium Waitlist Dialog */}
+      <PremiumWaitlistDialog 
+        isOpen={isWaitlistDialogOpen} 
+        onClose={() => setIsWaitlistDialogOpen(false)} 
+      />
     </div>
   );
 }

@@ -9,8 +9,8 @@ export default function Header() {
 
   return (
     <header className="w-full bg-surface shadow-soft sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between">
-        <div className="flex items-center justify-between w-full sm:w-auto">
+      <div className="container mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between">
+        <div className="flex items-center justify-between w-full sm:w-auto mb-4 sm:mb-0">
           <Link href="/" className="flex items-center">
             <Image
               width={220}
@@ -43,7 +43,7 @@ export default function Header() {
           <NavBarButtons />
         </nav>
         {isMenuOpen && (
-          <nav className="sm:hidden w-full mt-6 pb-2">
+          <nav className="sm:hidden w-full mt-8 pb-4">
             <NavBarButtons />
           </nav>
         )}

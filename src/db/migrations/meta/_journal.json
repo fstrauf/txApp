@@ -134,6 +134,13 @@
       "when": 1747945298276,
       "tag": "0018_high_the_professor",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1748545726478,
+      "tag": "0019_curly_black_widow",
+      "breakpoints": true
     }
   ]
 }
