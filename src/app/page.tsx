@@ -24,7 +24,7 @@ export default function Home() {
 
       <main className="w-full px-4 py-8 md:py-16 md:container md:mx-auto md:max-w-7xl">
         {/* New Hero Section - Personal Finance Health Check */}
-        <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 mb-16 md:mb-24">
+        <div className="flex flex-col md:flex-row items-start gap-8 md:gap-12 mb-16 md:mb-24">
           {/* Left Column: New Value Prop */}
           <div className="w-full md:w-1/2 text-center md:text-left">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 mb-6">
@@ -83,13 +83,15 @@ export default function Home() {
           {/* Right Column: Hero Image */}
           <div className="w-full md:w-1/2">
             <div className="mb-4">
-              <img
+              <Image
                 src="/expense-sorted_tx_analysis.png"
                 alt="Personal Finance Dashboard showing expense categorization and savings opportunities"
                 className="w-full h-auto rounded-xl shadow-lg"
-                loading="eager"
-                width={600}
-                height={400}
+                width={1663}
+                height={1618}
+                quality={100}
+                priority
+                sizes="(max-width: 768px) 100vw, 50vw"
               />
             </div>
             
