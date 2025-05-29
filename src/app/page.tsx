@@ -35,7 +35,7 @@ export default function Home() {
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
               Get Your Finances Sorted in{' '}
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">3 Minutes</span>
-            </h1>
+            </h1>            
             
             <p className="text-xl text-gray-700 mb-8">
               Answer a few questions and discover exactly where your money goes, 

@@ -2,11 +2,7 @@
 const nextConfig = {
   async redirects() {
     return [
-      {
-        source: '/demo',
-        destination: '/integrations',
-        permanent: true,
-      },
+      // Removed /demo redirect - now has its own page
     ]
   },
   experimental: {
