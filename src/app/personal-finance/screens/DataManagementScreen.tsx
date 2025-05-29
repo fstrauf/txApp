@@ -4,12 +4,17 @@
 import React from 'react';
 import { Box } from '@/components/ui/Box';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 import DataManagement from '../components/DataManagement';
 import { ProFeatureTeaser } from '@/app/personal-finance/shared/ProFeatureTeaser';
 import { LockClosedIcon, CircleStackIcon } from '@heroicons/react/24/outline';
 
 const DataManagementScreen: React.FC = () => {
   const { goToScreen } = useScreenNavigation();
+  const { trackNavigation } = usePersonalFinanceTracking({
+    currentScreen: 'dataManagement',
+    progress: 100 // Final screen in the flow
+  });
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 animate-fadeIn">
@@ -70,7 +75,10 @@ const DataManagementScreen: React.FC = () => {
       {/* Navigation */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
         <button
-          onClick={() => goToScreen('welcome')}
+          onClick={() => {
+            trackNavigation('dataManagement', 'welcome', 'back');
+            goToScreen('welcome');
+          }}
           className="w-full sm:w-48 flex items-center gap-2 px-6 py-3 text-gray-500 hover:text-indigo-700 font-medium transition-colors border border-gray-200 rounded-lg bg-white"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

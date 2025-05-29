@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
+import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 import { Box } from '@/components/ui/Box';
 import { ArrowUpTrayIcon, ArrowDownTrayIcon, TrashIcon, CircleStackIcon } from '@heroicons/react/24/outline';
 
@@ -12,6 +13,10 @@ interface DataManagementProps {
 
 export const DataManagement: React.FC<DataManagementProps> = ({ className = '' }) => {
   const { userData, clearAllData, exportData, importData } = usePersonalFinanceStore();
+  const { trackAction } = usePersonalFinanceTracking({
+    currentScreen: 'dataManagement',
+    progress: 100
+  });
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importText, setImportText] = useState('');
@@ -22,11 +27,24 @@ export const DataManagement: React.FC<DataManagementProps> = ({ className = '' }
     const data = exportData();
     setExportedData(data);
     setShowExportModal(true);
+    
+    // Track export action
+    trackAction('dataExported', {
+      data_size: data.length,
+      has_income: userData.income > 0,
+      has_spending: userData.spending > 0,
+      has_savings: userData.savings > 0,
+      transaction_count: userData.transactions?.length || 0
+    });
   };
 
   const handleImport = () => {
     if (!importText.trim()) {
       setMessage({ type: 'error', text: 'Please paste your data to import' });
+      trackAction('dataImportFailed', {
+        reason: 'empty_input',
+        input_length: importText.length
+      });
       return;
     }
 
@@ -35,15 +53,38 @@ export const DataManagement: React.FC<DataManagementProps> = ({ className = '' }
       setMessage({ type: 'success', text: 'Data imported successfully!' });
       setImportText('');
       setShowImportModal(false);
+      
+      // Track successful import
+      trackAction('dataImported', {
+        input_length: importText.length,
+        success: true
+      });
     } else {
       setMessage({ type: 'error', text: 'Failed to import data. Please check the format.' });
+      
+      // Track failed import
+      trackAction('dataImportFailed', {
+        reason: 'invalid_format',
+        input_length: importText.length
+      });
     }
   };
 
   const handleClearData = () => {
     if (window.confirm('Are you sure you want to clear all your data? This cannot be undone.')) {
+      // Track data before clearing
+      const dataBeforeClear = {
+        had_income: userData.income > 0,
+        had_spending: userData.spending > 0,
+        had_savings: userData.savings > 0,
+        transaction_count: userData.transactions?.length || 0
+      };
+      
       clearAllData();
       setMessage({ type: 'success', text: 'All data cleared successfully' });
+      
+      // Track clear action
+      trackAction('dataCleared', dataBeforeClear);
     }
   };
 
@@ -51,8 +92,18 @@ export const DataManagement: React.FC<DataManagementProps> = ({ className = '' }
     try {
       await navigator.clipboard.writeText(text);
       setMessage({ type: 'success', text: 'Copied to clipboard!' });
+      
+      // Track copy action
+      trackAction('dataCopiedToClipboard', {
+        data_size: text.length
+      });
     } catch (err) {
       setMessage({ type: 'error', text: 'Failed to copy to clipboard' });
+      
+      // Track copy failure
+      trackAction('dataCopyFailed', {
+        error: err instanceof Error ? err.message : 'Unknown error'
+      });
     }
   };
 

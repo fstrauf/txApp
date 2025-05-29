@@ -6,10 +6,15 @@ import { QuickAmountSelector } from '@/app/personal-finance/shared/QuickAmountSe
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 
 const IncomeScreen: React.FC = () => {
   const { updateIncome, userData } = usePersonalFinanceStore();
-  const { goToScreen } = useScreenNavigation();
+  const { goToScreen, getProgress } = useScreenNavigation();
+  const { trackFormCompletion, trackAction } = usePersonalFinanceTracking({ 
+    currentScreen: 'income', 
+    progress: getProgress() 
+  });
   
   const [income, setIncome] = useState<string>(userData.income !== undefined && userData.income !== null ? String(userData.income) : '');
   const [selectedAmount, setSelectedAmount] = useState<number | null>(userData.income || null);
@@ -46,6 +51,14 @@ const IncomeScreen: React.FC = () => {
   const handleContinue = () => {
     const incomeValue = parseFloat(income) || 0;
     updateIncome(incomeValue);
+    
+    // Track form completion
+    trackFormCompletion('income', {
+      income_amount: incomeValue,
+      was_quick_select: quickAmounts.includes(incomeValue),
+      completion_time: new Date().toISOString()
+    });
+    
     goToScreen('spending');
   };
 

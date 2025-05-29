@@ -7,11 +7,16 @@ import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 import { usePersonalFinanceStore } from '../../../store/personalFinanceStore';
 import { Box } from '@/components/ui/Box';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 import { CreditCardIcon, LightBulbIcon } from '@heroicons/react/24/outline';
 
 const SpendingScreen: React.FC = () => {
   const { userData, updateSpending } = usePersonalFinanceStore();
-  const { goToScreen } = useScreenNavigation();
+  const { goToScreen, getProgress } = useScreenNavigation();
+  const { trackFormCompletion, trackAction } = usePersonalFinanceTracking({ 
+    currentScreen: 'spending', 
+    progress: getProgress() 
+  });
   const [amount, setAmount] = useState<string>(userData.spending?.toString() || '');
   const [selectedQuickAmount, setSelectedQuickAmount] = useState<number | null>(userData.spending || null);
 
@@ -32,6 +37,15 @@ const SpendingScreen: React.FC = () => {
   const handleContinue = () => {
     const spendingValue = parseFloat(amount) || 0;
     updateSpending(spendingValue);
+    
+    // Track form completion
+    trackFormCompletion('spending', {
+      spending_amount: spendingValue,
+      was_quick_select: spendingAmounts.includes(spendingValue),
+      income_to_spending_ratio: userData.income ? spendingValue / userData.income : null,
+      completion_time: new Date().toISOString()
+    });
+    
     goToScreen('savings');
   };
 

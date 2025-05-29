@@ -7,11 +7,16 @@ import { usePersonalFinanceStore } from '../../../store/personalFinanceStore';
 import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 import { Box } from '@/components/ui/Box';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 import { BanknotesIcon, LightBulbIcon } from '@heroicons/react/24/outline';
 
 const SavingsScreen: React.FC = () => {
   const { userData, updateSavings } = usePersonalFinanceStore();
-  const { goToScreen } = useScreenNavigation();
+  const { goToScreen, getProgress } = useScreenNavigation();
+  const { trackFormCompletion, trackFlowCompletion } = usePersonalFinanceTracking({ 
+    currentScreen: 'savings', 
+    progress: getProgress() 
+  });
   const [amount, setAmount] = useState<string>(userData.savings?.toString() || '');
   const [selectedQuickAmount, setSelectedQuickAmount] = useState<number | null>(userData.savings || null);
 
@@ -32,6 +37,18 @@ const SavingsScreen: React.FC = () => {
   const handleContinue = () => {
     const savingsValue = parseFloat(amount) || 0;
     updateSavings(savingsValue);
+    
+    // Track form completion and potential flow completion
+    trackFormCompletion('savings', {
+      savings_amount: savingsValue,
+      was_quick_select: savingsAmounts.includes(savingsValue),
+      savings_rate: userData.income ? (savingsValue / (userData.income * 12)) * 100 : null,
+      completion_time: new Date().toISOString()
+    });
+    
+    // Track completion of core data collection flow
+    trackFlowCompletion();
+    
     goToScreen('initialInsights');
   };
 

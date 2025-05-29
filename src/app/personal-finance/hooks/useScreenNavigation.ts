@@ -3,6 +3,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback } from 'react';
+import { usePersonalFinanceTracking } from './usePersonalFinanceTracking';
 
 // Define the screen flow order
 const SCREEN_ORDER = [
@@ -28,34 +29,42 @@ export const useScreenNavigation = () => {
   // Get current screen from URL, default to 'welcome'
   const currentScreen = (searchParams.get('screen') as Screen) || 'welcome';
   
+  // Get progress percentage
+  const progress = Math.round(((SCREEN_ORDER.indexOf(currentScreen) + 1) / SCREEN_ORDER.length) * 100);
+  
+  // Initialize tracking
+  const { trackNavigation } = usePersonalFinanceTracking({ currentScreen, progress });
+  
   // Navigate to specific screen
   const goToScreen = useCallback((screen: Screen) => {
+    trackNavigation(currentScreen, screen, 'direct');
     router.push(`?screen=${screen}`);
-  }, [router]);
+  }, [router, currentScreen, trackNavigation]);
   
   // Navigate to next screen in order
   const nextScreen = useCallback(() => {
     const currentIndex = SCREEN_ORDER.indexOf(currentScreen);
     if (currentIndex < SCREEN_ORDER.length - 1) {
       const next = SCREEN_ORDER[currentIndex + 1];
+      trackNavigation(currentScreen, next, 'next');
       goToScreen(next);
     }
-  }, [currentScreen, goToScreen]);
+  }, [currentScreen, goToScreen, trackNavigation]);
   
   // Navigate to previous screen in order
   const prevScreen = useCallback(() => {
     const currentIndex = SCREEN_ORDER.indexOf(currentScreen);
     if (currentIndex > 0) {
       const prev = SCREEN_ORDER[currentIndex - 1];
+      trackNavigation(currentScreen, prev, 'back');
       goToScreen(prev);
     }
-  }, [currentScreen, goToScreen]);
+  }, [currentScreen, goToScreen, trackNavigation]);
   
   // Get progress percentage based on screen order
   const getProgress = useCallback(() => {
-    const currentIndex = SCREEN_ORDER.indexOf(currentScreen);
-    return Math.round(((currentIndex + 1) / SCREEN_ORDER.length) * 100);
-  }, [currentScreen]);
+    return progress;
+  }, [progress]);
   
   return {
     currentScreen,

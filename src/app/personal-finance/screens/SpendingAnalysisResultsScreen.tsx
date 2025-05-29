@@ -6,6 +6,7 @@ import { Box } from '@/components/ui/Box';
 import { InsightCard } from '@/app/personal-finance/shared/InsightCard';
 import { ProFeatureTeaser } from '@/app/personal-finance/shared/ProFeatureTeaser';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 
 import { 
   analyzeSpending, 
@@ -58,7 +59,11 @@ interface SpendingCategoryCard {
 
 const SpendingAnalysisResultsScreen: React.FC = () => {
   const { userData } = usePersonalFinanceStore();
-  const { goToScreen } = useScreenNavigation();
+  const { goToScreen, getProgress } = useScreenNavigation();
+  const { trackAction, trackFormCompletion } = usePersonalFinanceTracking({
+    currentScreen: 'spendingAnalysisResults',
+    progress: getProgress()
+  });
   const [selectedTimeframe, setSelectedTimeframe] = useState(12);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'summary' | 'transactions'>('summary');
@@ -302,10 +307,17 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
 
   // Handler for chart segment selection
   const handleChartValueChange = (value: any) => {
-    if (value && value.categoryClicked) {
-      setSelectedCategory(selectedCategory === value.categoryClicked ? null : value.categoryClicked);
-    } else {
-      setSelectedCategory(null);
+    const newCategory = (value && value.categoryClicked) ? 
+      (selectedCategory === value.categoryClicked ? null : value.categoryClicked) : null;
+    
+    if (newCategory !== selectedCategory) {
+      setSelectedCategory(newCategory);
+      trackAction('categorySelected', { 
+        category: newCategory,
+        selectionMethod: 'chart',
+        hasTransactionData,
+        viewMode
+      });
     }
   };
 
@@ -390,7 +402,14 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
             {[6, 12, 24, 36].map((months) => (
               <button
                 key={months}
-                onClick={() => setSelectedTimeframe(months)}
+                onClick={() => {
+                  setSelectedTimeframe(months);
+                  trackAction('timeframeSelected', { 
+                    timeframe: months,
+                    spendingBenchmark: spendingAnalysis.spendingBenchmark,
+                    runwayMonths: runwayAnalysis.months
+                  });
+                }}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   selectedTimeframe === months 
                     ? 'bg-indigo-500 text-white' 
@@ -424,7 +443,14 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
           {hasTransactionData && (
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
-                onClick={() => setViewMode('summary')}
+                onClick={() => {
+                  setViewMode('summary');
+                  trackAction('viewModeChanged', { 
+                    viewMode: 'summary',
+                    hasTransactionData,
+                    categoryCount: spendingBreakdown.length
+                  });
+                }}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   viewMode === 'summary'
                     ? 'bg-white text-indigo-600 shadow-sm'
@@ -434,7 +460,14 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                 <ChartBarIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Summary
               </button>
               <button
-                onClick={() => setViewMode('transactions')}
+                onClick={() => {
+                  setViewMode('transactions');
+                  trackAction('viewModeChanged', { 
+                    viewMode: 'transactions',
+                    hasTransactionData,
+                    transactionCount: userData.transactions?.filter(t => t.isDebit).length || 0
+                  });
+                }}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   viewMode === 'transactions'
                     ? 'bg-white text-indigo-600 shadow-sm'
@@ -529,9 +562,17 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                       ? 'ring-2 ring-indigo-500 bg-indigo-50' 
                       : 'hover:shadow-md'
                   }`}
-                  onClick={() => setSelectedCategory(
-                    selectedCategory === category.category ? null : category.category
-                  )}
+                  onClick={() => {
+                    const newCategory = selectedCategory === category.category ? null : category.category;
+                    setSelectedCategory(newCategory);
+                    trackAction('categorySelected', { 
+                      category: newCategory,
+                      selectionMethod: 'list',
+                      amount: category.amount,
+                      percentage: category.percentage,
+                      hasTransactionData
+                    });
+                  }}
                   hoverable={true}
                   padding="md"
                 >
@@ -736,7 +777,13 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
       {/* Navigation */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
         <button
-          onClick={() => goToScreen('spendingAnalysisUpload')}
+          onClick={() => {
+            trackAction('navigationBack', { 
+              from: 'spendingAnalysisResults',
+              reason: 'fixData'
+            });
+            goToScreen('spendingAnalysisUpload');
+          }}
           className="w-full sm:w-48 order-1 sm:order-1 flex items-center gap-2 px-6 py-3 text-gray-500 hover:text-indigo-700 font-medium transition-colors border border-gray-200 rounded-lg bg-white"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -745,7 +792,14 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         
         {hasTransactionData && (
           <button
-            onClick={() => goToScreen('dataManagement')}
+            onClick={() => {
+              trackAction('navigationToDataManagement', { 
+                from: 'spendingAnalysisResults',
+                hasTransactionData,
+                transactionCount: userData.transactions?.length || 0
+              });
+              goToScreen('dataManagement');
+            }}
             className="w-full sm:w-40 order-3 sm:order-2 flex items-center gap-2 px-4 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -756,7 +810,15 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         )}
         
         <button
-          onClick={() => goToScreen('savingsAnalysisInput')}
+          onClick={() => {
+            trackAction('navigationContinue', { 
+              from: 'spendingAnalysisResults',
+              to: 'savingsAnalysisInput',
+              spendingBenchmark: spendingAnalysis.spendingBenchmark,
+              runwayMonths: runwayAnalysis.months
+            });
+            goToScreen('savingsAnalysisInput');
+          }}
           className="w-full sm:w-48 order-2 sm:order-3 flex items-center gap-2 px-6 py-3 text-white bg-indigo-600 hover:bg-indigo-700 font-medium transition-colors rounded-lg"
         >
           Continue to Savings

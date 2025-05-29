@@ -7,6 +7,7 @@ import { Box } from '@/components/ui/Box';
 import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 import { Disclosure } from '@/components/ui/Disclosure';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 import { DonutChart } from '@/components/ui/DonutChart';
 import { ProFeatureTeaser } from '@/app/personal-finance/shared/ProFeatureTeaser';
 import { 
@@ -27,7 +28,11 @@ interface SavingsBreakdown {
 
 const SavingsAnalysisInputScreen: React.FC = () => {
   const { userData, updateSavingsBreakdown, updateSavingsGoal } = usePersonalFinanceStore();
-  const { goToScreen } = useScreenNavigation();
+  const { goToScreen, getProgress } = useScreenNavigation();
+  const { trackAction, trackFormCompletion } = usePersonalFinanceTracking({
+    currentScreen: 'savingsAnalysisInput',
+    progress: getProgress()
+  });
   const totalSavings = userData.savings || 0;
   
   const [breakdown, setBreakdown] = useState<SavingsBreakdown>(
@@ -48,12 +53,18 @@ const SavingsAnalysisInputScreen: React.FC = () => {
     setBreakdown(newBreakdown);
     // Auto-save breakdown when user changes values
     updateSavingsBreakdown(newBreakdown);
+    trackAction('allocationAdjusted', { 
+      allocationType: type,
+      newValue: numValue,
+      totalAllocated: Object.values(newBreakdown).reduce((sum, val) => sum + val, 0)
+    });
   };
 
   const totalAllocated = Object.values(breakdown).reduce((sum, val) => sum + val, 0);
   const isValid = Math.abs(totalAllocated - totalSavings) < 1; // Allow for small rounding differences
 
   const handleBack = () => {
+    trackAction('navigationBack', { from: 'savingsAnalysisInput' });
     goToScreen('initialInsights');
   };
 
@@ -171,6 +182,11 @@ const SavingsAnalysisInputScreen: React.FC = () => {
     };
     setBreakdown(newBreakdown);
     updateSavingsBreakdown(newBreakdown);
+    trackAction('quickAllocationApplied', { 
+      allocationType: allocation.label,
+      newBreakdown,
+      totalSavings 
+    });
   };
 
   return (
@@ -210,6 +226,10 @@ const SavingsAnalysisInputScreen: React.FC = () => {
                 onChange={() => {
                   setSavingsGoal(goal.value);
                   updateSavingsGoal(goal.value);
+                  trackAction('savingsGoalSelected', { 
+                    goal: goal.value,
+                    savingsAmount: totalSavings 
+                  });
                 }}
                 className="mr-2"
               />
@@ -224,7 +244,15 @@ const SavingsAnalysisInputScreen: React.FC = () => {
 
       {/* Educational Toggle (using Disclosure) */}
       <div className="mb-6 max-w-4xl">
-        <Disclosure
+        <div 
+          onClick={() => {
+            trackAction('educationalContentExpanded', { 
+              section: 'investmentBasics',
+              savingsAmount: totalSavings 
+            });
+          }}
+        >
+          <Disclosure
           buttonContent={
             <div className="flex items-center">
               <AcademicCapIcon className="h-8 w-8 text-indigo-600 mr-3" />
@@ -297,6 +325,7 @@ const SavingsAnalysisInputScreen: React.FC = () => {
           className="w-full"
           buttonClassName="w-full px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 hover:border-blue-300 transition-all duration-200 flex items-center justify-between group"
         />
+        </div>
       </div>
 
       {/* Current Allocation */}
@@ -618,7 +647,14 @@ const SavingsAnalysisInputScreen: React.FC = () => {
         </PrimaryButton>
         
         <PrimaryButton 
-          onClick={() => goToScreen('whatHappensNext')} 
+          onClick={() => {
+            trackAction('navigationContinue', { 
+              from: 'savingsAnalysisInput',
+              currentReturn: getCurrentReturn(),
+              allocationComplete: isValid
+            });
+            goToScreen('whatHappensNext');
+          }} 
           className="w-full sm:w-56"
         >
           Continue Your Journey →

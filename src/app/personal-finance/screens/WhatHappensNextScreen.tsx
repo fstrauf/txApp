@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 import { Box } from '@/components/ui/Box';
 import { Header } from '@/components/ui/Header';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
@@ -20,7 +21,11 @@ import {
 
 const WhatHappensNextScreen: React.FC = () => {
   const { userData } = usePersonalFinanceStore();
-  const { goToScreen } = useScreenNavigation();
+  const { goToScreen, getProgress } = useScreenNavigation();
+  const { trackEmailSubscription, trackAction } = usePersonalFinanceTracking({ 
+    currentScreen: 'whatHappensNext', 
+    progress: getProgress() 
+  });
   const [email, setEmail] = useState('');
   const [selectedFeatureInterest, setSelectedFeatureInterest] = useState<string[]>([]);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
@@ -82,6 +87,13 @@ const WhatHappensNextScreen: React.FC = () => {
         ? prev.filter(id => id !== featureId)
         : [...prev, featureId]
     );
+    
+    // Track feature interest
+    trackAction('feature_interest_toggle', {
+      feature_id: featureId,
+      is_selected: !selectedFeatureInterest.includes(featureId),
+      total_selected: selectedFeatureInterest.length
+    });
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -119,7 +131,9 @@ const WhatHappensNextScreen: React.FC = () => {
         setEmailSubmitted(true);
         setEmail(''); // Clear email input
         
-        // Track successful submission
+        // Track successful email subscription
+        trackEmailSubscription(email, selectedFeatureInterest, 'email-course');
+        
         console.log('Email course subscription successful:', { 
           email, 
           features: selectedFeatureInterest 

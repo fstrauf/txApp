@@ -8,6 +8,7 @@ import {DiveDeeperCard} from '@/app/personal-finance/shared/DiveDeeperCard';
 import { AIFinancialInsights } from '../ai/AIFinancialInsights';
 import { ProFeatureTeaser } from '@/app/personal-finance/shared/ProFeatureTeaser';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 import { Header } from '@/components/ui/Header';
 import { 
   generateFinancialInsights, 
@@ -23,7 +24,11 @@ import {
 
 const InitialInsightsScreen: React.FC = () => {
   const { userData } = usePersonalFinanceStore();
-  const { goToScreen } = useScreenNavigation();
+  const { goToScreen, getProgress } = useScreenNavigation();
+  const { trackInsightsGeneration, trackAction } = usePersonalFinanceTracking({ 
+    currentScreen: 'initialInsights', 
+    progress: getProgress() 
+  });
   const { income, spending, savings } = userData;
   const [showAIInsights, setShowAIInsights] = useState(false);
 
@@ -39,11 +44,35 @@ const InitialInsightsScreen: React.FC = () => {
   // Generate insights using the rules engine
   const insights = generateFinancialInsights(userData);
 
+  // Track insights generation
+  useEffect(() => {
+    if (insights && insights.length > 0) {
+      trackInsightsGeneration('initial_insights', true, {
+        insights_count: insights.length,
+        insights_types: insights.map(i => i.type),
+        user_income: income,
+        user_spending: spending,
+        user_savings: savings,
+        savings_rate: income > 0 ? ((income - spending) / income * 100) : null
+      });
+    }
+  }, [insights, trackInsightsGeneration, income, spending, savings]);
+
   const handleEditNumbers = () => {
+    trackAction('edit_numbers_clicked', {
+      from_screen: 'initialInsights'
+    });
     goToScreen('income');
   };
 
   const handleDiveDeeper = (type: string) => {
+    trackAction('dive_deeper_clicked', {
+      analysis_type: type,
+      user_has_income: Boolean(income),
+      user_has_spending: Boolean(spending),
+      user_has_savings: Boolean(savings)
+    });
+    
     switch (type) {
       case 'spending':
         goToScreen('spendingAnalysisUpload');

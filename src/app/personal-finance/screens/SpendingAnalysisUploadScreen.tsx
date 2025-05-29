@@ -8,6 +8,7 @@ import { AkahuUploadArea } from '@/app/personal-finance/shared/AkahuUploadArea';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
+import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 import { 
   ChartBarIcon, 
   BuildingLibraryIcon, 
@@ -52,6 +53,10 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
   const { data: session, status: sessionStatus } = useSession();
   const { goToScreen } = useScreenNavigation();
   const { userData, processTransactionData } = usePersonalFinanceStore();
+  const { trackAction, trackNavigation, trackError } = usePersonalFinanceTracking({
+    currentScreen: 'spendingAnalysisUpload',
+    progress: 60 // Positioned after initial insights in the flow
+  });
   const [uploadMethod, setUploadMethod] = useState<UploadMethod>('csv');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [importedTransactions, setImportedTransactions] = useState<any[] | null>(null);
@@ -67,6 +72,14 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'upload' | 'configure' | 'ready'>('upload');
 
   const handleFileSelect = async (file: File) => {
+    // Track file upload
+    trackAction('fileUploaded', {
+      file_name: file.name,
+      file_size: file.size,
+      file_type: file.type,
+      upload_method: uploadMethod
+    });
+
     setUploadedFile(file);
     setImportedTransactions(null);
     setFeedback(null);
@@ -183,6 +196,14 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
   };
 
   const handleMappingChange = (csvHeader: string, fieldType: MappedFieldType) => {
+    // Track column mapping changes
+    trackAction('columnMappingChanged', {
+      csv_header: csvHeader,
+      field_type: fieldType,
+      previous_mapping: config.mappings?.[csvHeader],
+      total_mapped_fields: Object.values(config.mappings || {}).filter(v => v !== 'none').length
+    });
+
     setConfig(prevConfig => {
       const newMappings = { ...prevConfig.mappings };
 
@@ -208,6 +229,13 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
   };
 
   const handleConfigChange = (field: keyof Omit<ImportConfig, 'mappings'>, value: string | number) => {
+    // Track configuration changes
+    trackAction('configurationChanged', {
+      field,
+      value,
+      previous_value: config[field as keyof typeof config]
+    });
+
     setConfig(prev => {
       const updatedConfig = { ...prev, mappings: { ...prev.mappings } };
       if (field === 'skipRows') {
@@ -223,6 +251,12 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
   };
 
   const handleTransactionsSelect = (transactions: any[]) => {
+    // Track Akahu transaction import
+    trackAction('akahuTransactionsImported', {
+      transaction_count: transactions.length,
+      upload_method: 'akahu'
+    });
+
     setImportedTransactions(transactions);
     setUploadedFile(null); // Clear any CSV file
     
@@ -232,7 +266,14 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
 
   const validateAndProcessData = async () => {
     if (!analysisResult || !config.mappings || !uploadedFile) {
-      setFeedback({ type: 'error', message: 'No data to process. Please upload and configure a file first.' });
+      const errorMessage = 'No data to process. Please upload and configure a file first.';
+      trackError('validationFailed', {
+        error: 'missing_data',
+        has_analysis_result: Boolean(analysisResult),
+        has_config_mappings: Boolean(config.mappings),
+        has_uploaded_file: Boolean(uploadedFile)
+      });
+      setFeedback({ type: 'error', message: errorMessage });
       return;
     }
 
@@ -242,9 +283,25 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
     const missingFields = requiredFields.filter(field => !mappingValues.includes(field as MappedFieldType));
 
     if (missingFields.length > 0) {
-      setFeedback({ type: 'error', message: `Please map the following required fields: ${missingFields.join(', ')}` });
+      const errorMessage = `Please map the following required fields: ${missingFields.join(', ')}`;
+      trackError('validationFailed', {
+        error: 'missing_required_fields',
+        missing_fields: missingFields,
+        mapped_fields: mappingValues.filter(v => v !== 'none')
+      });
+      setFeedback({ type: 'error', message: errorMessage });
       return;
     }
+
+    // Track start of data processing
+    trackAction('dataProcessingStarted', {
+      total_headers: analysisResult.headers.length,
+      mapped_fields: Object.values(config.mappings).filter(v => v !== 'none'),
+      date_format: config.dateFormat,
+      amount_format: config.amountFormat,
+      skip_rows: config.skipRows,
+      file_size: uploadedFile.size
+    });
 
     setIsProcessing(true);
     setCurrentStep('ready');
@@ -400,6 +457,16 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
           totalAmount: enrichedTransactions.reduce((sum: number, t: any) => sum + t.amount, 0)
         });
 
+        // Track successful processing
+        trackAction('dataProcessingCompleted', {
+          total_transactions: enrichedTransactions.length,
+          expense_transactions: enrichedTransactions.filter((t: any) => t.isDebit).length,
+          income_transactions: enrichedTransactions.filter((t: any) => !t.isDebit).length,
+          total_amount: enrichedTransactions.reduce((sum: number, t: any) => sum + t.amount, 0),
+          categories_found: [...new Set(enrichedTransactions.map((t: any) => t.category))].length,
+          processing_time: Date.now() - (performance.now() || 0) // Approximate processing time
+        });
+
         // Process the enriched transaction data
         processTransactionData(enrichedTransactions);
         
@@ -410,9 +477,16 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
       }
       
       // Navigate to results screen
+      trackNavigation('spendingAnalysisUpload', 'spendingAnalysisResults', 'next');
       goToScreen('spendingAnalysisResults');
     } catch (error: any) {
       console.error('Categorization error:', error);
+      trackError('dataProcessingFailed', {
+        error_message: error.message,
+        error_type: 'categorization_error',
+        file_size: uploadedFile?.size,
+        has_analysis_result: Boolean(analysisResult)
+      });
       setFeedback({ type: 'error', message: `Processing error: ${error.message}` });
     } finally {
       setIsProcessing(false);
@@ -422,10 +496,12 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
   const hasData = uploadedFile || (importedTransactions && importedTransactions.length > 0);
 
   const handleSkip = () => {
+    trackNavigation('spendingAnalysisUpload', 'initialInsights', 'back');
     goToScreen('initialInsights');
   };
 
   function prevScreen(): void {
+    trackNavigation('spendingAnalysisUpload', 'initialInsights', 'back');
     goToScreen('initialInsights');
   }
   return (
@@ -531,7 +607,13 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setUploadMethod('csv')}
+              onClick={() => {
+                trackAction('uploadMethodSelected', {
+                  method: 'csv',
+                  previous_method: uploadMethod
+                });
+                setUploadMethod('csv');
+              }}
               className={`p-6 rounded-xl border-2 transition-all ${
                 uploadMethod === 'csv'
                   ? 'border-indigo-500 bg-indigo-50'

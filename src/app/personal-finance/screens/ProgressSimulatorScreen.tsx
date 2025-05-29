@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 import { Box } from '@/components/ui/Box';
 import { Header } from '@/components/ui/Header';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
@@ -27,7 +28,11 @@ interface MonthProjection {
 
 const ProgressSimulatorScreen: React.FC = () => {
   const { userData } = usePersonalFinanceStore();
-  const { goToScreen } = useScreenNavigation();
+  const { goToScreen, getProgress } = useScreenNavigation();
+  const { trackAction } = usePersonalFinanceTracking({ 
+    currentScreen: 'progressSimulator', 
+    progress: getProgress() 
+  });
   const [selectedMonth, setSelectedMonth] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -96,6 +101,12 @@ const ProgressSimulatorScreen: React.FC = () => {
 
   const playAnimation = () => {
     setIsAnimating(true);
+    trackAction('animation_started', {
+      user_income: userData.income,
+      user_spending: userData.spending,
+      user_savings: userData.savings
+    });
+    
     let currentIndex = 0;
     
     const interval = setInterval(() => {
@@ -105,6 +116,11 @@ const ProgressSimulatorScreen: React.FC = () => {
       if (currentIndex >= projections.length) {
         clearInterval(interval);
         setIsAnimating(false);
+        trackAction('animation_completed', {
+          total_months_shown: projections.length,
+          final_savings: projections[projections.length - 1].savings,
+          final_spending: projections[projections.length - 1].spending
+        });
       }
     }, 1000);
   };

@@ -5,9 +5,22 @@ import React from 'react';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { Box } from '@/components/ui/Box';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 
 const WelcomeScreen: React.FC = () => {
-  const { goToScreen } = useScreenNavigation();
+  const { goToScreen, getProgress } = useScreenNavigation();
+  const { trackAction } = usePersonalFinanceTracking({ 
+    currentScreen: 'welcome', 
+    progress: getProgress() 
+  });
+
+  const handleGetStarted = () => {
+    trackAction('welcome_started', {
+      entry_point: 'welcome_screen',
+      timestamp: new Date().toISOString()
+    });
+    goToScreen('income');
+  };
 
   return (
     <div className="flex flex-col items-center justify-center text-center p-1 md:p-2">
@@ -43,7 +56,7 @@ const WelcomeScreen: React.FC = () => {
       </div>
 
       <PrimaryButton
-        onClick={() => goToScreen('income')}
+        onClick={handleGetStarted}
         className="w-full max-w-sm mt-8"
       >
         Let&apos;s Get Started
