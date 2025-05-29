@@ -8,6 +8,7 @@ import {DiveDeeperCard} from '@/app/personal-finance/shared/DiveDeeperCard';
 import { AIFinancialInsights } from '../ai/AIFinancialInsights';
 import { ProFeatureTeaser } from '@/app/personal-finance/shared/ProFeatureTeaser';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { Header } from '@/components/ui/Header';
 import { 
   generateFinancialInsights, 
   validateUserData
@@ -62,22 +63,17 @@ const InitialInsightsScreen: React.FC = () => {
     <div className="max-w-6xl mx-auto mb-4">
       <div className="max-w-6xl mx-auto p-4 sm:p-8 animate-fadeIn">
         {/* Enhanced Header with gradient text */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 backdrop-blur-sm mb-6">
-            <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
-            <span className="text-sm font-medium text-primary uppercase tracking-wide">
-              Your Financial Health Report
-            </span>
-          </div>
-          
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-linear-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-            Here's what we found
-          </h1>
-          
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Personalized insights based on your unique situation
-          </p>
-        </div>
+        <Header 
+          variant="gradient"
+          size="xl"
+          badge={{
+            text: "Your Financial Health Report",
+            variant: "info"
+          }}
+          subtitle="Personalized insights based on your unique situation"
+        >
+          Here's what we found
+        </Header>
 
         {/* Enhanced Financial Snapshot */}
 
@@ -253,6 +249,14 @@ const InitialInsightsScreen: React.FC = () => {
             <span className="font-medium">Edit my numbers</span>
           </button>
           
+          <button
+            onClick={() => goToScreen('whatHappensNext')}
+            className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-sm font-medium
+                     hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105
+                     focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-20 shadow-lg"
+          >
+            <span className="font-medium">Continue Your Journey →</span>
+          </button>
         </div>
       </div>
     </div>

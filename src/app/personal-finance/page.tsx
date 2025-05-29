@@ -15,6 +15,8 @@ import SpendingAnalysisUploadScreen from '@/app/personal-finance/screens/Spendin
 import SpendingAnalysisResultsScreen from '@/app/personal-finance/screens/SpendingAnalysisResultsScreen';
 import SavingsAnalysisInputScreen from '@/app/personal-finance/screens/SavingsAnalysisInputScreen';
 import DataManagementScreen from '@/app/personal-finance/screens/DataManagementScreen';
+import WhatHappensNextScreen from '@/app/personal-finance/screens/WhatHappensNextScreen';
+import ProgressSimulatorScreen from '@/app/personal-finance/screens/ProgressSimulatorScreen';
 import { DataPersistenceIndicator } from '@/app/personal-finance/components/DataPersistenceIndicator';
 
 const PersonalFinancePage: React.FC = () => {
@@ -57,6 +59,10 @@ function PersonalFinancePageContent() {
         return <SpendingAnalysisResultsScreen />;
       case 'savingsAnalysisInput':
         return <SavingsAnalysisInputScreen />;
+      case 'whatHappensNext':
+        return <WhatHappensNextScreen />;
+      case 'progressSimulator':
+        return <ProgressSimulatorScreen />;
       case 'dataManagement':
         return <DataManagementScreen />;
       default:

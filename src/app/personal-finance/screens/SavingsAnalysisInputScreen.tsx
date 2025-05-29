@@ -607,14 +607,21 @@ const SavingsAnalysisInputScreen: React.FC = () => {
         />
       </div>
 
-      {/* Back Button - Always at bottom */}
-      <div className="flex justify-center mt-12">
+      {/* Navigation Buttons */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
         <PrimaryButton 
           onClick={handleBack} 
           variant="secondary" 
           className="w-full sm:w-56"
         >
           ← Back to Insights
+        </PrimaryButton>
+        
+        <PrimaryButton 
+          onClick={() => goToScreen('whatHappensNext')} 
+          className="w-full sm:w-56"
+        >
+          Continue Your Journey →
         </PrimaryButton>
       </div>
     </div>

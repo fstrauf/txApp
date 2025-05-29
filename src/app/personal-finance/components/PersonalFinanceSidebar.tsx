@@ -14,7 +14,9 @@ import {
   ChartPieIcon,
   FlagIcon,
   WrenchScrewdriverIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  SparklesIcon,
+  TrophyIcon
 } from '@heroicons/react/24/outline';
 
 interface NavigationItem {
@@ -97,6 +99,28 @@ const navigationItems: NavigationItem[] = [
     description: 'Asset allocation & optimization',
     category: 'optimization',
     isAccessible: (userData) => userData.savings > 0,
+  },
+  {
+    screen: 'whatHappensNext',
+    title: 'What Happens Next',
+    icon: SparklesIcon,
+    description: 'Your ongoing journey',
+    category: 'optimization',
+    isAccessible: (userData) =>
+      userData.income !== null && userData.income !== undefined &&
+      userData.spending !== null && userData.spending !== undefined &&
+      userData.savings !== null && userData.savings !== undefined,
+  },
+  {
+    screen: 'progressSimulator',
+    title: 'Progress Simulator',
+    icon: TrophyIcon,
+    description: '6-month projection',
+    category: 'optimization',
+    isAccessible: (userData) =>
+      userData.income !== null && userData.income !== undefined &&
+      userData.spending !== null && userData.spending !== undefined &&
+      userData.savings !== null && userData.savings !== undefined,
   },
 ];
 

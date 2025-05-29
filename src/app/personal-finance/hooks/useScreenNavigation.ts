@@ -14,6 +14,8 @@ const SCREEN_ORDER = [
   'spendingAnalysisUpload',
   'spendingAnalysisResults',
   'savingsAnalysisInput',
+  'whatHappensNext',
+  'progressSimulator',
   'dataManagement'
 ] as const;
 

@@ -4,10 +4,11 @@ export type PrimaryButtonVariant = "primary" | "secondary" | "success";
 
 export interface PrimaryButtonProps {
   children: React.ReactNode;
-  onClick: () => void;
+  onClick?: () => void;
   disabled?: boolean;
   variant?: PrimaryButtonVariant;
   className?: string;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 export const PrimaryButton: React.FC<PrimaryButtonProps> = ({ 
@@ -15,7 +16,8 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   onClick, 
   disabled = false, 
   variant = "primary",
-  className = "" 
+  className = "",
+  type = "button"
 }) => {
   const baseClasses = "px-8 py-4 rounded-xl text-base font-semibold cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-opacity-20";
   
@@ -31,6 +33,7 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
 
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled}
       className={`${variants[variant]} ${className}`}
