@@ -1,4 +1,5 @@
 import React from 'react';
+import { DocumentTextIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 
 export interface CSVUploadAreaProps {
   onFileSelect: (file: File) => void;
@@ -49,7 +50,9 @@ export const CSVUploadArea: React.FC<CSVUploadAreaProps> = ({
                      : 'border-indigo-400 bg-indigo-50 hover:border-purple-500 hover:bg-indigo-100'}`}
         onClick={() => document.getElementById('csvFileInput')?.click()}
       >
-        <div className={`text-7xl mb-6 ${isDragOver ? 'text-green-500' : 'text-indigo-500'}`}>📄</div>
+        <div className={`flex justify-center mb-6 ${isDragOver ? 'text-green-500' : 'text-indigo-500'}`}>
+          <DocumentTextIcon className="h-20 w-20" />
+        </div>
         <h3 className="text-3xl font-bold text-gray-800 mb-3">Drop your CSV file here</h3>
         <p className="text-lg text-gray-600 mb-6">or click to browse</p>
         <p className="text-sm text-gray-500 mb-8">Supports CSV files from all major NZ banks</p>
@@ -74,7 +77,7 @@ export const CSVUploadArea: React.FC<CSVUploadAreaProps> = ({
       
       <div className="mt-6 p-5 bg-green-50 rounded-xl border-l-4 border-green-500">
         <div className="flex items-center">
-          <span className="text-xl mr-3">🔒</span>
+          <LockClosedIcon className="h-5 w-5 text-gray-600 mr-3" />
           <div>
             <div className="font-semibold text-gray-800 text-sm">Your data stays private</div>
             <div className="text-xs text-gray-600">All analysis happens in your browser. No data is sent to our servers.</div>

@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { Box } from '@/components/ui/Box';
+import { ArrowUpTrayIcon, ArrowDownTrayIcon, TrashIcon, CircleStackIcon } from '@heroicons/react/24/outline';
 
 interface DataManagementProps {
   className?: string;
@@ -63,7 +64,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ className = '' }
       {/* Status */}
       <Box variant="default" className="p-4">
         <h3 className="text-lg font-semibold text-gray-800 mb-3">
-          💾 Data Storage Status
+          <CircleStackIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Data Storage Status
         </h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
@@ -96,24 +97,27 @@ export const DataManagement: React.FC<DataManagementProps> = ({ className = '' }
         <button
           onClick={handleExport}
           disabled={!hasData}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
         >
-          📤 Export Data
+          <ArrowUpTrayIcon className="h-4 w-4" />
+          Export Data
         </button>
         
         <button
           onClick={() => setShowImportModal(true)}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-2"
         >
-          📥 Import Data
+          <ArrowDownTrayIcon className="h-4 w-4" />
+          Import Data
         </button>
         
         <button
           onClick={handleClearData}
           disabled={!hasData}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
         >
-          🗑️ Clear All
+          <TrashIcon className="h-4 w-4" />
+          Clear All
         </button>
       </div>
 

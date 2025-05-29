@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { Box } from '@/components/ui/Box';
 import { InsightCard } from '@/app/personal-finance/shared/InsightCard';
+import { ProFeatureTeaser } from '@/app/personal-finance/shared/ProFeatureTeaser';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 
 import { 
@@ -17,6 +18,27 @@ import {
 import { DonutChart } from '@/components/ui/DonutChart';
 import { parseTransactionDate } from '@/lib/utils';
 import { constructCategoryColors, getColorClassName, AvailableChartColorsKeys } from '@/lib/chartUtils';
+import {
+  HomeIcon,
+  ShoppingBagIcon,
+  TruckIcon,
+  FilmIcon,
+  BoltIcon,
+  HeartIcon,
+  AcademicCapIcon,
+  ShieldCheckIcon,
+  PaperAirplaneIcon,
+  BanknotesIcon,
+  ChartBarIcon,
+  StarIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  ExclamationCircleIcon,
+  LightBulbIcon,
+  ListBulletIcon,
+  ClockIcon
+} from '@heroicons/react/24/outline';
+import { UtensilsCrossed } from 'lucide-react';
 
 interface SpendingCategoryCard {
   category: string;
@@ -24,7 +46,7 @@ interface SpendingCategoryCard {
   percentage: number;
   benchmark: { min: number; max: number };
   status: 'good' | 'high' | 'low';
-  icon: string;
+  icon: React.ComponentType<{ className?: string }>;
   transactionCount?: number;
   transactions?: Array<{
     id: string;
@@ -99,13 +121,13 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (benchmark: string) => {
+  const getStatusIcon = (benchmark: string): React.ComponentType<{ className?: string }> => {
     switch (benchmark) {
-      case 'excellent': return '🌟';
-      case 'good': return '✅';
-      case 'concerning': return '⚠️';
-      case 'unsustainable': return '🚨';
-      default: return '📊';
+      case 'excellent': return StarIcon;
+      case 'good': return CheckCircleIcon;
+      case 'concerning': return ExclamationTriangleIcon;
+      case 'unsustainable': return ExclamationCircleIcon;
+      default: return ChartBarIcon;
     }
   };
 
@@ -145,19 +167,19 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
   };
 
   // Generate category mapping for icons
-  const getCategoryIcon = (category: string): string => {
+  const getCategoryIcon = (category: string): React.ComponentType<{ className?: string }> => {
     const lowerCategory = category.toLowerCase();
-    if (lowerCategory.includes('food') || lowerCategory.includes('grocery') || lowerCategory.includes('dining')) return '🍽️';
-    if (lowerCategory.includes('transport') || lowerCategory.includes('fuel') || lowerCategory.includes('car')) return '🚗';
-    if (lowerCategory.includes('housing') || lowerCategory.includes('rent') || lowerCategory.includes('mortgage')) return '🏠';
-    if (lowerCategory.includes('entertainment') || lowerCategory.includes('movie') || lowerCategory.includes('streaming')) return '🎬';
-    if (lowerCategory.includes('shopping') || lowerCategory.includes('retail') || lowerCategory.includes('clothing')) return '🛍️';
-    if (lowerCategory.includes('utilities') || lowerCategory.includes('power') || lowerCategory.includes('gas')) return '⚡';
-    if (lowerCategory.includes('health') || lowerCategory.includes('medical') || lowerCategory.includes('pharmacy')) return '🏥';
-    if (lowerCategory.includes('education') || lowerCategory.includes('school')) return '📚';
-    if (lowerCategory.includes('insurance')) return '🛡️';
-    if (lowerCategory.includes('travel') || lowerCategory.includes('vacation')) return '✈️';
-    return '💰';
+    if (lowerCategory.includes('food') || lowerCategory.includes('grocery') || lowerCategory.includes('dining')) return UtensilsCrossed;
+    if (lowerCategory.includes('transport') || lowerCategory.includes('fuel') || lowerCategory.includes('car')) return TruckIcon;
+    if (lowerCategory.includes('housing') || lowerCategory.includes('rent') || lowerCategory.includes('mortgage')) return HomeIcon;
+    if (lowerCategory.includes('entertainment') || lowerCategory.includes('movie') || lowerCategory.includes('streaming')) return FilmIcon;
+    if (lowerCategory.includes('shopping') || lowerCategory.includes('retail') || lowerCategory.includes('clothing')) return ShoppingBagIcon;
+    if (lowerCategory.includes('utilities') || lowerCategory.includes('power') || lowerCategory.includes('gas')) return BoltIcon;
+    if (lowerCategory.includes('health') || lowerCategory.includes('medical') || lowerCategory.includes('pharmacy')) return HeartIcon;
+    if (lowerCategory.includes('education') || lowerCategory.includes('school')) return AcademicCapIcon;
+    if (lowerCategory.includes('insurance')) return ShieldCheckIcon;
+    if (lowerCategory.includes('travel') || lowerCategory.includes('vacation')) return PaperAirplaneIcon;
+    return BanknotesIcon;
   };
 
   // Get spending status based on benchmark comparison
@@ -210,7 +232,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         percentage: 35,
         benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.housing,
         status: 'good',
-        icon: '🏠'
+        icon: HomeIcon
       },
       {
         category: 'Food',
@@ -218,7 +240,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         percentage: 15,
         benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.food,
         status: 'good',
-        icon: '🍽️'
+        icon: UtensilsCrossed
       },
       {
         category: 'Transportation',
@@ -226,7 +248,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         percentage: 18,
         benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.transportation,
         status: 'good',
-        icon: '🚗'
+        icon: TruckIcon
       },
       {
         category: 'Entertainment',
@@ -234,7 +256,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         percentage: 12,
         benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.entertainment,
         status: 'high',
-        icon: '🎬'
+        icon: FilmIcon
       },
       {
         category: 'Shopping',
@@ -242,7 +264,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         percentage: 10,
         benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.shopping,
         status: 'good',
-        icon: '🛍️'
+        icon: ShoppingBagIcon
       },
       {
         category: 'Utilities',
@@ -250,7 +272,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         percentage: 6,
         benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.utilities,
         status: 'good',
-        icon: '⚡'
+        icon: BoltIcon
       },
       {
         category: 'Healthcare',
@@ -258,7 +280,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         percentage: 4,
         benchmark: FINANCIAL_CONFIG.SPENDING_BENCHMARKS.healthcare,
         status: 'low',
-        icon: '🏥'
+        icon: HeartIcon
       }
     ];
 
@@ -313,7 +335,9 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
       {/* Key Metrics Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <Box variant="default" className="p-6 text-center">
-          <div className="text-3xl mb-2">{getStatusIcon(spendingAnalysis.spendingBenchmark)}</div>
+          <div className="flex justify-center mb-2">
+            {React.createElement(getStatusIcon(spendingAnalysis.spendingBenchmark), { className: "h-8 w-8 text-indigo-600" })}
+          </div>
           <div className="text-2xl font-bold text-gray-800 mb-1">
             {formatPercentage(spendingAnalysis.spendingRate)}
           </div>
@@ -324,7 +348,11 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         </Box>
 
         <Box variant="default" className="p-6 text-center">
-          <div className="text-3xl mb-2">⏰</div>
+          <div className="flex justify-center mb-2">
+            <svg className="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
           <div className="text-2xl font-bold text-gray-800 mb-1">
             {runwayAnalysis.months.toFixed(1)} mo
           </div>
@@ -335,7 +363,9 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         </Box>
 
         <Box variant="default" className="p-6 text-center">
-          <div className="text-3xl mb-2">💰</div>
+          <div className="flex justify-center mb-2">
+            <BanknotesIcon className="h-8 w-8 text-indigo-600" />
+          </div>
           <div className="text-2xl font-bold text-gray-800 mb-1">
             {formatCurrency(spendingAnalysis.averageDailySpending)}
           </div>
@@ -349,7 +379,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
       {/* Financial Runway Visualization */}
       <Box variant="gradient" className="mb-10">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          💡 Your financial runway
+          <LightBulbIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Your financial runway
         </h3>
         
         <p className="text-gray-600 mb-4">{runwayAnalysis.recommendation}</p>
@@ -401,7 +431,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                📊 Summary
+                <ChartBarIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Summary
               </button>
               <button
                 onClick={() => setViewMode('transactions')}
@@ -411,7 +441,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                📋 All Transactions
+                <ListBulletIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> All Transactions
               </button>
             </div>
           )}
@@ -442,7 +472,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                 </div>
               </div>
               <div className="text-sm text-blue-700">
-                📊 Based on your imported transaction data
+                <ChartBarIcon className="h-5 w-5 text-gray-600 mr-2 inline" /> Based on your imported transaction data
               </div>
             </div>
           </div>
@@ -507,7 +537,9 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <span className="text-2xl mr-3">{category.icon}</span>
+                      <div className="mr-3">
+                        <category.icon className="h-6 w-6 text-gray-600" />
+                      </div>
                       <div>
                         <h3 className="font-semibold text-gray-800">{category.category}</h3>
                         <p className="text-sm text-gray-600">
@@ -592,7 +624,9 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
               <Box key={index} variant="default" className="p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center">
-                    <span className="text-2xl mr-3">{category.icon}</span>
+                    <div className="mr-3">
+                      <category.icon className="h-6 w-6 text-gray-600" />
+                    </div>
                     <div>
                       <h3 className="font-semibold text-gray-800">{category.category}</h3>
                       <p className="text-sm text-gray-600">{formatPercentageDisplay(category.percentage)} of spending</p>
@@ -611,18 +645,29 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
 
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-800">
-            💡 <strong>Note:</strong> {hasTransactionData 
+            <LightBulbIcon className="h-4 w-4 text-blue-600 mr-1 inline" /> <strong>Note:</strong> {hasTransactionData 
               ? `This breakdown is based on your actual imported transaction data (${userData.transactions?.length || 0} transactions analyzed).`
               : 'This breakdown is estimated based on typical spending patterns. Upload your actual bank transactions for a personalized analysis.'
             }
             {(hasTransactionData ? (userData.actualMonthlySpending || userData.spending) : userData.spending) <= 0 && (
-              <span className="block mt-2">
-                ⚠️ <strong>Spending data validation:</strong> We detected invalid spending data (${formatCurrency(hasTransactionData ? (userData.actualMonthlySpending || userData.spending) : userData.spending)}). 
-                Analysis is based on {userData.income > 0 ? `estimated spending (70% of your ${formatCurrency(userData.income)} income)` : 'a minimum realistic spending amount ($2,000/month)'}.
-              </span>
+              <div className="mt-2 flex items-start">
+                <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+                <span>
+                  <strong>Spending data validation:</strong> We detected invalid spending data (${formatCurrency(hasTransactionData ? (userData.actualMonthlySpending || userData.spending) : userData.spending)}). 
+                  Analysis is based on {userData.income > 0 ? `estimated spending (70% of your ${formatCurrency(userData.income)} income)` : 'a minimum realistic spending amount ($2,000/month)'}.
+                </span>
+              </div>
             )}
           </p>
         </div>
+      </div>
+
+      {/* Pro Feature Teaser - Spending Alerts */}
+      <div className="mb-10">
+        <ProFeatureTeaser 
+          feature="spending-alerts"
+          context={`Never go over budget again! Get instant alerts when you're approaching your spending limits. Your current monthly spending of ${formatCurrency(spendingToAnalyze)} could be tracked in real-time.`}
+        />
       </div>
 
       {/* Recommendations */}
@@ -638,8 +683,8 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                   ${recommendation.priority === 'high' ? 'bg-red-100 text-red-600' : 
                     recommendation.priority === 'medium' ? 'bg-orange-100 text-orange-600' : 
                     'bg-green-100 text-green-600'}`}>
-                  {recommendation.priority === 'high' ? '🚨' : 
-                   recommendation.priority === 'medium' ? '⚠️' : '💡'}
+                  {recommendation.priority === 'high' ? <ExclamationCircleIcon className="h-5 w-5" /> : 
+                   recommendation.priority === 'medium' ? <ExclamationTriangleIcon className="h-5 w-5" /> : <LightBulbIcon className="h-5 w-5" />}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
@@ -681,7 +726,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
       {/* Educational Insight */}
       <InsightCard
         type="optimize"
-        icon="📚"
+        icon={<AcademicCapIcon className="h-8 w-8 text-orange-600" />}
         title="Understanding your spending patterns"
         text="Tracking spending by category helps identify where your money actually goes versus where you think it goes. Most people underestimate certain categories by 20-40%."
         action="The 50/30/20 rule: 50% needs, 30% wants, 20% savings is a good starting framework for budget allocation."

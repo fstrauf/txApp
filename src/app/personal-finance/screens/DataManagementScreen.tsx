@@ -5,6 +5,8 @@ import React from 'react';
 import { Box } from '@/components/ui/Box';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import DataManagement from '../components/DataManagement';
+import { ProFeatureTeaser } from '@/app/personal-finance/shared/ProFeatureTeaser';
+import { LockClosedIcon, CircleStackIcon } from '@heroicons/react/24/outline';
 
 const DataManagementScreen: React.FC = () => {
   const { goToScreen } = useScreenNavigation();
@@ -32,7 +34,7 @@ const DataManagementScreen: React.FC = () => {
       {/* Info Section */}
       <Box variant="gradient" className="mb-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          🔒 Privacy & Storage
+          <LockClosedIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Privacy & Storage
         </h2>
         <div className="space-y-3 text-gray-700">
           <p className="flex items-start">
@@ -53,6 +55,14 @@ const DataManagementScreen: React.FC = () => {
           </p>
         </div>
       </Box>
+
+      {/* Pro Feature Teaser - Auto Sync */}
+      <div className="mb-8">
+        <ProFeatureTeaser 
+          feature="auto-sync"
+          context="Tired of manually uploading CSV files? Our Pro version automatically syncs with your bank accounts, keeping your data up-to-date in real-time. No more manual exports or imports!"
+        />
+      </div>
 
       {/* Data Management Component */}
       <DataManagement />

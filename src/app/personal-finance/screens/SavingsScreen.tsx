@@ -7,6 +7,7 @@ import { usePersonalFinanceStore } from '../../../store/personalFinanceStore';
 import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 import { Box } from '@/components/ui/Box';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { BanknotesIcon, LightBulbIcon } from '@heroicons/react/24/outline';
 
 const SavingsScreen: React.FC = () => {
   const { userData, updateSavings } = usePersonalFinanceStore();
@@ -45,7 +46,9 @@ const SavingsScreen: React.FC = () => {
     <div className="max-w-2xl mx-auto p-6">
       {/* Header */}
       <div className="text-center mb-10">
-        <div className="text-6xl mb-6">💰</div>
+        <div className="flex justify-center mb-6">
+          <BanknotesIcon className="h-16 w-16 text-indigo-600" />
+        </div>
         <h1 className="text-4xl font-bold text-gray-800 mb-4">
           How much do you have saved?
         </h1>
@@ -77,7 +80,7 @@ const SavingsScreen: React.FC = () => {
       {/* Savings Tips */}
       <Box variant="gradient" className="max-w-lg mx-auto mb-4">
         <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-          💡 What counts as savings?
+          <LightBulbIcon className="h-5 w-5 text-indigo-600 mr-2" /> What counts as savings?
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
           <div className="flex items-center">

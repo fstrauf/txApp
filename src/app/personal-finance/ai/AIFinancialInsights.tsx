@@ -10,6 +10,18 @@ import { Box } from '@/components/ui/Box';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { useFinancialAdvisor, useFinancialHealth } from '../ai/useFinancialAdvisor';
 import type { AIRecommendation } from '../ai/index';
+import { 
+  CpuChipIcon, 
+  ExclamationCircleIcon, 
+  ExclamationTriangleIcon, 
+  CheckCircleIcon, 
+  LightBulbIcon,
+  FlagIcon,
+  ChatBubbleLeftRightIcon,
+  AcademicCapIcon,
+  ChartBarIcon,
+  DocumentTextIcon
+} from '@heroicons/react/24/outline';
 
 interface AIFinancialInsightsProps {
   context?: 'general' | 'savings_optimization' | 'spending_analysis' | 'goal_planning';
@@ -49,7 +61,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
     return (
       <Box variant="default" className={`p-6 ${className}`}>
         <div className="text-center">
-          <div className="text-4xl mb-4">🤖</div>
+          <div className="mb-4"><CpuChipIcon className="h-10 w-10 text-indigo-600" /></div>
           <h3 className="text-lg font-semibold text-gray-800 mb-2">
             AI Financial Advisor
           </h3>
@@ -77,20 +89,20 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
 
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
-      case 'high': return '🔴';
-      case 'medium': return '🟡';
-      case 'low': return '🟢';
-      default: return '💡';
+      case 'high': return <ExclamationCircleIcon className="h-4 w-4 text-red-500" />;
+      case 'medium': return <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500" />;
+      case 'low': return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
+      default: return <LightBulbIcon className="h-4 w-4 text-indigo-500" />;
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'insight': return '💡';
-      case 'action': return '🎯';
-      case 'warning': return '⚠️';
-      case 'education': return '📚';
-      default: return '💬';
+      case 'insight': return <LightBulbIcon className="h-4 w-4" />;
+      case 'action': return <FlagIcon className="h-4 w-4" />;
+      case 'warning': return <ExclamationTriangleIcon className="h-4 w-4" />;
+      case 'education': return <AcademicCapIcon className="h-4 w-4" />;
+      default: return <ChatBubbleLeftRightIcon className="h-4 w-4" />;
     }
   };
 
@@ -135,7 +147,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
       {healthCheck && (
         <Box variant="default" className="p-6">
           <h4 className="font-semibold text-gray-800 mb-3">
-            📊 Health Check Summary
+            <ChartBarIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Health Check Summary
           </h4>
           <p className="text-gray-700 mb-4">{healthCheck.summary}</p>
           
@@ -156,7 +168,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-              🤖 AI Financial Advisor
+              <CpuChipIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> AI Financial Advisor
               <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                 Beta
               </span>
@@ -170,7 +182,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
             <div className="flex items-center">
-              <span className="text-red-500 mr-2">⚠️</span>
+              <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-2" />
               <span className="text-red-700 text-sm">{error}</span>
             </div>
           </div>
@@ -238,7 +250,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
 
             {/* Recommendations */}
             <div className="space-y-3">
-              <h4 className="font-semibold text-gray-800">🎯 Recommendations</h4>
+              <h4 className="font-semibold text-gray-800"><FlagIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Recommendations</h4>
               {insight.recommendations.map((rec: AIRecommendation, index: number) => (
                 <div
                   key={rec.id || index}
@@ -295,7 +307,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
             {/* Next Steps */}
             {insight.nextSteps.length > 0 && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h4 className="font-semibold text-green-800 mb-2">📝 Next Steps</h4>
+                <h4 className="font-semibold text-green-800 mb-2"><DocumentTextIcon className="h-5 w-5 text-green-600 mr-2 inline" /> Next Steps</h4>
                 <ul className="space-y-1">
                   {insight.nextSteps.map((step, index) => (
                     <li key={index} className="text-green-700 text-sm flex items-start">
@@ -310,7 +322,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
             {/* Educational Topics */}
             {insight.educationalTopics.length > 0 && (
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <h4 className="font-semibold text-purple-800 mb-2">📚 Learn More About</h4>
+                <h4 className="font-semibold text-purple-800 mb-2"><AcademicCapIcon className="h-5 w-5 text-purple-600 mr-2 inline" /> Learn More About</h4>
                 <div className="flex flex-wrap gap-2">
                   {insight.educationalTopics.map((topic, index) => (
                     <span

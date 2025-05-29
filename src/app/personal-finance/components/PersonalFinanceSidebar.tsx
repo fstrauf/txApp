@@ -4,11 +4,23 @@ import React, { useState } from 'react';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import type { Screen } from '../hooks/useScreenNavigation';
+import { 
+  HandRaisedIcon, 
+  BanknotesIcon, 
+  CreditCardIcon, 
+  BuildingLibraryIcon, 
+  LightBulbIcon,
+  ChartBarIcon,
+  ChartPieIcon,
+  FlagIcon,
+  WrenchScrewdriverIcon,
+  MagnifyingGlassIcon
+} from '@heroicons/react/24/outline';
 
 interface NavigationItem {
   screen: Screen;
   title: string;
-  icon: string;
+  icon: React.ComponentType<{ className?: string }>;
   description: string;
   category: 'setup' | 'analysis' | 'optimization';
   isAccessible: (userData: any) => boolean;
@@ -18,7 +30,7 @@ const navigationItems: NavigationItem[] = [
   {
     screen: 'welcome',
     title: 'Welcome',
-    icon: '👋',
+    icon: HandRaisedIcon,
     description: 'Getting started',
     category: 'setup',
     isAccessible: () => true,
@@ -26,7 +38,7 @@ const navigationItems: NavigationItem[] = [
   {
     screen: 'income',
     title: 'Income',
-    icon: '💰',
+    icon: BanknotesIcon,
     description: 'Monthly income setup',
     category: 'setup',
     isAccessible: () => true,
@@ -34,7 +46,7 @@ const navigationItems: NavigationItem[] = [
   {
     screen: 'spending',
     title: 'Spending',
-    icon: '💳',
+    icon: CreditCardIcon,
     description: 'Monthly expenses',
     category: 'setup',
     isAccessible: () => true,
@@ -42,7 +54,7 @@ const navigationItems: NavigationItem[] = [
   {
     screen: 'savings',
     title: 'Savings',
-    icon: '🏦',
+    icon: BuildingLibraryIcon,
     description: 'Current savings amount',
     category: 'setup',
     isAccessible: () => true,
@@ -50,7 +62,7 @@ const navigationItems: NavigationItem[] = [
   {
     screen: 'initialInsights',
     title: 'Your Insights',
-    icon: '💡',
+    icon: LightBulbIcon,
     description: 'Financial health overview',
     category: 'analysis',
     isAccessible: (userData) =>
@@ -61,7 +73,7 @@ const navigationItems: NavigationItem[] = [
   {
     screen: 'spendingAnalysisUpload',
     title: 'Spending Analysis',
-    icon: '📊',
+    icon: ChartBarIcon,
     description: 'Upload bank data',
     category: 'analysis',
     isAccessible: (userData) =>
@@ -71,7 +83,7 @@ const navigationItems: NavigationItem[] = [
   {
     screen: 'spendingAnalysisResults',
     title: 'Spending Results',
-    icon: '📈',
+    icon: ChartPieIcon,
     description: 'Spending breakdown',
     category: 'analysis',
     isAccessible: (userData) =>
@@ -81,7 +93,7 @@ const navigationItems: NavigationItem[] = [
   {
     screen: 'savingsAnalysisInput',
     title: 'Savings Analysis',
-    icon: '🎯',
+    icon: FlagIcon,
     description: 'Asset allocation & optimization',
     category: 'optimization',
     isAccessible: (userData) => userData.savings > 0,
@@ -95,9 +107,9 @@ const categoryLabels = {
 };
 
 const categoryIcons = {
-  setup: '⚙️',
-  analysis: '🔍',
-  optimization: '🎯',
+  setup: WrenchScrewdriverIcon,
+  analysis: MagnifyingGlassIcon,
+  optimization: FlagIcon,
 };
 
 export function PersonalFinanceSidebar() {
@@ -214,9 +226,9 @@ export function PersonalFinanceSidebar() {
               </div>
               <div className="mb-2">
                 <div className="flex items-center">
-                  <span className="text-lg mr-2">
-                    {categoryIcons[stepInfo.category as keyof typeof categoryIcons]}
-                  </span>
+                  <div className="text-lg mr-2">
+                    {React.createElement(categoryIcons[stepInfo.category as keyof typeof categoryIcons], { className: "h-5 w-5" })}
+                  </div>
                   <span className="font-semibold text-gray-800">{stepInfo.title}</span>
                 </div>
                 <p className="text-sm text-gray-600 mt-1">{stepInfo.description}</p>
@@ -237,9 +249,9 @@ export function PersonalFinanceSidebar() {
                 <div key={category}>
                   {!isCollapsed && (
                     <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center">
-                      <span className="mr-2">
-                        {categoryIcons[category as keyof typeof categoryIcons]}
-                      </span>
+                      <div className="mr-2">
+                        {React.createElement(categoryIcons[category as keyof typeof categoryIcons], { className: "h-4 w-4" })}
+                      </div>
                       {categoryLabels[category as keyof typeof categoryLabels]}
                     </h3>
                   )}
@@ -274,7 +286,9 @@ export function PersonalFinanceSidebar() {
                             {isCurrent && (
                               <div className="absolute left-0 top-2 bottom-2 w-1.5 rounded-full bg-gradient-to-b from-indigo-500 to-blue-500 z-10"></div>
                             )}
-                            <span className={`text-lg flex-shrink-0 z-10 mx-auto md:mx-0 ${!isAccessible ? 'opacity-50' : ''}`}>{item.icon}</span>
+                            <div className={`text-lg flex-shrink-0 z-10 mx-auto md:mx-0 ${!isAccessible ? 'opacity-50' : ''}`}>
+                              <item.icon className="h-5 w-5" />
+                            </div>
                             {!isCollapsed && (
                               <div className="ml-3 flex-1 min-w-0 z-10">
                                 <div className="flex items-center justify-between">

@@ -7,6 +7,7 @@ import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 import { usePersonalFinanceStore } from '../../../store/personalFinanceStore';
 import { Box } from '@/components/ui/Box';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
+import { CreditCardIcon, LightBulbIcon } from '@heroicons/react/24/outline';
 
 const SpendingScreen: React.FC = () => {
   const { userData, updateSpending } = usePersonalFinanceStore();
@@ -45,7 +46,9 @@ const SpendingScreen: React.FC = () => {
     <div className="max-w-2xl mx-auto p-6">
       {/* Header */}
       <div className="text-center mb-10">
-        <div className="text-6xl mb-6">💸</div>
+        <div className="flex justify-center mb-6">
+          <CreditCardIcon className="h-16 w-16 text-indigo-600" />
+        </div>
         <h1 className="text-4xl font-bold text-gray-800 mb-4">
           What do you spend monthly?
         </h1>
@@ -77,7 +80,7 @@ const SpendingScreen: React.FC = () => {
       {/* Spending Categories Hint */}
       <Box variant="gradient" className="max-w-lg mx-auto mb-4">
         <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-          💡 Common spending categories
+          <LightBulbIcon className="h-5 w-5 text-indigo-600 mr-2" /> Common spending categories
         </h4>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-gray-600">
           <div className="flex items-center">

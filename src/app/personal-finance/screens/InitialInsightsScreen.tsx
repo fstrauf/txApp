@@ -6,11 +6,19 @@ import { ParametersReview } from '@/app/personal-finance/shared/ParametersReview
 import { InsightCard } from '@/app/personal-finance/shared/InsightCard';
 import {DiveDeeperCard} from '@/app/personal-finance/shared/DiveDeeperCard';
 import { AIFinancialInsights } from '../ai/AIFinancialInsights';
+import { ProFeatureTeaser } from '@/app/personal-finance/shared/ProFeatureTeaser';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { 
   generateFinancialInsights, 
   validateUserData
 } from '../engine/FinancialRulesEngine';
+import { 
+  CpuChipIcon, 
+  MagnifyingGlassIcon, 
+  CreditCardIcon, 
+  BuildingLibraryIcon, 
+  FlagIcon 
+} from '@heroicons/react/24/outline';
 
 const InitialInsightsScreen: React.FC = () => {
   const { userData } = usePersonalFinanceStore();
@@ -106,7 +114,7 @@ const InitialInsightsScreen: React.FC = () => {
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                <span className="text-sm">🤖</span>
+                <CpuChipIcon className="h-4 w-4 text-gray-600" />
                 <span className="text-sm font-medium">
                   {showAIInsights ? 'AI Insights' : 'Try AI Insights'}
                 </span>
@@ -148,7 +156,7 @@ const InitialInsightsScreen: React.FC = () => {
                 >
                   <InsightCard
                     type={insight.type}
-                    icon={insight.icon}
+                    icon={React.createElement(insight.icon, { className: "h-8 w-8 text-indigo-600" })}
                     title={insight.title}
                     text={insight.text}
                     action={insight.action}
@@ -161,11 +169,19 @@ const InitialInsightsScreen: React.FC = () => {
           )}
         </div>
 
+        {/* Pro Feature Teaser - Weekly Insights */}
+        <div className="mb-16">
+          <ProFeatureTeaser 
+            feature="weekly-insights"
+            context="Imagine getting insights like these every week, automatically updated with your latest spending"
+          />
+        </div>
+
         {/* Enhanced Dive Deeper Section */}
         <div className="mb-16">
           <div className="text-center mb-10">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-linear-to-br from-primary/20 to-secondary/20 mb-4">
-              <span className="text-2xl">🔍</span>
+              <MagnifyingGlassIcon className="h-8 w-8 text-indigo-600" />
             </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-4">
               Ready to dive deeper?
@@ -178,7 +194,7 @@ const InitialInsightsScreen: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
             <DiveDeeperCard
               type="spending"
-              icon="💳"
+              icon={<CreditCardIcon className="h-6 w-6 text-gray-600" />}
               title="Analyze Spending"
               description="Upload your bank transactions and discover exactly where your money goes"
               features={[
@@ -194,7 +210,7 @@ const InitialInsightsScreen: React.FC = () => {
             
             <DiveDeeperCard
               type="savings"
-              icon="🏦"
+              icon={<BuildingLibraryIcon className="h-6 w-6 text-gray-600" />}
               title="Optimize Savings"
               description="Analyze where you keep your money and maximize your returns"
               features={[
@@ -210,7 +226,7 @@ const InitialInsightsScreen: React.FC = () => {
             
             {/* <DiveDeeperCard
               type="goals"
-              icon="🎯"
+              icon={<FlagIcon className="h-6 w-6 text-gray-600" />}
               title="Set Goals"
               description="Set specific targets and get a roadmap to achieve them"
               features={[

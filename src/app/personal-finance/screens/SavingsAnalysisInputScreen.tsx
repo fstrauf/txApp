@@ -8,6 +8,15 @@ import { CurrencyInput } from '@/app/personal-finance/shared/CurrencyInput';
 import { Disclosure } from '@/components/ui/Disclosure';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { DonutChart } from '@/components/ui/DonutChart';
+import { ProFeatureTeaser } from '@/app/personal-finance/shared/ProFeatureTeaser';
+import { 
+  AcademicCapIcon, 
+  BuildingLibraryIcon, 
+  LockClosedIcon, 
+  ChartBarIcon, 
+  CreditCardIcon, 
+  LightBulbIcon 
+} from '@heroicons/react/24/outline';
 
 interface SavingsBreakdown {
   checking: number;
@@ -218,7 +227,7 @@ const SavingsAnalysisInputScreen: React.FC = () => {
         <Disclosure
           buttonContent={
             <div className="flex items-center">
-              <span className="text-2xl mr-3">🎓</span>
+              <AcademicCapIcon className="h-8 w-8 text-indigo-600 mr-3" />
               <div className="text-left">
                 <h3 className="font-semibold text-gray-800">
                   New to investing?
@@ -233,7 +242,7 @@ const SavingsAnalysisInputScreen: React.FC = () => {
             <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
               <Box variant="default" className="p-4">
                 <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                  <span className="text-xl mr-2">🏦</span>
+                  <BuildingLibraryIcon className="h-5 w-5 text-gray-600 mr-2" />
                   Savings Account (2-4% annually)
                 </h4>
                 <p className="text-sm text-gray-600 mb-2">
@@ -246,7 +255,7 @@ const SavingsAnalysisInputScreen: React.FC = () => {
 
               <Box variant="default" className="p-4">
                 <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                  <span className="text-xl mr-2">🔒</span>
+                  <LockClosedIcon className="h-5 w-5 text-gray-600 mr-2" />
                   Term Deposits (4-5% annually)
                 </h4>
                 <p className="text-sm text-gray-600 mb-2">
@@ -259,7 +268,7 @@ const SavingsAnalysisInputScreen: React.FC = () => {
 
               <Box variant="default" className="p-4">
                 <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                  <span className="text-xl mr-2">📈</span>
+                  <ChartBarIcon className="h-5 w-5 text-gray-600 mr-2" />
                   Index Funds/ETFs (7-10% average)
                 </h4>
                 <p className="text-sm text-gray-600 mb-2">
@@ -386,7 +395,7 @@ const SavingsAnalysisInputScreen: React.FC = () => {
       {/* Key Insight */}
       <Box variant="gradient" className="mb-8">
         <h3 className="font-semibold text-gray-800 mb-2">
-          💡 The diversification principle
+          <LightBulbIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> The diversification principle
         </h3>
         <p className="text-sm text-gray-600">
           A well-diversified portfolio balances:
@@ -403,7 +412,7 @@ const SavingsAnalysisInputScreen: React.FC = () => {
         <div className="mt-12 space-y-6 animate-fadeIn">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              📊 Your Allocation Analysis
+              <ChartBarIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Your Allocation Analysis
             </h2>
             <p className="text-gray-600">
               Current estimated annual return: <span className="font-bold text-green-600">{(getCurrentReturn() * 100).toFixed(1)}%</span>
@@ -428,30 +437,40 @@ const SavingsAnalysisInputScreen: React.FC = () => {
                   };
                   
                   // Create data array and filter out zero amounts
+                  const getSavingsIcon = (category: string) => {
+                    switch (category) {
+                      case 'Checking Account': return <CreditCardIcon className="h-4 w-4" />;
+                      case 'Savings Account': return <BuildingLibraryIcon className="h-4 w-4" />;
+                      case 'Term Deposits': return <LockClosedIcon className="h-4 w-4" />;
+                      case 'ETFs/Investments': return <ChartBarIcon className="h-4 w-4" />;
+                      default: return <BuildingLibraryIcon className="h-4 w-4" />;
+                    }
+                  };
+
                   const allCategories = [
                     {
                       name: 'Checking Account',
                       amount: breakdown.checking,
                       category: 'Checking Account',
-                      icon: '💳'
+                      icon: getSavingsIcon('Checking Account')
                     },
                     {
                       name: 'Savings Account',
                       amount: breakdown.savings,
                       category: 'Savings Account',
-                      icon: '🏦'
+                      icon: getSavingsIcon('Savings Account')
                     },
                     {
                       name: 'Term Deposits',
                       amount: breakdown.termDeposit,
                       category: 'Term Deposits',
-                      icon: '🔒'
+                      icon: getSavingsIcon('Term Deposits')
                     },
                     {
                       name: 'ETFs/Investments',
                       amount: breakdown.other,
                       category: 'ETFs/Investments',
-                      icon: '📈'
+                      icon: getSavingsIcon('ETFs/Investments')
                     }
                   ];
                   
@@ -526,7 +545,7 @@ const SavingsAnalysisInputScreen: React.FC = () => {
 
           {/* Suggestions */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800">💡 Recommendations</h3>
+            <h3 className="text-lg font-semibold text-gray-800"><LightBulbIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Recommendations</h3>
             {generateSuggestions().map((suggestion, index) => (
               <Box 
                 key={index} 
@@ -554,7 +573,7 @@ const SavingsAnalysisInputScreen: React.FC = () => {
           {/* Educational Content */}
           <Box variant="gradient" className="p-6">
             <h3 className="font-semibold text-gray-800 mb-3">
-              🎓 Quick Investment Guide
+              <AcademicCapIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Quick Investment Guide
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
@@ -579,6 +598,14 @@ const SavingsAnalysisInputScreen: React.FC = () => {
           </Box>
         </div>
       )}
+
+      {/* Pro Feature Teaser - Progress Tracking */}
+      <div className="mb-10">
+        <ProFeatureTeaser 
+          feature="progress-tracking"
+          context={`Track your allocation performance over time! Your current ${(getCurrentReturn() * 100).toFixed(1)}% return could be monitored with historical charts, goal progress, and milestone celebrations.`}
+        />
+      </div>
 
       {/* Back Button - Always at bottom */}
       <div className="flex justify-center mt-12">

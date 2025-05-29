@@ -1,6 +1,7 @@
 import React from 'react';
 import { ParameterCard } from './ParameterCard';
 import { Box } from '@/components/ui/Box';
+import { ChartBarIcon } from '@heroicons/react/24/outline';
 
 export interface ParametersReviewProps {
   income: number;
@@ -35,7 +36,7 @@ export const ParametersReview: React.FC<ParametersReviewProps> = ({
     <Box variant="gradient" className="mb-4 shadow-soft hover:shadow-xl transition-shadow duration-300">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-gray-800 flex items-center">
-          📊 Your Financial Snapshot
+          <ChartBarIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Your Financial Snapshot
         </h3>
         <button
           onClick={onEdit}

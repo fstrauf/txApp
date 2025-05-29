@@ -6,6 +6,16 @@
  * validation to prevent nonsensical recommendations.
  */
 
+import React from 'react';
+import { 
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  ExclamationCircleIcon,
+  LightBulbIcon,
+  BanknotesIcon,
+  ShieldCheckIcon
+} from '@heroicons/react/24/outline';
+
 // ===== CORE TYPES =====
 
 export interface UserFinancialData {
@@ -54,7 +64,7 @@ export interface ReturnAnalysis {
 
 export interface FinancialInsight {
   type: 'success' | 'warning' | 'optimize';
-  icon: string;
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
   text: string;
   action: string;
@@ -424,7 +434,7 @@ export function generateFinancialInsights(userData: UserFinancialData): Financia
   if (!validation.isValid) {
     return [{
       type: 'warning',
-      icon: '⚠️',
+      icon: ExclamationTriangleIcon,
       title: 'Data validation errors',
       text: 'Please review your financial data for accuracy',
       action: validation.errors.join('. '),
@@ -465,7 +475,7 @@ function generateSavingsRateInsights(savingsRate: number, monthlySavings: number
   if (savingsRate >= benchmarks.excellent) {
     insights.push({
       type: 'success',
-      icon: '🎉',
+      icon: CheckCircleIcon,
       title: 'Excellent savings habit!',
       text: `Your ${savingsRate.toFixed(1)}% savings rate puts you in the top 10% of savers.`,
       action: 'Keep it up! Consider increasing by 2-3% if possible.',
@@ -475,7 +485,7 @@ function generateSavingsRateInsights(savingsRate: number, monthlySavings: number
   } else if (savingsRate >= benchmarks.good) {
     insights.push({
       type: 'success',
-      icon: '✅',
+      icon: CheckCircleIcon,
       title: 'Great savings rate!',
       text: `Your ${savingsRate.toFixed(1)}% savings rate is above average.`,
       action: 'Consider bumping it up to 20% if possible.',
@@ -485,7 +495,7 @@ function generateSavingsRateInsights(savingsRate: number, monthlySavings: number
   } else if (savingsRate >= benchmarks.average) {
     insights.push({
       type: 'optimize',
-      icon: '💡',
+      icon: LightBulbIcon,
       title: 'Room to improve savings',
       text: `Your ${savingsRate.toFixed(1)}% savings rate could be boosted.`,
       action: 'Try to increase to 15% by reducing one major expense category.',
@@ -495,7 +505,7 @@ function generateSavingsRateInsights(savingsRate: number, monthlySavings: number
   } else if (savingsRate > benchmarks.concerning) {
     insights.push({
       type: 'warning',
-      icon: '⚠️',
+      icon: ExclamationTriangleIcon,
       title: 'Low savings rate needs attention',
       text: `Your ${savingsRate.toFixed(1)}% savings rate is below recommended minimums.`,
       action: 'Focus on reducing expenses or increasing income to save at least 10%.',
@@ -505,7 +515,7 @@ function generateSavingsRateInsights(savingsRate: number, monthlySavings: number
   } else {
     insights.push({
       type: 'warning',
-      icon: '🚨',
+      icon: ExclamationCircleIcon,
       title: 'Critical: Not saving money',
       text: 'You\'re spending equal to or more than your income.',
       action: 'Review expenses urgently and cut non-essential spending.',
@@ -525,7 +535,7 @@ function generateEmergencyFundInsights(monthsOfExpenses: number, spending: numbe
   if (monthsOfExpenses >= recMonths) {
     insights.push({
       type: 'success',
-      icon: '💪',
+      icon: ShieldCheckIcon,
       title: 'Excellent emergency fund!',
       text: `Your savings would last ${monthsOfExpenses.toFixed(1)} months without income.`,
       action: 'Consider investing excess savings for higher returns.',
@@ -535,7 +545,7 @@ function generateEmergencyFundInsights(monthsOfExpenses: number, spending: numbe
   } else if (monthsOfExpenses >= minMonths) {
     insights.push({
       type: 'optimize',
-      icon: '💰',
+      icon: BanknotesIcon,
       title: 'Good emergency fund foundation',
       text: `Your savings would last ${monthsOfExpenses.toFixed(1)} months without income.`,
       action: 'Consider building up to 6 months for extra security.',
@@ -550,7 +560,7 @@ function generateEmergencyFundInsights(monthsOfExpenses: number, spending: numbe
     
     insights.push({
       type: 'warning',
-      icon: '⚠️',
+      icon: ExclamationTriangleIcon,
       title: 'Build your emergency fund',
       text: `Your savings would last ${monthsOfExpenses.toFixed(1)} months without income.`,
       action: `Build emergency fund to $${emergencyTarget.toLocaleString()} (3 months expenses) before other goals.`,
@@ -560,7 +570,7 @@ function generateEmergencyFundInsights(monthsOfExpenses: number, spending: numbe
   } else {
     insights.push({
       type: 'warning',
-      icon: '🚨',
+      icon: ExclamationCircleIcon,
       title: 'No emergency buffer',
       text: 'You have very little savings to cover unexpected expenses.',
       action: 'Start building an emergency fund immediately - even $500 helps!',
@@ -584,7 +594,7 @@ function generateSpendingInsights(userData: UserFinancialData): FinancialInsight
   if (analysis.spendingBenchmark === 'unsustainable') {
     insights.push({
       type: 'warning',
-      icon: '🚨',
+      icon: ExclamationCircleIcon,
       title: 'Spending exceeds income!',
       text: 'Your current spending level is not sustainable with your income.',
       action: 'Immediate reduction in spending is required.',
@@ -594,7 +604,7 @@ function generateSpendingInsights(userData: UserFinancialData): FinancialInsight
   } else if (analysis.spendingBenchmark === 'concerning') {
     insights.push({
       type: 'warning',
-      icon: '⚠️',
+      icon: ExclamationTriangleIcon,
       title: 'High spending rate',
       text: 'Your spending is high relative to your income, which could be risky.',
       action: 'Consider reducing discretionary expenses.',
@@ -604,7 +614,7 @@ function generateSpendingInsights(userData: UserFinancialData): FinancialInsight
   } else if (analysis.spendingBenchmark === 'good') {
     insights.push({
       type: 'optimize',
-      icon: '💡',
+      icon: LightBulbIcon,
       title: 'Good spending rate',
       text: 'Your spending rate is within a reasonable range.',
       action: 'Aim to optimize further for savings or investments.',
@@ -614,7 +624,7 @@ function generateSpendingInsights(userData: UserFinancialData): FinancialInsight
   } else if (analysis.spendingBenchmark === 'excellent') {
     insights.push({
       type: 'success',
-      icon: '✅',
+      icon: CheckCircleIcon,
       title: 'Excellent spending habits!',
       text: 'Your spending is well-managed and sustainable.',
       action: 'Continue your current habits and consider investing savings.',

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { akahuService, AkahuAccount, AkahuConnection, AkahuService } from '@/lib/akahu';
+import { BuildingLibraryIcon, CheckCircleIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 
 export interface AkahuUploadAreaProps {
   onTransactionsSelect: (transactions: any[]) => void;
@@ -100,7 +101,9 @@ export const AkahuUploadArea: React.FC<AkahuUploadAreaProps> = ({
 
   const renderConnectStep = () => (
     <div className="text-center">
-      <div className="text-6xl mb-6">🏦</div>
+      <div className="flex justify-center mb-6">
+        <BuildingLibraryIcon className="h-16 w-16 text-indigo-600" />
+      </div>
       <h3 className="text-2xl font-bold text-gray-800 mb-4">Connect Your Bank Account</h3>
       <p className="text-gray-600 mb-6">
         Securely connect your bank account to automatically import your transactions
@@ -230,7 +233,9 @@ export const AkahuUploadArea: React.FC<AkahuUploadAreaProps> = ({
 
   const renderSuccessStep = () => (
     <div className="text-center">
-      <div className="text-6xl mb-6">🎉</div>
+      <div className="flex justify-center mb-6">
+        <CheckCircleIcon className="h-16 w-16 text-green-600" />
+      </div>
       <h3 className="text-2xl font-bold text-gray-800 mb-4">Transactions Imported Successfully!</h3>
       <p className="text-gray-600 mb-6">
         Your transactions have been imported and are ready for analysis.
@@ -260,7 +265,7 @@ export const AkahuUploadArea: React.FC<AkahuUploadAreaProps> = ({
       
       <div className="mt-6 p-5 bg-green-50 rounded-xl border-l-4 border-green-500">
         <div className="flex items-center">
-          <span className="text-xl mr-3">🔒</span>
+          <LockClosedIcon className="h-5 w-5 text-gray-600 mr-3" />
           <div>
             <div className="font-semibold text-gray-800 text-sm">Bank-level security</div>
             <div className="text-xs text-gray-600">

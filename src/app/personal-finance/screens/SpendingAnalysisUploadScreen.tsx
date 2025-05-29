@@ -8,6 +8,15 @@ import { AkahuUploadArea } from '@/app/personal-finance/shared/AkahuUploadArea';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
+import { 
+  ChartBarIcon, 
+  BuildingLibraryIcon, 
+  DocumentTextIcon, 
+  LightBulbIcon, 
+  EyeIcon, 
+  ArrowTrendingUpIcon, 
+  FlagIcon 
+} from '@heroicons/react/24/outline';
 
 type UploadMethod = 'csv' | 'akahu';
 
@@ -440,7 +449,7 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
                 variant="secondary"
                 className="text-sm px-6 py-2"
               >
-                📊 View Your Spending Analysis →
+                <ChartBarIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> View Your Spending Analysis →
               </PrimaryButton>
               <p className="text-xs text-gray-500 mt-2">
                 You have {userData.transactions.length} transactions analyzed
@@ -509,7 +518,9 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
                 Coming Soon
               </div>
               
-              <div className="text-4xl mb-3">🏦</div>
+              <div className="flex justify-center mb-3">
+                <BuildingLibraryIcon className="h-12 w-12 text-indigo-600" />
+              </div>
               <h4 className="font-semibold text-gray-800 mb-2">Connect Bank Account</h4>
               <p className="text-sm text-gray-600">
                 Automatically import transactions securely via Akahu
@@ -527,7 +538,9 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <div className="text-4xl mb-3">📄</div>
+              <div className="flex justify-center mb-3">
+                <DocumentTextIcon className="h-12 w-12 text-indigo-600" />
+              </div>
               <h4 className="font-semibold text-gray-800 mb-2">Upload CSV File</h4>
               <p className="text-sm text-gray-600">
                 Export transactions from your online banking
@@ -657,7 +670,7 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
               {/* Tip box for multiple description fields */}
               <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-start">
-                  <span className="text-lg mr-2">💡</span>
+                  <LightBulbIcon className="h-5 w-5 text-gray-600 mr-2" />
                   <div>
                     <h5 className="font-semibold text-blue-800 mb-1">Multiple Description Fields</h5>
                     <p className="text-sm text-blue-700">
@@ -691,7 +704,7 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
                   return (
                     <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
                       <div className="flex items-start">
-                        <span className="text-lg mr-2">👁️</span>
+                        <EyeIcon className="h-5 w-5 text-gray-600 mr-2" />
                         <div className="flex-1">
                           <h5 className="font-semibold text-green-800 mb-2">Combined Description Preview</h5>
                           <div className="space-y-2">
@@ -786,7 +799,7 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex items-start">
-              <span className="text-2xl mr-3">📊</span>
+              <ChartBarIcon className="h-8 w-8 text-indigo-600 mr-3" />
               <div>
                 <h4 className="font-semibold text-gray-800">Spending Categories</h4>
                 <p className="text-sm text-gray-600">Automatically categorize all your transactions into groceries, dining, transport, etc.</p>
@@ -794,7 +807,7 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
             </div>
             
             <div className="flex items-start">
-              <span className="text-2xl mr-3">📈</span>
+              <ArrowTrendingUpIcon className="h-8 w-8 text-indigo-600 mr-3" />
               <div>
                 <h4 className="font-semibold text-gray-800">Spending Trends</h4>
                 <p className="text-sm text-gray-600">See how your spending changes over time and identify patterns.</p>
@@ -802,7 +815,7 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
             </div>
             
             <div className="flex items-start">
-              <span className="text-2xl mr-3">💡</span>
+              <LightBulbIcon className="h-8 w-8 text-indigo-600 mr-3" />
               <div>
                 <h4 className="font-semibold text-gray-800">Saving Opportunities</h4>
                 <p className="text-sm text-gray-600">Find specific areas where you could reduce spending.</p>
@@ -810,7 +823,7 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
             </div>
             
             <div className="flex items-start">
-              <span className="text-2xl mr-3">🎯</span>
+              <FlagIcon className="h-8 w-8 text-indigo-600 mr-3" />
               <div>
                 <h4 className="font-semibold text-gray-800">Benchmarking</h4>
                 <p className="text-sm text-gray-600">Compare your spending to others in similar situations.</p>
