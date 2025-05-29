@@ -1,4 +1,18 @@
 import Link from 'next/link';
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Advanced Expense Tracker for Google Sheets - AI-Powered Categorization | Expense Sorted",
+  description: "Transform your Google Sheets into a powerful expense tracker with AI-powered categorization. Advanced features for comprehensive financial management and budgeting.",
+  alternates: {
+    canonical: "/use-cases/expense-tracker-google-sheet",
+  },
+  openGraph: {
+    title: "Advanced Expense Tracker for Google Sheets - AI-Powered Categorization",
+    description: "Transform your Google Sheets into a powerful expense tracker with AI-powered categorization and advanced financial management features.",
+    url: "/use-cases/expense-tracker-google-sheet",
+  },
+};
 
 export default function ExpenseTracker() {
   return (

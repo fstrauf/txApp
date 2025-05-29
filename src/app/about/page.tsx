@@ -1,4 +1,20 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About Expense Sorted - Personal Finance Made Simple",
+  description:
+    "Learn about Expense Sorted's mission to simplify personal finance through AI-powered expense categorization. Discover how we help users achieve financial clarity and automate their budgeting.",
+  alternates: {
+    canonical: "/about",
+  },
+  openGraph: {
+    title: "About Expense Sorted - Personal Finance Made Simple",
+    description:
+      "Learn about Expense Sorted's mission to simplify personal finance through AI-powered expense categorization. Discover how we help users achieve financial clarity and automate their budgeting.",
+    url: "/about",
+  },
+};
 
 export default function About() {
   return (

@@ -1,12 +1,26 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import GetItHereButton from "./getItHereButton";
 import Instructions from "./instructions";
 import Intro from "./intro";
 import StayUpToDate from "./stayUpToDate";
 import PageHeader from "../../components/PageHeader";
 import AddOnButton from "../components/buttons/AddOnButton";
+
+export const metadata: Metadata = {
+  title: "Financial Freedom Calculator - F*ck You Money Tracker | Expense Sorted",
+  description: "Calculate your path to financial independence with our F*ck You Money calculator. Track your cost of living, build emergency funds, and plan your journey to financial freedom.",
+  alternates: {
+    canonical: "/fuck-you-money-sheet",
+  },
+  openGraph: {
+    title: "Financial Freedom Calculator - F*ck You Money Tracker | Expense Sorted",
+    description: "Calculate your path to financial independence with our F*ck You Money calculator. Track your cost of living, build emergency funds, and plan your journey to financial freedom.",
+    url: "/fuck-you-money-sheet",
+  },
+};
 
 export default function FinancialFreedomSheet() {
   return (

@@ -1,4 +1,20 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Bank Transaction Classification - AI-Powered Financial Organization | Expense Sorted",
+  description:
+    "Master bank transaction classification with AI-powered tools. Automatically categorize bank transactions for better financial management, budgeting, and expense tracking.",
+  alternates: {
+    canonical: "/use-cases/bank-transaction-classification",
+  },
+  openGraph: {
+    title: "Bank Transaction Classification - AI-Powered Financial Organization",
+    description:
+      "Master bank transaction classification with AI-powered tools for better financial management and expense tracking.",
+    url: "/use-cases/bank-transaction-classification",
+  },
+};
 
 export default function BankTransactionClassification() {
   return (
@@ -37,8 +53,18 @@ export default function BankTransactionClassification() {
                 className="px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-soft hover:shadow-glow inline-flex items-center"
               >
                 Delve into Classification
-                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <svg
+                  className="ml-2 w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
                 </svg>
               </Link>
             </div>

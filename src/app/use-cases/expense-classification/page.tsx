@@ -1,4 +1,18 @@
 import Link from 'next/link';
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Expense Classification - AI-Powered Financial Categorization | Expense Sorted",
+  description: "Master expense classification for better financial planning and budgeting. Learn the significance of automated expense categorization with AI-powered tools.",
+  alternates: {
+    canonical: "/use-cases/expense-classification",
+  },
+  openGraph: {
+    title: "Expense Classification - AI-Powered Financial Categorization",
+    description: "Master expense classification for better financial planning and budgeting with AI-powered categorization tools.",
+    url: "/use-cases/expense-classification",
+  },
+};
 
 export default function ExpenseClassification() {
   return (

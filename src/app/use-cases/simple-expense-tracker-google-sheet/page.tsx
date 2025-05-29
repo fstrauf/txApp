@@ -1,4 +1,18 @@
 import Link from 'next/link';
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Simple Expense Tracker for Google Sheets - Free Template | Expense Sorted",
+  description: "Download our free simple expense tracker template for Google Sheets. Track your expenses effortlessly without complex budgeting software. Easy-to-use financial tracking solution.",
+  alternates: {
+    canonical: "/use-cases/simple-expense-tracker-google-sheet",
+  },
+  openGraph: {
+    title: "Simple Expense Tracker for Google Sheets - Free Template",
+    description: "Download our free simple expense tracker template for Google Sheets. Track your expenses effortlessly without complex budgeting software.",
+    url: "/use-cases/simple-expense-tracker-google-sheet",
+  },
+};
 
 export default function SimpleExpenseTracker() {
   return (

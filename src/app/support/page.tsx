@@ -1,3 +1,18 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Support & Help - Expense Sorted Customer Service",
+  description: "Get help with Expense Sorted's AI-powered expense categorization tools. Contact our support team for assistance with Google Sheets add-on, API integration, or account issues.",
+  alternates: {
+    canonical: "/support",
+  },
+  openGraph: {
+    title: "Support & Help - Expense Sorted Customer Service",
+    description: "Get help with Expense Sorted's AI-powered expense categorization tools. Contact our support team for assistance.",
+    url: "/support",
+  },
+};
+
 export default function ContactUs() {
   return (
     <>

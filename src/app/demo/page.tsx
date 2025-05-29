@@ -4,6 +4,9 @@ import Link from "next/link";
 import { Box } from "@/components/ui/Box";
 import { Header } from '@/components/ui/Header';
 
+// Note: Since this is a client component, metadata needs to be in a separate file
+// The metadata will be handled by a metadata.ts file in the same directory
+
 export default function DemoPage() {
   return (
     <div className="min-h-screen bg-background-default">
