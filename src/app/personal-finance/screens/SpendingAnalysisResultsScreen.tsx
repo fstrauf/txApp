@@ -305,6 +305,14 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
     return getColorClassName(color, 'bg') + ' text-white border-transparent';
   };
 
+  // Helper function to get category icon color class
+  const getCategoryIconColor = (category: string): string => {
+    const color = categoryColors.get(category);
+    if (!color) return 'text-gray-600';
+    
+    return getColorClassName(color, 'text');
+  };
+
   // Handler for chart segment selection
   const handleChartValueChange = (value: any) => {
     const newCategory = (value && value.categoryClicked) ? 
@@ -579,7 +587,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="mr-3">
-                        <category.icon className="h-6 w-6 text-gray-600" />
+                        <category.icon className={`h-6 w-6 ${getCategoryIconColor(category.category)}`} />
                       </div>
                       <div>
                         <h3 className="font-semibold text-gray-800">{category.category}</h3>
@@ -666,7 +674,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center">
                     <div className="mr-3">
-                      <category.icon className="h-6 w-6 text-gray-600" />
+                      <category.icon className={`h-6 w-6 ${getCategoryIconColor(category.category)}`} />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-800">{category.category}</h3>

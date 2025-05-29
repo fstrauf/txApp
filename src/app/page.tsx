@@ -560,9 +560,12 @@ export default function Home() {
                   Enhanced categorization
                 </li>
               </ul>
-              <button className="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary-dark transition-colors">
+              <Link
+                href="/integrations"
+                className="block w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary-dark transition-colors text-center font-medium"
+              >
                 Connect Lunch Money
-              </button>
+              </Link>
             </Box>
 
             {/* Developer API */}
