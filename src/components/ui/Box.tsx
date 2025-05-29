@@ -8,6 +8,7 @@ export interface BoxProps {
   className?: string;
   onClick?: () => void;
   hoverable?: boolean;
+  id?: string;
 }
 
 export const Box: React.FC<BoxProps> = ({ 
@@ -16,7 +17,8 @@ export const Box: React.FC<BoxProps> = ({
   padding = 'lg',
   className = '',
   onClick,
-  hoverable = false
+  hoverable = false,
+  id
 }) => {
   const paddingClasses = {
     sm: 'p-4',
@@ -65,6 +67,7 @@ export const Box: React.FC<BoxProps> = ({
 
   return (
     <div
+      id={id}
       onClick={onClick}
       className={`
         rounded-2xl
