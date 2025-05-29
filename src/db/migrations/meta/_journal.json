@@ -141,6 +141,13 @@
       "when": 1748545726478,
       "tag": "0019_curly_black_widow",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1748559475155,
+      "tag": "0020_wakeful_mimic",
+      "breakpoints": true
     }
   ]
 }

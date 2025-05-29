@@ -238,7 +238,7 @@ export async function POST(request: NextRequest, { params }: { params: { action:
         }, { status: 503 });
       }
 
-      // Call the categorization service
+      // Call the categorization service (using auto-classify for universal categorization)
       const categorizeResponse = await fetch(`${process.env.EXPENSE_SORTED_API}/auto-classify`, {
         method: 'POST',
         headers: {

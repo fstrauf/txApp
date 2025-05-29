@@ -11,7 +11,6 @@ import { useState } from 'react';
 import { Box } from "@/components/ui/Box";
 
 export default function Home() {
-  const { data: session, status: sessionStatus } = useSession();
   const [isWaitlistDialogOpen, setIsWaitlistDialogOpen] = useState(false);
 
   return (
@@ -54,7 +53,7 @@ export default function Home() {
               </div>
               <div className="border-l border-gray-300 h-12"></div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">2 min</div>
+                <div className="text-2xl font-bold text-gray-900">3 min</div>
                 <div className="text-sm text-gray-600">To complete</div>
               </div>
             </div>
