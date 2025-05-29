@@ -396,52 +396,6 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         </Box>
       </div>
 
-      {/* Financial Runway Visualization */}
-      <Box variant="gradient" className="mb-10">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          <LightBulbIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Your financial runway
-        </h3>
-        
-        <p className="text-gray-600 mb-4">{runwayAnalysis.recommendation}</p>
-        
-        <div className="mb-4">
-          <label className="text-sm text-gray-600">Time horizon:</label>
-          <div className="flex gap-2 mt-2">
-            {[6, 12, 24, 36].map((months) => (
-              <button
-                key={months}
-                onClick={() => {
-                  setSelectedTimeframe(months);
-                  trackAction('timeframeSelected', { 
-                    timeframe: months,
-                    spendingBenchmark: spendingAnalysis.spendingBenchmark,
-                    runwayMonths: runwayAnalysis.months
-                  });
-                }}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  selectedTimeframe === months 
-                    ? 'bg-indigo-500 text-white' 
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                {months} mo
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white bg-opacity-50 rounded-lg p-4">
-          <div className="text-center">
-            <p className="text-lg font-semibold text-gray-800">
-              At your current spending rate, your savings would last{' '}
-              <span className={runwayAnalysis.isHealthy ? 'text-green-600' : 'text-red-600'}>
-                {runwayAnalysis.months < 999 ? `${runwayAnalysis.months.toFixed(1)} months` : 'indefinitely'}
-              </span>
-            </p>
-          </div>
-        </div>
-      </Box>
-
       {/* Spending Category Breakdown */}
       <div className="mb-10">
         <div className="flex items-center justify-between mb-6">
