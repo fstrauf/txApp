@@ -47,7 +47,7 @@ module.exports = {
     },
   },
   plugins: [
-    // Typography plugin not compatible with Tailwind v4 - using custom styles in globals.css
+    // require('@tailwindcss/typography'), // Temporarily disabled for testing
   ],
   // variants: {
   //   extend: {

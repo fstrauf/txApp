@@ -10,15 +10,13 @@ export async function generateStaticParams() {
 }
 
 // This function generates metadata for each blog post page (good for SEO)
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const resolvedParams = await params;
-  const postData = await getPostData(resolvedParams.slug);
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const postData = await getPostData(params.slug);
 
   if (!postData) {
     return {
-      title: 'Post Not Found | Expense Sorted Blog',
+      title: 'Post Not Found',
       description: 'The blog post you are looking for does not exist.',
-      robots: 'noindex, nofollow',
     };
   }
 
@@ -39,10 +37,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: `${postData.title} | Expense Sorted Blog`,
     description: postData.summary || 'An article from the Expense Sorted Blog.',
     keywords: keywordsArray.length > 0 ? keywordsArray : undefined,
+    authors: postData.author ? [{ name: postData.author }] : [],
     alternates: {
       canonical: postUrl,
     },
-    robots: 'index, follow',
     openGraph: {
       title: postData.title,
       description: postData.summary || 'An article from the Expense Sorted Blog.',
@@ -59,6 +57,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       locale: 'en_US',
       type: 'article',
       publishedTime: postData.date,
+      authors: postData.author ? [postData.author] : [],
     },
     twitter: {
       card: 'summary_large_image',
@@ -78,6 +77,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     headline: postData.title,
     description: postData.summary,
     image: imageUrl,
+    author: {
+      '@type': 'Person',
+      name: postData.author || 'Expense Sorted Team',
+    },
     publisher: {
       '@type': 'Organization',
       name: 'Expense Sorted',
@@ -93,18 +96,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return metadata;
 }
 
-export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
-  const resolvedParams = await params;
-  console.log(`[BlogPage] Attempting to load blog post: ${resolvedParams.slug}`);
-  
-  const postData = await getPostData(resolvedParams.slug);
+export default async function PostPage({ params }: { params: { slug: string } }) {
+  const postData = await getPostData(params.slug);
 
   if (!postData) {
-    console.log(`[BlogPage] Post not found: ${resolvedParams.slug}`);
     notFound(); // This will render the not-found.js page or a default 404
   }
-
-  console.log(`[BlogPage] Successfully loaded post: ${postData.title}`);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.expensesorted.com';
   const postUrl = `${siteUrl}/blog/${postData.slug}`;
@@ -144,20 +141,17 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       />
       <article className="bg-white p-6 md:p-8 rounded-lg shadow-soft">
         <header className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4 leading-tight">{postData.title}</h1>
-          <div className="flex items-center space-x-4 text-sm text-gray-500 mb-4">
+          {/* <h1 className="text-4xl font-bold text-gray-900 mb-3">{postData.title}</h1> */}
+          <div className="text-sm text-gray-500">
             <time dateTime={postData.date}>
               {new Date(postData.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
             </time>
           </div>
-          {postData.summary && (
-            <p className="text-lg text-gray-600 leading-relaxed">{postData.summary}</p>
-          )}
         </header>
         
         {/* Render the HTML content from markdown */}
         <div 
-          className="blog-content"
+          className="prose prose-indigo lg:prose-lg max-w-none blog-content"
           dangerouslySetInnerHTML={{ __html: postData.contentHtml || '' }}
         />
 
