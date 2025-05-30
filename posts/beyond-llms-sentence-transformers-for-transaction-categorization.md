@@ -1,7 +1,11 @@
 ---
 title: "Beyond LLMs: Advanced Bank Transaction Categorization Methods That Save Time"
 date: "2025-05-15"
+lastModified: "2025-05-30"
 summary: "An exploration of advanced bank transaction categorization methods beyond LLMs, focusing on sentence transformers for time-saving, precision, and privacy."
+author: "Expense Sorted Team"
+keywords: ["transaction categorization", "sentence transformers", "LLM alternatives", "bank transaction AI", "financial data processing", "machine learning finance", "automated expense categorization"]
+image: "/og-beyond-llms.jpg"
 ---
 
 # Beyond LLMs: Advanced Bank Transaction Categorization Methods That Save Time
