@@ -45,7 +45,7 @@ export default function Features() {
           key={index}
           className="flex items-start p-6 bg-white rounded-xl shadow-soft hover:shadow-glow transition-shadow duration-300"
         >
-          <div className="flex-shrink-0 p-3 bg-primary/10 rounded-lg">
+          <div className="shrink-0 p-3 bg-primary/10 rounded-lg">
             <div className="text-primary">{feature.icon}</div>
           </div>
           <div className="ml-4">

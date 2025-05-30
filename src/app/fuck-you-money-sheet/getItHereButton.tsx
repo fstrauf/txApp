@@ -20,7 +20,7 @@ export default function GetItHereButton() {
 
   // Common button classes
   const buttonClasses = "inline-flex items-center justify-center rounded-md px-6 py-3 text-lg font-semibold text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary";
-  const primaryButtonClasses = `${buttonClasses} bg-primary hover:bg-primary-dark data-[hover]:bg-primary-dark data-[disabled]:bg-gray-400`;
+  const primaryButtonClasses = `${buttonClasses} bg-primary hover:bg-primary-dark data-[hover]:bg-primary-dark data-disabled:bg-gray-400`;
 
   const handleGetSpreadsheet = () => {
     setShowEmailInput(true);

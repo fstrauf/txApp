@@ -1,11 +1,25 @@
 import Link from 'next/link';
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Simple Expense Tracker for Google Sheets - Free Template | Expense Sorted",
+  description: "Download our free simple expense tracker template for Google Sheets. Track your expenses effortlessly without complex budgeting software. Easy-to-use financial tracking solution.",
+  alternates: {
+    canonical: "/use-cases/simple-expense-tracker-google-sheet",
+  },
+  openGraph: {
+    title: "Simple Expense Tracker for Google Sheets - Free Template",
+    description: "Download our free simple expense tracker template for Google Sheets. Track your expenses effortlessly without complex budgeting software.",
+    url: "/use-cases/simple-expense-tracker-google-sheet",
+  },
+};
 
 export default function SimpleExpenseTracker() {
   return (
     <div className="min-h-screen bg-background-default">
       <main className="container mx-auto px-4 py-16 max-w-7xl">
         <div className="bg-surface rounded-2xl shadow-soft p-8 space-y-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 text-center bg-clip-text text-transparent bg-gradient-to-r from-primary-dark via-primary to-secondary animate-gradient">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 text-center bg-clip-text text-transparent bg-linear-to-r from-primary-dark via-primary to-secondary animate-gradient">
             Simple Expense Tracker with Google Sheets™
           </h1>
           <div className="max-w-3xl mx-auto space-y-8">
