@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/typography";
 
 
 /* Your custom CSS variables and other global styles can go here */
