@@ -40,7 +40,7 @@ const WelcomeScreen: React.FC = () => {
         <h3 className="text-xl font-semibold text-gray-800 mb-6">You'll discover:</h3>
         <ul className="text-base text-gray-600 space-y-3 text-left">
           {[
-            "How you compare to other Kiwis",
+            "How you compare to other people",
             "Your biggest money-saving opportunities", 
             "A personalized action plan",
             "Timeline to reach your goals"

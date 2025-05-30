@@ -75,7 +75,7 @@ const IncomeScreen: React.FC = () => {
           What's your monthly take-home income?
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          After tax, KiwiSaver, and student loan payments
+          After tax, retirement funds, and student loan payments
         </p>
       </div>
 

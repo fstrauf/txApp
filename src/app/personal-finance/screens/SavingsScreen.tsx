@@ -126,7 +126,7 @@ const SavingsScreen: React.FC = () => {
           </div>
         </div>
         <p className="text-xs text-gray-500 mt-3 italic">
-          Don't include retirement accounts (KiwiSaver) or long-term investments that are hard to access
+          Don't include retirement accounts or long-term investments that are hard to access
         </p>
       </Box>
 
