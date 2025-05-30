@@ -1,0 +1,1 @@
+ALTER TYPE "public"."subscriberSource" ADD VALUE 'PREMIUM_WAITLIST' BEFORE 'OTHER';

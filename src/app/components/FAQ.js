@@ -42,7 +42,7 @@ export default function FAQ() {
             <h3 className="text-lg font-semibold text-gray-900">
               {faq.question}
             </h3>
-            <span className="ml-6 flex-shrink-0">
+            <span className="ml-6 shrink-0">
               <svg
                 className={`w-6 h-6 transform ${openIndex === index ? "rotate-180" : ""} text-gray-400`}
                 fill="none"

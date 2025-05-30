@@ -1,3 +1,20 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Terms of Service - Expense Sorted",
+  description:
+    "Read Expense Sorted's terms of service to understand the terms and conditions governing your use of our AI-powered expense categorization platform and services.",
+  alternates: {
+    canonical: "/terms-of-service",
+  },
+  openGraph: {
+    title: "Terms of Service - Expense Sorted",
+    description:
+      "Read Expense Sorted's terms of service to understand the terms and conditions governing your use of our AI-powered expense categorization platform and services.",
+    url: "/terms-of-service",
+  },
+};
+
 export default function TermsOfService() {
   return (
     <>

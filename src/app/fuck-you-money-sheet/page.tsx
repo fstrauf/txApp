@@ -1,12 +1,26 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import GetItHereButton from "./getItHereButton";
 import Instructions from "./instructions";
 import Intro from "./intro";
 import StayUpToDate from "./stayUpToDate";
 import PageHeader from "../../components/PageHeader";
 import AddOnButton from "../components/buttons/AddOnButton";
+
+export const metadata: Metadata = {
+  title: "Financial Freedom Calculator - F*ck You Money Tracker | Expense Sorted",
+  description: "Calculate your path to financial independence with our F*ck You Money calculator. Track your cost of living, build emergency funds, and plan your journey to financial freedom.",
+  alternates: {
+    canonical: "/fuck-you-money-sheet",
+  },
+  openGraph: {
+    title: "Financial Freedom Calculator - F*ck You Money Tracker | Expense Sorted",
+    description: "Calculate your path to financial independence with our F*ck You Money calculator. Track your cost of living, build emergency funds, and plan your journey to financial freedom.",
+    url: "/fuck-you-money-sheet",
+  },
+};
 
 export default function FinancialFreedomSheet() {
   return (
@@ -16,7 +30,7 @@ export default function FinancialFreedomSheet() {
           <PageHeader title="Financial Freedom - Cost of Living Tracking" />
 
           {/* Add-on Cross-Promotion Banner */}
-          <div className="max-w-3xl mx-auto bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl p-4 border border-primary/20 mb-6">
+          <div className="max-w-3xl mx-auto bg-linear-to-r from-primary/10 to-secondary/10 rounded-xl p-4 border border-primary/20 mb-6">
             <div className="flex flex-row items-center justify-between gap-4">
               <div className="flex items-center">
                 <div className="bg-white p-2 rounded-full shadow-sm mr-4">
@@ -29,7 +43,7 @@ export default function FinancialFreedomSheet() {
                   <p className="text-sm text-gray-700">Automatically categorize transactions in seconds with our Google Sheets Add-on</p>
                 </div>
               </div>
-              <AddOnButton size="md" variant="primary" text="Install Add-on" className="whitespace-nowrap flex-shrink-0" />
+              <AddOnButton size="md" variant="primary" text="Install Add-on" className="whitespace-nowrap shrink-0" />
             </div>
           </div>
 

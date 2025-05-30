@@ -76,7 +76,7 @@ const CategorizationControls = React.memo(({
         </button>
 
       </div>
-      <div className="text-sm text-gray-600 flex-grow mt-1">
+      <div className="text-sm text-gray-600 grow mt-1">
         Use reviewed transactions to Train your model. Categorise transactions that need review.
       </div>
 

@@ -18,6 +18,20 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  other: {
+    'google-site-verification': process.env.GOOGLE_SITE_VERIFICATION || '',
+  },
   openGraph: {
     type: 'website',
     url: '/', // Resolved relative to metadataBase
@@ -50,7 +64,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {/* Render the client wrapper unconditionally */}
               {/* It will handle showing/hiding the Sidebar based on client session */}
               <ClientSidebarWrapper />
-              <main className="flex-grow">{children}</main>
+              <main className="grow">{children}</main>
             </div>
             <Footer />
           </QueryProvider>
