@@ -279,4 +279,4 @@ Your runway is your freedom. How long is yours?
 
 ---
 
-*Ready to build your financial runway systematically? Our financial tracking tools help you monitor both your runway and your progress toward extending it, giving you the clarity you need to make strategic life decisions.*
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

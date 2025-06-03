@@ -475,4 +475,4 @@ It's time your tracking system reflected that reality.
 
 ---
 
-*Your financial freedom is too important to build on someone else's platform. Take back control today.*
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

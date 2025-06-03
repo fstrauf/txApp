@@ -1,6 +1,6 @@
 ---
 title: "Beyond Budgeting Apps: Why Most NZ Financial Tools Miss the Point"
-date: "2025-05-27"
+date: "2025-06-02"
 summary: "Why 73% of budgeting app users quit within 3 months, and how thinking about time instead of money changes everything for New Zealand personal finance."
 tags: ["budgeting", "personal finance", "new zealand", "time management", "financial freedom"]
 keywords: ["budgeting app nz", "best budgeting app nz", "personal finance app nz", "expense tracker nz"]
@@ -199,4 +199,4 @@ Choose tools and strategies that honor this truth.
 
 ---
 
-*This article challenges conventional budgeting wisdom based on real data from New Zealand users and international behavioral finance research. Your financial situation is unique - consider this a starting point for your own thinking, not personalized financial advice.*
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

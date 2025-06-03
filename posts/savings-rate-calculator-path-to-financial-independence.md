@@ -360,4 +360,4 @@ What's your target savings rate, and what will it make possible in your life?
 
 ---
 
-*Ready to track and optimize your savings rate systematically? Our financial tools help you monitor your progress, identify optimization opportunities, and stay on track toward your financial independence goals.*
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

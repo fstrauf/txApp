@@ -346,4 +346,4 @@ Your financial data belongs to you. Own it completely.
 
 ---
 
-*Want to supercharge your Google Sheets expense tracker with AI-powered categorization? Check out our automated tools that work alongside your sheets to provide the best of both worlds—privacy and automation.*
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

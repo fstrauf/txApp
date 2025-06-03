@@ -302,3 +302,7 @@ Your financial freedom is too important to rent from someone else's app.
 - [Google Sheets Budget Template: Complete NZ Setup Guide](#)
 - [Financial Privacy: Why Your Bank Data is Worth More Than You Think](#)
 - [The Time Freedom Calculator: Beyond Traditional Budgeting](#)
+
+---
+
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*
