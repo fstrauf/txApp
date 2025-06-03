@@ -1,12 +1,12 @@
 ---
-title: "How to Track Spending Without Selling Your Soul to Big Tech"
-date: "2025-05-27"
+title: "Privacy First Spending Management"
+date: "2025-01-17"
 summary: "Privacy-focused expense tracking methods that keep your financial data secure while still providing valuable insights. Perfect for New Zealanders who value data sovereignty."
 tags: ["expense tracking", "privacy", "data security", "personal finance", "new zealand"]
 keywords: ["expense tracker", "private expense tracking", "financial privacy nz", "expense tracking without bank access"]
 ---
 
-# How to Track Spending Without Selling Your Soul to Big Tech
+# Privacy First Spending Management
 
 **Your financial data is worth more than you think.**
 
@@ -331,6 +331,6 @@ Your financial data belongs to you. Keep it that way.
 
 ---
 
-*This article advocates for financial privacy as a component of long-term financial health. The methods described are educational and based on proven budgeting principles. Your financial situation is unique—adapt these approaches to fit your specific needs and comfort level.*
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*
 
 [Financial Freedom Spreadsheet](/personal-finance)

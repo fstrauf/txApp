@@ -127,4 +127,6 @@ Ask yourself these questions:
 
 If your answers reveal that you're sacrificing valuable time to manual categorization, machine learning isn't just a nice-to-have—it's essential to reclaiming your financial freedom.
 
-*Ready to let machine learning handle your transaction categorization? Our system adapts to your unique spending patterns and gives you back hours every month—without sacrificing accuracy or control.*
+---
+
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

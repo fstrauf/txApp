@@ -166,4 +166,6 @@ And ultimately, isn't that the point of financial automation? Not to have the cl
 
 Your financial life shouldn't demand hours of your attention. It should run smoothly in the background while you focus on living.
 
-*Ready to try advanced bank transaction categorization methods that actually respect your time? Our sentence transformer system learns your specific patterns and gives you back hours each month—without sacrificing accuracy or privacy.*
+---
+
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

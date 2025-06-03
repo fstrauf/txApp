@@ -4,55 +4,66 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState } from "react";
 import { useFeatureFlagEnabled } from 'posthog-js/react';
+import { 
+  CreditCardIcon,
+  ChartBarIcon,
+  BuildingLibraryIcon,
+  DocumentTextIcon,
+  CpuChipIcon,
+  ArrowDownTrayIcon,
+  LinkIcon,
+  KeyIcon,
+  UserIcon
+} from '@heroicons/react/24/outline';
 
 // Define the navigation links for the sidebar
 const sidebarNavItems = [
   {
     title: "Personal Finance",
     href: "/personal-finance",
-    icon: "💳",
+    icon: CreditCardIcon,
   },
   {
     title: "F-You Money Sheet",
     href: "/fuck-you-money-sheet",
-    icon: "📊",
+    icon: ChartBarIcon,
   },
   {
     title: "LunchMoney",
     href: "/lunchmoney",
-    icon: "🍕",
+    icon: BuildingLibraryIcon,
   },
   {
     title: "Blog",
     href: "/blog",
-    icon: "📝",
+    icon: DocumentTextIcon,
   },
   {
     title: "AutoAccountant",
     href: "/auto-accountant",
-    icon: "🤖",
+    icon: CpuChipIcon,
     featureFlag: 'betaFeature'
   },
   {
     title: "Import",
     href: "/import-transactions",
-    icon: "📥",
+    icon: ArrowDownTrayIcon,
     featureFlag: 'betaFeature'
   },
   {
     title: "Try Our API",
     href: "/api-landing",
-    icon: "🔗",
+    icon: LinkIcon,
   },
   {
     title: "API Key",
     href: "/api-key",
-    icon: "🔑",
+    icon: KeyIcon,
   },
   {
     title: "Profile",
     href: "/profile",
-    icon: "👤",
+    icon: UserIcon,
   },
 ];
 
@@ -112,7 +123,7 @@ export function Sidebar() {
                     : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
-                <span className="text-lg flex-shrink-0">{item.icon}</span>
+                <item.icon className="w-5 h-5 flex-shrink-0" />
                 {!isCollapsed && (
                   <span className="ml-3 truncate">{item.title}</span>
                 )}

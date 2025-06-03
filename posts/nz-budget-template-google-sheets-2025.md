@@ -371,4 +371,4 @@ Your financial freedom is too important to rent from someone else's app.
 
 ---
 
-*This template has helped over 500 New Zealanders take control of their finances. Join them today.*
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

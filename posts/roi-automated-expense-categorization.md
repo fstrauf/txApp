@@ -142,4 +142,6 @@ When I reclaimed 80+ hours annually through automation, I didn't just save time�
 
 Are you ready to stop trading irreplaceable hours of your life for a task a machine can do in seconds?
 
-*Want to reclaim 75+ hours annually? Our automated expense categorization adapts to your unique spending patterns and gives you back time that's rightfully yours—without sacrificing accuracy or control.*
+---
+
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

@@ -243,4 +243,4 @@ The goal isn't to hope you never need it. The goal is to never worry about wheth
 
 ---
 
-*Want to track your progress toward your emergency fund goal? Check out our comprehensive financial tracking tools that help you monitor all your financial goals in one place.*
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

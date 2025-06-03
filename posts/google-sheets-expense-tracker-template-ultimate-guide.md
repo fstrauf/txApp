@@ -207,4 +207,4 @@ This expense tracker embodies a simple philosophy: the best financial tools are 
 
 ---
 
-*Looking for even more advanced financial tracking? Check out our automated expense categorization app that works alongside your Google Sheets for the best of both worlds—privacy and automation.*
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation .*

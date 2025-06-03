@@ -98,4 +98,6 @@ The question isn't whether you can afford AI transaction categorization. It's wh
 
 Your time is running out—literally. How many more calendar squares are you willing to color in with "categorizing transactions"?
 
-*Ready to reclaim your time? Try our AI bank transaction categorization solution that gives you back hours each month while improving your financial clarity.*
+---
+
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

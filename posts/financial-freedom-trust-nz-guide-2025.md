@@ -649,4 +649,4 @@ Your financial freedom is too important to leave unprotected and unoptimized.
 
 ---
 
-*The wealthy use trusts not because they're complicated, but because they work. It's time you discovered why.*
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

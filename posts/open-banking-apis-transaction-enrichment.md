@@ -216,4 +216,6 @@ Open banking provides the access. Transaction enrichment APIs provide the intell
 
 Your financial life shouldn't demand hours of your attention. It should run smoothly in the background while you focus on living.
 
-*Want to give your users back hours each month? Our transaction data enrichment API transforms raw banking data into intelligible financial information—without sacrificing privacy or control.*
+---
+
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

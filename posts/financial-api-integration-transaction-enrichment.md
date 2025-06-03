@@ -301,4 +301,6 @@ And ultimately, isn't that the point? Not to have the cleverest feature set, but
 
 Your financial app shouldn't demand hours of user attention for basic functionality. It should run intelligently in the background while users focus on living.
 
-*Want to transform your financial app from a time sink to a time saver? Our transaction enrichment API integrates in under a day of development time and gives your users back hours each month.*
+---
+
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

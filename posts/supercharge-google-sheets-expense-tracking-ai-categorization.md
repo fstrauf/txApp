@@ -102,7 +102,7 @@ This approach requires programming knowledge and will involve setting up API con
 
 To help you get started, I've created a template that's already set up for AI-powered expense tracking:
 
-[Access the Template Here](https://docs.google.com/spreadsheets/d/template-id/copy)
+[Access the Template Here](/fuck-you-money-sheet)
 
 This template includes:
 
@@ -182,4 +182,4 @@ Ready to transform your expense tracking experience? [Try Expense Sorted](https:
 
 ---
 
-*Have questions about implementing AI categorization in your Google Sheets expense tracking system? Leave a comment below or reach out directly for personalized advice!*
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

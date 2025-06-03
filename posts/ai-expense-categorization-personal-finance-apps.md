@@ -241,4 +241,6 @@ And ultimately, isn't that the point? Not to have the cleverest financial techno
 
 Your financial life shouldn't demand hours of your attention. It should run intelligently in the background while you focus on living.
 
-*Want to transform your personal finance app from a time sink to a time saver? Our AI-powered expense categorization API delivers 92%+ accuracy out of the box, with continuous personalized learning that improves over time.*
+---
+
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

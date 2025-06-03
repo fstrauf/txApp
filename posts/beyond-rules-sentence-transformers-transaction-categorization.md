@@ -1,6 +1,6 @@
 ---
 title: "Beyond Rules: How Sentence Transformers Are Revolutionizing Transaction Categorization"
-date: "2025-04-02"
+date: "2025-03-09"
 summary: "Explore how sentence transformers revolutionize bank transaction categorization, offering better accuracy and flexibility than traditional rule-based systems."
 ---
 
@@ -127,4 +127,4 @@ Ready to move beyond rules? [Try Expense Sorted today](https://expensesorted.com
 
 ---
 
-*Wondering how Expense Sorted might work with your specific financial setup? Leave a comment below or reach out directly, and I'll be happy to help!*
+*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*
