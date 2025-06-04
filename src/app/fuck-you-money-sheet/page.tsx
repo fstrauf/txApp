@@ -24,26 +24,26 @@ export const metadata: Metadata = {
 
 export default function FinancialFreedomSheet() {
   return (
-    <div className="min-h-screen bg-background-default">
+    <div className="min-h-screen bg-background-default overflow-x-hidden">
       <main className="container mx-auto px-4 py-8 md:py-16 max-w-7xl">
-        <div className="bg-surface rounded-2xl shadow-soft p-4 md:p-8 space-y-6 md:space-y-8">
+        <div className="bg-surface rounded-2xl shadow-soft p-4 md:p-8 space-y-6 md:space-y-8 max-w-full overflow-x-hidden">
           <PageHeader title="Financial Freedom - Cost of Living Tracking" />
 
           {/* Add-on Cross-Promotion Banner */}
-          <div className="max-w-3xl mx-auto bg-linear-to-r from-primary/10 to-secondary/10 rounded-xl p-4 border border-primary/20 mb-6">
-            <div className="flex flex-row items-center justify-between gap-4">
+          <div className="max-w-3xl mx-auto bg-linear-to-r from-primary/10 to-secondary/10 rounded-xl p-4 border border-primary/20 mb-6 overflow-hidden">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center">
-                <div className="bg-white p-2 rounded-full shadow-sm mr-4">
+                <div className="bg-white p-2 rounded-full shadow-sm mr-4 flex-shrink-0">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                <div className="max-w-md">
+                <div className="max-w-full sm:max-w-md">
                   <h3 className="font-semibold text-gray-900">Supercharge Your Spreadsheet</h3>
                   <p className="text-sm text-gray-700">Automatically categorize transactions in seconds with our Google Sheets Add-on</p>
                 </div>
               </div>
-              <AddOnButton size="md" variant="primary" text="Install Add-on" className="whitespace-nowrap shrink-0" />
+              <AddOnButton size="md" variant="primary" text="Install Add-on" className="whitespace-nowrap shrink-0 w-full sm:w-auto" />
             </div>
           </div>
 
@@ -140,7 +140,7 @@ function ImageComponent() {
       width={1306}
       height={1230}
       src="/f-you-money-expense-vs-savings.png"
-      className="w-full"
+      className="w-full h-auto max-w-full"
       alt="Financial Freedom Spreadsheet"
       priority={true}
     />

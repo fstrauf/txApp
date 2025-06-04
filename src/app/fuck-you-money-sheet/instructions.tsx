@@ -12,10 +12,10 @@ export default function Instructions() {
       <p className="text-gray-700">Hop in and make a copy.</p>
       <div className="mt-6">
         <Image
-          width={760 / 2}
-          height={546 / 2}
+          width={380}
+          height={273}
           src="/f-you-make-a-copy.png"
-          className="rounded-md shadow-lg"
+          className="rounded-md shadow-lg w-full h-auto max-w-full"
           alt="Copy the template sheet"
         />
       </div>
@@ -33,10 +33,10 @@ export default function Instructions() {
       </p>
       <div className="mt-6">
         <Image
-          width={1306 / 1.5}
-          height={1230 / 1.5}
+          width={1306}
+          height={1230}
           src="/f-you-money-expense-sorted-extension.png"
-          className="rounded-md shadow-lg"
+          className="rounded-md shadow-lg w-full h-auto max-w-full"
           alt="Copy the template sheet"
         />
       </div>
@@ -50,7 +50,7 @@ export default function Instructions() {
               width={1306}
               height={1229}
               src="/f-you-money-expense-detail.png"
-              className="rounded-md shadow-lg"
+              className="rounded-md shadow-lg w-full h-auto max-w-full"
               alt="Add your income to the sheet"
               sizes="(max-width: 768px) 100vw, 768px"
               quality={100}
@@ -66,7 +66,7 @@ export default function Instructions() {
               width={929}
               height={327}
               src="/f-you-money-new_transactions.png"
-              className="rounded-md shadow-lg"
+              className="rounded-md shadow-lg w-full h-auto max-w-full"
               alt="Add new expenses"
             />
           </div>
@@ -79,7 +79,7 @@ export default function Instructions() {
               width={865}
               height={372}
               src="/f-you-money-monthly-expenses.png"
-              className="rounded-md shadow-lg"
+              className="rounded-md shadow-lg w-full h-auto max-w-full"
               alt="Copy over a new row in the Monthly Expense tab and fill in the new month."
             />
           </div>
@@ -91,7 +91,7 @@ export default function Instructions() {
               width={1200}
               height={1076}
               src="/f-you-money-expense-vs-savings.png"
-              className="rounded-md shadow-lg"
+              className="rounded-md shadow-lg w-full h-auto max-w-full"
               alt="Review spending, saving, and run-rate in the Expenses vs. Saving tab."
               sizes="(max-width: 768px) 100vw, 768px"
               quality={100}
