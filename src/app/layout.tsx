@@ -6,6 +6,7 @@ import Footer from "./components/Footer.js";
 import { SessionProvider } from "@/app/providers";
 import QueryProvider from "@/providers/QueryProvider";
 import { ClientSidebarWrapper } from "./components/ClientSidebarWrapper";
+import { MobileNavigationProvider } from "@/contexts/MobileNavigationContext";
 import type { Metadata } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -50,23 +51,24 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Keep server session check if needed elsewhere, but not for Sidebar rendering
-  // const session = await getServerSession(authConfig);
-
+export default async function RootLayout({ 
+  children 
+}: { 
+  children: React.ReactNode 
+}) {
   return (
     <html lang="en">
       <body className={`${inter.className} flex flex-col min-h-screen`}>
         <SessionProvider>
           <QueryProvider>
-            <Header />
-            <div className="flex flex-1">
-              {/* Render the client wrapper unconditionally */}
-              {/* It will handle showing/hiding the Sidebar based on client session */}
-              <ClientSidebarWrapper />
-              <main className="grow">{children}</main>
-            </div>
-            <Footer />
+            <MobileNavigationProvider>
+              <Header />
+              <div className="flex flex-1">
+                <ClientSidebarWrapper />
+                <main className="grow">{children}</main>
+              </div>
+              <Footer />
+            </MobileNavigationProvider>
           </QueryProvider>
         </SessionProvider>
       </body>

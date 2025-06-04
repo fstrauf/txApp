@@ -3,9 +3,20 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { NavBarButtons } from "@/app/components/nav-bar-buttons";
+import { MobileMenu } from "@/components/navigation/MobileMenu";
+import { useNavigationConfig } from "@/hooks/useNavigationConfig";
+import { useMobileNavigation } from "@/contexts/MobileNavigationContext";
 
 export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigationConfig = useNavigationConfig();
+  const { setIsMobileMenuOpen: setGlobalMobileMenuOpen } = useMobileNavigation();
+
+  const handleMobileMenuToggle = () => {
+    const newState = !isMobileMenuOpen;
+    setIsMobileMenuOpen(newState);
+    setGlobalMobileMenuOpen(newState);
+  };
 
   return (
     <header className="w-full bg-surface shadow-soft sticky top-0 z-50">
@@ -21,33 +32,39 @@ export default function Header() {
               priority
             />
           </Link>
-          <button className="sm:hidden block text-gray-600 hover:text-primary transition-colors" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            <svg className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-              {isMenuOpen ? (
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              ) : (
+          
+          {/* Mobile hamburger menu - always show on mobile */}
+          {navigationConfig.showMobileHamburger && (
+            <button 
+              className="sm:hidden block text-gray-600 hover:text-primary transition-colors" 
+              onClick={handleMobileMenuToggle}
+            >
+              <svg className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
                 <path
                   fillRule="evenodd"
                   d="M3 5h14a1 1 0 010 2H3a1 1 0 110-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 110-2z"
                   clipRule="evenodd"
                 />
-              )}
-            </svg>
-          </button>
+              </svg>
+            </button>
+          )}
         </div>
+        
+        {/* Desktop navigation - unchanged */}
         <nav className="sm:flex hidden">
           <NavBarButtons />
         </nav>
-        {isMenuOpen && (
-          <nav className="sm:hidden w-full mt-8 pb-4">
-            <NavBarButtons />
-          </nav>
-        )}
       </div>
+
+      {/* Mobile Menu Component */}
+      <MobileMenu
+        isOpen={isMobileMenuOpen}
+        onClose={() => {
+          setIsMobileMenuOpen(false);
+          setGlobalMobileMenuOpen(false);
+        }}
+        menuItems={navigationConfig.mobileMenuItems}
+      />
     </header>
   );
 }

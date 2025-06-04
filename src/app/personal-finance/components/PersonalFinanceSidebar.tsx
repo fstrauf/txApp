@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
+import { useMobileNavigation } from '@/contexts/MobileNavigationContext';
 import type { Screen } from '../hooks/useScreenNavigation';
 import { 
   HandRaisedIcon, 
@@ -139,8 +140,8 @@ const categoryIcons = {
 export function PersonalFinanceSidebar() {
   const { currentScreen, goToScreen } = useScreenNavigation();
   const { userData } = usePersonalFinanceStore();
+  const { isMobileMenuOpen, setIsMobileMenuOpen } = useMobileNavigation();
   const [isCollapsed, setIsCollapsed] = useState(true); // Start collapsed by default
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Group navigation items by category
   const groupedItems = navigationItems.reduce((acc, item) => {
@@ -172,21 +173,11 @@ export function PersonalFinanceSidebar() {
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white border border-gray-200 shadow-sm"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-
       {/* Mobile Overlay */}
-      {isMobileOpen && (
+      {isMobileMenuOpen && (
         <div 
           className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => setIsMobileOpen(false)}
+          onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
@@ -194,7 +185,7 @@ export function PersonalFinanceSidebar() {
       <aside className={`
         fixed md:static left-0 top-0 h-full bg-white border-r border-gray-200 shadow-lg z-50 
         transition-all duration-300
-        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         ${isCollapsed ? 'md:w-16 w-80' : 'md:w-80 w-80'}
       `}>
         <div className="flex flex-col h-full">
@@ -210,7 +201,7 @@ export function PersonalFinanceSidebar() {
               <div className="flex items-center gap-2">
                 {/* Mobile Close Button */}
                 <button
-                  onClick={() => setIsMobileOpen(false)}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className="md:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -294,7 +285,7 @@ export function PersonalFinanceSidebar() {
                             onClick={() => {
                               if (isAccessible) {
                                 goToScreen(item.screen);
-                                setIsMobileOpen(false); // Close mobile menu on navigation
+                                setIsMobileMenuOpen(false); // Close mobile menu on navigation
                               }
                             }}
                             disabled={!isAccessible}
