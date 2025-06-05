@@ -48,7 +48,8 @@
   /* background-color: theme('colors.gray.100'); */
   /* padding: 1em; */
   /* border-radius: 0.375rem; */
-  /* overflow-x: auto; */
+  overflow-x: auto; /* Ensure this is active */
+  max-width: 100%; /* Added for responsiveness */
 }
 
 .blog-content code {
@@ -67,6 +68,7 @@
   border-collapse: collapse;
   font-size: 0.9em;
   border: 1px solid #e5e7eb; /* Added a border to the table itself */
+  table-layout: fixed; /* Added for fixed table layout */
 }
 
 .blog-content th,
