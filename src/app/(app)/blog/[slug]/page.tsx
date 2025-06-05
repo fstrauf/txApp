@@ -1,6 +1,7 @@
 import { getAllPostSlugs, getPostData, PostData } from '@/lib/posts';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import IntegrationsToast from '@/components/shared/IntegrationsToast';
 import { Metadata } from 'next';
 
 // This function is needed for Next.js to know which slugs are available at build time
@@ -163,6 +164,7 @@ export default async function PostPage({ params }: { params: { slug: string } })
           </Link>
         </div>
       </article>
+      <IntegrationsToast />
     </div>
   );
 } 
