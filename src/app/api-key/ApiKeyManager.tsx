@@ -148,7 +148,10 @@ export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps)
   const getUsageInfo = () => {
     if (!accountInfo) return null;
     
-    switch (accountInfo.subscriptionPlan) {
+    // If subscription is canceled, treat as FREE regardless of plan
+    const effectivePlan = (accountInfo.subscriptionStatus === 'CANCELED') ? 'FREE' : accountInfo.subscriptionPlan;
+    
+    switch (effectivePlan) {
       case 'SILVER':
         return {
           limit: 20,
@@ -173,26 +176,30 @@ export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps)
   const getSubscriptionBadge = () => {
     if (!accountInfo) return null;
     
-    const plan = accountInfo.subscriptionPlan || 'FREE';
+    // If subscription is canceled, treat as FREE regardless of plan
+    const effectivePlan = (accountInfo.subscriptionStatus === 'CANCELED') ? 'FREE' : (accountInfo.subscriptionPlan || 'FREE');
     const status = accountInfo.subscriptionStatus || '';
     
-    console.log('Subscription Badge - Plan:', plan, 'Status:', status);
+    console.log('Subscription Badge - Plan:', effectivePlan, 'Status:', status, 'Original Plan:', accountInfo.subscriptionPlan);
     
     let badgeColor = 'bg-gray-100 text-gray-800';
     
-    if (plan === 'SILVER') {
+    if (effectivePlan === 'SILVER') {
       badgeColor = 'bg-blue-100 text-blue-800';
-    } else if (plan === 'GOLD') {
+    } else if (effectivePlan === 'GOLD') {
       badgeColor = 'bg-yellow-100 text-yellow-800';
     }
     
-    if (status === 'TRIALING') {
+    if (status === 'ACTIVE' && accountInfo.trialEndsAt && new Date(accountInfo.trialEndsAt).getTime() > Date.now()) {
       badgeColor = 'bg-purple-100 text-purple-800';
-    } else if (status === 'PAST_DUE') {
-      badgeColor = 'bg-red-100 text-red-800';
+      return (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${badgeColor}`}>
+          {effectivePlan} (Trial)
+        </span>
+      );
     }
     
-    if (plan === 'FREE' && !status) {
+    if (effectivePlan === 'FREE' && !status) {
       return (
         <span className={`px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}>
           Free Plan
@@ -202,7 +209,7 @@ export default function ApiKeyManager({ userId, onSuccess }: ApiKeyManagerProps)
     
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${badgeColor}`}>
-        {plan}{status === 'TRIALING' ? ' (Trial)' : ''}
+        {effectivePlan}
       </span>
     );
   };

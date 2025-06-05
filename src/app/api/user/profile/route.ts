@@ -23,8 +23,6 @@ async function handler(request: NextRequest, payload: JwtPayload) {
         stripeSubscriptionId: true,
         api_key: true,
         lunchMoneyApiKey: true,
-        subscriptionPlan: true,
-        subscriptionStatus: true,
         appBetaOptIn: true,
       },
       where: eq(users.id, userId),
@@ -34,20 +32,48 @@ async function handler(request: NextRequest, payload: JwtPayload) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Get all subscriptions for the user and prioritize them correctly
+    // Priority: ACTIVE paid subscriptions > TRIALING > others > most recent by updatedAt
+    const allSubscriptions = await db.query.subscriptions.findMany({
+      columns: {
+        status: true,
+        plan: true,
+        billingCycle: true,
+        cancelAtPeriodEnd: true,
+        currentPeriodEnd: true,
+        trialEndsAt: true,
+      },
+      where: eq(subscriptions.userId, userId),
+      orderBy: (subscriptions, { desc }) => [desc(subscriptions.updatedAt)],
+    });
+
+    // Find the best subscription based on priority
     let subscriptionResult = null;
-    if (userResult.stripeSubscriptionId) {
-      // Fetch the corresponding subscription details
-      subscriptionResult = await db.query.subscriptions.findFirst({
-        columns: {
-          status: true,
-          plan: true,
-          billingCycle: true,
-          cancelAtPeriodEnd: true,
-          currentPeriodEnd: true,
-        },
-        where: eq(subscriptions.stripeSubscriptionId, userResult.stripeSubscriptionId),
-        orderBy: (subscriptions, { desc }) => [desc(subscriptions.createdAt)],
-      });
+    if (allSubscriptions.length > 0) {
+      // First, look for ACTIVE paid subscriptions
+      const activeSubscriptions = allSubscriptions.filter(sub => 
+        sub.status === 'ACTIVE' && 
+        sub.currentPeriodEnd && 
+        new Date(sub.currentPeriodEnd) > new Date()
+      );
+      
+      if (activeSubscriptions.length > 0) {
+        subscriptionResult = activeSubscriptions[0]; // Take the first ACTIVE one
+      } else {
+        // If no ACTIVE, look for TRIALING
+        const trialingSubscriptions = allSubscriptions.filter(sub => 
+          sub.status === 'TRIALING' && 
+          sub.trialEndsAt && 
+          new Date(sub.trialEndsAt) > new Date()
+        );
+        
+        if (trialingSubscriptions.length > 0) {
+          subscriptionResult = trialingSubscriptions[0]; // Take the first TRIALING one
+        } else {
+          // Otherwise, take the most recent one
+          subscriptionResult = allSubscriptions[0];
+        }
+      }
     }
     
     // Combine user and subscription data

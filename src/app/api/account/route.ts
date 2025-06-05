@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
+import { SubscriptionService } from '@/lib/subscriptionService';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,19 +14,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    console.log(`Fetching API key for user ID: ${userId}`);
+    console.log(`Fetching account data for user ID: ${userId}`);
 
     // Find user by userId using Drizzle
-    const result = await db
+    const userResult = await db
       .select()
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
 
-    console.log(`Found ${result.length} user records`);
+    if (userResult.length === 0) {
+      return NextResponse.json(null);
+    }
+
+    const user = userResult[0];
+
+    // Get the user's current subscription using SubscriptionService
+    const subscription = await SubscriptionService.getCurrentSubscription(userId);
+
+    // Combine user data with subscription data for backward compatibility
+    const accountData = {
+      ...user,
+      // Add subscription fields for backward compatibility
+      subscriptionPlan: subscription?.plan || 'FREE',
+      subscriptionStatus: subscription?.status || null,
+      billingCycle: subscription?.billingCycle || null,
+      trialEndsAt: subscription?.trialEndsAt || null,
+      currentPeriodEndsAt: subscription?.currentPeriodEnd || null,
+    };
+
+    console.log(`Found user with subscription plan: ${accountData.subscriptionPlan}`);
     
-    // Return all user data or null if not found
-    return NextResponse.json(result.length > 0 ? result[0] : null);
+    return NextResponse.json(accountData);
   } catch (error) {
     console.error('Error fetching user account:', error);
     return NextResponse.json({ 

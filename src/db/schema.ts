@@ -17,11 +17,11 @@ import {
 // App beta opt in status enum
 export const appBetaOptInStatusEnum = pgEnum('appBetaOptInStatus', ['OPTED_IN', 'DISMISSED']);
 
-// Subscription plan enum
-export const subscriptionPlanEnum = pgEnum('subscriptionPlan', ['FREE', 'SILVER', 'GOLD']);
+// Subscription plan enum - simplified
+export const subscriptionPlanEnum = pgEnum('subscriptionPlan', ['FREE', 'TRIAL', 'SILVER', 'GOLD']);
 
-// Subscription status enum
-export const subscriptionStatusEnum = pgEnum('subscriptionStatus', ['ACTIVE', 'CANCELED', 'PAST_DUE', 'TRIALING']);
+// Subscription status enum - simplified
+export const subscriptionStatusEnum = pgEnum('subscriptionStatus', ['ACTIVE', 'CANCELED', 'EXPIRED']);
 
 // Billing cycle enum
 export const billingCycleEnum = pgEnum('billingCycle', ['MONTHLY', 'ANNUAL']);
@@ -42,18 +42,13 @@ export const users = pgTable('users', {
   passwordUpdatedAt: timestamp('password_updated_at', { withTimezone: true }),
   resetToken: text('resetToken'),
   resetTokenExpiry: timestamp('resetTokenExpiry', { mode: 'date', withTimezone: true }),
-  // Subscription fields
+  // Keep only API key and Stripe IDs for reference
   api_key: text('api_key').unique(),
-  subscriptionPlan: subscriptionPlanEnum('subscriptionPlan').default('FREE'),
-  subscriptionStatus: subscriptionStatusEnum('subscriptionStatus'),
-  billingCycle: billingCycleEnum('billingCycle'),
   stripeCustomerId: text('stripeCustomerId'),
   stripeSubscriptionId: text('stripeSubscriptionId'),
-  trialEndsAt: timestamp('trialEndsAt', { mode: 'date', withTimezone: true }),
-  currentPeriodEndsAt: timestamp('currentPeriodEndsAt', { mode: 'date', withTimezone: true }),
+  // Keep monthly categorizations and beta opt-in as they're user-specific
   monthlyCategorizations: integer('monthlyCategorizations').default(0),
   categoriesResetDate: timestamp('categoriesResetDate', { mode: 'date', withTimezone: true }),
-  // Add beta opt-in status directly to users table
   appBetaOptIn: appBetaOptInStatusEnum('appBetaOptIn'),
 }, (table) => {
   return {
@@ -109,25 +104,35 @@ export const accounts = pgTable(
 );
 
 // Add subscriptions table to track history of subscriptions
+// Simplified subscriptions table - remove accountId dependency, focus on essentials
 export const subscriptions = pgTable('subscriptions', {
   id: text('id').primaryKey().notNull().default(sql`gen_random_uuid()`),
   userId: text('userId')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  accountId: text('accountId')
-    .notNull()
-    .references(() => accounts.id, { onDelete: 'cascade' }),
   status: subscriptionStatusEnum('status').notNull(),
   plan: subscriptionPlanEnum('plan').notNull(),
   billingCycle: billingCycleEnum('billingCycle').notNull(),
+  
+  // Essential dates
   currentPeriodStart: timestamp('currentPeriodStart', { mode: 'date', withTimezone: true }).notNull(),
   currentPeriodEnd: timestamp('currentPeriodEnd', { mode: 'date', withTimezone: true }).notNull(),
-  cancelAtPeriodEnd: boolean('cancelAtPeriodEnd').default(false),
-  stripeSubscriptionId: text('stripeSubscriptionId'),
+  trialEndsAt: timestamp('trialEndsAt', { mode: 'date', withTimezone: true }),
+  
+  // Stripe integration
+  stripeSubscriptionId: text('stripeSubscriptionId').unique(),
   stripeCustomerId: text('stripeCustomerId'),
+  
+  // Simple flags
+  cancelAtPeriodEnd: boolean('cancelAtPeriodEnd').default(false),
+  
   createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
-});
+}, (subscription) => ({
+  // Ensure one active subscription per user
+  userIdIndex: index('subscriptions_userId_idx').on(subscription.userId),
+  stripeSubscriptionIdIndex: index('subscriptions_stripeSubscriptionId_idx').on(subscription.stripeSubscriptionId),
+}));
 
 export const sessions = pgTable('sessions', {
   id: text('id').notNull(), // Keep the id field, but it's NOT the primary key
@@ -369,7 +374,6 @@ export const embeddingsRelations = relations(embeddings, ({ one }) => ({
 
 export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   user: one(users, { fields: [subscriptions.userId], references: [users.id] }),
-  account: one(accounts, { fields: [subscriptions.accountId], references: [accounts.id] }),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({

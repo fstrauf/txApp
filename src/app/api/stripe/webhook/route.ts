@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleWebhookEvent } from '@/lib/stripe';
 import { db } from '@/db';
-import { eq, and, sql } from 'drizzle-orm';
-import { users, accounts, subscriptions, billingCycleEnum, subscriptionPlanEnum, subscriptionStatusEnum } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { users } from '@/db/schema';
+import { SubscriptionService } from '@/lib/subscriptionService';
 import Stripe from 'stripe';
 
 export async function POST(request: NextRequest) {
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
     const event = await handleWebhookEvent(rawBody, signature);
 
     // Handle the specific event types
+    console.log(`Processing webhook event: ${event.type}`);
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -31,73 +33,35 @@ export async function POST(request: NextRequest) {
         // Make sure this is a subscription checkout
         if (session.mode !== 'subscription') break;
         
-        // Find the customer and subscription data
-        const customerId = session.customer as string;
-        const subscriptionId = session.subscription as string;
-        
-        // Get plan and billing cycle from session metadata
-        const plan = (session.metadata?.plan || 'silver').toUpperCase();
-        const billingCycle = (session.metadata?.billingCycle || 'monthly').toUpperCase();
-        
         // Extract the userId from client_reference_id
         const userId = session.client_reference_id;
+        const customerId = session.customer as string;
+        const subscriptionId = session.subscription as string;
 
         if (!userId) {
           console.error("Missing userId in checkout.session.completed event");
           return NextResponse.json({ error: "Missing user ID" }, { status: 400 });
         }
         
-        // First find user with this Stripe customer ID
-        let userToUpdate = await db.query.users.findFirst({
-          where: eq(users.stripeCustomerId, customerId)
-        });
-        
-        if (!userToUpdate) {
-          // If not found directly in user table, try looking up through accounts
-          const userAccount = await db.query.accounts.findFirst({
-            columns: {
-              userId: true,
-            },
-            with: {
-              user: true
-            },
-            where: eq(accounts.userId, accounts.userId) // Placeholder - will be fixed in more comprehensive solution
-          });
-          
-          if (!userAccount) {
-            console.error(`No user found with Stripe customer ID: ${customerId}`);
-            break;
-          }
-          
-          userToUpdate = userAccount.user;
-        }
-        
-        // Update user's subscription information
+        // Update user's Stripe IDs for reference
         await db
           .update(users)
           .set({
-            subscriptionPlan: plan as any,
-            subscriptionStatus: 'TRIALING' as any,
-            billingCycle: billingCycle as any,
             stripeCustomerId: customerId,
             stripeSubscriptionId: subscriptionId,
-            // For trials, we'll set these during the subscription created/updated events
           })
-          .where(eq(users.id, userToUpdate.id));
+          .where(eq(users.id, userId));
         
-        console.log(`Updated user ${userToUpdate.id} with subscription ${subscriptionId}`);
+        console.log(`Updated user ${userId} with Stripe IDs`);
         break;
       }
-      
-      case 'customer.subscription.created':
+       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         
         // Find user by Stripe customer ID 
         const customerId = subscription.customer as string;
-        
-        // Look up user directly
-        let userToUpdate = await db.query.users.findFirst({
+        const userToUpdate = await db.query.users.findFirst({
           where: eq(users.stripeCustomerId, customerId)
         });
         
@@ -105,94 +69,98 @@ export async function POST(request: NextRequest) {
           console.error(`No user found with Stripe customer ID: ${customerId}`);
           break;
         }
-        
-        // Extract the subscription metadata
-        const plan = ((subscription.metadata?.plan || 'silver') as string).toUpperCase();
-        const billingCycle = ((subscription.metadata?.billingCycle || 'monthly') as string).toUpperCase();
 
-        // Determine the subscription status
-        let status: string;
-        switch (subscription.status) {
-          case 'trialing':
-            status = 'TRIALING';
-            break;
-          case 'active':
-            status = 'ACTIVE';
-            break;
-          case 'past_due':
-            status = 'PAST_DUE';
-            break;
-          case 'canceled':
-            status = 'CANCELED';
-            break;
-          default:
-            status = 'ACTIVE';
-        }
-        
-        // Get current timestamp and format for database
-        const now = new Date();
-        
-        // Update user with subscription details
+        // Update user's Stripe subscription ID for reference
         await db
           .update(users)
           .set({
-            subscriptionPlan: plan as any,
-            subscriptionStatus: status as any,
-            billingCycle: billingCycle as any,
-            stripeCustomerId: customerId,
             stripeSubscriptionId: subscription.id,
-            trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
-            currentPeriodEndsAt: new Date(subscription.current_period_end * 1000),
           })
           .where(eq(users.id, userToUpdate.id));
         
-        // Create/update a record in the subscriptions table
-        const existingSubscription = await db.query.subscriptions.findFirst({
-          where: eq(subscriptions.stripeSubscriptionId, subscription.id)
-        });
+        // Determine the subscription plan from the actual Stripe Price ID
+        let plan: 'GOLD' | 'SILVER' = 'GOLD'; // Default to GOLD
+        let billingCycle: 'MONTHLY' | 'ANNUAL' = 'MONTHLY'; // Default to MONTHLY
         
-        if (existingSubscription) {
-          // Update existing subscription record
-          await db
-            .update(subscriptions)
-            .set({
-              status: status as any,
-              plan: plan as any,
-              billingCycle: billingCycle as any,
-              currentPeriodStart: new Date(subscription.current_period_start * 1000),
-              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-              cancelAtPeriodEnd: subscription.cancel_at_period_end,
-              updatedAt: now
-            })
-            .where(eq(subscriptions.id, existingSubscription.id));
-        } else {
-          // Find a valid account for this user
-          const userAccount = await db.query.accounts.findFirst({
-            where: eq(accounts.userId, userToUpdate.id)
+        if (subscription.items.data.length > 0) {
+          const priceId = subscription.items.data[0].price.id;
+          const priceAmount = subscription.items.data[0].price.unit_amount;
+          const interval = subscription.items.data[0].price.recurring?.interval;
+          
+          console.log(`[Webhook] Subscription details:`, {
+            priceId,
+            priceAmount,
+            priceAmountFormatted: priceAmount ? `$${(priceAmount / 100).toFixed(2)}` : 'null',
+            currency: subscription.items.data[0].price.currency,
+            interval
           });
           
-          if (userAccount) {
-            // Create a new subscription record only if we found a valid account
-            await db.insert(subscriptions).values({
-              userId: userToUpdate.id,
-              accountId: userAccount.id,
-              status: status as any,
-              plan: plan as any,
-              billingCycle: billingCycle as any,
-              currentPeriodStart: new Date(subscription.current_period_start * 1000),
-              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-              cancelAtPeriodEnd: subscription.cancel_at_period_end,
-              stripeSubscriptionId: subscription.id,
-              stripeCustomerId: customerId,
-              createdAt: now,
-              updatedAt: now
-            });
-          } else {
-            console.log(`Skipping subscription record creation - no valid account found for user ${userToUpdate.id}`);
+          // Map based on actual Stripe Price IDs from environment variables
+          switch (priceId) {
+            case process.env.STRIPE_SILVER_MONTHLY_PRICE_ID:
+              plan = 'SILVER';
+              billingCycle = 'MONTHLY';
+              break;
+            case process.env.STRIPE_SILVER_ANNUAL_PRICE_ID:
+              plan = 'SILVER';
+              billingCycle = 'ANNUAL';
+              break;
+            case process.env.STRIPE_GOLD_MONTHLY_PRICE_ID:
+              plan = 'GOLD';
+              billingCycle = 'MONTHLY';
+              break;
+            case process.env.STRIPE_GOLD_ANNUAL_PRICE_ID:
+              plan = 'GOLD';
+              billingCycle = 'ANNUAL';
+              break;
+            default:
+              console.warn(`[Webhook] Unknown price ID: ${priceId}, defaulting to GOLD MONTHLY`);
+              plan = 'GOLD';
+              billingCycle = 'MONTHLY';
           }
+          
+          console.log(`[Webhook] Mapped price ID ${priceId} to plan: ${plan}, billing: ${billingCycle}`);
         }
         
-        console.log(`Updated subscription information for user ${userToUpdate.id}`);
+        // Map Stripe status to our status enum
+        let status: 'active' | 'canceled' | 'trialing' = 'active';
+        switch (subscription.status) {
+          case 'trialing':
+          case 'active':
+            status = 'active';
+            break;
+          case 'canceled':
+          case 'unpaid':
+          case 'incomplete_expired':
+          case 'past_due':
+            status = 'canceled';
+            break;
+          default:
+            status = 'active';
+        }
+
+        // For new subscriptions, create a subscription record
+        if (event.type === 'customer.subscription.created') {
+          await SubscriptionService.createSubscription({
+            userId: userToUpdate.id,
+            plan,
+            billingCycle, // Use the billingCycle we determined above
+            stripeSubscriptionId: subscription.id,
+            stripeCustomerId: customerId,
+            trialDays: subscription.trial_end ? Math.ceil((subscription.trial_end * 1000 - Date.now()) / (1000 * 60 * 60 * 24)) : 0,
+          });
+          console.log(`[Webhook] Created new ${plan} ${billingCycle} subscription for user ${userToUpdate.id}`);
+        } else {
+          // For updates, use updateFromStripe with the correct signature
+          await SubscriptionService.updateFromStripe(subscription.id, {
+            status,
+            currentPeriodStart: new Date(subscription.current_period_start * 1000),
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : undefined,
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          });
+          console.log(`Updated subscription for user ${userToUpdate.id} via SubscriptionService`);
+        }
         break;
       }
       
@@ -204,41 +172,33 @@ export async function POST(request: NextRequest) {
           where: eq(users.stripeSubscriptionId, subscription.id)
         });
         
-        if (!userToUpdate) {
-          console.error(`No user found with Stripe subscription ID: ${subscription.id}`);
-          break;
-        }
-        
-        // Reset the user's subscription and remove API key
-        await db
-          .update(users)
-          .set({
-            subscriptionPlan: 'FREE' as any,
-            subscriptionStatus: 'CANCELED' as any,
-            api_key: null, // Remove the API key
-            // Keep the customer ID for future subscriptions
-          })
-          .where(eq(users.id, userToUpdate.id));
-        
-        // Update the subscription record if it exists
-        const existingSubscription = await db.query.subscriptions.findFirst({
-          where: eq(subscriptions.stripeSubscriptionId, subscription.id)
-        });
-        
-        if (existingSubscription) {
+        if (userToUpdate) {
+          // Use SubscriptionService to handle cancellation with correct signature
+          await SubscriptionService.updateFromStripe(subscription.id, {
+            status: 'canceled',
+            currentPeriodStart: new Date(subscription.current_period_start * 1000),
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            cancelAtPeriodEnd: true,
+          });
+          
+          // Remove API key from user since subscription is canceled
           await db
-            .update(subscriptions)
+            .update(users)
             .set({
-              status: 'CANCELED' as any,
-              cancelAtPeriodEnd: true,
-              updatedAt: new Date()
+              api_key: null,
             })
-            .where(eq(subscriptions.id, existingSubscription.id));
+            .where(eq(users.id, userToUpdate.id));
+          
+          console.log(`Subscription ${subscription.id} canceled for user ${userToUpdate.id}`);
+        } else {
+          console.error(`No user found with Stripe subscription ID: ${subscription.id}`);
         }
-        
-        console.log(`Subscription ${subscription.id} has been canceled for user ${userToUpdate.id}`);
         break;
       }
+      
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+        break;
     }
     
     return NextResponse.json({ received: true });

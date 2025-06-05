@@ -148,6 +148,34 @@
       "when": 1748559475155,
       "tag": "0020_wakeful_mimic",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1749071927900,
+      "tag": "0021_fluffy_korath",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1749085426556,
+      "tag": "0022_nappy_gorilla_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1749088355761,
+      "tag": "0023_fat_doorman",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1749088463530,
+      "tag": "0024_modern_warpath",
+      "breakpoints": true
     }
   ]
 }

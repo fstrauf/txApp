@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { SubscriptionManager } from '@/lib/subscriptionManager';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,39 +26,53 @@ export async function POST(request: NextRequest) {
     if (existingUser.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    // Use SubscriptionManager to handle subscription updates
+    let subscription;
     
-    // Update user with subscription details
-    const updateValues: any = {};
-    
-    if (subscriptionStatus) {
-      if (subscriptionStatus === 'RESET') {
-        // Special case to reset subscription status to null
-        updateValues.subscriptionStatus = null;
-      } else {
-        updateValues.subscriptionStatus = subscriptionStatus;
+    if (subscriptionStatus === 'TRIALING') {
+      // Start a trial - if trialEndsAt is provided, calculate days from now
+      let trialDurationDays = 14; // default
+      if (trialEndsAt) {
+        const trialEndDate = new Date(trialEndsAt);
+        const now = new Date();
+        trialDurationDays = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        trialDurationDays = Math.max(1, trialDurationDays); // Ensure at least 1 day
       }
+      
+      subscription = await SubscriptionManager.startTrial(
+        userId,
+        subscriptionPlan || 'SILVER',
+        trialDurationDays
+      );
+    } else if (subscriptionStatus === 'RESET' || subscriptionStatus === 'FREE') {
+      // For FREE status, we can just cancel all existing subscriptions
+      const currentSub = await SubscriptionManager.getCurrentSubscription(userId);
+      if (currentSub) {
+        await SubscriptionManager.cancelSubscription(userId);
+      }
+      // Return a basic FREE subscription representation
+      subscription = {
+        plan: 'SILVER', // Will be ignored for display
+        status: 'CANCELED',
+        billingCycle: 'MONTHLY',
+        userId
+      };
+    } else {
+      // For valid subscription statuses, upsert with SubscriptionManager
+      subscription = await SubscriptionManager.upsertSubscription({
+        userId,
+        status: subscriptionStatus as 'ACTIVE' | 'TRIALING' | 'CANCELED' | 'PAST_DUE',
+        plan: (subscriptionPlan || 'SILVER') as 'SILVER' | 'GOLD',
+        billingCycle: 'MONTHLY',
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      });
     }
-    
-    if (subscriptionPlan) {
-      updateValues.subscriptionPlan = subscriptionPlan;
-    }
-    
-    if (trialEndsAt) {
-      updateValues.trialEndsAt = new Date(trialEndsAt);
-    } else if (subscriptionStatus === 'TRIALING') {
-      // Set trial end to 14 days from now if status is TRIALING
-      const trialEnd = new Date();
-      trialEnd.setDate(trialEnd.getDate() + 14);
-      updateValues.trialEndsAt = trialEnd;
-    }
-    
-    const result = await db
-      .update(users)
-      .set(updateValues)
-      .where(eq(users.id, userId))
-      .returning();
-    
-    return NextResponse.json(result[0]);
+
+    console.log(`Subscription updated successfully for user ${userId}`);
+    return NextResponse.json(subscription);
+
   } catch (error) {
     console.error('Error updating user subscription:', error);
     return NextResponse.json({ 
