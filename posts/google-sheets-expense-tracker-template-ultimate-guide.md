@@ -53,7 +53,7 @@ Set budgets for each category and see real-time comparisons with actual spending
 ## How to Use the Template
 
 ### Step 1: Make Your Copy
-**[Download the Ultimate Expense Tracker Template](https://docs.google.com/spreadsheets/d/1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4/edit?gid=432578983#gid=432578983)**
+**[Download the Ultimate Expense Tracker Template](/fuck-you-money-sheet)**
 
 1. Click the link above
 2. Go to File → Make a Copy

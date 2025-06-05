@@ -59,9 +59,7 @@ export function SubscriptionCancellation({
       const response = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
         headers: {
-          // Assuming JWT is stored in localStorage or handled by auth context
-          // Adjust header fetching as needed based on your auth implementation
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}` 
+          'Content-Type': 'application/json',
         }
       });
 

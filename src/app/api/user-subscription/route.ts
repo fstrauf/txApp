@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authConfig } from '@/lib/auth';
 import { findUserByEmail } from '@/db/utils';
-import { hasActiveSubscriptionOrTrial } from '@/lib/authUtils';
+import { SubscriptionService } from '@/lib/subscriptionService';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user's info with subscription details
+    // Get user's info
     const user = await findUserByEmail(session.user.email);
     if (!user) {
       return NextResponse.json(
@@ -24,20 +24,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Use the utility function to determine active status
-    const isActive = hasActiveSubscriptionOrTrial({
-      subscriptionStatus: user.subscriptionStatus,
-      currentPeriodEndsAt: user.currentPeriodEndsAt,
-      trialEndsAt: user.trialEndsAt,
-    });
+    // Use SubscriptionService to get current subscription
+    const subscription = await SubscriptionService.getCurrentSubscription(user.id);
 
-    // Return subscription info from the user record
+    // If no subscription found, return default FREE plan
+    if (!subscription) {
+      return NextResponse.json({
+        subscriptionPlan: 'FREE',
+        subscriptionStatus: null,
+        billingCycle: null,
+        trialEndsAt: null,
+        currentPeriodEndsAt: null,
+        hasActiveSubscription: false,
+      });
+    }
+
+    // Determine if subscription is active (using our simplified status enum)
+    const isActive = subscription.status === 'ACTIVE';
+
+    // Return subscription info
     return NextResponse.json({
-      subscriptionPlan: user.subscriptionPlan || 'FREE',
-      subscriptionStatus: user.subscriptionStatus || null,
-      billingCycle: user.billingCycle || null,
-      trialEndsAt: user.trialEndsAt,
-      currentPeriodEndsAt: user.currentPeriodEndsAt,
+      subscriptionPlan: subscription.plan || 'FREE',
+      subscriptionStatus: subscription.status,
+      billingCycle: subscription.billingCycle,
+      trialEndsAt: subscription.trialEndsAt,
+      currentPeriodEndsAt: subscription.currentPeriodEnd,
       hasActiveSubscription: isActive,
     });
   } catch (error) {
