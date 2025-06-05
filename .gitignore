@@ -59,6 +59,29 @@ node_modules/
 *.sln
 *.sw?
 # OS specific
+.DS_Store
+Thumbs.db
+
+# Debug and temporary files
+debug_*.js
+debug_*.mjs
+debug_*.ts
+test_*.js
+test_*.mjs
+test_*.ts
+check_*.js
+cleanup_*.js
+cleanup_*.ts
+cleanup_*.sql
+fix_*.js
+fix_*.ts
+temp_*.js
+temp_*.ts
+*.temp.js
+*.temp.ts
+*.debug.js
+*.debug.ts
+
 # Task files
 tasks.json
 tasks/ 
