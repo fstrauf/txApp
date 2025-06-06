@@ -1,5 +1,5 @@
 ---
-title: "How to Create an Expense Tracker in Google Sheets: Complete Step-by-Step Guide (2025)"
+title: "Create a Google Sheets Expense Tracker: Complete Guide (2025)"
 date: "2025-03-29"
 summary: "Learn to build a powerful expense tracker in Google Sheets from scratch. Complete tutorial with formulas, automation, and advanced features for perfect financial tracking."
 keywords: "how to create expense tracker google sheets, how to make expense tracker google sheets, create expense tracker google sheets, google sheets expense tracker tutorial"
