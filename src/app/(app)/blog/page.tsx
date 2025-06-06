@@ -15,11 +15,21 @@ export const metadata: Metadata = {
     url: '/blog',
     type: 'website',
     siteName: 'Expense Sorted',
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 951,
+        height: 635,
+        alt: "Personal Finance Blog - Expert Tips & AI Expense Insights",
+      },
+    ],
+    locale: "en_US",
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Personal Finance Blog - Expert Tips & AI Expense Insights',
     description: 'Discover expert personal finance tips, AI-powered expense categorization insights, and budgeting strategies.',
+    images: ["/opengraph-image.png"],
   },
 };
 

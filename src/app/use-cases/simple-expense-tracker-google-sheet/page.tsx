@@ -11,6 +11,23 @@ export const metadata: Metadata = {
     title: "Simple Expense Tracker for Google Sheets - Free Template",
     description: "Download our free simple expense tracker template for Google Sheets. Track your expenses effortlessly without complex budgeting software.",
     url: "/use-cases/simple-expense-tracker-google-sheet",
+    siteName: "Expense Sorted",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 951,
+        height: 635,
+        alt: "Simple Expense Tracker for Google Sheets - Free Template",
+      },
+    ],
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Simple Expense Tracker for Google Sheets - Free Template",
+    description: "Download our free simple expense tracker template for Google Sheets.",
+    images: ["/opengraph-image.png"],
   },
 };
 

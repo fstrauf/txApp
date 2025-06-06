@@ -12,6 +12,23 @@ export const metadata: Metadata = {
     description:
       "Read Expense Sorted's privacy policy to understand how we collect, use, and protect your personal information while providing AI-powered expense categorization services.",
     url: "/privacy-policy",
+    siteName: "Expense Sorted",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 951,
+        height: 635,
+        alt: "Privacy Policy - Expense Sorted",
+      },
+    ],
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Privacy Policy - Expense Sorted",
+    description: "Read Expense Sorted's privacy policy to understand how we protect your information.",
+    images: ["/opengraph-image.png"],
   },
 };
 

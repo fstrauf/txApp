@@ -19,6 +19,23 @@ export const metadata: Metadata = {
     title: "Financial Freedom Calculator - F*ck You Money Tracker | Expense Sorted",
     description: "Calculate your path to financial independence with our F*ck You Money calculator. Track your cost of living, build emergency funds, and plan your journey to financial freedom.",
     url: "/fuck-you-money-sheet",
+    siteName: "Expense Sorted",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 951,
+        height: 635,
+        alt: "Financial Freedom Calculator - F*ck You Money Tracker",
+      },
+    ],
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Financial Freedom Calculator - F*ck You Money Tracker",
+    description: "Calculate your path to financial independence and track your journey to financial freedom.",
+    images: ["/opengraph-image.png"],
   },
 };
 

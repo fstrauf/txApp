@@ -11,6 +11,22 @@ export const metadata: Metadata = {
     title: "API Documentation - Expense Categorization API | Expense Sorted",
     description: "Complete API documentation for Expense Sorted's transaction categorization API. Integrate AI-powered expense categorization into your financial applications.",
     url: "/api-docs",
+    siteName: "Expense Sorted",
     type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 951,
+        height: 635,
+        alt: "API Documentation - Expense Categorization API",
+      },
+    ],
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "API Documentation - Expense Categorization API | Expense Sorted",
+    description: "Complete API documentation for Expense Sorted's transaction categorization API.",
+    images: ["/opengraph-image.png"],
   },
 };
