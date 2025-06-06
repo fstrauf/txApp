@@ -13,6 +13,23 @@ export const metadata: Metadata = {
     description:
       "Master bank transaction classification with AI-powered tools for better financial management and expense tracking.",
     url: "/use-cases/bank-transaction-classification",
+    siteName: "Expense Sorted",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 951,
+        height: 635,
+        alt: "Bank Transaction Classification - AI-Powered Financial Organization",
+      },
+    ],
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bank Transaction Classification - AI-Powered Financial Organization",
+    description: "Master bank transaction classification with AI-powered tools for better financial management.",
+    images: ["/opengraph-image.png"],
   },
 };
 

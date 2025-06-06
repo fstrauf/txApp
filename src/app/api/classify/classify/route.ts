@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'API key not configured for this user.' }, { status: 400 });
     }
 
+    console.log(`User ${userId} API key ${userApiKey} found, proceeding with classification.`);
     // 2. Get the payload from the incoming request
     const payload = await request.json();
 

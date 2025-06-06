@@ -1,5 +1,5 @@
 ---
-title: "AI Expense Categorization: The Cornerstone of Effective Personal Finance Apps"
+title: "AI Expense Categorization: The Finance App Foundation"
 date: "2025-04-19"
 summary: "An exploration of AI expense categorization in personal finance apps, focusing on the time-value problem and the importance of effective categorization."
 ---

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Head from "next/head";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast, Toaster } from 'react-hot-toast';
@@ -162,6 +163,11 @@ export default function PricingPage() {
 
   return (
     <div className="bg-background-default min-h-screen py-12">
+      <Head>
+        <link rel="canonical" href="https://www.expensesorted.com/pricing" />
+        <title>Pricing Plans - Expense Sorted | AI-Powered Expense Categorization</title>
+        <meta name="description" content="Choose the perfect plan for your expense tracking needs. Free Google Sheets add-on, premium categorization API, and enterprise solutions. Start your free trial today." />
+      </Head>
       <Toaster position="bottom-center" />
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="text-center mb-12">

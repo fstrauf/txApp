@@ -1,5 +1,5 @@
 ---
-title: "The ROI of Automated Expense Categorization for Time-Conscious Professionals"
+title: "ROI of Automated Expense Categorization for Professionals"
 date: "2025-05-01"
 summary: "An exploration of the ROI of automated expense categorization for time-conscious professionals."
 ---

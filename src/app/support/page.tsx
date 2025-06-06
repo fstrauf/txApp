@@ -10,6 +10,23 @@ export const metadata: Metadata = {
     title: "Support & Help - Expense Sorted Customer Service",
     description: "Get help with Expense Sorted's AI-powered expense categorization tools. Contact our support team for assistance.",
     url: "/support",
+    siteName: "Expense Sorted",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 951,
+        height: 635,
+        alt: "Support & Help - Expense Sorted Customer Service",
+      },
+    ],
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Support & Help - Expense Sorted Customer Service",
+    description: "Get help with Expense Sorted's AI-powered expense categorization tools.",
+    images: ["/opengraph-image.png"],
   },
 };
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from 'next/link';
+import Head from 'next/head';
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { getUserSubscriptionStatusDetails, type SubscriptionStatusDetails, type UserSubscriptionData } from '@/lib/authUtils';
@@ -152,6 +153,11 @@ export default function ApiLandingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800">
+      <Head>
+        <link rel="canonical" href="https://www.expensesorted.com/api-landing" />
+        <title>Expense Categorization API - Developer Platform | Expense Sorted</title>
+        <meta name="description" content="Integrate AI-powered expense categorization into your financial applications. RESTful API with 95% accuracy, real-time processing, and flexible pricing. Start your free trial today." />
+      </Head>
       <Toaster position="bottom-center" />
       {/* New wrapper to constrain all content like the main page */}
       <div className="container mx-auto px-4 max-w-7xl py-8 md:py-16">

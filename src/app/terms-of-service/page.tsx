@@ -12,6 +12,23 @@ export const metadata: Metadata = {
     description:
       "Read Expense Sorted's terms of service to understand the terms and conditions governing your use of our AI-powered expense categorization platform and services.",
     url: "/terms-of-service",
+    siteName: "Expense Sorted",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 951,
+        height: 635,
+        alt: "Terms of Service - Expense Sorted",
+      },
+    ],
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Terms of Service - Expense Sorted",
+    description: "Read Expense Sorted's terms of service and conditions of use.",
+    images: ["/opengraph-image.png"],
   },
 };
 

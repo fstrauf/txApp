@@ -11,6 +11,23 @@ export const metadata: Metadata = {
     title: "Expense Classification - AI-Powered Financial Categorization",
     description: "Master expense classification for better financial planning and budgeting with AI-powered categorization tools.",
     url: "/use-cases/expense-classification",
+    siteName: "Expense Sorted",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 951,
+        height: 635,
+        alt: "Expense Classification - AI-Powered Financial Categorization",
+      },
+    ],
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Expense Classification - AI-Powered Financial Categorization",
+    description: "Master expense classification for better financial planning with AI-powered tools.",
+    images: ["/opengraph-image.png"],
   },
 };
 

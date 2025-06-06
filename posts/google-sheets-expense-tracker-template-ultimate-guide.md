@@ -1,5 +1,5 @@
 ---
-title: "The Ultimate Google Sheets Expense Tracker Template (2025) - Free Download"
+title: "Ultimate Google Sheets Expense Tracker (2025) - Free Download"
 date: "2025-03-23"
 summary: "Get the most comprehensive free Google Sheets expense tracker template with automatic categorization, visual dashboards, and complete privacy. Your data stays in your Google account."
 keywords: "google sheets expense tracker template, expense tracker google sheets, free expense tracker template, personal expense tracker google sheets"

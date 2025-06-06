@@ -13,6 +13,24 @@ export const metadata: Metadata = {
     description:
       "Learn about Expense Sorted's mission to simplify personal finance through AI-powered expense categorization. Discover how we help users achieve financial clarity and automate their budgeting.",
     url: "/about",
+    siteName: "Expense Sorted",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 951,
+        height: 635,
+        alt: "Expense Sorted - Personal Finance Made Simple",
+      },
+    ],
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About Expense Sorted - Personal Finance Made Simple",
+    description:
+      "Learn about Expense Sorted's mission to simplify personal finance through AI-powered expense categorization.",
+    images: ["/opengraph-image.png"],
   },
 };
 

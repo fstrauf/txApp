@@ -1,5 +1,5 @@
 ---
-title: "Beyond Rules: How Sentence Transformers Are Revolutionizing Transaction Categorization"
+title: "Sentence Transformers vs Rules for Transaction Categorization"
 date: "2025-03-09"
 summary: "Explore how sentence transformers revolutionize bank transaction categorization, offering better accuracy and flexibility than traditional rule-based systems."
 ---

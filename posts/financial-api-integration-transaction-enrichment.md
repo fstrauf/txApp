@@ -1,5 +1,5 @@
 ---
-title: "Financial API Integration: How Transaction Enrichment Creates User Time Freedom"
+title: "Transaction Enrichment APIs: Time Freedom for Users"
 date: "2025-04-10"
 summary: "An exploration of financial API integration and transaction enrichment, focusing on the time-value problem and the importance of effective categorization."
 ---

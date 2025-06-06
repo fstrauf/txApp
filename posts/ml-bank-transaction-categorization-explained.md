@@ -1,5 +1,5 @@
 ---
-title: "Behind the Machine: How ML Makes Bank Transaction Categorization Actually Work"
+title: "How ML Powers Bank Transaction Categorization"
 date: "2025-05-09"
 summary: "An exploration of how machine learning makes bank transaction categorization actually work."
 ---

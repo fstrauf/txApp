@@ -11,6 +11,23 @@ export const metadata: Metadata = {
     title: "Advanced Expense Tracker for Google Sheets - AI-Powered Categorization",
     description: "Transform your Google Sheets into a powerful expense tracker with AI-powered categorization and advanced financial management features.",
     url: "/use-cases/expense-tracker-google-sheet",
+    siteName: "Expense Sorted",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 951,
+        height: 635,
+        alt: "Advanced Expense Tracker for Google Sheets - AI-Powered Categorization",
+      },
+    ],
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Advanced Expense Tracker for Google Sheets - AI-Powered Categorization",
+    description: "Transform your Google Sheets into a powerful expense tracker with AI-powered categorization.",
+    images: ["/opengraph-image.png"],
   },
 };
 
