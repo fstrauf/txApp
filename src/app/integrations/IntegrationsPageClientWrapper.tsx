@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Head from 'next/head';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Create a client
@@ -40,7 +41,12 @@ export default function IntegrationsPageClientWrapper({ children }: { children: 
 
   return (
     <QueryClientProvider client={queryClient}>
-        {children}
+      <Head>
+        <link rel="canonical" href="https://www.expensesorted.com/integrations" />
+        <title>Integrations - Connect Your Financial Apps | Expense Sorted</title>
+        <meta name="description" content="Connect Expense Sorted with your favorite financial apps. Integrate with Google Sheets, Lunch Money, YNAB, and more. Automate your expense categorization workflow." />
+      </Head>
+      {children}
     </QueryClientProvider>
   );
 } 

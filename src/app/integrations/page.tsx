@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import Head from 'next/head';
 import { FaGoogle, FaSpinner, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 import { useSession } from 'next-auth/react';
 import { toast, Toaster } from 'react-hot-toast';

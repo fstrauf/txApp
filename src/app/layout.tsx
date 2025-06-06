@@ -16,9 +16,6 @@ export const metadata: Metadata = {
   title: "Expense Sorted - Categorise your expenses",
   description:
     "Automatically categorise your monthly expenses using AI. Hook this App up to your Google Sheets™ and get your monthly budgeting done in no time.",
-  alternates: {
-    canonical: "/",
-  },
   robots: {
     index: true,
     follow: true,
