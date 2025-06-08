@@ -233,7 +233,7 @@ const headers = {
 **Step 2: Send Raw Transactions**
 ```javascript
 // Batch processing of transactions
-const response = await fetch('https://api.expensesorted.com/enrich', {
+const response = await fetch('https://api.example.com/enrich', {
   method: 'POST',
   headers,
   body: JSON.stringify({
