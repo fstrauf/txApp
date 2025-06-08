@@ -57,7 +57,7 @@ const SpendingScreen: React.FC = () => {
   const canContinue = currentAmount > 0;
 
   return (
-    <div className="max-w-2xl mx-auto p-6 max-h-screen overflow-hidden">
+    <div className="max-w-2xl mx-auto p-6 max-h-screen overflow-auto">
       {/* Header */}
       <div className="text-center mb-6">
         <div className="flex justify-center mb-4">
