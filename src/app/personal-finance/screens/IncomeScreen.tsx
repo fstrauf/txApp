@@ -67,20 +67,20 @@ const IncomeScreen: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 flex flex-col">
-      {/* Header Section - Matching Artifact */}
-      <div className="text-center mb-10">
-        <div className="text-sm text-gray-500 uppercase tracking-wide mb-2">Question 1 of 3</div>
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+    <div className="max-w-4xl mx-auto p-6 flex flex-col max-h-screen">
+      {/* Header Section - Compact */}
+      <div className="text-center mb-8">
+        <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Question 1 of 3</div>
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-3">
           What's your monthly take-home income?
         </h1>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
           After tax, retirement funds, and student loan payments
         </p>
       </div>
 
       {/* Input Section */}
-      <div className="mb-10">
+      <div className="mb-6">
         <CurrencyInput
           value={income}
           onChange={handleIncomeChange}
@@ -90,7 +90,7 @@ const IncomeScreen: React.FC = () => {
       </div>
 
       {/* Quick Amount Selector */}
-      <div className="mb-12 flex-1">
+      <div className="mb-8 flex-1">
         <QuickAmountSelector
           amounts={quickAmounts}
           selectedAmount={selectedAmount}
@@ -99,7 +99,7 @@ const IncomeScreen: React.FC = () => {
       </div>
 
       {/* Navigation Buttons - Consistent at Bottom */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-8">
         <PrimaryButton
           onClick={handleBack}
           variant="secondary"
