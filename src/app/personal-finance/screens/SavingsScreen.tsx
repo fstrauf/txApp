@@ -60,22 +60,22 @@ const SavingsScreen: React.FC = () => {
 
   
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className="max-w-2xl mx-auto p-6 max-h-screen overflow-hidden">
       {/* Header */}
-      <div className="text-center mb-10">
-        <div className="flex justify-center mb-6">
-          <BanknotesIcon className="h-16 w-16 text-indigo-600" />
+      <div className="text-center mb-6">
+        <div className="flex justify-center mb-4">
+          <BanknotesIcon className="h-12 w-12 text-indigo-600" />
         </div>
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">
+        <h1 className="text-3xl font-bold text-gray-800 mb-3">
           How much do you have saved?
         </h1>
-        <p className="text-xl text-gray-600 leading-relaxed">
+        <p className="text-lg text-gray-600 leading-relaxed">
           Include your emergency fund, savings accounts, and easily accessible investments.
         </p>
       </div>
 
       {/* Amount Input */}
-      <div className="mb-8">
+      <div className="mb-6">
         <CurrencyInput
           value={amount}
           onChange={handleAmountChange}
@@ -86,7 +86,7 @@ const SavingsScreen: React.FC = () => {
       </div>
 
       {/* Quick Amount Selector */}
-      <div className="mb-12 flex-1">
+      <div className="mb-6 flex-1">
         <QuickAmountSelector
           amounts={savingsAmounts}
           selectedAmount={selectedQuickAmount}
@@ -94,44 +94,44 @@ const SavingsScreen: React.FC = () => {
         />
       </div>
 
-      {/* Savings Tips */}
+      {/* Savings Tips - Compact */}
       <Box variant="gradient" className="max-w-lg mx-auto mb-4">
-        <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-          <LightBulbIcon className="h-5 w-5 text-indigo-600 mr-2" /> What counts as savings?
+        <h4 className="text-base font-semibold text-gray-800 mb-2 flex items-center">
+          <LightBulbIcon className="h-4 w-4 text-indigo-600 mr-2" /> What counts as savings?
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600">
           <div className="flex items-center">
-            <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+            <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full mr-2"></span>
             Emergency fund
           </div>
           <div className="flex items-center">
-            <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+            <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full mr-2"></span>
             High-yield savings
           </div>
           <div className="flex items-center">
-            <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+            <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full mr-2"></span>
             Term deposits
           </div>
           <div className="flex items-center">
-            <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+            <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full mr-2"></span>
             Conservative investments
           </div>
           <div className="flex items-center">
-            <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+            <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full mr-2"></span>
             Cash in checking accounts
           </div>
           <div className="flex items-center">
-            <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+            <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full mr-2"></span>
             Money market funds
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-3 italic">
+        <p className="text-xs text-gray-500 mt-2 italic">
           Don't include retirement accounts or long-term investments that are hard to access
         </p>
       </Box>
 
       {/* Navigation Buttons - Consistent at Bottom */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-6">
         <PrimaryButton
           onClick={handleBack}
           variant="secondary"

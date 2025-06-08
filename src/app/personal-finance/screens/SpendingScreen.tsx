@@ -57,22 +57,22 @@ const SpendingScreen: React.FC = () => {
   const canContinue = currentAmount > 0;
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className="max-w-2xl mx-auto p-6 max-h-screen overflow-auto">
       {/* Header */}
-      <div className="text-center mb-10">
-        <div className="flex justify-center mb-6">
-          <CreditCardIcon className="h-16 w-16 text-indigo-600" />
+      <div className="text-center mb-6">
+        <div className="flex justify-center mb-4">
+          <CreditCardIcon className="h-12 w-12 text-indigo-600" />
         </div>
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">
+        <h1 className="text-3xl font-bold text-gray-800 mb-3">
           What do you spend monthly?
         </h1>
-        <p className="text-xl text-gray-600 leading-relaxed">
+        <p className="text-lg text-gray-600 leading-relaxed">
           Include everything: rent, groceries, entertainment, bills, and all other expenses.
         </p>
       </div>
 
       {/* Amount Input */}
-      <div className="mb-8">
+      <div className="mb-6">
         <CurrencyInput
           value={amount}
           onChange={handleAmountChange}
@@ -82,7 +82,7 @@ const SpendingScreen: React.FC = () => {
       </div>
 
       {/* Quick Amount Selector */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-3">Quick select</h3>
         <QuickAmountSelector
           amounts={spendingAmounts}
@@ -91,44 +91,44 @@ const SpendingScreen: React.FC = () => {
         />
       </div>
 
-      {/* Spending Categories Hint */}
+      {/* Spending Categories Hint - Compact */}
       <Box variant="gradient" className="max-w-lg mx-auto mb-4">
-        <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-          <LightBulbIcon className="h-5 w-5 text-indigo-600 mr-2" /> Common spending categories
+        <h4 className="text-base font-semibold text-gray-800 mb-2 flex items-center">
+          <LightBulbIcon className="h-4 w-4 text-indigo-600 mr-2" /> Common categories
         </h4>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-gray-600">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-gray-600">
           <div className="flex items-center">
-            <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
+            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mr-2"></span>
             Housing & Rent
           </div>
           <div className="flex items-center">
-            <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
+            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mr-2"></span>
             Groceries & Food
           </div>
           <div className="flex items-center">
-            <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
+            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mr-2"></span>
             Transportation
           </div>
           <div className="flex items-center">
-            <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
+            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mr-2"></span>
             Utilities & Bills
           </div>
           <div className="flex items-center">
-            <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
+            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mr-2"></span>
             Entertainment
           </div>
           <div className="flex items-center">
-            <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
+            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mr-2"></span>
             Shopping & Others
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-3 italic">
+        <p className="text-xs text-gray-500 mt-2 italic">
           Don't worry about being exact - you can always adjust this later
         </p>
       </Box>
 
       {/* Navigation Buttons - Consistent at Bottom */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-12">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-6">
         <PrimaryButton
           onClick={handleBack}
           variant="secondary"

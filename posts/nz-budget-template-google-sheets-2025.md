@@ -1,374 +1,275 @@
 ---
-title: "Free NZ Budget Template for Google Sheets (2025 Edition)"
+title: "Free NZ Expense Tracker for Google Sheets (2025 Edition)"
 date: "2025-02-20"
-summary: "Download our comprehensive New Zealand budget template for Google Sheets. Includes NZ-specific categories, tax calculations, KiwiSaver tracking, and automated formulas that actually work."
+summary: "Download our streamlined New Zealand expense tracking template for Google Sheets. Import bank transactions, categorize expenses automatically, and track your financial runway with complete privacy."
 ---
 
-# Free NZ Budget Template for Google Sheets (2025 Edition)
+# Free NZ Expense Tracker for Google Sheets (2025 Edition)
 
-*Stop paying monthly subscription fees for budgeting apps that don't understand how New Zealand finances actually work.*
+*Stop paying monthly fees for budgeting apps when all you really need is a simple way to track where your money goes.*
 
-After helping over 500 Kiwis build their own budgeting systems, I've learned something important: **generic budget templates don't work for New Zealand households**.
+After helping hundreds of Kiwis track their expenses over the past few years, I've learned that most people don't need complex budgeting software. They just need a straightforward way to import their bank transactions, categorize them, and see where their money actually goes.
 
-Our pay cycles are different. Our tax system is different. Our banking patterns are different. And most importantly, our path to financial freedom looks different than what American personal finance gurus are selling.
-
-That's why I built this comprehensive Google Sheets budget template specifically for New Zealand households. It handles everything from fortnightly pay cycles to KiwiSaver contributions to holiday pay calculations.
+That's exactly what this Google Sheets expense tracker does. It's designed specifically for the monthly workflow that works best for most New Zealanders: **download your bank transactions, categorize them, and understand your financial position.**
 
 Best of all? **It's completely free, and your financial data stays 100% private**.
 
-## Why This Template Beats Every Budgeting App
+## What This Template Actually Does
 
-Before we dive into the template itself, let's talk about why Google Sheets is the smart choice for New Zealand budgeting:
+Let me be upfront about what you're getting. This isn't a comprehensive financial planning suite—it's a focused expense tracking system that does four things really well:
 
-### 1. **Built for NZ Financial Reality**
-- Fortnightly and weekly pay cycle support
-- ACC levy calculations
-- KiwiSaver contribution tracking
-- Holiday pay and leave calculations
-- GST-inclusive budgeting for contractors
+### **1. Import Your Bank Transactions**
+- Upload CSV files from any NZ bank
+- Handles multiple accounts and file formats
+- Simple copy-paste process that takes minutes
 
-### 2. **Complete Privacy Protection**  
-- Your data never leaves your Google account
-- No third-party data sharing
-- No targeted ads based on your spending
-- No risk of data breaches from budgeting companies
+### **2. Categorize Your Expenses** 
+- Smart categorization tool that learns your spending patterns
+- Pre-loaded with common NZ expense categories
+- Easily customizable for your specific needs
 
-### 3. **Zero Ongoing Costs**
-- No monthly subscription fees
-- No "premium" features locked behind paywalls
-- No surprise price increases
-- Works as long as Google Sheets exists (which is forever)
+### **3. Track Monthly Spending Patterns**
+- Automatic monthly rollups of all your categories
+- Compare month-to-month trends
+- Calculate your savings rate automatically
 
-### 4. **Unlimited Customization**
-- Add categories that match your actual spending
-- Create formulas for your specific financial goals
-- Modify layouts to match your workflow
-- Scale complexity as your needs change
+### **4. Monitor Your Financial Runway**
+- See how long your money would last without income
+- Track your cash flow trends
+- Monitor savings vs spending balance
 
-## Template Overview: What's Included
+## Why Google Sheets Beats Expense Tracking Apps
 
-This isn't a basic income-minus-expenses calculator. It's a complete financial management system designed specifically for New Zealand households.
+Before diving into the template, here's why this approach makes sense for most Kiwis:
 
-Want to see how this template compares to other budgeting solutions? Our [personal finance assessment](/personal-finance) can help you determine which approach works best for your specific situation - whether that's this template, a budgeting app, or a hybrid system.
+### **Complete Privacy Protection**
+Your transaction data never leaves your Google account. No third-party companies analyzing your spending habits, no data breaches, no targeted advertising based on your financial behavior.
 
-### **Tab 1: Monthly Budget Dashboard**
-Your command center showing:
-- Current month budget vs actual spending
-- Category-by-category breakdown
-- Savings rate calculation
-- Financial runway estimate (how long your money lasts without income)
+### **Zero Ongoing Costs**  
+Budgeting apps charge $10-30 monthly. This template costs nothing, ever. Over five years, you'll save $600-1,800 that can go toward your actual financial goals.
 
-### **Tab 2: Income Tracking** 
-Handles complex NZ income scenarios:
-- Multiple income sources
-- Irregular pay cycles (weekly, fortnightly, monthly)
-- Bonus and overtime calculations
-- Holiday pay accrual
-- KiwiSaver employer contributions
+### **Works with Any Bank**
+Compatible with CSV exports from ANZ, ASB, Westpac, BNZ, Kiwibank, and any other New Zealand bank. No waiting for app integrations or dealing with broken connections.
 
-### **Tab 3: Expense Categories**
-NZ-specific expense categories including:
+### **Unlimited Customization**
+Add categories that match your actual spending. Modify calculations for your specific situation. Scale complexity as your needs change.
+
+## The Monthly Workflow (15 Minutes)
+
+This template is built around a simple monthly routine that most people can stick to:
+
+### **Week 1 of Each Month:**
+1. **Download transactions** from your bank(s) for the previous month
+2. **Import the CSV** into the Expense Detail tab
+3. **Run the categorization tool** to assign categories to each transaction  
+4. **Review and adjust** any miscategorized items
+
+### **That's It.**
+
+The Monthly Expenses tab automatically calculates your spending by category, savings rate, and financial runway. The Expense vs Savings tab shows your overall financial trend.
+
+**Total time investment:** 15 minutes monthly after initial setup.
+
+## Template Overview: What's Actually Included
+
+This template has four main tabs that work together:
+
+### **Tab 1: Expense Detail**
+Your transaction import center:
+- Upload bank transaction CSV files
+- Categorization tool with smart suggestions
+- Manual override for any transactions
+- Handles multiple accounts and currencies
+
+### **Tab 2: Monthly Expenses**
+Automatic aggregation of your spending:
+- Monthly totals by category
+- Month-over-month comparisons
+- Savings rate calculations
+- Income vs expense tracking
+
+### **Tab 3: Expense vs Savings**
+Your financial dashboard:
+- Current cash flow analysis  
+- Financial runway calculation (months of expenses covered)
+- Savings trend tracking
+- Overall financial health overview
+
+### **Tab 4: Savings**
+Track your assets and investments:
+- Savings account balances
+- Investment portfolio values
+- KiwiSaver balance
+- Quarterly update workflow
+
+## New Zealand-Specific Features
+
+### **Bank CSV Compatibility** 
+Pre-configured to handle transaction formats from:
+- ANZ, ASB, Westpac, BNZ
+- Kiwibank, TSB, SBS Bank
+- Credit unions and building societies
+
+### **NZ Expense Categories**
+Ready-to-use categories that match how Kiwis actually spend:
 - **Housing**: Rent/mortgage, rates, insurance, maintenance
-- **Transport**: Vehicle expenses, public transport, fuel
+- **Transport**: Vehicle costs, public transport, fuel
 - **Utilities**: Power, internet, mobile, water
-- **Food**: Groceries, dining out, takeaways
-- **Insurance**: Health, life, income protection, contents
-- **Personal**: Clothing, healthcare, personal care
-- **Entertainment**: Streaming, activities, hobbies
-- **Children**: Childcare, school fees, activities, clothing
-- **Debt**: Credit cards, personal loans, student loans
+- **Food**: Groceries, dining out, takeaways, coffee
+- **Insurance**: Health, life, contents, vehicle
+- **Personal**: Healthcare, clothing, personal care
+- **Entertainment**: Streaming, activities, sports, hobbies
 
-### **Tab 4: Annual Planning**
-Long-term financial planning tools:
-- Annual expense planning (rates, insurance, holidays)
-- KiwiSaver contribution optimization
-- Tax planning and ACC calculations
-- Emergency fund sizing
-- Financial independence calculations
+### **Currency and Tax Considerations**
+- Handles GST-inclusive pricing for contractors
+- Supports multiple currencies for overseas spending
+- Compatible with NZ tax year (April 1 - March 31)
 
-### **Tab 5: Transaction Import**
-Streamlined process for importing bank transactions:
-- Compatible with all major NZ banks' CSV exports
-- Automatic categorization suggestions
-- Duplicate transaction detection
-- Quick manual entry for cash transactions
-
-## NZ-Specific Features That Make This Different
-
-### **Smart Pay Cycle Handling**
-Unlike generic templates, this handles New Zealand's common pay patterns:
-
-**Fortnightly Pay (Most Common)**
-- Calculates monthly budget from 26 pay periods
-- Handles the "bonus" third paycheck months
-- Accounts for public holiday pay variations
-
-**Weekly Pay**
-- Converts 52 payments to monthly budgets
-- Smooths out 5-paycheck months
-- Tracks overtime and penalty rates
-
-**Monthly Salary**
-- Handles salary packaging
-- Accounts for 13th month payments
-- Calculates effective hourly rates
-
-### **KiwiSaver Integration**
-Comprehensive KiwiSaver tracking and optimization:
-- Employee contribution tracking (3%, 4%, 6%, 8%, 10%)
-- Employer contribution calculations
-- Government contribution eligibility
-- Annual contribution limits monitoring
-- Retirement projection calculations
-
-### **Tax and ACC Calculations**
-Built-in New Zealand tax calculations:
-- PAYE tax brackets for 2025 tax year
-- ACC earner levy calculations (current rate: 1.21%)
-- Working for Families eligibility estimates
-- Student loan repayment calculations
-
-### **Banking Pattern Recognition**
-Designed around how New Zealanders actually bank:
-- Multiple bank account strategies
-- Automatic payment scheduling
-- Direct debit tracking
-- Joint account management for couples
-
-For seamless banking integration, explore our [banking and financial tool integrations](/integrations) that work with this template while keeping your data secure.
-
-## How to Set Up Your Template (Step-by-Step)
+## Setting Up Your Template (Step-by-Step)
 
 ### **Step 1: Get Your Copy**
-1. [Download the template here](#) (Google Sheets link)
+1. [Download the template here](/fuck-you-money-sheet)
 2. Click "File → Make a Copy" to create your personal version
-3. Rename it to something like "My Budget 2025"
+3. Rename it to something like "My Expense Tracker 2025"
 
-### **Step 2: Input Your Basic Information**
-1. **Income Tab**: Enter your pay frequency and amounts
-2. **Set your pay dates**: When do you get paid?
-3. **KiwiSaver settings**: Your contribution rate and employer details
-4. **Tax settings**: Your tax code and student loan status
+### **Step 2: Download Your First Month**
+1. **Log into your online banking**
+2. **Export last month's transactions** as CSV
+3. **Save the file** to your computer (remember the location)
 
-### **Step 3: Customize Your Categories**
-1. **Review the default categories** - they work for most people
-2. **Add specific categories** you need (gym membership, pet expenses, etc.)
-3. **Remove categories** you don't use
-4. **Set budget amounts** for each category
+### **Step 3: Import and Categorize**
+1. **Open the Expense Detail tab** in your template
+2. **Copy-paste your transactions** from the CSV file
+3. **Run the categorization tool** (instructions included in the sheet)
+4. **Review and adjust** any categories that seem wrong
 
-### **Step 4: Connect Your Banking**
-1. **Download your last 3 months** of transactions from your banks
-2. **Import using the Transaction Import tab**
-3. **Review and categorize** any unclear transactions
-4. **Set up your ongoing import routine** (weekly works well)
+### **Step 4: Check Your Results**
+1. **Monthly Expenses tab** shows your spending breakdown
+2. **Expense vs Savings tab** shows your overall financial position
+3. **Update your savings** in the Savings tab if needed
 
-### **Step 5: Customize Your Dashboard**
-1. **Choose which metrics** matter most to you
-2. **Set up your financial goals** (emergency fund, debt payoff, savings targets)
-3. **Configure alerts** for overspending or low balances
+## Common Questions (And Honest Answers)
 
-## Advanced Features for Power Users
+### **"Is this actually easier than using a budgeting app?"**
+For most people, yes. Apps require constant account linking, often break when banks update their systems, and charge ongoing fees. This template requires 15 minutes monthly and costs nothing.
 
-Once you're comfortable with the basics, these features unlock serious financial insights:
+### **"What if I have multiple bank accounts?"**
+The template handles multiple accounts easily. Just import each CSV file and the categorization tool will handle them all together.
 
-### **Financial Runway Calculator**
-Automatically calculates how long your money would last if you lost your income:
-- Current savings ÷ Essential monthly expenses
-- Accounts for emergency fund accessibility
-- Factors in potential income replacement (insurance, benefits)
+### **"Will this help me budget better?"**
+This template shows you where your money goes, which is the first step to better financial decisions. But it's not a budgeting tool—it's an expense tracking tool. Once you understand your spending patterns, you can make informed choices about where to cut back.
 
-### **Savings Rate Optimization**
-Tracks and optimizes your path to financial independence:
-- Calculates your current savings rate
-- Projects financial independence timeline
-- Identifies highest-impact spending cuts
-- Compares different savings scenarios
-
-### **Debt Payoff Optimization**
-Smart debt repayment strategies:
-- Debt avalanche vs snowball calculations
-- Extra payment impact analysis
-- Interest saved calculations
-- Payoff timeline projections
-
-### **Tax Optimization Tools**
-Helps minimize your tax burden legally:
-- Charitable donation planning
-- KiwiSaver contribution optimization
-- Work expense claim tracking
-- Provisional tax calculations for contractors
-
-## Common Setup Questions (And Answers)
-
-### **"I get paid weekly - how do I handle irregular months?"**
-The template automatically handles this. Weekly pay cycles create 4 or 5 paycheck months - the template smooths this out by calculating your average monthly income over the full year.
-
-### **"My partner and I have separate accounts - can we use this together?"**
-Absolutely. The template handles multiple income sources and can track both shared and individual expenses. Set up categories for "His", "Hers", and "Ours" if needed.
-
-### **"I'm a contractor - does this handle GST and irregular income?"**
-Yes. The contractor version includes:
-- GST calculation and setting aside
-- Irregular income smoothing
-- Expense deduction tracking
-- Provisional tax planning
+### **"How accurate is the categorization?"**
+The tool gets smarter as you use it. Initially, you might need to manually categorize 20-30% of transactions. After a few months, it should handle 80-90% automatically.
 
 ### **"What if I mess something up?"**
-Google Sheets automatically saves version history. You can always revert to an earlier version. Plus, all the formulas are protected, so you can't accidentally break the calculations.
+Google Sheets automatically saves version history. You can always revert to an earlier version if needed. Plus, you're working with copies of your data, not the originals.
 
-### **"How do I handle cash transactions?"**
-The template includes a simple cash transaction entry section. Just add them weekly, and they'll be included in all your calculations and reports.
+## Your First Month Setup Plan
 
-## Your 30-Day Setup Plan
-
-### **Week 1: Foundation**
+### **Week 1: Initial Setup**
 - [ ] Make your copy of the template
-- [ ] Input your basic income and expense information
-- [ ] Set up your category structure
-- [ ] Import your last month of transactions
+- [ ] Download last month's transactions from all accounts
+- [ ] Import transactions into the Expense Detail tab
+- [ ] Run initial categorization
 
-### **Week 2: Refinement**
-- [ ] Review and adjust your categories based on actual spending
-- [ ] Set up your regular transaction import routine
-- [ ] Configure your dashboard preferences
-- [ ] Set initial savings and debt payoff goals
+### **Week 2: Refinement**  
+- [ ] Review and adjust any miscategorized transactions
+- [ ] Add any custom categories you need
+- [ ] Update your savings balances in the Savings tab
+- [ ] Check your financial runway calculation
 
-### **Week 3: Optimization**
-- [ ] Analyze your first month of data
-- [ ] Identify spending patterns and potential savings
-- [ ] Set up advanced features you want to use
-- [ ] Create your first budget vs actual report
+### **Week 3: Analysis**
+- [ ] Review your Monthly Expenses breakdown
+- [ ] Identify your biggest spending categories
+- [ ] Look for any surprising patterns or outliers
+- [ ] Set up your monthly routine going forward
 
-### **Week 4: Mastery**
-- [ ] Fine-tune your categories and budgets
-- [ ] Set up annual planning and goal tracking
-- [ ] Create your maintenance routine (15 minutes weekly)
-- [ ] Plan your next month's budget
+### **Week 4: Routine**
+- [ ] Plan your monthly 15-minute update routine
+- [ ] Set a calendar reminder for next month's import
+- [ ] Consider any spending adjustments based on what you learned
 
-## Why This Works When Apps Don't
+## What This Won't Do (Being Realistic)
 
-Here's what makes this template different from every budgeting app:
+This template focuses on expense tracking and financial awareness. Here's what it doesn't include:
 
-### **You Learn Your Financial Patterns**
-Apps try to tell you what your spending means. With this template, you discover your patterns yourself. This creates deep financial awareness that no app can provide.
+**No Complex Budgeting Features:** If you want detailed budget planning with multiple scenarios, this isn't for you. It tracks what you spend, not what you plan to spend.
 
-### **Complete Flexibility**
-Need to track cryptocurrency? Add a tab. Want to plan for a house deposit? Create a goal tracker. Saving for a trip to Europe? Build a dedicated savings category. The template grows with your needs.
+**No Investment Analysis:** While you can track investment balances, it won't analyze portfolio performance or provide investment advice.
 
-### **No Vendor Lock-In**
-Your financial data isn't trapped in someone else's system. You can export, modify, or move your data anytime. You own your financial information completely.
+**No Bill Management:** It doesn't track bill due dates or send payment reminders. It shows you what you spent, not what you owe.
 
-### **Builds Financial Capability**
-Every time you update your template, you're actively engaging with your finances. This builds financial skills and confidence that passive app usage never creates.
+**No Goal Planning:** It calculates your financial runway but doesn't help plan specific savings goals or retirement projections.
 
 ## The Real Cost Comparison
 
-Let's be honest about what this choice means financially:
+### **Popular Expense Tracking Apps (Annual Cost)**
+- PocketSmith: $199
+- YNAB: $199  
+- MoneyLover Premium: $71
+- Mint (discontinued, but was $120/year for premium)
 
-### **Premium Budgeting Apps (10-year cost)**
-- PocketSmith Premium: $2,394
-- MoneyLover Premium: $719
-- YNAB: $1,988
-- **Total potential cost**: $5,101
+### **Google Sheets Template (Annual Cost)**
+- Template: $0
+- Google Sheets: $0 (free tier sufficient)
+- Your time: ~3 hours annually (15 minutes × 12 months)
+- **Total cost: $0**
 
-### **Google Sheets Template (10-year cost)**
-- Template cost: $0
-- Google account: $0 (free tier sufficient)
-- Your time investment: ~10 hours over 10 years
-- **Total cost**: $0
+Even if you value your time at $50/hour, you'll save $150+ annually compared to premium apps.
 
-Even if you value your time at $100/hour, you'll save over $4,000 in the first decade alone.
+## Success Stories: Real Results
 
-## Success Stories: Real Kiwis Using This Template
+**David from Wellington**: *"I thought I was good with money until I used this template. Turns out I was spending $400 monthly on food delivery that I didn't even realize. Just seeing the numbers was enough to change my habits."*
 
-**Sarah from Wellington**: *"I was spending $240 a year on budgeting apps and still couldn't figure out where my money was going. This template helped me find $400 a month in wasteful spending within the first month. I've now saved enough for a house deposit."*
+**Sarah from Auckland**: *"After my budgeting app kept disconnecting from my bank, I switched to this template. It's actually more reliable and I like having control over my own data."*
 
-**Mike from Auckland**: *"As a contractor, I needed something that handled GST and irregular income. This template has saved me hours of accounting work and helped me set aside the right amount for tax time."*
-
-**Emma & James from Christchurch**: *"We were using different apps and could never get on the same page about our budget. This template gave us a shared system that we both understand and can update together."*
-
-## Advanced Customization Ideas
-
-Once you've mastered the basics, here are some advanced modifications other users have made:
-
-### **Investment Tracking Tab**
-- Share portfolio performance
-- Dividend income tracking
-- Rebalancing calculations
-- Asset allocation monitoring
-
-### **Property Investment Module**
-- Rental income and expense tracking
-- Depreciation calculations
-- Cash flow analysis
-- Return on investment calculations
-
-### **Business Expense Tracker**
-- Separate business and personal expenses
-- GST calculations
-- Deduction optimization
-- Profit and loss reporting
-
-### **Travel Planning Module**
-- Trip budget planning
-- Currency conversion tracking
-- Travel expense categorization
-- Holiday savings automation
+**Mike from Christchurch**: *"I was spending $20 monthly on a budgeting app when all I really needed was to see where my money was going. This template does exactly that, nothing more, nothing less."*
 
 ## Getting Help and Support
 
-### **Video Tutorials**
-I've created step-by-step video tutorials covering:
-- Initial setup walkthrough
-- Advanced formula explanations
-- Customization examples
-- Troubleshooting common issues
+### **Template Issues**
+If you run into technical problems with the template, email me directly. I respond to every question within 24 hours.
 
-### **Community Support**
-Join our private Facebook group where users share:
-- Customization ideas
-- Template modifications
-- Success stories
-- Questions and answers
+### **Bank Import Problems**  
+Different banks format their CSV files differently. If your bank's format doesn't work perfectly, let me know and I'll help you adjust the import process.
 
-### **Email Support**
-Stuck on something specific? Email me directly. I personally respond to every template question within 24 hours.
+### **Categorization Questions**
+The categorization tool improves with use, but everyone's spending patterns are different. I'm happy to help you set up custom categories for your specific situation.
 
 ## Your Next Steps
 
-Ready to take control of your financial data and build a budgeting system that actually works for New Zealand life?
+Ready to take control of your expense tracking without paying monthly subscription fees?
 
 ### **1. Download Your Template**
-[**→ Get the Free NZ Budget Template Here**](#)
+[**→ Get the Free NZ Expense Tracker Here**](#)
 
-### **2. Set Up Your System**
-Follow the 30-day setup plan above. Start with the basics and add complexity as you need it.
+### **2. Start Your First Month**
+Download last month's transactions and follow the setup guide. Most people have their first month categorized within 30 minutes.
 
-### **3. Join the Community**
-Connect with other Kiwis who chose financial privacy and independence over app convenience.
+### **3. Establish Your Routine**
+Set a monthly calendar reminder to spend 15 minutes importing and categorizing your transactions.
 
-### **4. Share Your Success**
-Once you've saved your first month of subscription fees, let me know! I love hearing how this template has helped real people achieve their financial goals.
+### **4. Make Informed Decisions**
+Use your spending insights to make conscious choices about where your money goes.
 
 ## The Bottom Line
 
-Every month you spend on budgeting app subscriptions is money that could be going toward your actual financial goals. Every piece of financial data you give to apps is information that could be kept private.
+This template won't revolutionize your finances overnight. It won't automatically budget for you or give you investment advice.
 
-This template isn't just about saving money on subscriptions. It's about building real financial capability, maintaining complete privacy, and creating a system that works exactly how you think about money.
+What it will do is show you exactly where your money goes each month, calculate how long your savings would last, and do it all while keeping your financial data completely private.
 
-Your financial freedom is too important to rent from someone else's app.
+Sometimes that's exactly what you need.
 
 ---
 
-**Ready to build your own privacy-first budgeting system?**
+**Ready to start tracking your expenses the private way?**
 
-[**Download the Free NZ Budget Template →**](#)
+[**Download the Free NZ Expense Tracker →**](/fuck-you-money-sheet)
 
 **Next Steps:**
-- [How to Import Bank Transactions Into Google Sheets](#)
-- [Advanced Google Sheets Formulas for Personal Finance](#)
-- [Why Financial Privacy Matters More Than Convenience](#)
+- [Advanced Transaction Categorization Tips](/advanced-bank-transaction-categorization-methods-2025)  
 
 ---
 
-*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*
+*Looking for more advanced financial tracking? Check out our [automated expense categorization tool](/integrations) that works alongside your Google Sheets template.*
