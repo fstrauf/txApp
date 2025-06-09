@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import Papa from 'papaparse';
 import { CSVUploadArea } from '@/app/personal-finance/shared/CSVUploadArea';
 import { AkahuUploadArea } from '@/app/personal-finance/shared/AkahuUploadArea';
+import { GoogleSheetsUploadArea } from '@/app/personal-finance/components/GoogleSheetsUploadArea';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { SmartSheetsIntegration } from '@/app/personal-finance/shared/SmartSheetsIntegration';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
@@ -20,7 +21,7 @@ import {
   FlagIcon 
 } from '@heroicons/react/24/outline';
 
-type UploadMethod = 'csv' | 'akahu';
+type UploadMethod = 'csv' | 'google-sheets';
 
 // Define the types a column can be mapped to
 type MappedFieldType = 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'none';
@@ -254,10 +255,10 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
   };
 
   const handleTransactionsSelect = (transactions: any[]) => {
-    // Track Akahu transaction import
-    trackAction('akahuTransactionsImported', {
+    // Track transaction import based on upload method
+    trackAction(uploadMethod === 'google-sheets' ? 'googleSheetsTransactionsImported' : 'akahuTransactionsImported', {
       transaction_count: transactions.length,
-      upload_method: 'akahu'
+      upload_method: uploadMethod
     });
 
     setImportedTransactions(transactions);
@@ -266,13 +267,29 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
     // Process transaction data and update the store
     processTransactionData(transactions);
     
-    // Store transactions and show Google Sheets integration
+    // Store transactions
     setEnrichedTransactions(transactions);
-    setShowSheetsIntegration(true);
-    setFeedback({ 
-      type: 'success', 
-      message: `Successfully imported ${transactions.length} transactions from your bank account!` 
-    });
+    
+    if (uploadMethod === 'google-sheets') {
+      // For Google Sheets import, skip the export integration and go directly to results
+      setFeedback({ 
+        type: 'success', 
+        message: `Successfully imported ${transactions.length} transactions from Google Sheets! Taking you to results...` 
+      });
+      
+      // Auto-navigate to results after a short delay
+      setTimeout(() => {
+        trackNavigation('spendingAnalysisUpload', 'spendingAnalysisResults', 'next');
+        goToScreen('spendingAnalysisResults');
+      }, 1500);
+    } else {
+      // For other methods, show Google Sheets integration
+      setShowSheetsIntegration(true);
+      setFeedback({ 
+        type: 'success', 
+        message: `Successfully imported ${transactions.length} transactions from your bank account!` 
+      });
+    }
   };
 
   const validateAndProcessData = async () => {
@@ -592,28 +609,24 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
-              // onClick={() => setUploadMethod('akahu')}
-              className={`p-6 rounded-xl border-2 transition-all relative ${
-                uploadMethod === 'akahu'
-                  ? 'border-indigo-500 bg-indigo-50'
-                  : 'border-gray-200 hover:border-gray-300 opacity-75'
+              onClick={() => setUploadMethod('google-sheets')}
+              className={`p-6 rounded-xl border-2 transition-all ${
+                uploadMethod === 'google-sheets'
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-200 hover:border-green-300'
               }`}
-              disabled
             >
-              {/* Coming Soon Badge */}
-              <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                Coming Soon
-              </div>
-              
               <div className="flex justify-center mb-3">
-                <BuildingLibraryIcon className="h-12 w-12 text-indigo-600" />
+                <svg className="h-12 w-12 text-green-600" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19,3H5C3.9,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.9 20.1,3 19,3M14,17H8V15H14V17M16.5,13H7.5V11H16.5V13M16.5,9H7.5V7H16.5V9Z"/>
+                </svg>
               </div>
-              <h4 className="font-semibold text-gray-800 mb-2">Connect Bank Account</h4>
+              <h4 className="font-semibold text-gray-800 mb-2">Connect Google Sheet</h4>
               <p className="text-sm text-gray-600">
-                Automatically import transactions securely via Akahu
+                Import data from your existing ExpenseSorted template sheet
               </p>
               <div className="mt-3 text-xs text-gray-500 font-medium">
-                ✓ Recommended • Most accurate
+                ✓ Uses template format • Real-time sync
               </div>
             </button>
 
@@ -649,8 +662,12 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
         <div className="bg-white rounded-2xl p-8 mb-8">
           {uploadMethod === 'csv' ? (
             <CSVUploadArea onFileSelect={handleFileSelect} />
+          ) : uploadMethod === 'google-sheets' ? (
+            <GoogleSheetsUploadArea onTransactionsSelect={handleTransactionsSelect} />
           ) : (
-            <AkahuUploadArea onTransactionsSelect={handleTransactionsSelect} />
+            <div className="text-center text-gray-500">
+              <p>Please select an upload method above.</p>
+            </div>
           )}
           
           {uploadedFile && (
@@ -690,14 +707,23 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
               : 'bg-red-50 border-red-200 text-red-800'
           }`}>
             <div className="flex items-center">
-              <span className="text-lg mr-2">{feedback.type === 'success' ? '✅' : '❌'}</span>
+              <span className="text-lg mr-2">
+                {uploadMethod === 'google-sheets' && feedback.type === 'success' && feedback.message.includes('Taking you to results') ? (
+                  <svg className="animate-spin h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  feedback.type === 'success' ? '✅' : '❌'
+                )}
+              </span>
               <div className="font-medium">{feedback.message}</div>
             </div>
           </div>
         )}
 
-        {/* Google Sheets Integration - Show after successful processing */}
-        {showSheetsIntegration && enrichedTransactions && (
+        {/* Google Sheets Integration - Show after successful processing, but skip if imported from Google Sheets */}
+        {showSheetsIntegration && enrichedTransactions && uploadMethod !== 'google-sheets' && (
           <div className="mb-8">
             <SmartSheetsIntegration
               transactions={enrichedTransactions}
