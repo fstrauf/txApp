@@ -135,36 +135,61 @@ export default async function PostPage({ params }: { params: { slug: string } })
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <script 
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-      />
-      <article className="bg-white p-6 md:p-8 rounded-lg shadow-soft">
-        <header className="mb-8">
-          {/* <h1 className="text-4xl font-bold text-gray-900 mb-3">{postData.title}</h1> */}
-          <div className="text-sm text-gray-500">
-            <time dateTime={postData.date}>
-              {new Date(postData.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-            </time>
-          </div>
-        </header>
-        
-        {/* Render the HTML content from markdown */}
-        <div 
-          className="prose prose-indigo lg:prose-lg max-w-none blog-content"
-          dangerouslySetInnerHTML={{ __html: postData.contentHtml || '' }}
+    <div className="min-h-screen bg-background-default overflow-x-hidden w-full">
+      <div className="container mx-auto px-4 py-8 max-w-3xl w-full">
+        <script 
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
+        <article className="bg-white p-4 sm:p-6 md:p-8 rounded-lg shadow-soft overflow-hidden">
+          <header className="mb-8">
+            {/* <h1 className="text-4xl font-bold text-gray-900 mb-3">{postData.title}</h1> */}
+            <div className="text-sm text-gray-500">
+              <time dateTime={postData.date}>
+                {new Date(postData.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </time>
+            </div>
+          </header>
+          
+          {/* Render the HTML content from markdown */}
+          <div className="overflow-x-hidden w-full">
+            <div 
+              className="prose prose-indigo sm:prose-lg max-w-none blog-content"
+              style={{
+                width: '100%',
+                maxWidth: '100%',
+                overflowX: 'hidden'
+              }}
+              dangerouslySetInnerHTML={{ __html: postData.contentHtml || '' }}
+            />
+          </div>
+          
+          <script dangerouslySetInnerHTML={{
+            __html: `
+              document.addEventListener('DOMContentLoaded', function() {
+                const tables = document.querySelectorAll('.blog-content table');
+                tables.forEach(function(table) {
+                  if (!table.parentElement.classList.contains('table-wrapper')) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'table-wrapper';
+                    table.parentNode.insertBefore(wrapper, table);
+                    wrapper.appendChild(table);
+                  }
+                });
+              });
+            `
+          }} />
 
-        <hr className="my-8" />
+          <hr className="my-8" />
 
-        <div className="mt-8">
-          <Link href="/blog" className="text-indigo-600 hover:text-indigo-800 font-medium">
-            &larr; Back to all posts
-          </Link>
-        </div>
-      </article>
-      <IntegrationsToast />
+          <div className="mt-8">
+            <Link href="/blog" className="text-indigo-600 hover:text-indigo-800 font-medium">
+              &larr; Back to all posts
+            </Link>
+          </div>
+        </article>
+        <IntegrationsToast />
+      </div>
     </div>
   );
 } 

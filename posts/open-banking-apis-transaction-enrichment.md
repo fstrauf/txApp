@@ -130,7 +130,7 @@ The reality is much simpler:
 **Step 1: API Connection**
 ```javascript
 // Simple API call example
-const transactionData = await fetch('https://api.expensesorted.com/enrich', {
+const transactionData = await fetch('https://api.example.com/enrich', {
   method: 'POST',
   body: JSON.stringify({ transactions: yourTransactions }),
   headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
