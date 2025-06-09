@@ -309,10 +309,10 @@ export default function HomePageClient() {
         {/* Tools Section */}
         <Box variant="gradient" padding="lg" className="mb-16" id="tools">
           <div className="text-center mb-8 md:mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-black mb-4">
               Choose Your Perfect Tool
             </h2>
-            <p className="text-lg text-white/90 max-w-2xl mx-auto">
+            <p className="text-lg text-black/90 max-w-2xl mx-auto">
               Whether you're just starting or already have a system, we have the right solution for you.
             </p>
           </div>

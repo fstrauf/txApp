@@ -17,6 +17,73 @@ img {
   height: auto;
 }
 
+/* Simple table scroll solution */
+.blog-content table {
+  display: table !important;
+  width: auto !important;
+  min-width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+}
+
+/* Create a scrollable wrapper around tables */
+.blog-content table {
+  /* Reset any conflicting styles */
+  display: table;
+  width: auto;
+  margin: 1rem 0;
+}
+
+/* This will be applied via JavaScript or we can use a CSS-only approach */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin: 1rem 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrapper table {
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.blog-content img, 
+.blog-content video, 
+.blog-content iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+  /* Mobile specific improvements */
+@media (max-width: 640px) {
+  .blog-content table {
+    font-size: 0.875rem;
+  }
+  
+  .blog-content pre {
+    font-size: 0.875rem;
+  }
+}
+
+/* Toast animation */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 100px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out;
+}
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
