@@ -55,12 +55,12 @@ export default async function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} flex flex-col min-h-screen`}>
+      <body className={`${inter.className}`}>
         <SessionProvider>
           <QueryProvider>
             <MobileNavigationProvider>
               <Header />
-              <div className="flex flex-1">
+              <div className="flex">
                 <ClientSidebarWrapper />
                 <main className="grow">{children}</main>
               </div>

@@ -6,6 +6,7 @@ import Papa from 'papaparse';
 import { CSVUploadArea } from '@/app/personal-finance/shared/CSVUploadArea';
 import { AkahuUploadArea } from '@/app/personal-finance/shared/AkahuUploadArea';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
+import { SmartSheetsIntegration } from '@/app/personal-finance/shared/SmartSheetsIntegration';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
@@ -70,6 +71,8 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
   });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [currentStep, setCurrentStep] = useState<'upload' | 'configure' | 'ready'>('upload');
+  const [showSheetsIntegration, setShowSheetsIntegration] = useState(false);
+  const [enrichedTransactions, setEnrichedTransactions] = useState<any[] | null>(null);
 
   const handleFileSelect = async (file: File) => {
     // Track file upload
@@ -262,6 +265,14 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
     
     // Process transaction data and update the store
     processTransactionData(transactions);
+    
+    // Store transactions and show Google Sheets integration
+    setEnrichedTransactions(transactions);
+    setShowSheetsIntegration(true);
+    setFeedback({ 
+      type: 'success', 
+      message: `Successfully imported ${transactions.length} transactions from your bank account!` 
+    });
   };
 
   const validateAndProcessData = async () => {
@@ -470,15 +481,15 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
         // Process the enriched transaction data
         processTransactionData(enrichedTransactions);
         
+        // Store enriched transactions and show Google Sheets integration
+        setEnrichedTransactions(enrichedTransactions);
+        setShowSheetsIntegration(true);
+        
         setFeedback({ 
           type: 'success', 
           message: `Successfully categorized ${categorizedData.results.length} transactions! Found ${enrichedTransactions.filter((t: any) => t.isDebit).length} expense transactions.` 
         });
       }
-      
-      // Navigate to results screen
-      trackNavigation('spendingAnalysisUpload', 'spendingAnalysisResults', 'next');
-      goToScreen('spendingAnalysisResults');
     } catch (error: any) {
       console.error('Categorization error:', error);
       trackError('dataProcessingFailed', {
@@ -505,7 +516,7 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
     goToScreen('initialInsights');
   }
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="bg-gray-50 p-6 pb-20">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -682,6 +693,31 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
               <span className="text-lg mr-2">{feedback.type === 'success' ? '✅' : '❌'}</span>
               <div className="font-medium">{feedback.message}</div>
             </div>
+          </div>
+        )}
+
+        {/* Google Sheets Integration - Show after successful processing */}
+        {showSheetsIntegration && enrichedTransactions && (
+          <div className="mb-8">
+            <SmartSheetsIntegration
+              transactions={enrichedTransactions}
+              onSuccess={() => {
+                setFeedback({ 
+                  type: 'success', 
+                  message: 'Transactions successfully saved to Google Sheets!' 
+                });
+                // Navigate to results after a short delay
+                setTimeout(() => {
+                  trackNavigation('spendingAnalysisUpload', 'spendingAnalysisResults', 'next');
+                  goToScreen('spendingAnalysisResults');
+                }, 2000);
+              }}
+              onSkip={() => {
+                // Navigate to results screen immediately
+                trackNavigation('spendingAnalysisUpload', 'spendingAnalysisResults', 'next');
+                goToScreen('spendingAnalysisResults');
+              }}
+            />
           </div>
         )}
 
