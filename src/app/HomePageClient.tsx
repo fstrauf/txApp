@@ -183,12 +183,7 @@ export default function HomePageClient() {
                   </div>
                 </div>
               </div>
-              <Link
-                href="#tools"
-                className="mt-4 inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-secondary text-white font-medium hover:shadow-lg transition-all text-sm"
-              >
-                Choose Your Tool →
-              </Link>
+
               {/* Arrow for desktop - visible only on md+ screens */}
               <div className="hidden md:block absolute right-0 top-1/3 transform translate-x-1/2 z-10">
                 <div className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center">
@@ -240,47 +235,23 @@ export default function HomePageClient() {
                 </div>
               </div>
 
-              {/* Weekly Insights */}
-              <Box variant="elevated" padding="md" hoverable className="text-center group bg-white/80 backdrop-blur-sm">
-                <div className="mb-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto">
-                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                  </div>
-                  <h4 className="font-semibold text-gray-800 mb-2">AI Financial Coaching</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Get personalized advice and answer questions about your spending patterns.
-                  </p>
-                  <div className="flex flex-wrap gap-2 justify-center text-xs">
-                    <div className="bg-purple-50 px-2 py-1 rounded">
-                      <span className="text-gray-600">Smart alerts</span>
-                    </div>
-                    <div className="bg-purple-50 px-2 py-1 rounded">
-                      <span className="text-gray-600">Goal tracking</span>
-                    </div>
-                    <div className="bg-purple-50 px-2 py-1 rounded">
-                      <span className="text-gray-600">AI coaching</span>
-                    </div>
-                  </div>
-                </div>
-              </Box>
+              {/* AI Financial Coaching Box */}
+              
               <button
                 onClick={() => setIsWaitlistDialogOpen(true)}
                 className="mt-4 inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-secondary text-white font-medium hover:shadow-lg transition-all text-sm"
               >
                 Join Waitlist →
               </button>
-            </Box>
-
-            {/* Call to Action Highlight */}
-            <div className="max-w-lg mx-auto mt-10 md:mt-12 text-center py-4">
-              <div className="inline-block bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 font-semibold px-6 py-2 rounded-full text-sm mb-2">
-                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                  Start your journey today
-                </span>
+              {/* Arrow for desktop - visible only on md+ screens */}
+              <div className="hidden md:block absolute right-0 top-1/3 transform translate-x-1/2 z-10">
+                <div className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center">
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </div>
               </div>
-            </div>
+            </Box>
 
             {/* Step 3: Achieve Your Goals */}
             <Box variant="elevated" padding="md" hoverable className="flex flex-col items-center h-full">
@@ -324,6 +295,15 @@ export default function HomePageClient() {
               </div>
             </Box>
           </div>
+
+          {/* Call to Action Highlight - moved outside the grid */}
+          <div className="max-w-lg mx-auto mt-10 md:mt-12 text-center py-4">
+            <div className="inline-block bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 font-semibold px-6 py-2 rounded-full text-sm mb-2">
+              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                Start your journey today
+              </span>
+            </div>
+          </div>
         </Box>
 
         {/* Tools Section */}
@@ -343,7 +323,8 @@ export default function HomePageClient() {
               <div className="mb-6">
                 <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Financial Health Check</h3>
