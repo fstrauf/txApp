@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth';
 import { google } from 'googleapis';
-
-interface ValidatedTransaction {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  category: string;
-  account: string;
-  isDebit: boolean;
-  confidence?: number;
-}
+import { 
+  EXPENSE_DETAIL_SCHEMA, 
+  ExpenseDetailTransaction,
+  transactionsToExpenseDetailRows 
+} from '@/lib/sheets/expense-detail-schema';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,8 +25,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Spreadsheet ID is required' }, { status: 400 });
     }
 
-    // Get OAuth credentials from session
-    const accessToken = (session as any).accessToken || (session as any).user?.accessToken;
+    // Get OAuth credentials from Authorization header or session
+    const authHeader = request.headers.get('authorization');
+    let accessToken: string | null = null;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      accessToken = authHeader.replace('Bearer ', '');
+      console.log('✅ Using access token from Authorization header');
+    } else {
+      // Fallback to session token (for backward compatibility)
+      accessToken = (session as any).accessToken || (session as any).user?.accessToken;
+      console.log('📋 Using access token from session');
+    }
+    
     if (!accessToken) {
       return NextResponse.json({ error: 'No access token available' }, { status: 401 });
     }
@@ -42,28 +47,21 @@ export async function POST(request: NextRequest) {
 
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // Prepare data for Google Sheets
-    // Format: Date | Description | Amount | Category | Type | Account | Confidence
-    const rows = transactions.map((transaction: ValidatedTransaction) => [
-      transaction.date,
-      transaction.description,
-      transaction.isDebit ? -Math.abs(transaction.amount) : Math.abs(transaction.amount), // Negative for expenses
-      transaction.category,
-      transaction.isDebit ? 'Expense' : 'Income',
-      transaction.account,
-      transaction.confidence ? Math.round(transaction.confidence * 100) + '%' : '100%'
-    ]);
+    // Convert transactions to Expense-Detail sheet format using centralized schema
+    const rows = transactionsToExpenseDetailRows(transactions as ExpenseDetailTransaction[]);
 
-    console.log('Appending transactions to spreadsheet:', {
+    console.log('Appending transactions to Expense-Detail sheet:', {
       spreadsheetId,
+      targetSheet: EXPENSE_DETAIL_SCHEMA.sheetName,
       transactionCount: transactions.length,
-      sampleRows: rows.slice(0, 2)
+      sampleRows: rows.slice(0, 2),
+      expectedFormat: EXPENSE_DETAIL_SCHEMA.headers
     });
 
-    // Append to the spreadsheet
+    // Append to the Expense-Detail sheet using centralized schema
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: 'A:G', // Assuming columns A-G for our data
+      range: EXPENSE_DETAIL_SCHEMA.ranges.writeData,
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
@@ -79,8 +77,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       appendedCount: transactions.length,
+      targetSheet: EXPENSE_DETAIL_SCHEMA.sheetName,
       updatedRange: response.data.updates?.updatedRange,
-      updatedRows: response.data.updates?.updatedRows
+      updatedRows: response.data.updates?.updatedRows,
+      message: `Successfully appended ${transactions.length} transactions to ${EXPENSE_DETAIL_SCHEMA.sheetName} sheet`
     });
 
   } catch (error: any) {

@@ -25,7 +25,7 @@ import DataManagementDrawer from '../components/DataManagementDrawer';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 
 const DashboardScreen: React.FC = () => {
-  const { processTransactionData } = usePersonalFinanceStore();
+  const { processTransactionData, updateSpreadsheetInfo } = usePersonalFinanceStore();
   const { goToScreen, getProgress } = useScreenNavigation();
   const { trackAction } = usePersonalFinanceTracking({ 
     currentScreen: 'dashboard', 
@@ -67,6 +67,11 @@ const DashboardScreen: React.FC = () => {
   };
 
   const handleSpreadsheetLinked = (data: { spreadsheetId: string; spreadsheetUrl: string }) => {
+    console.log('🔗 Spreadsheet linked, updating store:', data);
+    
+    // Update the store with the spreadsheet information
+    updateSpreadsheetInfo(data.spreadsheetId, data.spreadsheetUrl);
+    
     setIsHelpDrawerOpen(false);
     // The useDashboard hook will automatically handle status updates
   };

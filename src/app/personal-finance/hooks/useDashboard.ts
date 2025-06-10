@@ -9,7 +9,7 @@ import {
 } from '../utils/dashboardStats';
 
 export const useDashboard = () => {
-  const { userData } = usePersonalFinanceStore();
+  const { userData, updateSpreadsheetInfo } = usePersonalFinanceStore();
   const { status: dashboardStatus, isLoading: statusLoading, error: statusError } = useDashboardStatus();
   
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
@@ -41,6 +41,17 @@ export const useDashboard = () => {
   const spreadsheetLinked = dashboardStatus?.hasSpreadsheet || false;
   const spreadsheetUrl = dashboardStatus?.spreadsheetUrl || null;
   const isFirstTimeUser = !spreadsheetLinked && filteredTransactions.length === 0;
+
+  // Sync spreadsheet info from API to store when available
+  useEffect(() => {
+    if (dashboardStatus?.spreadsheetId && dashboardStatus?.spreadsheetUrl) {
+      console.log('🔗 Syncing spreadsheet info to store:', {
+        spreadsheetId: dashboardStatus.spreadsheetId,
+        spreadsheetUrl: dashboardStatus.spreadsheetUrl
+      });
+      updateSpreadsheetInfo(dashboardStatus.spreadsheetId, dashboardStatus.spreadsheetUrl);
+    }
+  }, [dashboardStatus?.spreadsheetId, dashboardStatus?.spreadsheetUrl, updateSpreadsheetInfo]);
 
   // Calculate stats from local data when appropriate
   useEffect(() => {

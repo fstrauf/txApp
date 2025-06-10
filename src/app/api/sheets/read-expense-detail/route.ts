@@ -1,82 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { 
+  EXPENSE_DETAIL_SCHEMA, 
+  ExpenseDetailTransaction,
+  parseExpenseDetailRows,
+  validateExpenseDetailHeaders,
+  filterRecentTransactions,
+  sortTransactionsByDate
+} from '@/lib/sheets/expense-detail-schema';
 
-interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  category: string;
-  account: string;
-  isDebit: boolean;
-}
 
-// Helper function to convert Excel serial date to JavaScript Date
-function excelSerialToDate(serial: number): Date {
-  // Excel serial date starts from 1900-01-01 (serial 1)
-  // But Excel incorrectly treats 1900 as a leap year, so we need to adjust
-  const epoch = new Date(1899, 11, 30); // December 30, 1899
-  const jsDate = new Date(epoch.getTime() + (serial * 24 * 60 * 60 * 1000));
-  return jsDate;
-}
-
-// Helper function to parse date value (handles both serial numbers and date strings)
-function parseDate(dateValue: any): string {
-  if (!dateValue) return '';
-  
-  // If it's a number, treat it as Excel serial date
-  if (typeof dateValue === 'number') {
-    const date = excelSerialToDate(dateValue);
-    return date.toISOString().split('T')[0]; // Return YYYY-MM-DD format
-  }
-  
-  // If it's already a string, try to parse it
-  if (typeof dateValue === 'string') {
-    const parsed = new Date(dateValue);
-    if (!isNaN(parsed.getTime())) {
-      return parsed.toISOString().split('T')[0];
-    }
-  }
-  
-  return dateValue.toString();
-}
-
-// Helper function to parse amount value (handles accounting notation)
-function parseAmount(amountValue: any): number {
-  if (typeof amountValue === 'number') {
-    return amountValue;
-  }
-  
-  if (typeof amountValue !== 'string') {
-    return 0;
-  }
-  
-  let cleanAmount = amountValue.toString().trim();
-  
-  // Handle empty or non-numeric strings
-  if (!cleanAmount || cleanAmount === '') {
-    return 0;
-  }
-  
-  // Handle accounting notation with parentheses - indicates negative (expense)
-  const isParentheses = cleanAmount.startsWith('(') && cleanAmount.endsWith(')');
-  if (isParentheses) {
-    cleanAmount = cleanAmount.slice(1, -1); // Remove parentheses
-  }
-  
-  // Remove currency symbols, commas, and spaces
-  cleanAmount = cleanAmount.replace(/[$,\s]/g, '');
-  
-  // Parse the number
-  const parsed = parseFloat(cleanAmount);
-  if (isNaN(parsed)) {
-    return 0;
-  }
-  
-  // For accounting notation with parentheses, return negative (expense)
-  // For regular negative signs, preserve the sign
-  return isParentheses ? -parsed : parsed;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -136,10 +69,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read all data from the Expense-Detail sheet
+    // Read all data from the Expense-Detail sheet using centralized schema
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Expense-Detail!A:H', // All columns A through H
+      range: EXPENSE_DETAIL_SCHEMA.ranges.readAll,
       valueRenderOption: 'UNFORMATTED_VALUE'
     });
 
@@ -151,123 +84,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Expected columns: Source, Date, Narrative, Amount Spent, Category, Currency Spent, Amount in Base Currency: AUD, [empty]
+    // Validate headers using centralized schema
     const headers = rows[0];
-    const dataRows = rows.slice(1).filter(row => row.length > 0 && row.some(cell => cell !== '')); // Filter out empty rows
-
-    console.log('Headers found:', headers);
-    console.log('Data rows count:', dataRows.length);
+    const headerValidation = validateExpenseDetailHeaders(headers);
     
-    // Log some sample data to understand the format
-    if (dataRows.length > 0) {
-      console.log('Sample row data:', dataRows[0]);
-      const dateIndex = headers.indexOf('Date');
-      const amountIndex = headers.indexOf('Amount Spent');
-      const baseAmountIndex = headers.findIndex(h => h.includes('Amount in Base Currency'));
-      console.log('Sample data parsing:', {
-        rawDate: dataRows[0][dateIndex],
-        parsedDate: parseDate(dataRows[0][dateIndex]),
-        rawAmount: dataRows[0][amountIndex],
-        parsedAmount: parseAmount(dataRows[0][amountIndex]),
-        baseAmount: baseAmountIndex >= 0 ? dataRows[0][baseAmountIndex] : 'N/A'
-      });
-    }
-
-    // Validate that we have the expected columns
-    const expectedColumns = ['Source', 'Date', 'Narrative', 'Amount Spent', 'Category'];
-    const missingColumns = expectedColumns.filter(col => !headers.includes(col));
-    
-    if (missingColumns.length > 0) {
+    if (!headerValidation.isValid) {
       return NextResponse.json(
         { 
-          error: `Missing required columns: ${missingColumns.join(', ')}. Please use the ExpenseSorted template format.`,
-          foundHeaders: headers
+          error: `Invalid sheet format: ${headerValidation.errors.join(', ')}`,
+          foundHeaders: headers,
+          expectedHeaders: EXPENSE_DETAIL_SCHEMA.headers
         },
         { status: 400 }
       );
     }
 
-    // Convert to our standard transaction format
-    const transactions: Transaction[] = dataRows.map((row, index) => {
-      // Find column indices
-      const sourceIndex = headers.indexOf('Source');
-      const dateIndex = headers.indexOf('Date');
-      const narrativeIndex = headers.indexOf('Narrative');
-      const amountIndex = headers.indexOf('Amount Spent');
-      const categoryIndex = headers.indexOf('Category');
-      const currencyIndex = headers.indexOf('Currency Spent');
-      const baseAmountIndex = headers.findIndex(h => h.includes('Amount in Base Currency'));
+    console.log('Headers validated:', headers);
+    console.log('Raw data rows count:', rows.length - 1);
 
-      // Extract and parse values
-      const source = row[sourceIndex] || '';
-      const rawDate = row[dateIndex];
-      const parsedDate = parseDate(rawDate);
-      const narrative = row[narrativeIndex] || '';
-      const rawAmount = row[amountIndex];
-      const parsedAmount = parseAmount(rawAmount);
-      const category = row[categoryIndex] || 'Uncategorized';
-      const currency = row[currencyIndex] || 'AUD';
-      const baseAmount = baseAmountIndex >= 0 ? parseAmount(row[baseAmountIndex]) : parsedAmount;
+    // Parse rows using centralized schema
+    const allTransactions = parseExpenseDetailRows(rows, spreadsheetId);
+    console.log('Parsed transactions:', allTransactions.length);
 
-      // Validate required fields
-      if (!parsedDate || parsedAmount === 0) {
-        console.warn(`Skipping row ${index + 2}: missing date or invalid amount`, { 
-          rawDate, 
-          parsedDate, 
-          rawAmount,
-          parsedAmount 
-        });
-        return null;
-      }
+    // Filter to last 12 months (according to memory)
+    const recentTransactions = filterRecentTransactions(allTransactions, 12);
+    console.log('Recent transactions (last 12 months):', recentTransactions.length);
 
-      // 12-month filtering: Only import transactions from the last 12 months
-      const transactionDate = new Date(parsedDate);
-      const twelveMonthsAgo = new Date();
-      twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
-      
-      if (transactionDate < twelveMonthsAgo) {
-        // Skip transactions older than 12 months
-        return null;
-      }
-
-      // Use the base currency amount if available and valid, otherwise use the original amount
-      const finalAmount = !isNaN(baseAmount) && baseAmount !== 0 ? baseAmount : parsedAmount;
-      
-      // Determine if this is an expense (negative amount) or credit/income (positive amount)
-      // In accounting: expenses are negative, income/credits are positive
-      const isExpense = finalAmount < 0;
-      
-      // Debug logging for the first few transactions
-      if (index < 3) {
-        console.log(`Transaction ${index + 1}:`, {
-          narrative,
-          rawDate,
-          parsedDate,
-          rawAmount,
-          parsedAmount,
-          baseAmount,
-          finalAmount,
-          isExpense,
-          absoluteAmount: Math.abs(finalAmount)
-        });
-      }
-
-      return {
-        id: `sheet-${spreadsheetId}-${index + 2}`, // Use row number as part of ID
-        date: parsedDate,
-        description: narrative.toString(),
-        amount: Math.abs(finalAmount), // Always store as positive
-        category: category.toString(),
-        account: source.toString() || 'Google Sheets Import',
-        isDebit: isExpense // true for expenses (negative amounts), false for income/credits (positive amounts)
-      };
-    }).filter((t): t is Transaction => t !== null); // Remove null entries (including filtered old transactions)
-
-    console.log('Converted transactions (last 12 months only):', transactions.length);
+    // Sort by date (newest first)
+    const transactions = sortTransactionsByDate(recentTransactions);
 
     if (transactions.length === 0) {
       return NextResponse.json(
-        { error: 'No valid transactions found. Please check your data format.' },
+        { error: 'No valid transactions found in the last 12 months. Please check your data format.' },
         { status: 400 }
       );
     }

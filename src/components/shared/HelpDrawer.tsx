@@ -13,7 +13,7 @@ interface HelpDrawerProps {
 }
 
 export default function HelpDrawer({ isOpen, onClose, title, children, size = 'default' }: HelpDrawerProps) {
-  const maxWidth = size === 'large' ? 'max-w-4xl' : 'max-w-md';
+  const maxWidth = size === 'large' ? 'max-w-6xl' : 'max-w-md'; // Increased large size from 4xl to 6xl for better 3/4 width
   
   return (
     <Transition.Root show={isOpen} as={Fragment}>

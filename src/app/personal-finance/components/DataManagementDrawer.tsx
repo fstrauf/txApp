@@ -22,6 +22,7 @@ import {
   ChevronUpIcon,
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
+import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
 
 interface DataManagementDrawerProps {
   spreadsheetLinked: boolean;
@@ -89,6 +90,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   onClose
 }) => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
+  const { getValidAccessToken } = useIncrementalAuth();
   const [activeTab, setActiveTab] = useState<TabType>(spreadsheetLinked ? 'manage' : 'link');
   
   // CSV Processing State
@@ -452,7 +454,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           category: result.predicted_category || 'Uncategorized',
           predicted_category: result.predicted_category,
           similarity_score: result.similarity_score,
-          confidence: result.confidence || 0,
+          confidence: result.similarity_score || 0, // Use similarity_score as confidence
           isValidated: false,
           isSelected: false,
           account: 'Imported'
@@ -493,7 +495,8 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           id: `transaction-${index}`,
           category: result.predicted_category || 'Uncategorized',
           predicted_category: result.predicted_category,
-          confidence: result.confidence || 0,
+          similarity_score: result.similarity_score,
+          confidence: result.similarity_score || 0, // Use similarity_score as confidence
           isValidated: false,
           isSelected: false,
           account: 'Imported'
@@ -578,8 +581,22 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   const handleCompleteValidation = async () => {
     const validatedTransactions = validationTransactions.filter(t => t.isValidated);
     
+    console.log('🔄 Starting validation completion...', {
+      validatedCount: validatedTransactions.length,
+      totalCount: validationTransactions.length,
+      spreadsheetId: userData.spreadsheetId,
+      spreadsheetUrl: userData.spreadsheetUrl,
+      hasSpreadsheetId: !!userData.spreadsheetId,
+      hasSpreadsheetUrl: !!userData.spreadsheetUrl
+    });
+    
     if (validatedTransactions.length === 0) {
       setFeedback({ type: 'error', message: 'Please validate at least one transaction before completing.' });
+      return;
+    }
+
+    if (!userData.spreadsheetId) {
+      setFeedback({ type: 'error', message: 'No spreadsheet linked. Please link a Google Sheet first.' });
       return;
     }
 
@@ -587,43 +604,70 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     setFeedback({ type: 'info', message: 'Writing transactions to Google Sheet...' });
 
     try {
+      console.log('📊 Updating store with validated transactions...');
       // Update the store with validated transactions
       processTransactionData(validatedTransactions);
 
-      // If user has a spreadsheet, append the validated transactions
-      if (userData.spreadsheetId && validatedTransactions.length > 0) {
-        const response = await fetch('/api/sheets/append-validated-transactions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            transactions: validatedTransactions,
-            spreadsheetId: userData.spreadsheetId
-          })
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          setFeedback({ 
-            type: 'success', 
-            message: `Successfully wrote ${result.appendedCount} transactions to Google Sheet!` 
-          });
-          
-          // Close drawer and navigate back to dashboard
-          setTimeout(() => {
-            onClose();
-            window.location.href = '/personal-finance'; // Navigate to dashboard
-          }, 2000);
-        } else {
-          throw new Error('Failed to append transactions to spreadsheet');
-        }
-      } else {
-        throw new Error('No spreadsheet linked');
+      console.log('🔑 Getting fresh OAuth access token...');
+      const accessToken = await getValidAccessToken();
+      if (!accessToken) {
+        throw new Error('Unable to get valid Google access token. Please re-authorize spreadsheet access.');
       }
+      console.log('✅ Got valid access token, calling API...');
+
+      console.log('📝 Calling API to append transactions to spreadsheet...');
+      const response = await fetch('/api/sheets/append-validated-transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          transactions: validatedTransactions,
+          spreadsheetId: userData.spreadsheetId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `API call failed with status ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Successfully appended transactions:', result);
+      
+      setFeedback({ 
+        type: 'success', 
+        message: `Successfully wrote ${result.appendedCount || validatedTransactions.length} transactions to Google Sheet!` 
+      });
+      
+      // Clear validation state
+      setValidationTransactions([]);
+      setSelectedTransactions(new Set());
+      
+      // Close drawer and navigate back to dashboard
+      setTimeout(() => {
+        console.log('🔄 Closing drawer and navigating to dashboard...');
+        onClose();
+        window.location.href = '/personal-finance';
+      }, 2000);
+
     } catch (error: any) {
-      console.error('Error completing validation:', error);
-      setFeedback({ type: 'error', message: `Error: ${error.message}` });
+      console.error('❌ Error completing validation:', error);
+      
+      let errorMessage = `Failed to write to spreadsheet: ${error.message}`;
+      
+      // Handle specific OAuth/authorization errors
+      if (error.message.includes('access token') || error.message.includes('Unauthorized')) {
+        errorMessage = 'Authorization expired. Please refresh the page and try again, or re-link your spreadsheet if the issue persists.';
+      } else if (error.message.includes('Permission denied')) {
+        errorMessage = 'Permission denied. Please ensure your spreadsheet is accessible and you have edit permissions.';
+      }
+      
+      setFeedback({ 
+        type: 'error', 
+        message: errorMessage
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -1113,13 +1157,40 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
 
               {/* Complete Validation Button */}
               <div className="border-t pt-4 mt-4">
-                <button
-                  onClick={handleCompleteValidation}
-                  disabled={validatedCount === 0 || isProcessing}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {isProcessing ? 'Writing to Google Sheet...' : `Complete Validation (${validatedCount} transactions)`}
-                </button>
+                {validatedCount === 0 ? (
+                  <div className="text-center py-2">
+                    <p className="text-sm text-gray-500 mb-2">Validate at least one transaction to continue</p>
+                    <button
+                      disabled={true}
+                      className="w-full px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed"
+                    >
+                      Complete Validation (0 transactions)
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-2">
+                      Ready to write {validatedCount} transaction{validatedCount !== 1 ? 's' : ''} to your Google Sheet
+                    </p>
+                    <button
+                      onClick={handleCompleteValidation}
+                      disabled={isProcessing}
+                      className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isProcessing ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Writing to Google Sheet...
+                        </span>
+                      ) : (
+                        `✅ Complete Validation & Write to Sheet (${validatedCount} transactions)`
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
