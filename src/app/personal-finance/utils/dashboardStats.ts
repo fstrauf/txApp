@@ -3,6 +3,7 @@ export interface DashboardStats {
   monthlyAverageSavings: number;
   monthlyAverageExpenses: number;
   lastMonthExpenses: number;
+  lastMonthIncome: number;
   annualExpenseProjection: number;
   lastDataRefresh?: Date;
 }
@@ -21,6 +22,7 @@ export const calculateStatsFromTransactions = (transactions: Transaction[]): Das
       monthlyAverageExpenses: 0,
       monthlyAverageSavings: 0,
       lastMonthExpenses: 0,
+      lastMonthIncome: 0,
       annualExpenseProjection: 0,
       lastDataRefresh: new Date(),
     };
@@ -73,11 +75,20 @@ export const calculateStatsFromTransactions = (transactions: Transaction[]): Das
     })
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
   
+  // === LAST MONTH INCOME (fixed date filtering) ===
+  const lastMonthIncome = income
+    .filter(t => {
+      const transactionDate = new Date(t.date);
+      return transactionDate >= lastMonth && transactionDate <= lastMonthEnd;
+    })
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  
   return {
     monthlyAverageIncome: Math.round(monthlyAverageIncome),
     monthlyAverageExpenses: Math.round(monthlyAverageExpenses),
     monthlyAverageSavings: Math.round(monthlyAverageSavings),
     lastMonthExpenses: Math.round(lastMonthExpenses),
+    lastMonthIncome: Math.round(lastMonthIncome),
     annualExpenseProjection: Math.round(monthlyAverageExpenses * 12),
     lastDataRefresh: new Date(),
   };

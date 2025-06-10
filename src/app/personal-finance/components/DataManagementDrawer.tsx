@@ -30,12 +30,11 @@ interface DataManagementDrawerProps {
   onSpreadsheetLinked: (data: { spreadsheetId: string; spreadsheetUrl: string }) => void;
   onTransactionsFromGoogleSheets: (transactions: any[]) => void;
   onRefreshData: () => void;
-  onAddNewData: () => void;
   isLoading: boolean;
   onClose: () => void;
 }
 
-type TabType = 'link' | 'upload' | 'manage' | 'validate';
+type TabType = 'manage' | 'upload' | 'validate';
 type MappedFieldType = 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'none';
 
 interface AnalysisResult {
@@ -85,13 +84,12 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   onSpreadsheetLinked,
   onTransactionsFromGoogleSheets,
   onRefreshData,
-  onAddNewData,
   isLoading,
   onClose
 }) => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
   const { getValidAccessToken } = useIncrementalAuth();
-  const [activeTab, setActiveTab] = useState<TabType>(spreadsheetLinked ? 'manage' : 'link');
+  const [activeTab, setActiveTab] = useState<TabType>('manage');
   
   // CSV Processing State
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -726,15 +724,15 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('link')}
+            onClick={() => setActiveTab('manage')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'link'
+              activeTab === 'manage'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            <LinkIcon className="h-5 w-5 inline mr-2" />
-            Link Google Sheet
+            <ArrowPathIcon className="h-5 w-5 inline mr-2" />
+            Manage Data
           </button>
           
           <button
@@ -748,20 +746,6 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             <DocumentPlusIcon className="h-5 w-5 inline mr-2" />
             Upload CSV
           </button>
-
-          {spreadsheetLinked && (
-            <button
-              onClick={() => setActiveTab('manage')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'manage'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <ArrowPathIcon className="h-5 w-5 inline mr-2" />
-              Manage Data
-            </button>
-          )}
 
           {validationTransactions.length > 0 && (
             <button
@@ -781,21 +765,119 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
 
       {/* Tab Content */}
       <div className="space-y-6">
-        {activeTab === 'link' && (
-          <div className="space-y-4">
+        {activeTab === 'manage' && (
+          <div className="space-y-6">
+            {/* Info Banner */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-start">
                 <InformationCircleIcon className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
                 <div className="text-sm text-blue-800">
-                  <p className="font-medium mb-1">Link a Google Spreadsheet</p>
-                  <p>Connect your existing Google Sheets or create a new one from our template. This will become your primary data source for the dashboard.</p>
+                  <p className="font-medium mb-1">Data Management Hub</p>
+                  <p>Link a Google Spreadsheet, refresh your data, or manage your existing data source. All your data operations are centralized here.</p>
                 </div>
               </div>
             </div>
-            
-            <SpreadsheetLinker
-              onSuccess={onSpreadsheetLinked}
-            />
+
+            {/* Current Spreadsheet Status or Link New */}
+            {spreadsheetLinked && spreadsheetUrl ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <CheckIcon className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
+                  <div className="text-sm text-green-800 flex-1">
+                    <p className="font-medium mb-1">Google Spreadsheet Connected</p>
+                    <p className="text-xs text-green-600 mt-1 break-all">
+                      {spreadsheetUrl}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 mt-0.5 mr-3 flex-shrink-0" />
+                  <div className="text-sm text-amber-800">
+                    <p className="font-medium mb-1">No Spreadsheet Connected</p>
+                    <p>Link a Google Spreadsheet to enable automatic data sync and dashboard updates.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Link/Change Spreadsheet */}
+              <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+                <div className="flex items-center gap-3">
+                  <LinkIcon className="h-6 w-6 text-blue-600 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-gray-900">
+                      {spreadsheetLinked ? 'Change Spreadsheet' : 'Link Google Sheet'}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {spreadsheetLinked ? 'Connect a different sheet' : 'Connect your first sheet'}
+                    </p>
+                  </div>
+                </div>
+                <SpreadsheetLinker onSuccess={onSpreadsheetLinked} />
+              </div>
+
+              {/* Refresh Data */}
+              {spreadsheetLinked && (
+                <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <ArrowPathIcon className="h-6 w-6 text-green-600 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-gray-900">Refresh Data</h4>
+                      <p className="text-sm text-gray-600">Get latest transactions from your sheet</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={onRefreshData}
+                    disabled={isLoading}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    {isLoading ? 'Refreshing...' : 'Refresh Now'}
+                  </button>
+                </div>
+              )}
+
+              {/* Open Spreadsheet */}
+              {spreadsheetLinked && spreadsheetUrl && (
+                <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <EyeIcon className="h-6 w-6 text-gray-600 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-gray-900">Open Sheet</h4>
+                      <p className="text-sm text-gray-600">View your spreadsheet in Google Sheets</p>
+                    </div>
+                  </div>
+                  <a
+                    href={spreadsheetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    <LinkIcon className="h-4 w-4" />
+                    Open in New Tab
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Access to Upload */}
+            <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <DocumentPlusIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <h4 className="font-medium text-gray-900 mb-1">Need to add more data?</h4>
+              <p className="text-sm text-gray-600 mb-4">Upload CSV files to import additional transactions</p>
+              <button
+                onClick={() => setActiveTab('upload')}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                <DocumentPlusIcon className="h-4 w-4" />
+                Go to Upload CSV
+              </button>
+            </div>
           </div>
         )}
 
@@ -1006,75 +1088,6 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                 </button>
               </div>
             )}
-          </div>
-        )}
-
-        {activeTab === 'manage' && spreadsheetLinked && (
-          <div className="space-y-6">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <InformationCircleIcon className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
-                <div className="text-sm text-green-800">
-                  <p className="font-medium mb-1">Data Source Connected</p>
-                  <p>Your Google Spreadsheet is linked and ready. You can refresh data, change the linked sheet, or upload additional CSV data.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Current Spreadsheet Info */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">Current Data Source</h4>
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  <p>Google Spreadsheet</p>
-                  {spreadsheetUrl && (
-                    <p className="text-xs text-gray-500 mt-1 break-all">
-                      {spreadsheetUrl}
-                    </p>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={onRefreshData}
-                    disabled={isLoading}
-                    className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    Refresh Data
-                  </button>
-                  <a
-                    href={spreadsheetUrl || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    <LinkIcon className="h-4 w-4" />
-                    Open Sheet
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button
-                onClick={() => setActiveTab('link')}
-                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left"
-              >
-                <LinkIcon className="h-6 w-6 text-blue-600 mb-2" />
-                <h4 className="font-medium text-gray-900">Change Spreadsheet</h4>
-                <p className="text-sm text-gray-600">Link a different Google Sheet</p>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('upload')}
-                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left"
-              >
-                <DocumentPlusIcon className="h-6 w-6 text-purple-600 mb-2" />
-                <h4 className="font-medium text-gray-900">Add CSV Data</h4>
-                <p className="text-sm text-gray-600">Import additional transactions</p>
-              </button>
-            </div>
           </div>
         )}
 
