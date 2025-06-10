@@ -428,14 +428,20 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
 
       setFeedback({ type: 'success', message: `Sending ${transactions.length} transactions for categorization...` });
 
+      // Use smart categorization if user has a spreadsheet, otherwise fallback to generic
+      const spreadsheetId = userData.spreadsheetId;
+      const categorizationEndpoint = spreadsheetId ? '/api/classify/smart-categorize' : '/api/transactions/categorize';
+      
       // Send to categorization service
-      const response = await fetch('/api/transactions/categorize', {
+      const response = await fetch(categorizationEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          transactions: transactions
+          transactions: transactions,
+          spreadsheetId: spreadsheetId,
+          useCustomTraining: Boolean(spreadsheetId)
         })
       });
 
@@ -495,16 +501,21 @@ const SpendingAnalysisUploadScreen: React.FC = () => {
           processing_time: Date.now() - (performance.now() || 0) // Approximate processing time
         });
 
-        // Process the enriched transaction data
+        // Store enriched transactions for validation
+        setEnrichedTransactions(enrichedTransactions);
+        
+        // Navigate to validation screen instead of showing sheets integration immediately
+        trackNavigation('spendingAnalysisUpload', 'transactionValidation', 'next');
+        
+        // Store in state for the validation screen to access
         processTransactionData(enrichedTransactions);
         
-        // Store enriched transactions and show Google Sheets integration
-        setEnrichedTransactions(enrichedTransactions);
-        setShowSheetsIntegration(true);
+        // Navigate to validation
+        goToScreen('transactionValidation');
         
         setFeedback({ 
           type: 'success', 
-          message: `Successfully categorized ${categorizedData.results.length} transactions! Found ${enrichedTransactions.filter((t: any) => t.isDebit).length} expense transactions.` 
+          message: `Successfully categorized ${categorizedData.results.length} transactions! Redirecting to validation...` 
         });
       }
     } catch (error: any) {

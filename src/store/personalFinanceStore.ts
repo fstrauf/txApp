@@ -35,6 +35,10 @@ interface UserData {
   savingsBreakdown?: SavingsBreakdown;
   selectedBank?: string;
   savingsGoal?: string;
+  // Spreadsheet integration
+  spreadsheetId?: string;
+  spreadsheetUrl?: string;
+  lastDataRefresh?: string;
   // Transaction data
   transactions?: Transaction[];
   categorySpending?: CategorySpending[];
@@ -49,6 +53,9 @@ interface PersonalFinanceState {
   updateSavingsBreakdown: (breakdown: SavingsBreakdown) => void;
   updateSelectedBank: (bank: string) => void;
   updateSavingsGoal: (goal: string) => void;
+  // Spreadsheet management
+  updateSpreadsheetInfo: (spreadsheetId: string, spreadsheetUrl: string) => void;
+  updateLastDataRefresh: (timestamp: string) => void;
   // Transaction management
   updateTransactions: (transactions: Transaction[]) => void;
   processTransactionData: (transactions: Transaction[]) => void;
@@ -100,6 +107,18 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
   updateSavingsGoal: (goal: string) => {
     set((state) => ({
       userData: { ...state.userData, savingsGoal: goal }
+    }));
+  },
+
+  updateSpreadsheetInfo: (spreadsheetId: string, spreadsheetUrl: string) => {
+    set((state) => ({
+      userData: { ...state.userData, spreadsheetId, spreadsheetUrl }
+    }));
+  },
+
+  updateLastDataRefresh: (timestamp: string) => {
+    set((state) => ({
+      userData: { ...state.userData, lastDataRefresh: timestamp }
     }));
   },
 

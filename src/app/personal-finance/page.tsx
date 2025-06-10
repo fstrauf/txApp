@@ -6,12 +6,14 @@ import { useScreenNavigation } from '@/app/personal-finance/hooks/useScreenNavig
 import ProgressBar from '@/app/personal-finance/shared/ProgressBar';
 import { PersonalFinanceSidebar } from '@/app/personal-finance/components/PersonalFinanceSidebar';
 import { Breadcrumbs } from '@/app/personal-finance/components/Breadcrumbs';
+import DashboardScreen from '@/app/personal-finance/screens/DashboardScreen';
 import WelcomeScreen from '@/app/personal-finance/screens/WelcomeScreen';
 import IncomeScreen from '@/app/personal-finance/screens/IncomeScreen';
 import SpendingScreen from '@/app/personal-finance/screens/SpendingScreen';
 import SavingsScreen from '@/app/personal-finance/screens/SavingsScreen';
 import InitialInsightsScreen from '@/app/personal-finance/screens/InitialInsightsScreen';
 import SpendingAnalysisUploadScreen from '@/app/personal-finance/screens/SpendingAnalysisUploadScreen';
+import TransactionValidationScreen from '@/app/personal-finance/screens/TransactionValidationScreen';
 import SpendingAnalysisResultsScreen from '@/app/personal-finance/screens/SpendingAnalysisResultsScreen';
 import SavingsAnalysisInputScreen from '@/app/personal-finance/screens/SavingsAnalysisInputScreen';
 import DataManagementScreen from '@/app/personal-finance/screens/DataManagementScreen';
@@ -43,6 +45,8 @@ function PersonalFinancePageContent() {
 
   const renderScreen = () => {
     switch (currentScreen) {
+      case 'dashboard':
+        return <DashboardScreen />;
       case 'welcome':
         return <WelcomeScreen />;
       case 'income':
@@ -55,6 +59,8 @@ function PersonalFinancePageContent() {
         return <InitialInsightsScreen />;
       case 'spendingAnalysisUpload':
         return <SpendingAnalysisUploadScreen />;
+      case 'transactionValidation':
+        return <TransactionValidationScreen />;
       case 'spendingAnalysisResults':
         return <SpendingAnalysisResultsScreen />;
       case 'savingsAnalysisInput':
@@ -66,7 +72,7 @@ function PersonalFinancePageContent() {
       case 'dataManagement':
         return <DataManagementScreen />;
       default:
-        return <WelcomeScreen />;
+        return <DashboardScreen />; // Default to dashboard instead of welcome
     }
   };
 
