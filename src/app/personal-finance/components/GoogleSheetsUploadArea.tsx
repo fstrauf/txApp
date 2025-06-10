@@ -19,7 +19,7 @@ export function GoogleSheetsUploadArea({ onTransactionsSelect }: GoogleSheetsUpl
   const [sheetUrl, setSheetUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { requestSpreadsheetAccess } = useIncrementalAuth();
+  const { requestSpreadsheetAccess, getValidAccessToken } = useIncrementalAuth();
 
   const extractSpreadsheetId = (url: string): string | null => {
     // Extract spreadsheet ID from various Google Sheets URL formats
@@ -53,8 +53,16 @@ export function GoogleSheetsUploadArea({ onTransactionsSelect }: GoogleSheetsUpl
     setError(null);
 
     try {
-      // Request Google Sheets permissions and get access token
-      const accessToken = await requestSpreadsheetAccess();
+      // First try to use stored/valid access token
+      let accessToken = await getValidAccessToken();
+      
+      if (!accessToken) {
+        console.log('No valid stored token, requesting Google Sheets permissions...');
+        // No stored token available, request Google Sheets permissions
+        accessToken = await requestSpreadsheetAccess();
+      } else {
+        console.log('Using stored Google Sheets access token');
+      }
 
       // Call our API to read from the Google Sheet
       const response = await fetch('/api/sheets/read-expense-detail', {

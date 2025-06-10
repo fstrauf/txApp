@@ -7,6 +7,8 @@ import { InsightCard } from '@/app/personal-finance/shared/InsightCard';
 import { ProFeatureTeaser } from '@/app/personal-finance/shared/ProFeatureTeaser';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
+import { DataAnalysisEngine } from '../engine/DataAnalysisEngine';
+import { MonthlySpendingChart } from '@/components/ui/MonthlySpendingChart';
 
 import { 
   analyzeSpending, 
@@ -67,6 +69,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(12);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'summary' | 'transactions'>('summary');
+  const [selectedChartCategories, setSelectedChartCategories] = useState<string[]>([]);
 
   // Validate user data first
   const validation = validateUserData(userData);
@@ -108,16 +111,77 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
     }
   }
 
-  // Use the rules engine for spending analysis with actual data
+  // Initialize data analysis engine for advanced analytics
+  const dataEngine = useMemo(() => {
+    if (hasTransactionData && userData.transactions && userData.transactions.length > 0) {
+      return new DataAnalysisEngine(userData.transactions);
+    }
+    return null;
+  }, [hasTransactionData, userData.transactions]);
+
+  // CENTRALIZED CALCULATIONS - Single source of truth for all metrics
+  const centralizedMetrics = useMemo(() => {
+    // Use actual data when available, fallback to user data
+    const hasActualData = dataEngine !== null;
+    
+    if (hasActualData) {
+      const actualIncome = dataEngine.getActualIncome();
+      const actualSpending = dataEngine.getActualSpendingRate();
+      const summaryStats = dataEngine.getSummaryStats();
+      
+      return {
+        hasActualData: true,
+        monthlyIncome: summaryStats.averageMonthlyIncome,
+        monthlySpending: summaryStats.averageMonthlySpending,
+        totalSpending: summaryStats.totalSpending,
+        spendingRate: actualSpending.monthlySpendingRate,
+        dailySpending: summaryStats.averageMonthlySpending / 30,
+        runwayMonths: userData.savings > 0 ? userData.savings / summaryStats.averageMonthlySpending : 0,
+        surplus: summaryStats.averageMonthlyIncome - summaryStats.averageMonthlySpending,
+        incomeTransactionCount: actualIncome.incomeTransactions.length,
+        expenseTransactionCount: summaryStats.totalTransactions,
+        incomeByCategory: actualIncome.incomeByCategory,
+        totalIncome: actualIncome.totalIncome
+      };
+    } else {
+      // Fallback to user-inputted data
+      return {
+        hasActualData: false,
+        monthlyIncome: userData.income,
+        monthlySpending: spendingToAnalyze,
+        totalSpending: spendingToAnalyze,
+        spendingRate: userData.income > 0 ? (spendingToAnalyze / userData.income) * 100 : 0,
+        dailySpending: spendingToAnalyze / 30,
+        runwayMonths: userData.savings > 0 ? userData.savings / spendingToAnalyze : 0,
+        surplus: userData.income - spendingToAnalyze,
+        incomeTransactionCount: 0,
+        expenseTransactionCount: 0,
+        incomeByCategory: {},
+        totalIncome: userData.income
+      };
+    }
+  }, [dataEngine, userData, spendingToAnalyze]);
+
+  // Use legacy analysis for recommendations and benchmarks
   const spendingAnalysis = useMemo(() => analyzeSpending({
     ...userData,
-    spending: spendingToAnalyze
-  }), [userData, spendingToAnalyze]);
-  
-  const runwayAnalysis = useMemo(() => 
-    calculateFinancialRunway(userData.savings, spendingToAnalyze),
-    [userData.savings, spendingToAnalyze]
-  );
+    spending: centralizedMetrics.monthlySpending
+  }), [userData, centralizedMetrics.monthlySpending]);
+
+  // Get advanced analytics data (only when actual data available)
+  const monthlySpendingData = useMemo(() => {
+    if (!dataEngine) return null;
+    
+    return {
+      monthlyData: dataEngine.getMonthlySpending(),
+      timeSeriesData: dataEngine.getCategoryTimeSeriesData(),
+      rollingMetrics: dataEngine.getRollingMetrics(),
+      currentMonthComparison: dataEngine.getCurrentMonthComparison(),
+      summaryStats: dataEngine.getSummaryStats(),
+      topCategories: dataEngine.getTopCategories(10),
+      spendingAnomalies: dataEngine.getSpendingAnomalies(30)
+    };
+  }, [dataEngine]);
 
   // Get status color based on spending benchmark
   const getStatusColor = (benchmark: string) => {
@@ -333,6 +397,23 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
     }
   };
 
+  // Handler for monthly chart category toggle
+  const handleChartCategoryToggle = (category: string) => {
+    setSelectedChartCategories(prev => {
+      if (prev.includes(category)) {
+        return prev.filter(c => c !== category);
+      } else {
+        return [...prev, category];
+      }
+    });
+    
+    trackAction('monthlyChartCategoryToggled', {
+      category,
+      isSelected: !selectedChartCategories.includes(category),
+      totalSelected: selectedChartCategories.length
+    });
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-8 animate-fadeIn">
       {/* Header */}
@@ -352,7 +433,10 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
         </h1>
         
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          You spend {formatPercentage(spendingAnalysis.spendingRate)} of your income ({formatCurrency(spendingAnalysis.totalSpending)}/month)
+          You spend {formatPercentage(centralizedMetrics.spendingRate)} of your {formatCurrency(centralizedMetrics.monthlyIncome)} {centralizedMetrics.hasActualData ? 'actual ' : ''}monthly income 
+          <span className="block mt-1 text-lg">
+            {formatCurrency(centralizedMetrics.monthlySpending)}/month spending vs {formatCurrency(centralizedMetrics.monthlyIncome)}/month income
+          </span>
         </p>
       </div>
 
@@ -363,11 +447,18 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
             {React.createElement(getStatusIcon(spendingAnalysis.spendingBenchmark), { className: "h-8 w-8 text-indigo-600" })}
           </div>
           <div className="text-2xl font-bold text-gray-800 mb-1">
-            {formatPercentage(spendingAnalysis.spendingRate)}
+            {formatPercentage(centralizedMetrics.spendingRate)}
           </div>
-          <div className="text-sm text-gray-600">of income spent</div>
+          <div className="text-sm text-gray-600">
+            of {formatCurrency(centralizedMetrics.monthlyIncome)} {centralizedMetrics.hasActualData ? 'actual' : ''} income spent
+          </div>
           <div className="text-xs text-gray-500 mt-2">
-            Target: ≤{formatPercentage(FINANCIAL_CONFIG.SPENDING_ANALYSIS.goodSpendingRate)}
+            Target: ≤{formatPercentage(FINANCIAL_CONFIG.SPENDING_ANALYSIS.goodSpendingRate)} • {formatCurrency(centralizedMetrics.monthlySpending)} spending
+            {centralizedMetrics.hasActualData && (
+              <div className="mt-1">
+                <span className="text-green-600">✓ Based on actual transaction data</span>
+              </div>
+            )}
           </div>
         </Box>
 
@@ -378,7 +469,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
             </svg>
           </div>
           <div className="text-2xl font-bold text-gray-800 mb-1">
-            {runwayAnalysis.months.toFixed(1)} mo
+            {centralizedMetrics.runwayMonths.toFixed(1)} mo
           </div>
           <div className="text-sm text-gray-600">financial runway</div>
           <div className="text-xs text-gray-500 mt-2">
@@ -391,14 +482,206 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
             <BanknotesIcon className="h-8 w-8 text-indigo-600" />
           </div>
           <div className="text-2xl font-bold text-gray-800 mb-1">
-            {formatCurrency(spendingAnalysis.averageDailySpending)}
+            {formatCurrency(centralizedMetrics.dailySpending)}
           </div>
           <div className="text-sm text-gray-600">daily spending</div>
           <div className="text-xs text-gray-500 mt-2">
-            {formatCurrency(spendingAnalysis.averageDailySpending * 365)} annually
+            {formatCurrency(centralizedMetrics.dailySpending * 365)} annually
           </div>
         </Box>
       </div>
+
+      {/* Actual Income Analysis - Only show if we have income data from transactions */}
+      {centralizedMetrics.hasActualData && (
+        <div className="mb-10">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            Income vs Spending Analysis
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Box variant="elevated" className="p-6 text-center">
+              <div className="flex justify-center mb-2">
+                <BanknotesIcon className="h-8 w-8 text-green-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-800 mb-1">
+                {formatCurrency(centralizedMetrics.monthlyIncome)}
+              </div>
+              <div className="text-sm text-gray-600">actual monthly income</div>
+              <div className="text-xs text-gray-500 mt-2">
+                From {centralizedMetrics.incomeTransactionCount} income transactions
+              </div>
+            </Box>
+
+            <Box variant="elevated" className="p-6 text-center">
+              <div className="flex justify-center mb-2">
+                <TruckIcon className="h-8 w-8 text-red-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-800 mb-1">
+                {formatCurrency(centralizedMetrics.monthlySpending)}
+              </div>
+              <div className="text-sm text-gray-600">monthly spending</div>
+              <div className="text-xs text-gray-500 mt-2">
+                From {centralizedMetrics.expenseTransactionCount} expense transactions
+              </div>
+            </Box>
+
+            <Box variant="elevated" className="p-6 text-center">
+              <div className="flex justify-center mb-2">
+                <ChartBarIcon className={`h-8 w-8 ${
+                  centralizedMetrics.spendingRate > 70 ? 'text-red-600' : 
+                  centralizedMetrics.spendingRate > 50 ? 'text-yellow-600' : 'text-green-600'
+                }`} />
+              </div>
+              <div className="text-2xl font-bold text-gray-800 mb-1">
+                {centralizedMetrics.spendingRate.toFixed(1)}%
+              </div>
+              <div className="text-sm text-gray-600">of income spent</div>
+              <div className="text-xs text-gray-500 mt-2">
+                Target: ≤70% • {centralizedMetrics.spendingRate > 70 ? '🔴' : '✅'} 
+                {centralizedMetrics.spendingRate > 70 ? ' Over budget' : ' On track'}
+              </div>
+            </Box>
+
+            <Box variant="elevated" className="p-6 text-center">
+              <div className="flex justify-center mb-2">
+                {centralizedMetrics.surplus > 0 ? (
+                  <CheckCircleIcon className="h-8 w-8 text-green-600" />
+                ) : (
+                  <ExclamationCircleIcon className="h-8 w-8 text-red-600" />
+                )}
+              </div>
+              <div className="text-2xl font-bold text-gray-800 mb-1">
+                {formatCurrency(Math.abs(centralizedMetrics.surplus))}
+              </div>
+              <div className="text-sm text-gray-600">
+                {centralizedMetrics.surplus > 0 ? 'surplus' : 'deficit'}
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                {centralizedMetrics.surplus > 0 ? 
+                  'Money left over each month' : 'Spending more than earning'
+                }
+              </div>
+            </Box>
+          </div>
+
+          {/* Income Breakdown by Category */}
+          {Object.keys(centralizedMetrics.incomeByCategory).length > 0 && (
+            <Box variant="elevated" className="mt-6 p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Income Sources</h3>
+              <div className="space-y-3">
+                {Object.entries(centralizedMetrics.incomeByCategory)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([category, amount]) => (
+                    <div key={category} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                        <span className="font-medium text-gray-800">{formatCategoryName(category)}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-gray-800">{formatCurrency(amount)}</div>
+                        <div className="text-xs text-gray-500">
+                          {((amount / centralizedMetrics.totalIncome) * 100).toFixed(1)}% of total income
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </Box>
+          )}
+        </div>
+      )}
+
+      {/* Monthly Spending Trends - Only show if we have transaction data with multiple months */}
+      {monthlySpendingData && monthlySpendingData.monthlyData.length > 1 && (
+        <div className="mb-10">
+          <MonthlySpendingChart
+            timeSeriesData={monthlySpendingData.timeSeriesData}
+            monthlyData={monthlySpendingData.monthlyData}
+            rollingMetrics={monthlySpendingData.rollingMetrics}
+            selectedCategories={selectedChartCategories}
+            onCategoryToggle={handleChartCategoryToggle}
+          />
+          
+          {/* Monthly Comparison Insights */}
+          {monthlySpendingData.currentMonthComparison.currentMonth && (
+            <Box variant="default" className="mt-4 p-4">
+              <h4 className="text-lg font-semibold text-gray-800 mb-3">Month-over-Month Insights</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-sm font-medium text-gray-600">Current Month</div>
+                  <div className="text-xl font-bold text-gray-800">
+                    {formatCurrency(monthlySpendingData.currentMonthComparison.currentMonth.total)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {monthlySpendingData.currentMonthComparison.currentMonth.monthName}
+                  </div>
+                </div>
+                
+                {monthlySpendingData.currentMonthComparison.previousMonth && (
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-gray-600">vs Previous Month</div>
+                    <div className={`text-xl font-bold ${
+                      monthlySpendingData.currentMonthComparison.monthOverMonthChange > 0 
+                        ? 'text-red-600' : 'text-green-600'
+                    }`}>
+                      {monthlySpendingData.currentMonthComparison.monthOverMonthChange > 0 ? '+' : ''}
+                      {monthlySpendingData.currentMonthComparison.monthOverMonthChange.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {formatCurrency(monthlySpendingData.currentMonthComparison.previousMonth.total)} in {monthlySpendingData.currentMonthComparison.previousMonth.monthName}
+                    </div>
+                  </div>
+                )}
+                
+                {monthlySpendingData.currentMonthComparison.sameMonthLastYear && (
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-gray-600">vs Same Month Last Year</div>
+                    <div className={`text-xl font-bold ${
+                      monthlySpendingData.currentMonthComparison.yearOverYearChange > 0 
+                        ? 'text-red-600' : 'text-green-600'
+                    }`}>
+                      {monthlySpendingData.currentMonthComparison.yearOverYearChange > 0 ? '+' : ''}
+                      {monthlySpendingData.currentMonthComparison.yearOverYearChange.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {formatCurrency(monthlySpendingData.currentMonthComparison.sameMonthLastYear.total)} in {monthlySpendingData.currentMonthComparison.sameMonthLastYear.monthName}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Box>
+          )}
+
+          {/* Spending Anomalies Alert */}
+          {monthlySpendingData.spendingAnomalies.length > 0 && (
+            <Box variant="default" className="mt-4 p-4 border-l-4 border-orange-400 bg-orange-50">
+              <div className="flex items-start">
+                <ExclamationTriangleIcon className="h-5 w-5 text-orange-600 mr-2 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="text-sm font-semibold text-orange-800 mb-2">Spending Anomalies Detected</h4>
+                  <div className="space-y-2">
+                    {monthlySpendingData.spendingAnomalies.slice(0, 3).map((anomaly, index) => (
+                      <div key={index} className="text-sm text-orange-700">
+                        <span className="font-medium">{anomaly.category}</span> in{' '}
+                        <span className="font-medium">{anomaly.month.monthName}</span>:{' '}
+                        {formatCurrency(anomaly.amount)} (
+                        <span className={anomaly.deviationPercentage > 0 ? 'text-red-600' : 'text-green-600'}>
+                          {anomaly.deviationPercentage > 0 ? '+' : ''}{anomaly.deviationPercentage.toFixed(0)}%
+                        </span>
+                        {' '}vs avg {formatCurrency(anomaly.averageAmount)})
+                      </div>
+                    ))}
+                    {monthlySpendingData.spendingAnomalies.length > 3 && (
+                      <div className="text-xs text-orange-600">
+                        +{monthlySpendingData.spendingAnomalies.length - 3} more anomalies detected
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Box>
+          )}
+        </div>
+      )}
 
       {/* Spending Category Breakdown */}
       <div className="mb-10">
@@ -460,7 +743,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                 <div>
                   <span className="text-sm text-blue-600 font-medium">Transactions</span>
                   <div className="text-lg font-bold text-blue-800">
-                    {userData.transactions?.filter(t => t.isDebit).length || 0}
+                    {userData.transactions?.length || 0}
                   </div>
                 </div>
                 <div>
@@ -592,7 +875,6 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100/50">
                   {userData.transactions
-                    .filter(t => t.isDebit)
                     .sort((a, b) => parseTransactionDate(b.date).getTime() - parseTransactionDate(a.date).getTime())
                     .map((transaction, index) => (
                       <tr key={transaction.id || index} className="hover:bg-gray-50/50 transition-colors duration-150">
@@ -613,7 +895,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
                           <span className={transaction.isDebit ? 'text-red-600' : 'text-green-600'}>
-                            {formatCurrency(transaction.isDebit ? -transaction.amount : transaction.amount)}
+                            {formatCurrency(transaction.amount)}
                           </span>
                         </td>
                       </tr>
@@ -673,7 +955,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
       <div className="mb-10">
         <ProFeatureTeaser 
           feature="spending-alerts"
-          context={`Never go over budget again! Get instant alerts when you're approaching your spending limits. Your current monthly spending of ${formatCurrency(spendingToAnalyze)} could be tracked in real-time.`}
+          context={`Never go over budget again! Get instant alerts when you're approaching your spending limits. Your current monthly spending of ${formatCurrency(centralizedMetrics.monthlySpending)} could be tracked in real-time.`}
         />
       </div>
 
@@ -781,7 +1063,7 @@ const SpendingAnalysisResultsScreen: React.FC = () => {
               from: 'spendingAnalysisResults',
               to: 'savingsAnalysisInput',
               spendingBenchmark: spendingAnalysis.spendingBenchmark,
-              runwayMonths: runwayAnalysis.months
+              runwayMonths: centralizedMetrics.runwayMonths
             });
             goToScreen('savingsAnalysisInput');
           }}

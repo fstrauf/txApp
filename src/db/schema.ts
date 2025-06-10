@@ -50,6 +50,12 @@ export const users = pgTable('users', {
   monthlyCategorizations: integer('monthlyCategorizations').default(0),
   categoriesResetDate: timestamp('categoriesResetDate', { mode: 'date', withTimezone: true }),
   appBetaOptIn: appBetaOptInStatusEnum('appBetaOptIn'),
+  // Spreadsheet-centric fields
+  spreadsheetUrl: text('spreadsheetUrl'),
+  spreadsheetId: text('spreadsheetId'),
+  lastDataRefresh: timestamp('lastDataRefresh', { mode: 'date', withTimezone: true }),
+  emailRemindersEnabled: boolean('emailRemindersEnabled').default(false),
+  oauthRefreshToken: text('oauthRefreshToken'), // Encrypted Google Sheets OAuth token
 }, (table) => {
   return {
     emailIdx: index('users_email_idx').on(table.email),

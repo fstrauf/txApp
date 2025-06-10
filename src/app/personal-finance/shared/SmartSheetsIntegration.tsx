@@ -41,7 +41,8 @@ export const SmartSheetsIntegration: React.FC<SmartSheetsIntegrationProps> = ({
     isRequestingPermission, 
     hasSpreadsheetAccess, 
     isSignedIn,
-    isGoogleLoaded
+    isGoogleLoaded,
+    getValidAccessToken
   } = useIncrementalAuth();
   
   const [currentStep, setCurrentStep] = useState<IntegrationStep>('offer');
@@ -57,24 +58,40 @@ export const SmartSheetsIntegration: React.FC<SmartSheetsIntegrationProps> = ({
       return;
     }
 
-    if (!isGoogleLoaded) {
-      setError('Google services are still loading. Please try again in a moment.');
-      return;
-    }
-
-    // Check if Google Client ID is configured
-    if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
-      setError('Google OAuth is not configured. Please set NEXT_PUBLIC_GOOGLE_CLIENT_ID environment variable.');
-      return;
-    }
-
-    setCurrentStep('auth');
     setError(null);
     
     try {
-      const token = await requestSpreadsheetAccess();
+      // First try to get a valid stored token (no UI needed)
+      console.log('Checking for stored Google Sheets access...');
+      let token = await getValidAccessToken();
+      
+      if (token) {
+        console.log('Using stored Google Sheets access token');
+        setAuthToken(token);
+        setCurrentStep('choice');
+        return;
+      }
+
+      // No stored token available, need to request new authorization
+      console.log('No stored token found, requesting new authorization...');
+      
+      if (!isGoogleLoaded) {
+        setError('Google services are still loading. Please try again in a moment.');
+        return;
+      }
+
+      // Check if Google Client ID is configured
+      if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
+        setError('Google OAuth is not configured. Please set NEXT_PUBLIC_GOOGLE_CLIENT_ID environment variable.');
+        return;
+      }
+
+      setCurrentStep('auth');
+      
+      token = await requestSpreadsheetAccess();
       setAuthToken(token);
       setCurrentStep('choice');
+      
     } catch (err: any) {
       console.error('Google Sheets permission error:', err);
       
@@ -230,6 +247,11 @@ export const SmartSheetsIntegration: React.FC<SmartSheetsIntegrationProps> = ({
             <p className="text-gray-600 mb-4">
               Keep your {transactions.length} categorized transactions organized in a Google Sheet. 
               Perfect for ongoing budget tracking, sharing with financial advisors, or building custom reports.
+              {hasSpreadsheetAccess && (
+                <span className="block mt-2 text-green-600 text-sm font-medium">
+                  ✓ Google Sheets access already authorized
+                </span>
+              )}
             </p>
             
             <div className="flex flex-col sm:flex-row gap-3">
