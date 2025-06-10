@@ -205,10 +205,10 @@ interface DashboardChartsProps {
   onTimeFilterChange?: (timeFilter: string) => void;
 }
 
-type TimeFilter = 'all' | 'last30' | 'last90' | 'last12months';
+type TimeFilter = 'all' | 'month-1' | 'month-2' | 'month-3';
 
 const DashboardCharts: React.FC<DashboardChartsProps> = ({ 
-  transactions: propTransactions,
+  transactions: propTransactions, 
   onTimeFilterChange 
 }) => {
   const { userData } = usePersonalFinanceStore();
@@ -216,33 +216,52 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
+  // Generate month options for the last 3 months
+  const getMonthOptions = () => {
+    const now = new Date();
+    const months = [];
+    
+    for (let i = 1; i <= 3; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      months.push({
+        value: `month-${i}` as TimeFilter,
+        label: monthName,
+        date: date
+      });
+    }
+    
+    return months;
+  };
+
+  const monthOptions = getMonthOptions();
+
   // Use transactions from props or store
   const allTransactions = propTransactions || userData.transactions || [];
   const hasData = allTransactions.length > 0;
+
+
 
   // Filter transactions based on time period
   const filteredTransactions = useMemo(() => {
     if (timeFilter === 'all') return allTransactions;
     
-    const now = new Date();
-    const cutoffDate = new Date();
-    
-    switch (timeFilter) {
-      case 'last30':
-        cutoffDate.setDate(now.getDate() - 30);
-        break;
-      case 'last90':
-        cutoffDate.setDate(now.getDate() - 90);
-        break;
-      case 'last12months':
-        cutoffDate.setFullYear(now.getFullYear() - 1);
-        break;
+    // Handle month-based filtering
+    if (timeFilter.startsWith('month-')) {
+      const monthsBack = parseInt(timeFilter.split('-')[1]);
+      const now = new Date();
+      const targetDate = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
+      const targetYear = targetDate.getFullYear();
+      const targetMonth = targetDate.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
+      
+      return allTransactions.filter(t => {
+        const transactionDate = parseTransactionDate(t.date);
+        return transactionDate.getFullYear() === targetYear && 
+               transactionDate.getMonth() + 1 === targetMonth;
+      });
     }
     
-    return allTransactions.filter(t => {
-      const transactionDate = parseTransactionDate(t.date);
-      return transactionDate >= cutoffDate;
-    });
+    return allTransactions;
   }, [allTransactions, timeFilter]);
 
   // Initialize data analysis engine
@@ -393,11 +412,16 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Time</option>
-              <option value="last30">Last 30 Days</option>
-              <option value="last90">Last 90 Days</option>
-              <option value="last12months">Last 12 Months</option>
+              {monthOptions.map((month) => (
+                <option key={month.value} value={month.value}>
+                  {month.label}
+                </option>
+              ))}
             </select>
           </div>
+          
+          {/* Available Months - removed since we're using fixed last 3 months */}
+          {/* Month/Year Picker - removed since we're using fixed last 3 months */}
         </div>
 
         {/* Data Summary */}

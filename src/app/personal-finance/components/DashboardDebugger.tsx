@@ -66,22 +66,19 @@ const DashboardDebugger: React.FC<DashboardDebuggerProps> = ({
     let filteredTransactions = transactions;
     
     if (timeFilter !== 'all') {
-      const cutoffDate = new Date();
-      switch (timeFilter) {
-        case 'last30':
-          cutoffDate.setDate(now.getDate() - 30);
-          break;
-        case 'last90':
-          cutoffDate.setDate(now.getDate() - 90);
-          break;
-        case 'last12months':
-          cutoffDate.setFullYear(now.getFullYear() - 1);
-          break;
+      // Handle month-based filtering
+      if (timeFilter.startsWith('month-')) {
+        const monthsBack = parseInt(timeFilter.split('-')[1]);
+        const targetDate = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
+        const targetYear = targetDate.getFullYear();
+        const targetMonth = targetDate.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
+        
+        filteredTransactions = transactions.filter(t => {
+          const transactionDate = parseTransactionDate(t.date);
+          return transactionDate.getFullYear() === targetYear && 
+                 transactionDate.getMonth() + 1 === targetMonth;
+        });
       }
-      filteredTransactions = transactions.filter(t => {
-        const transactionDate = parseTransactionDate(t.date);
-        return transactionDate >= cutoffDate;
-      });
     }
 
     const chartsExpenseTransactions = filteredTransactions.filter(t => t.isDebit && t.amount > 0);

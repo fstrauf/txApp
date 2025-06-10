@@ -5,7 +5,7 @@
 
 export interface ExpenseDetailRow {
   source: string;          // Column A
-  date: string;           // Column B (YYYY-MM-DD format)
+  date: string;           // Column B (DD/MM/YYYY format for Google Sheets)
   narrative: string;      // Column C (description)
   amountSpent: number;    // Column D (may contain signed amounts)
   category: string;       // Column E
@@ -61,6 +61,22 @@ export const EXPENSE_DETAIL_SCHEMA = {
 } as const;
 
 /**
+ * Format date from YYYY-MM-DD to DD/MM/YYYY for Google Sheets
+ */
+function formatDateForSheet(dateString: string): string {
+  try {
+    const date = new Date(dateString + 'T00:00:00'); // Add time to avoid timezone issues
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    console.warn('Error formatting date for sheet:', dateString, error);
+    return dateString; // Fallback to original
+  }
+}
+
+/**
  * Convert internal transaction to Expense-Detail row format
  */
 export function transactionToExpenseDetailRow(transaction: ExpenseDetailTransaction): (string | number)[] {
@@ -69,7 +85,7 @@ export function transactionToExpenseDetailRow(transaction: ExpenseDetailTransact
   
   return [
     'ExpenseSorted Import',                    // Source (A)
-    transaction.date,                          // Date (B)
+    formatDateForSheet(transaction.date),      // Date (B) - formatted as DD/MM/YYYY
     transaction.description,                   // Narrative (C) 
     signedAmount,                              // Amount Spent (D) - signed (negative for expenses, positive for income)
     transaction.category,                      // Category (E)
@@ -116,7 +132,31 @@ export function expenseDetailRowToTransaction(
       const date = new Date(excelEpoch.getTime() + (rawDate - 2) * 24 * 60 * 60 * 1000);
       parsedDate = date.toISOString().split('T')[0];
     } else if (typeof rawDate === 'string') {
-      const date = new Date(rawDate);
+      let date: Date;
+      
+      // Handle DD/MM/YYYY format (user's preferred format)
+      if (rawDate.includes('/') && rawDate.split('/').length === 3) {
+        const parts = rawDate.split('/');
+        if (parts.length === 3) {
+          const day = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+          const year = parseInt(parts[2], 10);
+          
+          // Validate the date parts
+          if (!isNaN(day) && !isNaN(month) && !isNaN(year) && 
+              day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 1900) {
+            date = new Date(year, month, day);
+          } else {
+            throw new Error('Invalid DD/MM/YYYY date parts');
+          }
+        } else {
+          throw new Error('Invalid DD/MM/YYYY format');
+        }
+      } else {
+        // Try standard date parsing for other formats
+        date = new Date(rawDate);
+      }
+      
       if (isNaN(date.getTime())) {
         console.warn('Invalid date format:', rawDate);
         return null;

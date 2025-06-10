@@ -58,6 +58,8 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [showOnlyUnvalidated, setShowOnlyUnvalidated] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Initialize transactions from props or store
   useEffect(() => {
@@ -181,6 +183,7 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
 
     // If user has a spreadsheet, append the validated transactions and then refresh dashboard
     if (userData.spreadsheetId && validatedTransactions.length > 0) {
+      setIsSubmitting(true); // Show loading state
       try {
         const response = await fetch('/api/sheets/append-validated-transactions', {
           method: 'POST',
@@ -198,35 +201,49 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
           console.log('Successfully appended transactions to spreadsheet:', result);
           
           trackAction('transactions_appended_to_sheet', {
-            appended_count: result.appendedCount,
+            appended_count: result.appendedCount || result.updatedRows || validatedTransactions.length,
             spreadsheet_id: userData.spreadsheetId
           });
 
-          // After successful append, navigate to dashboard which will trigger a refresh to show complete data
-          if (onValidationComplete) {
-            onValidationComplete(validatedTransactions);
-          } else {
-            // Navigate to dashboard instead of spendingAnalysisResults
-            // Dashboard will need to refresh from spreadsheet to show complete data
-            goToScreen('dashboard');
-          }
+          // Show success feedback
+          setFeedback({
+            type: 'success',
+            message: `✅ Successfully saved ${result.updatedRows || validatedTransactions.length} transactions to your Google Sheet!`
+          });
+
+          // Wait a moment for user to see the success message
+          setTimeout(() => {
+            // Clear the local transaction data to force dashboard to refresh from spreadsheet
+            processTransactionData([]);
+            
+            // Navigate to dashboard - the auto-refresh will kick in
+            if (onValidationComplete) {
+              onValidationComplete(validatedTransactions);
+            } else {
+              goToScreen('dashboard');
+            }
+          }, 1500);
+
         } else {
-          console.error('Failed to append transactions to spreadsheet');
-          // If append fails, still navigate but with current data
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to save to Google Sheets');
+        }
+      } catch (error: any) {
+        console.error('Error appending transactions:', error);
+        setFeedback({
+          type: 'error',
+          message: `❌ Failed to save to Google Sheets: ${error.message}`
+        });
+        setIsSubmitting(false);
+        
+        // Still navigate after error, but with current data
+        setTimeout(() => {
           if (onValidationComplete) {
             onValidationComplete(validatedTransactions);
           } else {
             goToScreen('spendingAnalysisResults');
           }
-        }
-      } catch (error) {
-        console.error('Error appending transactions:', error);
-        // If error occurs, still navigate but with current data
-        if (onValidationComplete) {
-          onValidationComplete(validatedTransactions);
-        } else {
-          goToScreen('spendingAnalysisResults');
-        }
+        }, 2000);
       }
     } else {
       // No spreadsheet linked, use original behavior
@@ -405,6 +422,24 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
         </div>
       </div>
 
+      {/* Feedback Message */}
+      {feedback && (
+        <div className={`mt-6 p-4 rounded-lg border ${
+          feedback.type === 'success' 
+            ? 'bg-green-50 border-green-200 text-green-800' 
+            : 'bg-red-50 border-red-200 text-red-800'
+        }`}>
+          <div className="flex items-center">
+            {feedback.type === 'success' ? (
+              <CheckCircleIcon className="h-5 w-5 mr-2" />
+            ) : (
+              <ExclamationTriangleIcon className="h-5 w-5 mr-2" />
+            )}
+            {feedback.message}
+          </div>
+        </div>
+      )}
+
       {/* Bottom Actions */}
       <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-between items-center">
         <div className="text-sm text-gray-600">
@@ -415,17 +450,24 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
           {onCancel && (
             <button
               onClick={onCancel}
-              className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+              disabled={isSubmitting}
+              className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200 disabled:opacity-50"
             >
               Cancel
             </button>
           )}
           <button
             onClick={handleCompleteValidation}
-            disabled={validatedCount === 0}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={validatedCount === 0 || isSubmitting}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Complete Validation ({validatedCount})
+            {isSubmitting && (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            )}
+            {isSubmitting 
+              ? `Saving to Google Sheets...` 
+              : `Complete Validation (${validatedCount})`
+            }
           </button>
         </div>
       </div>

@@ -76,7 +76,15 @@ export const useDashboard = () => {
       console.log('🔄 Auto-refreshing from linked spreadsheet...');
       refreshFromSpreadsheet(spreadsheetUrl);
     }
-  }, [spreadsheetUrl]); // Only depend on URL, not the function to avoid loops
+  }, [spreadsheetUrl, spreadsheetLinked]); // Also depend on spreadsheetLinked to refresh when dashboard mounts
+
+  // Force refresh when dashboard mounts if spreadsheet is linked but no local data
+  useEffect(() => {
+    if (spreadsheetLinked && spreadsheetUrl && (!userData.transactions || userData.transactions.length === 0) && !isRefreshing) {
+      console.log('🔄 Dashboard mounted with spreadsheet but no local data - forcing refresh...');
+      refreshFromSpreadsheet(spreadsheetUrl);
+    }
+  }, []); // Only run on mount
 
   // Handle manual refresh
   const handleRefreshData = useCallback(async () => {
