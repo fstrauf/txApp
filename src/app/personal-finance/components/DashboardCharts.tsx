@@ -15,21 +15,212 @@ import {
   ListBulletIcon,
   FunnelIcon,
   ArrowTrendingUpIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  ChevronDownIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
+
+// Simple Stacked Bar Chart Component
+interface SimpleStackedBarChartProps {
+  data: any[];
+  categoryColors: Map<string, AvailableChartColorsKeys>;
+  selectedCategory?: string | null;
+  onCategoryClick?: (category: string | null) => void;
+}
+
+const SimpleStackedBarChart: React.FC<SimpleStackedBarChartProps> = ({ 
+  data, 
+  categoryColors, 
+  selectedCategory,
+  onCategoryClick 
+}) => {
+  const [hoveredSegment, setHoveredSegment] = React.useState<{
+    category: string;
+    amount: number;
+    month: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  if (!data.length) return null;
+
+  // Get all unique categories from the data
+  const allCategories = new Set<string>();
+  data.forEach(month => {
+    Object.keys(month).forEach(key => {
+      if (key !== 'month' && key !== 'displayMonth' && key !== 'total') {
+        allCategories.add(key);
+      }
+    });
+  });
+
+  const categories = Array.from(allCategories);
+  const maxTotal = Math.max(...data.map(d => d.total));
+
+  const getColorHex = (colorName: AvailableChartColorsKeys): string => {
+    const colorMap: Record<AvailableChartColorsKeys, string> = {
+      indigo: '#6366f1',
+      blue: '#3b82f6',
+      emerald: '#10b981',
+      amber: '#f59e0b',
+      red: '#ef4444',
+      orange: '#f97316',
+      teal: '#14b8a6',
+      violet: '#8b5cf6',
+      pink: '#ec4899',
+      cyan: '#06b6d4'
+    };
+    return colorMap[colorName] || '#6b7280';
+  };
+
+  const handleSegmentClick = (category: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    const newSelection = selectedCategory === category ? null : category;
+    onCategoryClick?.(newSelection);
+  };
+
+  const handleSegmentHover = (
+    category: string, 
+    amount: number, 
+    month: string, 
+    event: React.MouseEvent
+  ) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setHoveredSegment({
+      category,
+      amount,
+      month,
+      x: event.clientX,
+      y: event.clientY
+    });
+  };
+
+  const formatCategoryName = (category: string): string => {
+    return category
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  return (
+    <>
+      <div className="w-full h-full p-4">
+        <div className="flex items-end justify-center gap-3 h-full">
+          {data.map((month, index) => {
+            const heightPercentage = maxTotal > 0 ? (month.total / maxTotal) * 90 : 0;
+            
+            return (
+              <div key={index} className="flex flex-col items-center" style={{ flex: '1 1 0%', minWidth: '40px' }}>
+                {/* Bar Container */}
+                <div className="relative w-full flex flex-col justify-end" style={{ height: '300px' }}>
+                  {/* The actual stacked bar */}
+                  <div
+                    className="w-full relative bg-gray-200 rounded-t-sm border border-gray-300"
+                    style={{ 
+                      height: `${Math.max(heightPercentage, 2)}%`,
+                      minHeight: '10px'
+                    }}
+                  >
+                    {/* Stacked segments */}
+                    {categories.map((category, catIndex) => {
+                      const categoryAmount = month[category] || 0;
+                      const segmentHeight = month.total > 0 ? (categoryAmount / month.total) * 100 : 0;
+                      
+                      if (segmentHeight === 0) return null;
+                      
+                      const isSelected = selectedCategory === category;
+                      const isOtherSelected = selectedCategory && selectedCategory !== category;
+                      
+                      return (
+                        <div
+                          key={catIndex}
+                          className={`w-full border-t border-white cursor-pointer transition-all duration-200 ${
+                            isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''
+                          }`}
+                          style={{
+                            height: `${segmentHeight}%`,
+                            backgroundColor: getColorHex(categoryColors.get(category) || 'indigo'),
+                            opacity: isOtherSelected ? 0.3 : 1,
+                            transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                            zIndex: isSelected ? 10 : 1
+                          }}
+                          onClick={(e) => handleSegmentClick(category, e)}
+                          onMouseEnter={(e) => handleSegmentHover(category, categoryAmount, month.displayMonth, e)}
+                          onMouseLeave={() => setHoveredSegment(null)}
+                          onMouseMove={(e) => handleSegmentHover(category, categoryAmount, month.displayMonth, e)}
+                        />
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Value label on top */}
+                  <div className="text-xs text-gray-600 text-center mt-1">
+                    ${(month.total / 1000).toFixed(1)}k
+                  </div>
+                </div>
+                
+                {/* Month Label */}
+                <div className="text-xs text-gray-600 mt-2 text-center">
+                  {month.displayMonth?.split(' ')[0] || month.month}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tooltip */}
+      {hoveredSegment && (
+        <div
+          className="fixed z-50 bg-white border border-gray-200 shadow-lg rounded-lg px-3 py-2 pointer-events-none"
+          style={{
+            left: hoveredSegment.x + 10,
+            top: hoveredSegment.y - 10,
+            transform: 'translateY(-100%)'
+          }}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <div 
+              className="w-3 h-3 rounded-full"
+              style={{
+                backgroundColor: getColorHex(categoryColors.get(hoveredSegment.category) || 'indigo')
+              }}
+            />
+            <div className="font-semibold text-gray-900">{formatCategoryName(hoveredSegment.category)}</div>
+          </div>
+          <div className="text-sm text-gray-700">{formatCurrency(hoveredSegment.amount)}</div>
+          <div className="text-xs text-gray-500">{hoveredSegment.month}</div>
+        </div>
+      )}
+    </>
+  );
+};
 
 interface DashboardChartsProps {
   transactions?: any[];
+  onTimeFilterChange?: (timeFilter: string) => void;
 }
 
 type TimeFilter = 'all' | 'last30' | 'last90' | 'last12months';
-type ViewMode = 'charts' | 'transactions' | 'monthly';
 
-const DashboardCharts: React.FC<DashboardChartsProps> = ({ transactions: propTransactions }) => {
+const DashboardCharts: React.FC<DashboardChartsProps> = ({ 
+  transactions: propTransactions,
+  onTimeFilterChange 
+}) => {
   const { userData } = usePersonalFinanceStore();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('charts');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   // Use transactions from props or store
   const allTransactions = propTransactions || userData.transactions || [];
@@ -93,10 +284,45 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ transactions: propTra
           ? (data.amount / expenseTransactions.reduce((sum, t) => sum + t.amount, 0)) * 100 
           : 0,
         transactionCount: data.count,
-        transactions: data.transactions
+        transactions: data.transactions.sort((a, b) => b.amount - a.amount) // Sort transactions by amount descending
       }))
       .sort((a, b) => b.amount - a.amount);
   }, [filteredTransactions, hasData]);
+
+  // Monthly spending data for stacked bar chart
+  const monthlySpendingData = useMemo(() => {
+    if (!dataEngine) return [];
+    
+    const monthlyData = dataEngine.getMonthlySpending();
+    const timeSeriesData = dataEngine.getCategoryTimeSeriesData();
+    
+    // Transform data for stacked bar chart
+    return monthlyData.map(month => {
+      const categoryBreakdown: { [key: string]: number } = {};
+      
+      // Get category spending for this month
+      categorySpending.forEach(cat => {
+        const monthTransactions = cat.transactions.filter(t => {
+          const transactionDate = parseTransactionDate(t.date);
+          const monthStart = new Date(month.year, month.month - 1, 1);
+          const monthEnd = new Date(month.year, month.month, 0);
+          return transactionDate >= monthStart && transactionDate <= monthEnd;
+        });
+        
+        const monthlyAmount = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+        if (monthlyAmount > 0) {
+          categoryBreakdown[cat.category] = monthlyAmount;
+        }
+      });
+      
+      return {
+        month: `${month.year}-${String(month.month).padStart(2, '0')}`,
+        displayMonth: `${month.monthName} ${month.year}`,
+        total: month.total,
+        ...categoryBreakdown
+      };
+    }).slice(-12); // Last 12 months
+  }, [dataEngine, categorySpending]);
 
   // Create color mapping for categories
   const chartColors: AvailableChartColorsKeys[] = ['indigo', 'blue', 'emerald', 'amber', 'red', 'orange', 'teal', 'violet', 'pink', 'cyan'];
@@ -107,16 +333,22 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ transactions: propTra
     );
   }, [categorySpending]);
 
-  // Simplified for now - focus on working charts
-  const monthlyData = useMemo(() => {
-    return [];
-  }, []);
-
   // Handle chart interaction
   const handleChartValueChange = (value: any) => {
     const newCategory = (value && value.categoryClicked) ? 
       (selectedCategory === value.categoryClicked ? null : value.categoryClicked) : null;
     setSelectedCategory(newCategory);
+  };
+
+  // Toggle category expansion
+  const toggleCategoryExpansion = (category: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category);
+    } else {
+      newExpanded.add(category);
+    }
+    setExpandedCategories(newExpanded);
   };
 
   const formatCurrency = (amount: number) => {
@@ -158,7 +390,11 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ transactions: propTra
           <span className="text-sm font-medium text-gray-700">Time Period:</span>
           <select
             value={timeFilter}
-            onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
+            onChange={(e) => {
+              const newFilter = e.target.value as TimeFilter;
+              setTimeFilter(newFilter);
+              onTimeFilterChange?.(newFilter);
+            }}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">All Time</option>
@@ -168,222 +404,182 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ transactions: propTra
           </select>
         </div>
 
-        {/* View Mode */}
-        <div className="flex bg-gray-100 rounded-lg p-1">
-          <button
-            onClick={() => setViewMode('charts')}
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              viewMode === 'charts'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <ChartPieIcon className="h-4 w-4 mr-2 inline" />
-            Charts
-          </button>
-          <button
-            onClick={() => setViewMode('transactions')}
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              viewMode === 'transactions'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <ListBulletIcon className="h-4 w-4 mr-2 inline" />
-            Transactions
-          </button>
-        </div>
-      </div>
-
-      {/* Data Summary */}
-      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-        <div className="flex items-center gap-4 flex-wrap">
+        {/* Data Summary */}
+        <div className="flex items-center gap-4 flex-wrap text-sm text-gray-600">
           <div className="flex items-center gap-2">
-            <InformationCircleIcon className="h-4 w-4 text-blue-600" />
-            <span className="text-sm text-blue-800 font-medium">
-              {filteredTransactions.length} transactions
-            </span>
+            <InformationCircleIcon className="h-4 w-4" />
+            <span>{filteredTransactions.length} transactions</span>
           </div>
-          <div className="text-sm text-blue-700">
+          <div>
             Total Expenses: {formatCurrency(
               filteredTransactions
                 .filter(t => t.isDebit && t.amount > 0)
                 .reduce((sum, t) => sum + t.amount, 0)
             )}
           </div>
-          <div className="text-sm text-blue-700">
+          <div>
             {categorySpending.length} categories
           </div>
         </div>
       </div>
 
-      {/* Charts View */}
-      {viewMode === 'charts' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Pie Chart */}
-          {categorySpending.length > 0 && (
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
-                Expenses by Category
-              </h3>
-              <div className="flex justify-center items-center h-64 sm:h-80">
-                <DonutChart 
-                  data={categorySpending.map(cat => ({
-                    name: cat.category,
-                    amount: cat.amount,
-                    category: cat.category
-                  }))}
-                  value="amount"
-                  category="category"
-                  colors={chartColors}
-                  valueFormatter={(value: number) => formatCurrency(value)}
-                  className="w-64 h-64 sm:w-80 sm:h-80"
-                  showTooltip={true}
-                  selectedCategory={selectedCategory}
-                  onValueChange={handleChartValueChange}
-                />
-              </div>
-              {selectedCategory && (
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg text-center">
-                  <div className="font-medium text-gray-800">
-                    {formatCategoryName(selectedCategory)}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    Click chart segments to filter
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Category List */}
-          <div className="space-y-3">
-            <h3 className="text-lg font-semibold text-gray-800">Category Breakdown</h3>
-            {categorySpending.map((category, index) => (
-              <div
-                key={index} 
-                className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 transition-all cursor-pointer ${
-                  selectedCategory === category.category 
-                    ? 'ring-2 ring-blue-500 bg-blue-50' 
-                    : 'hover:shadow-md'
-                }`}
-                onClick={() => {
-                  const newCategory = selectedCategory === category.category ? null : category.category;
-                  setSelectedCategory(newCategory);
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div 
-                      className="w-4 h-4 rounded-full mr-3 bg-gray-400"
-                    />
-                    <div>
-                      <h4 className="font-semibold text-gray-800">
-                        {formatCategoryName(category.category)}
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        {category.percentage.toFixed(1)}% • {category.transactionCount} transactions
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-gray-800">
-                      {formatCurrency(category.amount)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Monthly Analysis */}
-      {viewMode === 'monthly' && dataEngine && (
-        <div className="space-y-6">
-          {monthlyData.length > 1 && (
-            <MonthlySpendingChart
-              timeSeriesData={dataEngine.getCategoryTimeSeriesData()}
-              monthlyData={dataEngine.getMonthlySpending()}
-              rollingMetrics={dataEngine.getRollingMetrics()}
-              selectedCategories={[]}
-              onCategoryToggle={() => {}}
+      {/* Top Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Doughnut Chart */}
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+            Expenses by Category
+          </h3>
+          <div className="flex justify-center items-center h-64 sm:h-80">
+            <DonutChart 
+              data={categorySpending.map(cat => ({
+                name: cat.category,
+                amount: cat.amount,
+                category: cat.category
+              }))}
+              value="amount"
+              category="category"
+              colors={chartColors}
+              valueFormatter={(value: number) => formatCurrency(value)}
+              className="w-64 h-64 sm:w-80 sm:h-80"
+              showTooltip={true}
+              selectedCategory={selectedCategory}
+              onValueChange={handleChartValueChange}
             />
-          )}
-          
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">Monthly Breakdown</h3>
+          </div>
+          {selectedCategory && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg text-center">
+              <div className="font-medium text-gray-800">
+                {formatCategoryName(selectedCategory)}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">
+                Click chart segments to filter
+              </div>
             </div>
-            <MonthlyTable data={monthlyData} />
-          </div>
+          )}
         </div>
-      )}
 
-      {/* Transactions List */}
-      {viewMode === 'transactions' && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800">
-              All Transactions {selectedCategory && `• ${formatCategoryName(selectedCategory)}`}
-            </h3>
-            {selectedCategory && (
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className="mt-2 text-sm text-blue-600 hover:text-blue-800"
-              >
-                Clear filter
-              </button>
-            )}
-          </div>
-          <div className="overflow-x-auto max-h-96 overflow-y-auto">
-            <table className="min-w-full divide-y divide-gray-100">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    Amount
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {filteredTransactions
-                  .filter(t => !selectedCategory || t.category === selectedCategory)
-                  .sort((a, b) => parseTransactionDate(b.date).getTime() - parseTransactionDate(a.date).getTime())
-                  .map((transaction, index) => (
-                    <tr key={transaction.id || index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {parseTransactionDate(transaction.date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                        {transaction.description}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          {formatCategoryName(transaction.category)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
-                        <span className={transaction.isDebit ? 'text-red-600' : 'text-green-600'}>
-                          {transaction.isDebit ? '-' : '+'}
-                          {formatCurrency(transaction.amount)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
+        {/* Stacked Bar Chart */}
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+            Monthly Spending Trends
+          </h3>
+          {dataEngine && monthlySpendingData.length > 1 ? (
+            <div className="h-64 sm:h-80">
+              <SimpleStackedBarChart 
+                data={monthlySpendingData}
+                categoryColors={categoryColors}
+                selectedCategory={selectedCategory}
+                onCategoryClick={setSelectedCategory}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-64 sm:h-80 text-gray-500">
+              <div className="text-center">
+                <ChartBarIcon className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                <p>Need more monthly data for trends</p>
+                <p className="text-sm">Add transactions from multiple months</p>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
+
+      {/* Category Breakdown with Collapsible Transactions */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-800">Category Breakdown</h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Click categories to expand and view individual transactions
+          </p>
+        </div>
+        
+        <div className="divide-y divide-gray-100">
+          {categorySpending.map((category, index) => {
+            const isExpanded = expandedCategories.has(category.category);
+            const isSelected = selectedCategory === category.category;
+            
+            return (
+              <div key={index}>
+                {/* Category Header */}
+                <div
+                  className={`p-4 cursor-pointer transition-all hover:bg-gray-50 ${
+                    isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                  }`}
+                  onClick={() => {
+                    toggleCategoryExpansion(category.category);
+                    // Also handle selection for chart interaction
+                    const newCategory = selectedCategory === category.category ? null : category.category;
+                    setSelectedCategory(newCategory);
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        {isExpanded ? (
+                          <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                        ) : (
+                          <ChevronRightIcon className="h-4 w-4 text-gray-500" />
+                        )}
+                                                 <div 
+                           className={`w-4 h-4 rounded-full ${getColorClassName(categoryColors.get(category.category) || 'indigo', 'bg')}`}
+                         />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-800">
+                          {formatCategoryName(category.category)}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {category.percentage.toFixed(1)}% • {category.transactionCount} transactions
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-gray-800">
+                        {formatCurrency(category.amount)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded Transactions */}
+                {isExpanded && (
+                  <div className="bg-gray-50 border-t border-gray-100">
+                    <div className="px-4 py-2">
+                      <div className="text-xs font-medium text-gray-500 mb-2">
+                        TRANSACTIONS ({category.transactions.length})
+                      </div>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {category.transactions.map((transaction, txIndex) => (
+                          <div 
+                            key={txIndex}
+                            className="flex items-center justify-between py-2 px-3 bg-white rounded border border-gray-200"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {transaction.description}
+                                </p>
+                                <span className="text-sm font-bold text-red-600 ml-3">
+                                  {formatCurrency(transaction.amount)}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                {parseTransactionDate(transaction.date).toLocaleDateString()}
+                                {transaction.account && ` • ${transaction.account}`}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };

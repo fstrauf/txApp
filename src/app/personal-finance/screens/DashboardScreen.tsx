@@ -15,6 +15,8 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import DashboardCharts from '../components/DashboardCharts';
+import DashboardDebugger from '../components/DashboardDebugger';
+import DataOverview from '../components/DataOverview';
 import { useSession } from 'next-auth/react';
 import { SpreadsheetLinker } from '../components/SpreadsheetLinker';
 import { GoogleSheetsUploadArea } from '../components/GoogleSheetsUploadArea';
@@ -84,21 +86,62 @@ const DashboardScreen: React.FC = () => {
 
   // Calculate dashboard statistics from transaction data
   const calculateStatsFromTransactions = (transactions: any[]): DashboardStats => {
+    if (!transactions.length) {
+      return {
+        monthlyAverageIncome: 0,
+        monthlyAverageExpenses: 0,
+        monthlyAverageSavings: 0,
+        lastMonthExpenses: 0,
+        annualExpenseProjection: 0,
+        lastDataRefresh: new Date(),
+      };
+    }
+
     const now = new Date();
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const twelveMonthsAgo = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0); // Last day of previous month
     
-    const expenses = transactions.filter(t => t.isDebit || t.amount < 0);
-    const income = transactions.filter(t => !t.isDebit && t.amount > 0);
+    // === SMART DATE LOGIC ===
+    // Calculate actual data span
+    const transactionDates = transactions.map(t => new Date(t.date));
+    const oldestDate = new Date(Math.min(...transactionDates.map(d => d.getTime())));
+    const newestDate = new Date(Math.max(...transactionDates.map(d => d.getTime())));
     
-    // Calculate monthly averages
-    const monthlyAverageIncome = income.reduce((sum, t) => sum + Math.abs(t.amount), 0) / 12;
-    const monthlyAverageExpenses = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0) / 12;
+    // Calculate actual months spanned
+    const actualMonths = Math.max(1, Math.ceil((newestDate.getTime() - oldestDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+    
+    // Determine which transactions to use and how many months to divide by
+    let transactionsToUse = transactions;
+    let monthsToUseForAverage = actualMonths;
+    
+    if (actualMonths > 12) {
+      // Use rolling 12-month window (last 12 months only)
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+      
+      transactionsToUse = transactions.filter(t => new Date(t.date) >= twelveMonthsAgo);
+      monthsToUseForAverage = 12;
+    }
+    // If ≤ 12 months, use all data and actual months (already set above)
+    
+    // === CALCULATE INCOME AND EXPENSES ===
+    const expenses = transactionsToUse.filter(t => t.isDebit || t.amount < 0);
+    const income = transactionsToUse.filter(t => !t.isDebit && t.amount > 0);
+    
+    const totalIncome = income.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    const totalExpenses = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    
+    // Calculate monthly averages using smart division
+    const monthlyAverageIncome = totalIncome / monthsToUseForAverage;
+    const monthlyAverageExpenses = totalExpenses / monthsToUseForAverage;
     const monthlyAverageSavings = monthlyAverageIncome - monthlyAverageExpenses;
     
-    // Last month expenses
+    // === LAST MONTH EXPENSES (fixed date filtering) ===
     const lastMonthExpenses = expenses
-      .filter(t => new Date(t.date) >= lastMonth)
+      .filter(t => {
+        const transactionDate = new Date(t.date);
+        return transactionDate >= lastMonth && transactionDate <= lastMonthEnd;
+      })
       .reduce((sum, t) => sum + Math.abs(t.amount), 0);
     
     return {
@@ -525,8 +568,13 @@ const FirstTimeUserDashboard: React.FC<{ onLinkSpreadsheet: () => void }> = ({
 
 // Dashboard Statistics Component
 const DashboardStatistics: React.FC<{ stats: DashboardStats }> = ({ stats }) => {
+  const [currentTimeFilter, setCurrentTimeFilter] = React.useState('all');
+
   return (
     <div className="space-y-8">
+      {/* Debug Component - Remove this in production */}
+      {/* <DashboardDebugger dashboardStats={stats} timeFilter={currentTimeFilter} /> */}
+      
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
@@ -572,8 +620,11 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats }> = ({ stats }) => 
         </div>
       </div>
 
+      {/* Data Overview */}
+      <DataOverview />
+
       {/* Dashboard Visualizations */}
-      <DashboardCharts />
+      <DashboardCharts onTimeFilterChange={setCurrentTimeFilter} />
     </div>
   );
 };
