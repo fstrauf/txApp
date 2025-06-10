@@ -2,19 +2,13 @@
 
 import React, { useState, useMemo } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { MonthlyTable } from '@/components/analytics';
 import { DonutChart } from '@/components/ui/DonutChart';
-import { MonthlySpendingChart } from '@/components/ui/MonthlySpendingChart';
 import { parseTransactionDate } from '@/lib/utils';
 import { constructCategoryColors, getColorClassName, AvailableChartColorsKeys } from '@/lib/chartUtils';
 import { DataAnalysisEngine } from '../engine/DataAnalysisEngine';
 import {
   CalendarIcon,
   ChartBarIcon,
-  ChartPieIcon,
-  ListBulletIcon,
-  FunnelIcon,
-  ArrowTrendingUpIcon,
   InformationCircleIcon,
   ChevronDownIcon,
   ChevronRightIcon
@@ -317,7 +311,7 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
       
       return {
         month: `${month.year}-${String(month.month).padStart(2, '0')}`,
-        displayMonth: `${month.monthName} ${month.year}`,
+        displayMonth: month.monthName,
         total: month.total,
         ...categoryBreakdown
       };
@@ -385,23 +379,25 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
       {/* Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         {/* Time Filter */}
-        <div className="flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">Time Period:</span>
-          <select
-            value={timeFilter}
-            onChange={(e) => {
-              const newFilter = e.target.value as TimeFilter;
-              setTimeFilter(newFilter);
-              onTimeFilterChange?.(newFilter);
-            }}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">All Time</option>
-            <option value="last30">Last 30 Days</option>
-            <option value="last90">Last 90 Days</option>
-            <option value="last12months">Last 12 Months</option>
-          </select>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Time Period:</span>
+            <select
+              value={timeFilter}
+              onChange={(e) => {
+                const newFilter = e.target.value as TimeFilter;
+                setTimeFilter(newFilter);
+                onTimeFilterChange?.(newFilter);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Time</option>
+              <option value="last30">Last 30 Days</option>
+              <option value="last90">Last 90 Days</option>
+              <option value="last12months">Last 12 Months</option>
+            </select>
+          </div>
         </div>
 
         {/* Data Summary */}
@@ -424,7 +420,7 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
       </div>
 
       {/* Top Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Doughnut Chart */}
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
@@ -460,7 +456,7 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
         </div>
 
         {/* Stacked Bar Chart */}
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+        <div className="lg:col-span-2 bg-white rounded-lg p-6 shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
             Monthly Spending Trends
           </h3>

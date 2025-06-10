@@ -7,6 +7,7 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon 
 } from '@heroicons/react/24/outline';
+import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
 
 interface SpreadsheetLinkerProps {
   onSuccess: (data: { spreadsheetId: string; spreadsheetUrl: string }) => void;
@@ -17,6 +18,7 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
   onSuccess, 
   onCancel 
 }) => {
+  const { requestSpreadsheetAccess, hasSpreadsheetAccess } = useIncrementalAuth();
   const [linkingOption, setLinkingOption] = useState<'existing' | 'new' | null>(null);
   const [spreadsheetUrl, setSpreadsheetUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -33,6 +35,21 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
     setError(null);
 
     try {
+      console.log('🔗 Linking spreadsheet - checking OAuth permissions...');
+      
+      // First, ensure we have Google Sheets access
+      let accessToken;
+      try {
+        accessToken = await requestSpreadsheetAccess();
+        console.log('✅ OAuth permission granted');
+      } catch (oauthError) {
+        console.error('❌ OAuth permission failed:', oauthError);
+        setError('Please grant access to Google Sheets to continue');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('📊 Linking spreadsheet to database...');
       const response = await fetch('/api/dashboard/link-spreadsheet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,6 +59,7 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
       const data = await response.json();
 
       if (response.ok) {
+        console.log('✅ Spreadsheet linked successfully');
         setSuccess(true);
         setTimeout(() => {
           onSuccess(data);
@@ -50,6 +68,7 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
         setError(data.error || 'Failed to link spreadsheet');
       }
     } catch (error) {
+      console.error('❌ Error linking spreadsheet:', error);
       setError('Failed to link spreadsheet. Please try again.');
     } finally {
       setIsLoading(false);
@@ -61,6 +80,21 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
     setError(null);
 
     try {
+      console.log('📝 Creating new spreadsheet - checking OAuth permissions...');
+      
+      // First, ensure we have Google Sheets access
+      let accessToken;
+      try {
+        accessToken = await requestSpreadsheetAccess();
+        console.log('✅ OAuth permission granted for new spreadsheet');
+      } catch (oauthError) {
+        console.error('❌ OAuth permission failed:', oauthError);
+        setError('Please grant access to Google Sheets to continue');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('📊 Creating new spreadsheet...');
       const response = await fetch('/api/dashboard/link-spreadsheet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,6 +104,7 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
       const data = await response.json();
 
       if (response.ok) {
+        console.log('✅ New spreadsheet created successfully');
         setSuccess(true);
         setTimeout(() => {
           onSuccess(data);
@@ -78,6 +113,7 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
         setError(data.error || 'Failed to create new spreadsheet');
       }
     } catch (error) {
+      console.error('❌ Error creating spreadsheet:', error);
       setError('Failed to create spreadsheet. Please try again.');
     } finally {
       setIsLoading(false);

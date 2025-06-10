@@ -129,10 +129,18 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
   },
 
       processTransactionData: (transactions: Transaction[]) => {
-        console.log('ProcessTransactionData called with:', {
+        console.log('🔄 ProcessTransactionData called with:', {
           transactionCount: transactions.length,
           sampleTransactions: transactions.slice(0, 3),
-          transactionTypes: transactions.map(t => ({ isDebit: t.isDebit, amount: t.amount, category: t.category })).slice(0, 5)
+          transactionTypes: transactions.map(t => ({ isDebit: t.isDebit, amount: t.amount, category: t.category })).slice(0, 5),
+          dateRange: transactions.length > 0 ? {
+            oldest: transactions.reduce((oldest, t) => 
+              new Date(t.date) < new Date(oldest.date) ? t : oldest
+            )?.date,
+            newest: transactions.reduce((newest, t) => 
+              new Date(t.date) > new Date(newest.date) ? t : newest
+            )?.date
+          } : null
         });
 
         // Process transactions to calculate spending breakdown and categories
@@ -180,16 +188,29 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
           topCategories: categorySpending.slice(0, 5)
         });
 
-        set((state) => ({
-          userData: { 
+        console.log('📝 Updating store with new transaction data...');
+        set((state) => {
+          const newUserData = { 
             ...state.userData, 
             transactions,
             categorySpending,
             actualMonthlySpending,
             // Update spending if significantly different or if not set
             spending: state.userData.spending === 0 ? actualMonthlySpending : state.userData.spending
-          }
-        }));
+          };
+          
+          console.log('✅ Store updated - New userData transaction count:', newUserData.transactions?.length || 0);
+          console.log('📊 Store updated - Date range:', newUserData.transactions?.length > 0 ? {
+            oldest: newUserData.transactions.reduce((oldest, t) => 
+              new Date(t.date) < new Date(oldest.date) ? t : oldest
+            )?.date,
+            newest: newUserData.transactions.reduce((newest, t) => 
+              new Date(t.date) > new Date(newest.date) ? t : newest
+            )?.date
+          } : 'No transactions');
+          
+          return { userData: newUserData };
+        });
       },
 
       // Data management functions

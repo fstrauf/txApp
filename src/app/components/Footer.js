@@ -5,7 +5,7 @@ import InternalLinks from "@/components/InternalLinks";
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-surface border-t border-gray-200">
+    <footer className="w-full bg-white border-t border-gray-200 mt-auto">
       <div className="container mx-auto px-4 py-12">
         {/* Main Footer Content */}
         <div className="mb-8">

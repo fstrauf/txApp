@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
+import { useDashboard } from '../hooks/useDashboard';
+import { calculateStatsFromTransactions, DashboardStats } from '../utils/dashboardStats';
 import { Header } from '@/components/ui/Header';
 import { 
   DocumentPlusIcon,
@@ -17,255 +19,100 @@ import {
 import DashboardCharts from '../components/DashboardCharts';
 import DashboardDebugger from '../components/DashboardDebugger';
 import DataOverview from '../components/DataOverview';
-import { useSession } from 'next-auth/react';
 import { SpreadsheetLinker } from '../components/SpreadsheetLinker';
 import { GoogleSheetsUploadArea } from '../components/GoogleSheetsUploadArea';
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
-
-interface DashboardStats {
-  monthlyAverageIncome: number;
-  monthlyAverageSavings: number;
-  monthlyAverageExpenses: number;
-  lastMonthExpenses: number;
-  annualExpenseProjection: number;
-  lastDataRefresh?: Date;
-}
+import DataManagementDrawer from '../components/DataManagementDrawer';
+import HelpDrawer from '@/components/shared/HelpDrawer';
 
 const DashboardScreen: React.FC = () => {
-  const { data: session } = useSession();
-  const { userData, processTransactionData } = usePersonalFinanceStore();
+  const { processTransactionData } = usePersonalFinanceStore();
   const { goToScreen, getProgress } = useScreenNavigation();
   const { trackAction } = usePersonalFinanceTracking({ 
     currentScreen: 'dashboard', 
     progress: getProgress() 
   });
-  const { hasSpreadsheetAccess, getValidAccessToken } = useIncrementalAuth();
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFirstTimeUser, setIsFirstTimeUser] = useState(true);
-  const [spreadsheetLinked, setSpreadsheetLinked] = useState(false);
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Use the consolidated dashboard hook
+  const {
+    dashboardStats,
+    filteredTransactions,
+    isFirstTimeUser,
+    spreadsheetLinked,
+    spreadsheetUrl,
+    hideTransfer,
+    isLoading,
+    isRefreshing,
+    error,
+    setHideTransfer,
+    handleRefreshData,
+    clearError
+  } = useDashboard();
+
   const [showSpreadsheetLinker, setShowSpreadsheetLinker] = useState(false);
-  const [spreadsheetUrl, setSpreadsheetUrl] = useState<string | null>(null);
+  const [isHelpDrawerOpen, setIsHelpDrawerOpen] = useState(false);
 
-  // Check if user has linked spreadsheet and transaction data
+  // Ensure help drawer is closed when dashboard loads (e.g., returning from validation screen)
   useEffect(() => {
-    checkSpreadsheetStatus();
-  }, [session, userData]);
+    setIsHelpDrawerOpen(false);
+  }, []);
 
-  const checkSpreadsheetStatus = async () => {
-    if (!session?.user?.id) return;
-    
-    try {
-      const response = await fetch('/api/dashboard/status');
-      const data = await response.json();
-      
-      if (response.ok) {
-        setSpreadsheetLinked(!!data.spreadsheetUrl);
-        setSpreadsheetUrl(data.spreadsheetUrl);
-        
-        // Check if we have actual transaction data
-        const hasTransactionData = userData.transactions && userData.transactions.length > 0;
-        setIsFirstTimeUser(!data.spreadsheetUrl && !hasTransactionData);
-        
-        if (data.spreadsheetUrl || hasTransactionData) {
-          // Calculate stats from actual transaction data if available
-          if (hasTransactionData) {
-            const calculatedStats = calculateStatsFromTransactions(userData.transactions!);
-            setDashboardStats(calculatedStats);
-          } else if (data.stats) {
-            setDashboardStats(data.stats);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error checking spreadsheet status:', error);
-    }
-  };
 
-  // Calculate dashboard statistics from transaction data
-  const calculateStatsFromTransactions = (transactions: any[]): DashboardStats => {
-    if (!transactions.length) {
-      return {
-        monthlyAverageIncome: 0,
-        monthlyAverageExpenses: 0,
-        monthlyAverageSavings: 0,
-        lastMonthExpenses: 0,
-        annualExpenseProjection: 0,
-        lastDataRefresh: new Date(),
-      };
-    }
 
-    const now = new Date();
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0); // Last day of previous month
-    
-    // === SMART DATE LOGIC ===
-    // Calculate actual data span
-    const transactionDates = transactions.map(t => new Date(t.date));
-    const oldestDate = new Date(Math.min(...transactionDates.map(d => d.getTime())));
-    const newestDate = new Date(Math.max(...transactionDates.map(d => d.getTime())));
-    
-    // Calculate actual months spanned
-    const actualMonths = Math.max(1, Math.ceil((newestDate.getTime() - oldestDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
-    
-    // Determine which transactions to use and how many months to divide by
-    let transactionsToUse = transactions;
-    let monthsToUseForAverage = actualMonths;
-    
-    if (actualMonths > 12) {
-      // Use rolling 12-month window (last 12 months only)
-      const twelveMonthsAgo = new Date();
-      twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
-      
-      transactionsToUse = transactions.filter(t => new Date(t.date) >= twelveMonthsAgo);
-      monthsToUseForAverage = 12;
-    }
-    // If ≤ 12 months, use all data and actual months (already set above)
-    
-    // === CALCULATE INCOME AND EXPENSES ===
-    const expenses = transactionsToUse.filter(t => t.isDebit || t.amount < 0);
-    const income = transactionsToUse.filter(t => !t.isDebit && t.amount > 0);
-    
-    const totalIncome = income.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    const totalExpenses = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    
-    // Calculate monthly averages using smart division
-    const monthlyAverageIncome = totalIncome / monthsToUseForAverage;
-    const monthlyAverageExpenses = totalExpenses / monthsToUseForAverage;
-    const monthlyAverageSavings = monthlyAverageIncome - monthlyAverageExpenses;
-    
-    // === LAST MONTH EXPENSES (fixed date filtering) ===
-    const lastMonthExpenses = expenses
-      .filter(t => {
-        const transactionDate = new Date(t.date);
-        return transactionDate >= lastMonth && transactionDate <= lastMonthEnd;
-      })
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    
-    return {
-      monthlyAverageIncome: Math.round(monthlyAverageIncome),
-      monthlyAverageExpenses: Math.round(monthlyAverageExpenses),
-      monthlyAverageSavings: Math.round(monthlyAverageSavings),
-      lastMonthExpenses: Math.round(lastMonthExpenses),
-      annualExpenseProjection: Math.round(monthlyAverageExpenses * 12),
-      lastDataRefresh: new Date(),
-    };
-  };
-
+  // Event handlers
   const handleLinkSpreadsheet = () => {
     trackAction('link_spreadsheet_clicked', {
       is_first_time: isFirstTimeUser
     });
-    setShowSpreadsheetLinker(true);
+    setIsHelpDrawerOpen(true);
   };
 
   const handleSpreadsheetLinked = (data: { spreadsheetId: string; spreadsheetUrl: string }) => {
-    setShowSpreadsheetLinker(false);
-    setSpreadsheetLinked(true);
-    setIsFirstTimeUser(false);
-    // Refresh dashboard status
-    checkSpreadsheetStatus();
+    setIsHelpDrawerOpen(false);
+    // The useDashboard hook will automatically handle status updates
   };
 
   const handleTransactionsFromGoogleSheets = async (transactions: any[]) => {
-    // Process the transactions through the store
-    processTransactionData(transactions);
+    // Check if these are categorized transactions needing validation (from CSV upload)
+    const hasCategoryPredictions = transactions.some(t => t.predicted_category || t.confidence !== undefined);
     
-    // Calculate and set dashboard stats
-    const calculatedStats = calculateStatsFromTransactions(transactions);
-    setDashboardStats(calculatedStats);
-    
-    // Update state
-    setSpreadsheetLinked(true);
-    setIsFirstTimeUser(false);
-    setShowSpreadsheetLinker(false);
-    
-    trackAction('google_sheets_imported_to_dashboard', {
-      transaction_count: transactions.length,
-      expense_count: transactions.filter(t => t.isDebit).length,
-      income_count: transactions.filter(t => !t.isDebit).length
-    });
+    if (hasCategoryPredictions) {
+      // These are newly categorized transactions that need validation
+      setIsHelpDrawerOpen(false); // Close the help drawer
+      
+      trackAction('csv_transactions_categorized', {
+        transaction_count: transactions.length,
+        expense_count: transactions.filter(t => t.isDebit).length,
+        income_count: transactions.filter(t => !t.isDebit).length
+      });
+      
+      // Navigate to validation screen
+      processTransactionData(transactions); // Store in app state for validation screen
+      goToScreen('transactionValidation');
+      
+    } else {
+      // These are direct imports from Google Sheets (already categorized)
+      processTransactionData(transactions);
+      
+      // Close the help drawer
+      setIsHelpDrawerOpen(false);
+      
+      trackAction('google_sheets_imported_to_dashboard', {
+        transaction_count: transactions.length,
+        expense_count: transactions.filter(t => t.isDebit).length,
+        income_count: transactions.filter(t => !t.isDebit).length
+      });
 
-    // Try to save the spreadsheet URL to the database for future use
-    // We need to get the spreadsheet URL from the current GoogleSheetsUploadArea state
-    // This is a bit tricky since the component doesn't expose it, but we can enhance this later
-    // For now, just refresh the dashboard status to pick up any changes
-    setTimeout(() => {
-      checkSpreadsheetStatus();
-    }, 1000);
+      // The useDashboard hook will automatically handle stats calculation and state updates
+    }
   };
 
-  const handleRefreshData = async () => {
-    if (!spreadsheetLinked && !spreadsheetUrl) {
-      setError('No spreadsheet linked to refresh from');
-      return;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    
+  const handleManualRefresh = async () => {
     trackAction('refresh_data_clicked', {
       has_existing_data: !!dashboardStats,
       has_spreadsheet_url: !!spreadsheetUrl
     });
 
-    try {
-      // If we have a spreadsheet URL, try to refresh from it using existing API
-      if (spreadsheetUrl) {
-        const accessToken = await getValidAccessToken();
-        
-        if (!accessToken) {
-          setError('Please reconnect to Google Sheets to refresh data');
-          return;
-        }
-
-        // Extract spreadsheet ID from URL
-        const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
-        if (!spreadsheetId) {
-          setError('Invalid spreadsheet URL stored');
-          return;
-        }
-
-        // Use the existing Google Sheets API to read data
-        const response = await fetch('/api/sheets/read-expense-detail', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({ spreadsheetId })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to read from Google Sheets');
-        }
-
-        if (data.transactions && data.transactions.length > 0) {
-          // Process the refreshed transactions
-          handleTransactionsFromGoogleSheets(data.transactions);
-        } else {
-          setError('No transaction data found in the spreadsheet');
-        }
-      } else {
-        // Fallback to dashboard API
-        const response = await fetch('/api/dashboard/refresh', { method: 'POST' });
-        const data = await response.json();
-        
-        if (response.ok) {
-          setDashboardStats(data.stats);
-        } else {
-          setError(data.error || 'Failed to refresh data');
-        }
-      }
-    } catch (error: any) {
-      setError(error.message || 'Failed to refresh data from spreadsheet');
-    } finally {
-      setIsLoading(false);
-    }
+    await handleRefreshData();
   };
 
   // Helper function to extract spreadsheet ID from URL
@@ -306,41 +153,15 @@ const DashboardScreen: React.FC = () => {
     trackAction('add_new_data_clicked', {
       has_existing_data: !!dashboardStats
     });
-    goToScreen('spendingAnalysisUpload');
+    setIsHelpDrawerOpen(true);
   };
 
   const handleExplainThis = () => {
     trackAction('explain_this_clicked');
-    // TODO: Open help drawer or modal
+    setIsHelpDrawerOpen(true);
   };
 
-  if (showSpreadsheetLinker) {
-    return (
-      <div className="max-w-7xl mx-auto p-4 sm:p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Connect Your Google Sheet
-          </h1>
-          <p className="text-lg text-gray-600">
-            Import your transaction data to create your personalized dashboard
-          </p>
-        </div>
-        
-        <div className="bg-white rounded-2xl p-8 max-w-2xl mx-auto">
-          <GoogleSheetsUploadArea onTransactionsSelect={handleTransactionsFromGoogleSheets} />
-          
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => setShowSpreadsheetLinker(false)}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+
 
   if (isFirstTimeUser) {
     return <FirstTimeUserDashboard onLinkSpreadsheet={handleLinkSpreadsheet} />;
@@ -431,7 +252,7 @@ const DashboardScreen: React.FC = () => {
                   Open Spreadsheet
                 </button>
                 <button
-                  onClick={handleLinkSpreadsheet}
+                  onClick={() => setIsHelpDrawerOpen(true)}
                   className="text-sm text-green-600 hover:text-green-800 underline"
                 >
                   Change Spreadsheet
@@ -451,7 +272,38 @@ const DashboardScreen: React.FC = () => {
       )}
 
       {/* Dashboard Statistics */}
-      {dashboardStats && <DashboardStatistics stats={dashboardStats} />}
+      {dashboardStats && (
+        <>
+          {/* Top Level Controls */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium text-gray-700">Settings:</span>
+                
+                {/* Hide Transfer Toggle */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">Hide Transfer:</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hideTransfer}
+                      onChange={(e) => setHideTransfer(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+              </div>
+              
+              <div className="text-sm text-gray-600">
+                Affects both KPIs and charts • {filteredTransactions.length} transactions shown
+              </div>
+            </div>
+          </div>
+
+          <DashboardStatistics stats={dashboardStats} filteredTransactions={filteredTransactions} />
+        </>
+      )}
 
       {/* No Data State */}
       {!dashboardStats && !isLoading && (
@@ -467,7 +319,7 @@ const DashboardScreen: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             {spreadsheetLinked ? (
               <button
-                onClick={handleRefreshData}
+                onClick={handleManualRefresh}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
               >
                 <ArrowPathIcon className="h-5 w-5" />
@@ -475,7 +327,7 @@ const DashboardScreen: React.FC = () => {
               </button>
             ) : (
               <button
-                onClick={handleLinkSpreadsheet}
+                onClick={() => setIsHelpDrawerOpen(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
               >
                 <DocumentPlusIcon className="h-5 w-5" />
@@ -483,7 +335,7 @@ const DashboardScreen: React.FC = () => {
               </button>
             )}
             <button
-              onClick={handleAddNewData}
+              onClick={() => setIsHelpDrawerOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
             >
               <PlusCircleIcon className="h-5 w-5" />
@@ -492,6 +344,25 @@ const DashboardScreen: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Data Management Help Drawer */}
+      <HelpDrawer
+        isOpen={isHelpDrawerOpen}
+        onClose={() => setIsHelpDrawerOpen(false)}
+        title="Manage Your Data"
+        size="large"
+      >
+        <DataManagementDrawer
+          spreadsheetLinked={spreadsheetLinked}
+          spreadsheetUrl={spreadsheetUrl}
+          onSpreadsheetLinked={handleSpreadsheetLinked}
+          onTransactionsFromGoogleSheets={handleTransactionsFromGoogleSheets}
+          onRefreshData={handleRefreshData}
+          onAddNewData={handleAddNewData}
+          isLoading={isLoading}
+          onClose={() => setIsHelpDrawerOpen(false)}
+        />
+      </HelpDrawer>
     </div>
   );
 };
@@ -567,8 +438,15 @@ const FirstTimeUserDashboard: React.FC<{ onLinkSpreadsheet: () => void }> = ({
 };
 
 // Dashboard Statistics Component
-const DashboardStatistics: React.FC<{ stats: DashboardStats }> = ({ stats }) => {
+const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransactions: any[] }> = ({ stats, filteredTransactions }) => {
   const [currentTimeFilter, setCurrentTimeFilter] = React.useState('all');
+
+  // Calculate the last month name
+  const getLastMonthName = () => {
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return lastMonth.toLocaleDateString('en-US', { month: 'long' });
+  };
 
   return (
     <div className="space-y-8">
@@ -605,7 +483,7 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats }> = ({ stats }) => 
         </div>
         
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Last Month Expenses</h4>
+          <h4 className="text-sm font-medium text-gray-500 mb-2">{getLastMonthName()} Expenses</h4>
           <p className="text-3xl font-bold text-orange-600">
             ${stats.lastMonthExpenses.toLocaleString()}
           </p>
@@ -624,7 +502,10 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats }> = ({ stats }) => 
       <DataOverview />
 
       {/* Dashboard Visualizations */}
-      <DashboardCharts onTimeFilterChange={setCurrentTimeFilter} />
+      <DashboardCharts 
+        transactions={filteredTransactions}
+        onTimeFilterChange={setCurrentTimeFilter} 
+      />
     </div>
   );
 };

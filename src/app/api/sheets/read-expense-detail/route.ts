@@ -220,6 +220,16 @@ export async function POST(request: NextRequest) {
         return null;
       }
 
+      // 12-month filtering: Only import transactions from the last 12 months
+      const transactionDate = new Date(parsedDate);
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+      
+      if (transactionDate < twelveMonthsAgo) {
+        // Skip transactions older than 12 months
+        return null;
+      }
+
       // Use the base currency amount if available and valid, otherwise use the original amount
       const finalAmount = !isNaN(baseAmount) && baseAmount !== 0 ? baseAmount : parsedAmount;
       
@@ -251,9 +261,9 @@ export async function POST(request: NextRequest) {
         account: source.toString() || 'Google Sheets Import',
         isDebit: isExpense // true for expenses (negative amounts), false for income/credits (positive amounts)
       };
-    }).filter((t): t is Transaction => t !== null); // Remove null entries
+    }).filter((t): t is Transaction => t !== null); // Remove null entries (including filtered old transactions)
 
-    console.log('Converted transactions:', transactions.length);
+    console.log('Converted transactions (last 12 months only):', transactions.length);
 
     if (transactions.length === 0) {
       return NextResponse.json(
@@ -268,7 +278,7 @@ export async function POST(request: NextRequest) {
       transactionCount: transactions.length,
       spreadsheetId,
       sheetName: 'Expense-Detail',
-      message: `Successfully imported ${transactions.length} transactions from Expense-Detail sheet`
+      message: `Successfully imported ${transactions.length} transactions from the last 12 months (Expense-Detail sheet)`
     });
 
   } catch (error: any) {

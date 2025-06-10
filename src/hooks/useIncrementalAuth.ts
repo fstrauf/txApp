@@ -40,28 +40,44 @@ export const useIncrementalAuth = () => {
 
   // Load tokens from localStorage
   const loadStoredTokens = useCallback(() => {
+    console.log('📂 Loading stored tokens from localStorage...');
     try {
       const stored = localStorage.getItem(GOOGLE_TOKEN_STORAGE_KEY);
+      console.log('📋 Raw stored tokens:', stored ? 'found' : 'not found');
+      
       if (stored) {
         const tokens: GoogleTokens = JSON.parse(stored);
+        console.log('📋 Parsed tokens:', {
+          hasAccessToken: !!tokens.access_token,
+          hasRefreshToken: !!tokens.refresh_token,
+          expiresAt: tokens.expires_at ? new Date(tokens.expires_at).toISOString() : 'none',
+          scope: tokens.scope,
+          isExpired: tokens.expires_at ? Date.now() >= tokens.expires_at : 'no expiry'
+        });
         
         // Check if tokens are still valid (not expired)
         if (tokens.expires_at && Date.now() < tokens.expires_at) {
+          console.log('✅ Tokens are still valid, using them');
           setStoredTokens(tokens);
           setHasSpreadsheetAccess(tokens.scope?.includes('spreadsheets') || false);
           return tokens;
         } else {
+          console.log('⏰ Tokens expired, attempting refresh...');
           // Tokens expired, try to refresh if we have a refresh token
           if (tokens.refresh_token) {
+            console.log('🔄 Refresh token found, refreshing...');
             refreshAccessToken(tokens.refresh_token);
           } else {
+            console.warn('⚠️ No refresh token found, clearing storage');
             // No refresh token or expired, clear storage
             clearStoredTokens();
           }
         }
+      } else {
+        console.warn('⚠️ No stored tokens found in localStorage');
       }
     } catch (error) {
-      console.error('Error loading stored Google tokens:', error);
+      console.error('❌ Error loading stored Google tokens:', error);
       clearStoredTokens();
     }
     return null;
@@ -128,23 +144,47 @@ export const useIncrementalAuth = () => {
 
   // Get valid access token (refresh if needed)
   const getValidAccessToken = useCallback(async (): Promise<string | null> => {
+    console.log('🔑 getValidAccessToken called - checking stored tokens...');
     const tokens = loadStoredTokens();
     
+    console.log('📋 Token status:', {
+      hasTokens: !!tokens,
+      hasAccessToken: !!tokens?.access_token,
+      hasRefreshToken: !!tokens?.refresh_token,
+      expiresAt: tokens?.expires_at ? new Date(tokens.expires_at).toISOString() : 'none',
+      isExpired: tokens?.expires_at ? Date.now() >= tokens.expires_at : 'no expiry',
+      currentTime: new Date().toISOString(),
+      scope: tokens?.scope
+    });
+    
     if (!tokens) {
+      console.warn('⚠️ No stored tokens found');
       return null;
     }
 
     // Check if token is still valid (with 5 minute buffer)
     const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
     if (tokens.expires_at && Date.now() < (tokens.expires_at - bufferTime)) {
+      console.log('✅ Using valid stored access token');
       return tokens.access_token;
     }
 
+    console.log('🔄 Token expired or about to expire, attempting refresh...');
     // Token is expired or about to expire, try to refresh
     if (tokens.refresh_token) {
-      return await refreshAccessToken(tokens.refresh_token);
+      console.log('🔄 Refresh token available, refreshing...');
+      const refreshedToken = await refreshAccessToken(tokens.refresh_token);
+      if (refreshedToken) {
+        console.log('✅ Successfully refreshed access token');
+        return refreshedToken;
+      } else {
+        console.error('❌ Failed to refresh access token');
+      }
+    } else {
+      console.warn('⚠️ No refresh token available');
     }
 
+    console.warn('❌ Unable to get valid access token');
     return null;
   }, [loadStoredTokens, refreshAccessToken]);
 

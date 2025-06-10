@@ -179,7 +179,7 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
     // Update the store with validated transactions
     processTransactionData(validatedTransactions);
 
-    // If user has a spreadsheet, offer to append the validated transactions
+    // If user has a spreadsheet, append the validated transactions and then refresh dashboard
     if (userData.spreadsheetId && validatedTransactions.length > 0) {
       try {
         const response = await fetch('/api/sheets/append-validated-transactions', {
@@ -201,19 +201,40 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
             appended_count: result.appendedCount,
             spreadsheet_id: userData.spreadsheetId
           });
+
+          // After successful append, navigate to dashboard which will trigger a refresh to show complete data
+          if (onValidationComplete) {
+            onValidationComplete(validatedTransactions);
+          } else {
+            // Navigate to dashboard instead of spendingAnalysisResults
+            // Dashboard will need to refresh from spreadsheet to show complete data
+            goToScreen('dashboard');
+          }
         } else {
           console.error('Failed to append transactions to spreadsheet');
+          // If append fails, still navigate but with current data
+          if (onValidationComplete) {
+            onValidationComplete(validatedTransactions);
+          } else {
+            goToScreen('spendingAnalysisResults');
+          }
         }
       } catch (error) {
         console.error('Error appending transactions:', error);
+        // If error occurs, still navigate but with current data
+        if (onValidationComplete) {
+          onValidationComplete(validatedTransactions);
+        } else {
+          goToScreen('spendingAnalysisResults');
+        }
       }
-    }
-
-    if (onValidationComplete) {
-      onValidationComplete(validatedTransactions);
     } else {
-      // Navigate to spending analysis results to show validated data
-      goToScreen('spendingAnalysisResults');
+      // No spreadsheet linked, use original behavior
+      if (onValidationComplete) {
+        onValidationComplete(validatedTransactions);
+      } else {
+        goToScreen('spendingAnalysisResults');
+      }
     }
   };
 
