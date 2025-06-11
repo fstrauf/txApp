@@ -4,14 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
-import { useDashboard } from '../hooks/useDashboard';
+import { useDashboardQuery } from '../hooks/useDashboardQuery';
 import { DashboardStats } from '../utils/dashboardStats';
 import { Header } from '@/components/ui/Header';
 import { 
   DocumentPlusIcon,
   ArrowPathIcon,
-  LinkIcon,
-  QuestionMarkCircleIcon,
   ChartBarIcon,
   PlusCircleIcon,
   ExclamationTriangleIcon
@@ -29,7 +27,7 @@ const DashboardScreen: React.FC = () => {
     progress: getProgress() 
   });
 
-  // Use the consolidated dashboard hook
+  // Use the TanStack Query dashboard hook
   const {
     dashboardStats,
     filteredTransactions,
@@ -42,9 +40,10 @@ const DashboardScreen: React.FC = () => {
     setHideTransfer,
     handleRefreshData,
     clearError
-  } = useDashboard();
+  } = useDashboardQuery();
 
   const [isHelpDrawerOpen, setIsHelpDrawerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'ai-insights'>('overview');
 
   // Generate mock data for first-time users
   const mockStats = {
@@ -250,7 +249,188 @@ const DashboardScreen: React.FC = () => {
           </div>
           </div>
 
-          <DashboardStatistics stats={displayStats} filteredTransactions={displayTransactions} />
+          {/* Navigation Tabs */}
+          <div className="mb-8">
+            <nav className="flex space-x-8" aria-label="Dashboard navigation">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                  activeTab === 'overview'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab('transactions')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                  activeTab === 'transactions'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Transactions
+              </button>
+              <button
+                onClick={() => setActiveTab('ai-insights')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                  activeTab === 'ai-insights'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                AI Insights
+              </button>
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'overview' && (
+            <DashboardStatistics stats={displayStats} filteredTransactions={displayTransactions} />
+          )}
+
+          {activeTab === 'transactions' && (
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Details</h3>
+              {displayTransactions.length > 0 ? (
+                <div className="space-y-3">
+                  {displayTransactions.slice(0, 50).map((transaction, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{transaction.category || 'Transaction'}</p>
+                        <p className="text-sm text-gray-600">{transaction.isDebit ? 'Expense' : 'Income'}</p>
+                        <p className="text-xs text-gray-500">
+                          {transaction.date ? new Date(transaction.date).toLocaleDateString() : 'No date'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-semibold ${transaction.isDebit ? 'text-red-600' : 'text-green-600'}`}>
+                          {transaction.isDebit ? '-' : '+'}${Math.abs(transaction.amount || 0).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {displayTransactions.length > 50 && (
+                    <p className="text-sm text-gray-500 text-center mt-4">
+                      Showing first 50 of {displayTransactions.length} transactions
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500">No transaction data available</p>
+                  {isFirstTimeUser && (
+                    <p className="text-sm text-gray-400 mt-2">Connect your data to see transaction details</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'ai-insights' && (
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">AI-Powered Financial Insights</h3>
+              {displayStats ? (
+                <div className="space-y-6">
+                  {/* Spending Patterns */}
+                  <div className="border-l-4 border-blue-500 pl-4">
+                    <h4 className="font-medium text-gray-900 mb-2">Spending Pattern Analysis</h4>
+                    <p className="text-gray-600 mb-2">
+                      Based on your transaction history, here are some key insights:
+                    </p>
+                    <ul className="space-y-1 text-sm text-gray-600">
+                      <li>• Your monthly expenses average ${displayStats.monthlyAverageExpenses.toLocaleString()}</li>
+                      <li>• Last month you spent ${displayStats.lastMonthExpenses.toLocaleString()}, which is {
+                        displayStats.lastMonthExpenses < displayStats.monthlyAverageExpenses ? 'below' : 'above'
+                      } your average</li>
+                      <li>• Your projected annual expenses: ${displayStats.annualExpenseProjection.toLocaleString()}</li>
+                    </ul>
+                  </div>
+
+                  {/* Savings Opportunities */}
+                  <div className="border-l-4 border-green-500 pl-4">
+                    <h4 className="font-medium text-gray-900 mb-2">Savings Opportunities</h4>
+                    <p className="text-gray-600 mb-2">
+                      Potential areas to optimize your spending:
+                    </p>
+                    <ul className="space-y-1 text-sm text-gray-600">
+                      <li>• You're saving ${displayStats.monthlyAverageSavings.toLocaleString()} per month on average</li>
+                      <li>• Consider automating transfers to boost your savings rate</li>
+                      <li>• Review recurring subscriptions for potential savings</li>
+                    </ul>
+                  </div>
+
+                  {/* Financial Health Score */}
+                  <div className="border-l-4 border-purple-500 pl-4">
+                    <h4 className="font-medium text-gray-900 mb-2">Financial Health Score</h4>
+                    <p className="text-gray-600 mb-2">
+                      Your financial health indicators:
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                      <div className="text-center p-3 bg-gray-50 rounded-lg">
+                        <p className="text-lg font-semibold text-green-600">
+                          {Math.round((displayStats.monthlyAverageSavings / displayStats.monthlyAverageIncome) * 100)}%
+                        </p>
+                        <p className="text-xs text-gray-600">Savings Rate</p>
+                      </div>
+                      <div className="text-center p-3 bg-gray-50 rounded-lg">
+                        <p className="text-lg font-semibold text-blue-600">
+                          {Math.round((displayStats.monthlyAverageExpenses / displayStats.monthlyAverageIncome) * 100)}%
+                        </p>
+                        <p className="text-xs text-gray-600">Expense Ratio</p>
+                      </div>
+                      <div className="text-center p-3 bg-gray-50 rounded-lg">
+                        <p className="text-lg font-semibold text-purple-600">
+                          {Math.round(displayStats.monthlyAverageSavings > 0 ? (displayStats.monthlyAverageExpenses / displayStats.monthlyAverageSavings) : 0)}
+                        </p>
+                        <p className="text-xs text-gray-600">Months to Zero</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Trends and Predictions */}
+                  <div className="border-l-4 border-orange-500 pl-4">
+                    <h4 className="font-medium text-gray-900 mb-2">Trends & Predictions</h4>
+                    <p className="text-gray-600 mb-2">
+                      Based on current patterns:
+                    </p>
+                    <ul className="space-y-1 text-sm text-gray-600">
+                      <li>• At your current savings rate, you could build a 6-month emergency fund in {
+                        Math.ceil((displayStats.monthlyAverageExpenses * 6) / displayStats.monthlyAverageSavings)
+                      } months</li>
+                      <li>• Your spending trend suggests {
+                        displayStats.lastMonthExpenses < displayStats.monthlyAverageExpenses ? 'improved control' : 'increased spending'
+                      }</li>
+                      <li>• Consider setting up automated investments to grow wealth</li>
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">AI Insights Coming Soon</h4>
+                  <p className="text-gray-500 mb-4">
+                    Connect your financial data to unlock personalized AI-powered insights and recommendations.
+                  </p>
+                  {isFirstTimeUser && (
+                    <button
+                      onClick={handleLinkSpreadsheet}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+                    >
+                      <DocumentPlusIcon className="h-5 w-5" />
+                      Connect Data for AI Insights
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
