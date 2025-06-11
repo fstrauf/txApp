@@ -263,14 +263,14 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
     return (
       <div className="max-w-4xl mx-auto p-4 sm:p-8">
         <div className="text-center py-12">
-          <ExclamationTriangleIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Transactions to Validate</h3>
-          <p className="text-gray-500 mb-6">
+          <ExclamationTriangleIcon className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-900 mb-2">No Transactions to Validate</h3>
+          <p className="text-slate-500 mb-6">
             Upload and categorize transactions first to see validation options.
           </p>
           <button
             onClick={() => goToScreen('spendingAnalysisUpload')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 shadow-sm"
           >
             Upload Transactions
           </button>
@@ -295,34 +295,34 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
       </Header>
 
       {/* Progress Bar */}
-      <div className="mb-8 bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="mb-8 bg-white rounded-lg p-6 shadow-sm border border-slate-200">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">Validation Progress</span>
-          <span className="text-sm text-gray-500">{validatedCount} of {totalCount} completed</span>
+          <span className="text-sm font-medium text-slate-700">Validation Progress</span>
+          <span className="text-sm text-slate-500">{validatedCount} of {totalCount} completed</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-slate-200 rounded-full h-2">
           <div 
-            className="bg-green-500 h-2 rounded-full transition-all duration-300"
+            className="bg-purple-600 h-2 rounded-full transition-all duration-300"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
       </div>
 
       {/* Controls */}
-      <div className="mb-6 bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="mb-6 bg-white rounded-lg p-6 shadow-sm border border-slate-200">
         <div className="flex flex-wrap items-center gap-4 mb-4">
           {/* Bulk Actions */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleSelectAll}
-              className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+              className="px-3 py-1.5 text-sm border border-slate-300 rounded-md hover:bg-slate-50 transition-colors duration-200 text-slate-700 hover:text-slate-900"
             >
               {selectedTransactions.size === filteredAndSortedTransactions.length ? 'Deselect All' : 'Select All'}
             </button>
             {selectedTransactions.size > 0 && (
               <button
                 onClick={handleValidateSelected}
-                className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-all duration-200 shadow-sm"
               >
                 Validate Selected ({selectedTransactions.size})
               </button>
@@ -331,12 +331,12 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
 
           {/* Filters */}
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm text-slate-600">
               <input
                 type="checkbox"
                 checked={showOnlyUnvalidated}
                 onChange={(e) => setShowOnlyUnvalidated(e.target.checked)}
-                className="rounded"
+                className="rounded border-slate-300 text-purple-600 focus:ring-purple-500"
               />
               Show only unvalidated
             </label>
@@ -345,7 +345,7 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-3 py-1 text-sm border border-gray-300 rounded"
+            className="px-3 py-1.5 text-sm border border-slate-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
           >
             <option value="all">All categories</option>
             {categories.map(cat => (
@@ -355,11 +355,11 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
 
           {/* Sort */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Sort by:</span>
+            <span className="text-sm text-slate-600">Sort by:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-1 text-sm border border-gray-300 rounded"
+              className="px-3 py-1.5 text-sm border border-slate-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             >
               <option value="confidence">Confidence</option>
               <option value="amount">Amount</option>
@@ -367,7 +367,7 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
             </select>
             <button
               onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-              className="p-1 hover:bg-gray-100 rounded"
+              className="p-1.5 hover:bg-slate-100 rounded-md transition-colors duration-200 text-slate-600 hover:text-slate-800"
             >
               {sortDirection === 'asc' ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
             </button>
@@ -376,25 +376,25 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
       </div>
 
       {/* Transactions List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-slate-50">
               <tr>
                 <th className="px-4 py-3 text-left">
                   <input
                     type="checkbox"
                     checked={selectedTransactions.size === filteredAndSortedTransactions.length && filteredAndSortedTransactions.length > 0}
                     onChange={handleSelectAll}
-                    className="rounded"
+                    className="rounded border-slate-300 text-purple-600 focus:ring-purple-500"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Date</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Description</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Amount</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Category</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Confidence</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Actions</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Date</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Description</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Amount</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Category</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Confidence</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -427,14 +427,14 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
       {feedback && (
         <div className={`mt-6 p-4 rounded-lg border ${
           feedback.type === 'success' 
-            ? 'bg-green-50 border-green-200 text-green-800' 
+            ? 'bg-purple-50 border-purple-200 text-purple-700' 
             : 'bg-red-50 border-red-200 text-red-800'
         }`}>
           <div className="flex items-center">
             {feedback.type === 'success' ? (
-              <CheckCircleIcon className="h-5 w-5 mr-2" />
+              <CheckCircleIcon className="h-5 w-5 mr-2 text-purple-600" />
             ) : (
-              <ExclamationTriangleIcon className="h-5 w-5 mr-2" />
+              <ExclamationTriangleIcon className="h-5 w-5 mr-2 text-red-600" />
             )}
             {feedback.message}
           </div>
@@ -443,7 +443,7 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
 
       {/* Bottom Actions */}
       <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-between items-center">
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-slate-600">
           {validatedCount} of {totalCount} transactions validated
         </div>
         
@@ -452,7 +452,7 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
             <button
               onClick={onCancel}
               disabled={isSubmitting}
-              className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200 disabled:opacity-50"
+              className="px-6 py-2 text-slate-600 hover:text-slate-800 transition-colors duration-200 disabled:opacity-50 border border-slate-300 rounded-lg hover:bg-slate-50"
             >
               Cancel
             </button>
@@ -460,7 +460,7 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
           <button
             onClick={handleCompleteValidation}
             disabled={validatedCount === 0 || isSubmitting}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
           >
             {isSubmitting && (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -507,9 +507,9 @@ const TransactionRow: React.FC<TransactionRowProps> = ({
   availableCategories
 }) => {
   const getConfidenceColor = (confidence: number = 0) => {
-    if (confidence >= 0.8) return 'text-green-600 bg-green-50';
-    if (confidence >= 0.6) return 'text-yellow-600 bg-yellow-50';
-    return 'text-red-600 bg-red-50';
+    if (confidence >= 0.8) return 'text-purple-700 bg-purple-50 border border-purple-200';
+    if (confidence >= 0.6) return 'text-amber-700 bg-amber-50 border border-amber-200';
+    return 'text-red-700 bg-red-50 border border-red-200';
   };
 
   const getConfidenceText = (confidence: number = 0) => {
@@ -519,24 +519,30 @@ const TransactionRow: React.FC<TransactionRowProps> = ({
   };
 
   return (
-    <tr className={`${isEven ? 'bg-white' : 'bg-gray-50'} ${transaction.isValidated ? 'opacity-60' : ''}`}>
+    <tr className={`${
+      transaction.isValidated 
+        ? 'bg-purple-50' 
+        : isEven 
+          ? 'bg-white' 
+          : 'bg-slate-50'
+    } ${transaction.isValidated ? 'opacity-75' : ''} hover:bg-slate-100 transition-colors duration-150`}>
       <td className="px-4 py-3">
         <input
           type="checkbox"
           checked={isSelected}
           onChange={(e) => onSelect(transaction.id, e.target.checked)}
-          className="rounded"
+          className="h-4 w-4 accent-purple-600 border-slate-300 rounded"
           disabled={transaction.isValidated}
         />
       </td>
-      <td className="px-4 py-3 text-sm text-gray-900">
+      <td className="px-4 py-3 text-sm text-slate-900">
         {new Date(transaction.date).toLocaleDateString()}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
+      <td className="px-4 py-3 text-sm text-slate-900 max-w-xs truncate">
         {transaction.description}
       </td>
       <td className="px-4 py-3 text-sm">
-        <span className={`font-medium ${transaction.isDebit ? 'text-red-600' : 'text-green-600'}`}>
+        <span className={`font-medium ${transaction.isDebit ? 'text-red-600' : 'text-emerald-600'}`}>
           {transaction.isDebit ? '-' : '+'}${Math.abs(transaction.amount).toFixed(2)}
         </span>
       </td>
@@ -546,7 +552,7 @@ const TransactionRow: React.FC<TransactionRowProps> = ({
             <select
               value={editValue}
               onChange={(e) => onEditValueChange(e.target.value)}
-              className="px-2 py-1 text-sm border border-gray-300 rounded flex-1"
+              className="px-2 py-1 text-sm border border-slate-300 rounded-md flex-1 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') onEditSave(editValue);
                 if (e.key === 'Escape') onEditCancel();
@@ -561,21 +567,25 @@ const TransactionRow: React.FC<TransactionRowProps> = ({
             </select>
             <button
               onClick={() => onEditSave(editValue)}
-              className="p-1 text-green-600 hover:bg-green-50 rounded"
+              className="p-1 text-purple-600 hover:bg-purple-50 rounded-md transition-colors duration-200"
             >
               <CheckIcon className="h-4 w-4" />
             </button>
             <button
               onClick={onEditCancel}
-              className="p-1 text-red-600 hover:bg-red-50 rounded"
+              className="p-1 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
             >
               <XMarkIcon className="h-4 w-4" />
             </button>
           </div>
         ) : (
-          <span className={`inline-flex items-center gap-1 ${transaction.isValidated ? 'text-gray-500' : 'text-gray-900'}`}>
+          <span className={`inline-flex items-center gap-1 ${
+            transaction.isValidated 
+              ? 'text-purple-700 font-medium' 
+              : 'text-slate-900'
+          }`}>
             {transaction.category}
-            {transaction.isValidated && <CheckCircleIcon className="h-4 w-4 text-green-500" />}
+            {transaction.isValidated && <CheckCircleIcon className="h-4 w-4 text-purple-600" />}
           </span>
         )}
       </td>
@@ -590,14 +600,14 @@ const TransactionRow: React.FC<TransactionRowProps> = ({
             <>
               <button
                 onClick={() => onValidate(transaction.id)}
-                className="p-1 text-green-600 hover:bg-green-50 rounded"
+                className="p-1 text-purple-600 hover:bg-purple-50 rounded-md transition-colors duration-200"
                 title="Validate"
               >
                 <CheckIcon className="h-4 w-4" />
               </button>
               <button
                 onClick={() => onEdit(transaction)}
-                className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                className="p-1 text-purple-600 hover:bg-purple-50 rounded-md transition-colors duration-200"
                 title="Edit category"
               >
                 <PencilIcon className="h-4 w-4" />

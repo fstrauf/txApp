@@ -24,7 +24,7 @@ import {
   CogIcon
 } from '@heroicons/react/24/outline';
 import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
-import { convertCurrency } from '@/lib/currency';
+import { convertCurrency, extractCurrencyCode } from '@/lib/currency';
 
 interface DataManagementDrawerProps {
   spreadsheetLinked: boolean;
@@ -160,6 +160,93 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   };
 
   const lastTransaction = getLastTransaction();
+
+  // Polling for completion similar to LunchMoney
+  const pollForCompletion = async (
+    predictionId: string,
+    operationType: 'training' | 'classification',
+    onSuccess: (results?: any) => void,
+    onError: (message: string) => void
+  ) => {
+    const maxPolls = 120; // 120 * 5s = 10 minutes
+    const pollInterval = 5000;
+    let pollCount = 0;
+
+    const executePoll = async () => {
+      while (pollCount < maxPolls) {
+        pollCount++;
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        
+        const pollingUrl = `/api/classify/status/${predictionId}`;
+        console.log(`[Poll] Attempting fetch (${pollCount}/${maxPolls}): ${pollingUrl}`);
+
+        try {
+          const response = await fetch(pollingUrl);
+          console.log(`[Poll] Response Status: ${response.status}`);
+
+          if (!response.ok) {
+            if (pollCount > 3) {
+              throw new Error(`Status endpoint error: ${response.status} ${response.statusText}`);
+            } else {
+              console.warn(`[Poll] Status endpoint error (attempt ${pollCount}): ${response.status}. Retrying...`);
+              setFeedback({ 
+                type: 'info', 
+                message: `🔄 ${operationType} in progress - checking status (attempt ${pollCount})...` 
+              });
+              continue;
+            }
+          }
+
+          const responseText = await response.text();
+          let data;
+          try {
+            data = JSON.parse(responseText);
+            console.log(`[Poll] Job status:`, data);
+
+            if (data.status === 'completed') {
+              console.log(`[Poll] Job completed. Data:`, data);
+              setFeedback({ type: 'success', message: `${operationType} completed successfully!` });
+              
+              if (onSuccess) {
+                await onSuccess(data);
+              }
+              return;
+            } else if (data.status === 'failed') {
+              const errorMessage = data.error || 'Job failed';
+              console.error(`[Poll] Job failed:`, errorMessage);
+              setFeedback({ type: 'error', message: `${operationType} failed: ${errorMessage}` });
+              if (onError) {
+                onError(errorMessage);
+              }
+              return;
+            } else {
+              setFeedback({ 
+                type: 'info', 
+                message: `🔄 ${operationType} in progress - processing your request (poll ${pollCount}/${maxPolls})...` 
+              });
+            }
+          } catch (parseError) {
+            const errorMessage = parseError instanceof Error ? parseError.message : 'Failed to parse response';
+            console.error(`[Poll] Failed to parse JSON response:`, errorMessage);
+            throw new Error(errorMessage);
+          }
+        } catch (error) {
+          console.error(`[Poll] Error polling for ${predictionId} (attempt ${pollCount}):`, error);
+          if (pollCount >= maxPolls / 2) {
+            onError(error instanceof Error ? error.message : `Failed to poll for job ${predictionId} status.`);
+            return;
+          }
+          setFeedback({ 
+            type: 'info', 
+            message: `🔄 ${operationType} - connection issue (attempt ${pollCount}), retrying...` 
+          });
+        }
+      }
+      // If loop finishes, it means timeout
+      onError(`${operationType} job ${predictionId} timed out after ${maxPolls} polling attempts.`);
+    };
+    await executePoll();
+  };
 
   // CSV Processing Functions
   const handleFileSelect = async (file: File) => {
@@ -366,7 +453,13 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         const currencyHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'currency');
         
         const originalAmount = parseFloat(String(row[amountHeader!] || '0'));
-        const originalCurrency = currencyHeader ? String(row[currencyHeader] || baseCurrency).toUpperCase() : baseCurrency;
+        const rawCurrency = currencyHeader ? String(row[currencyHeader] || baseCurrency) : baseCurrency;
+        const originalCurrency = extractCurrencyCode(rawCurrency) || baseCurrency;
+        
+        // Debug currency extraction
+        if (currencyHeader && rawCurrency !== originalCurrency) {
+          console.log('Currency extracted:', { rawCurrency, originalCurrency, baseCurrency });
+        }
         
         // Parse and format the date properly to avoid timezone issues
         const rawDate = row[dateHeader!] || new Date().toISOString().split('T')[0];
@@ -450,11 +543,41 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           })
         });
 
-        if (!trainResponse.ok) {
-          throw new Error('Failed to train custom model on existing data');
+        if (trainResponse.status === 200) {
+          // Synchronous training completion
+          const trainResult = await trainResponse.json();
+          if (trainResponse.ok && trainResult.success) {
+            setFeedback({ type: 'success', message: 'Model trained! Now categorizing new transactions...' });
+          } else {
+            throw new Error(trainResult.message || 'Training failed despite 200 OK response');
+          }
+        } else if (trainResponse.status === 202) {
+          // Asynchronous training - need to poll for completion
+          const { prediction_id, message: acceptanceMessage } = await trainResponse.json();
+          if (!prediction_id) {
+            throw new Error('Training job started but did not return a prediction ID');
+          }
+          
+          setFeedback({ type: 'info', message: `🚀 ${acceptanceMessage || `Training job submitted. Processing your data...`}` });
+          
+          // Wait for training to complete via polling
+          await new Promise((resolve, reject) => {
+            pollForCompletion(
+              prediction_id,
+              'training',
+              (pollingData) => {
+                setFeedback({ type: 'success', message: 'Model trained via polling! Now categorizing new transactions...' });
+                resolve(pollingData);
+              },
+              (errorMessage) => {
+                reject(new Error(errorMessage));
+              }
+            );
+          });
+        } else {
+          const errorData = await trainResponse.json().catch(() => ({ message: `Training request failed with status ${trainResponse.status}` }));
+          throw new Error(errorData.message || errorData.error || `Training request failed: ${trainResponse.statusText}`);
         }
-
-        setFeedback({ type: 'success', message: 'Model trained! Now categorizing new transactions...' });
 
         // Step 2: Classify new transactions using the trained model
         const classifyResponse = await fetch('/api/classify/classify', {
@@ -469,11 +592,56 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           })
         });
 
-        if (!classifyResponse.ok) {
-          throw new Error('Failed to classify transactions with custom model');
+        let classifiedData: any;
+
+        if (classifyResponse.status === 200) {
+          // Synchronous classification completion
+          classifiedData = await classifyResponse.json();
+          
+          if (classifyResponse.ok && classifiedData.status === 'completed' && classifiedData.results) {
+            // Validation successful - proceed
+          } else {
+            throw new Error(classifiedData.message || 'Classification completed but with unexpected response format');
+          }
+        } else if (classifyResponse.status === 202) {
+          // Asynchronous classification - need to poll for completion
+          const { prediction_id, message: acceptanceMessage } = await classifyResponse.json();
+          if (!prediction_id) {
+            throw new Error('Classification job started but did not return a prediction ID');
+          }
+          
+          setFeedback({ type: 'info', message: `🚀 ${acceptanceMessage || `Classification job submitted. Processing your transactions...`}` });
+          
+          // Wait for classification to complete via polling
+          classifiedData = await new Promise((resolve, reject) => {
+            pollForCompletion(
+              prediction_id,
+              'classification',
+              (pollingData) => {
+                setFeedback({ type: 'success', message: 'Classification completed via polling!' });
+                resolve(pollingData || { results: [] });
+              },
+              (errorMessage) => {
+                reject(new Error(errorMessage));
+              }
+            );
+          });
+        } else {
+          const errorData = await classifyResponse.json().catch(() => ({ message: `Classification request failed with status ${classifyResponse.status}` }));
+          throw new Error(errorData.message || errorData.error || `Classification request failed: ${classifyResponse.statusText}`);
+        }
+        
+        // Validate API response
+        if (!classifiedData.results || !Array.isArray(classifiedData.results)) {
+          throw new Error('Invalid response from classification API - no results array');
         }
 
-        const classifiedData = await classifyResponse.json();
+        if (classifiedData.results.length !== uniqueTransactions.length) {
+          console.warn('Classification results count mismatch:', {
+            expectedCount: uniqueTransactions.length,
+            actualCount: classifiedData.results.length
+          });
+        }
         
         // Transform classified results back to full transaction format
         const categorizedTransactions = classifiedData.results.map((result: any, index: number) => ({
@@ -514,11 +682,56 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           })
         });
 
-        if (!autoClassifyResponse.ok) {
-          throw new Error('Failed to auto-classify transactions');
+        let autoClassifiedData: any;
+
+        if (autoClassifyResponse.status === 200) {
+          // Synchronous auto-classification completion
+          autoClassifiedData = await autoClassifyResponse.json();
+          
+          if (autoClassifyResponse.ok && autoClassifiedData.status === 'completed' && autoClassifiedData.results) {
+            // Validation successful - proceed
+          } else {
+            throw new Error(autoClassifiedData.message || 'Auto-classification completed but with unexpected response format');
+          }
+        } else if (autoClassifyResponse.status === 202) {
+          // Asynchronous auto-classification - need to poll for completion
+          const { prediction_id, message: acceptanceMessage } = await autoClassifyResponse.json();
+          if (!prediction_id) {
+            throw new Error('Auto-classification job started but did not return a prediction ID');
+          }
+          
+          setFeedback({ type: 'info', message: `🚀 ${acceptanceMessage || `Auto-classification job submitted. Processing your transactions...`}` });
+          
+          // Wait for auto-classification to complete via polling
+          autoClassifiedData = await new Promise((resolve, reject) => {
+            pollForCompletion(
+              prediction_id,
+              'classification',
+              (pollingData) => {
+                setFeedback({ type: 'success', message: 'Auto-classification completed via polling!' });
+                resolve(pollingData || { results: [] });
+              },
+              (errorMessage) => {
+                reject(new Error(errorMessage));
+              }
+            );
+          });
+        } else {
+          const errorData = await autoClassifyResponse.json().catch(() => ({ message: `Auto-classification request failed with status ${autoClassifyResponse.status}` }));
+          throw new Error(errorData.message || errorData.error || `Auto-classification request failed: ${autoClassifyResponse.statusText}`);
+        }
+        
+        // Validate API response
+        if (!autoClassifiedData.results || !Array.isArray(autoClassifiedData.results)) {
+          throw new Error('Invalid response from auto-classification API - no results array');
         }
 
-        const autoClassifiedData = await autoClassifyResponse.json();
+        if (autoClassifiedData.results.length !== uniqueTransactions.length) {
+          console.warn('Auto-classification results count mismatch:', {
+            expectedCount: uniqueTransactions.length,
+            actualCount: autoClassifiedData.results.length
+          });
+        }
         
         // Transform auto-classified results back to full transaction format
         const categorizedTransactions = autoClassifiedData.results.map((result: any, index: number) => ({
@@ -848,7 +1061,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   const progressPercentage = totalValidationCount > 0 ? (validatedCount / totalValidationCount) * 100 : 0;
 
   const getConfidenceColor = (confidence: number = 0) => {
-    if (confidence >= 0.8) return 'text-green-600 bg-green-100';
+    if (confidence >= 0.8) return 'text-purple-600 bg-purple-100';
     if (confidence >= 0.6) return 'text-yellow-600 bg-yellow-100';
     return 'text-red-600 bg-red-100';
   };
@@ -1299,7 +1512,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                   {selectedTransactions.size > 0 && (
                     <button
                       onClick={handleValidateSelected}
-                      className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                      className="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
                     >
                       Validate Selected ({selectedTransactions.size})
                     </button>
@@ -1370,7 +1583,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                     <button
                       onClick={handleCompleteValidation}
                       disabled={isProcessing}
-                      className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                     >
                       {isProcessing ? (
                         <span className="flex items-center justify-center gap-2">
@@ -1448,7 +1661,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                               />
                               <button
                                 onClick={() => handleEditCategory(transaction.id, editCategory)}
-                                className="p-1 text-green-600 hover:text-green-800"
+                                className="p-1 text-purple-600 hover:text-purple-800"
                               >
                                 <CheckIcon className="h-4 w-4" />
                               </button>
@@ -1478,7 +1691,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                         </td>
                         <td className="px-4 py-3">
                           {transaction.isValidated ? (
-                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
                               <CheckIcon className="h-3 w-3 mr-1" />
                               Validated
                             </span>
@@ -1492,7 +1705,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                           {!transaction.isValidated && (
                             <button
                               onClick={() => handleValidateTransaction(transaction.id)}
-                              className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                              className="px-3 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700"
                             >
                               Validate
                             </button>

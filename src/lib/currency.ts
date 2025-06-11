@@ -5,6 +5,39 @@ interface CurrencyConversionResponse {
 }
 
 /**
+ * Extract a clean 3-letter currency code from text that might contain amounts or other words
+ * @param currencyText - Text that might contain currency code like "USD 11.46 CONVERTED AT 0.58"
+ * @returns Clean 3-letter currency code or null if not found
+ */
+export function extractCurrencyCode(currencyText: string): string | null {
+  if (!currencyText || typeof currencyText !== 'string') {
+    return null;
+  }
+
+  // Remove extra whitespace and convert to uppercase
+  const cleanText = currencyText.trim().toUpperCase();
+  
+  // Common currency codes (ISO 4217)
+  const currencyCodes = [
+    'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD',
+    'SGD', 'NOK', 'MXN', 'INR', 'RUB', 'ZAR', 'TRY', 'BRL', 'TWD', 'DKK',
+    'PLN', 'THB', 'IDR', 'HUF', 'CZK', 'ILS', 'CLP', 'PHP', 'AED', 'COP',
+    'SAR', 'MYR', 'RON', 'HRK', 'BGN', 'ISK', 'HKD', 'KRW'
+  ];
+
+  // Try to find a currency code in the text
+  for (const code of currencyCodes) {
+    if (cleanText.includes(code)) {
+      return code;
+    }
+  }
+
+  // If no known currency found, try to extract first 3-letter sequence
+  const match = cleanText.match(/\b[A-Z]{3}\b/);
+  return match ? match[0] : null;
+}
+
+/**
  * Convert currency using Frankfurter API with historical rates
  * @param amount - Amount to convert
  * @param fromCurrency - Source currency (3-letter code)
@@ -18,16 +51,25 @@ export async function convertCurrency(
   toCurrency: string,
   date?: string
 ): Promise<number> {
+  // Clean and extract currency codes
+  const cleanFromCurrency = extractCurrencyCode(fromCurrency);
+  const cleanToCurrency = extractCurrencyCode(toCurrency);
+
+  if (!cleanFromCurrency || !cleanToCurrency) {
+    console.warn('Invalid currency codes:', { fromCurrency, toCurrency, cleanFromCurrency, cleanToCurrency });
+    return amount; // Return original amount if currencies are invalid
+  }
+
   // If currencies are the same, no conversion needed
-  if (fromCurrency.toUpperCase() === toCurrency.toUpperCase()) {
+  if (cleanFromCurrency === cleanToCurrency) {
     return amount;
   }
 
   try {
     // Use historical rate if date provided, otherwise latest rate
     const endpoint = date 
-      ? `https://api.frankfurter.dev/v1/${date}?base=${fromCurrency.toUpperCase()}&symbols=${toCurrency.toUpperCase()}`
-      : `https://api.frankfurter.dev/v1/latest?base=${fromCurrency.toUpperCase()}&symbols=${toCurrency.toUpperCase()}`;
+      ? `https://api.frankfurter.dev/v1/${date}?base=${cleanFromCurrency}&symbols=${cleanToCurrency}`
+      : `https://api.frankfurter.dev/v1/latest?base=${cleanFromCurrency}&symbols=${cleanToCurrency}`;
 
     const response = await fetch(endpoint);
     
@@ -36,10 +78,10 @@ export async function convertCurrency(
     }
 
     const data: CurrencyConversionResponse = await response.json();
-    const rate = data.rates[toCurrency.toUpperCase()];
+    const rate = data.rates[cleanToCurrency];
 
     if (!rate) {
-      throw new Error(`Exchange rate not found for ${fromCurrency} to ${toCurrency}`);
+      throw new Error(`Exchange rate not found for ${cleanFromCurrency} to ${cleanToCurrency}`);
     }
 
     return amount * rate;
@@ -89,7 +131,8 @@ export async function getSupportedCurrencies(): Promise<Record<string, string>> 
 export async function isCurrencySupported(currencyCode: string): Promise<boolean> {
   try {
     const currencies = await getSupportedCurrencies();
-    return currencyCode.toUpperCase() in currencies;
+    const cleanCode = extractCurrencyCode(currencyCode);
+    return cleanCode ? cleanCode in currencies : false;
   } catch (error) {
     console.error('Error checking currency support:', error);
     return false;
