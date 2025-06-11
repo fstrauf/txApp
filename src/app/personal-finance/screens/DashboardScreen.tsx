@@ -634,25 +634,25 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
       {/* <DashboardDebugger dashboardStats={stats} timeFilter={currentTimeFilter} /> */}
       
       {/* Condensed Key Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
           <h4 className="text-sm font-medium text-gray-500 mb-3">Income</h4>
           <div className="space-y-3">
             <div>
               <p className="text-lg font-semibold text-green-600">
-                ${stats.monthlyAverageIncome.toLocaleString()}
+                ${Math.round(stats.monthlyAverageIncome).toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">Monthly Average</p>
             </div>
             <div className="border-t pt-3">
               <p className="text-lg font-semibold text-green-500">
-                ${stats.lastMonthIncome.toLocaleString()}
+                ${Math.round(stats.lastMonthIncome).toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">{lastMonthName}</p>
             </div>
             <div className="border-t pt-3">
               <p className="text-lg font-semibold text-green-700">
-                ${annualIncomeProjection.toLocaleString()}
+                ${Math.round(annualIncomeProjection).toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">Annual Projection</p>
             </div>
@@ -664,19 +664,19 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
           <div className="space-y-3">
             <div>
               <p className="text-lg font-semibold text-red-600">
-                ${stats.monthlyAverageExpenses.toLocaleString()}
+                ${Math.round(stats.monthlyAverageExpenses).toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">Monthly Average</p>
             </div>
             <div className="border-t pt-3">
               <p className="text-lg font-semibold text-red-500">
-                ${stats.lastMonthExpenses.toLocaleString()}
+                ${Math.round(stats.lastMonthExpenses).toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">{lastMonthName}</p>
             </div>
             <div className="border-t pt-3">
               <p className="text-lg font-semibold text-red-700">
-                ${stats.annualExpenseProjection.toLocaleString()}
+                ${Math.round(stats.annualExpenseProjection).toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">Annual Projection</p>
             </div>
@@ -688,7 +688,7 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
           <div className="space-y-3">
             <div>
               <p className="text-lg font-semibold text-blue-600">
-                ${stats.monthlyAverageSavings.toLocaleString()}
+                ${Math.round(stats.monthlyAverageSavings).toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">Monthly Average</p>
             </div>
@@ -702,34 +702,58 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
               <p className="text-sm text-gray-500">Savings Rate</p>
             </div>
             <div className="border-t pt-3">
-              {savingsLoading ? (
-                <div className="animate-pulse">
-                  <div className="h-6 bg-gray-200 rounded w-16 mb-1"></div>
-                  <div className="h-3 bg-gray-200 rounded w-12"></div>
-                </div>
-              ) : savingsError ? (
+              <p className="text-lg font-semibold text-blue-700">
+                ${Math.round(stats.monthlyAverageSavings * 12).toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500">Annual Projection</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <h4 className="text-sm font-medium text-gray-500 mb-3">Runway</h4>
+          <div className="space-y-3">
+            {savingsLoading ? (
+              <div className="animate-pulse">
+                <div className="h-6 bg-gray-200 rounded w-16 mb-1"></div>
+                <div className="h-3 bg-gray-200 rounded w-12"></div>
+              </div>
+            ) : savingsError ? (
+              <div>
+                <p className="text-lg font-semibold text-gray-400">N/A</p>
+                <p className="text-sm text-gray-500">No savings data</p>
+              </div>
+            ) : savingsData ? (
+              <>
                 <div>
-                  <p className="text-lg font-semibold text-gray-400">N/A</p>
-                  <p className="text-sm text-gray-500">Runway</p>
+                  <p className="text-lg font-semibold text-purple-600">
+                    ${Math.round(savingsData.netAssetValue).toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-500">Total Savings</p>
                 </div>
-              ) : savingsData ? (
-                <div>
-                  <p className="text-lg font-semibold text-blue-700">
+                <div className="border-t pt-3">
+                  <p className="text-lg font-semibold text-purple-500">
                     {savingsData.runway} months
                   </p>
                   <p className="text-sm text-gray-500">
-                    Runway (${savingsData.netAssetValue.toLocaleString()} ÷ ${stats.monthlyAverageExpenses.toLocaleString()})
+                    {savingsData.runway >= 12 
+                      ? `(${Math.round(savingsData.runway / 12 * 10) / 10} years)`
+                      : 'Financial runway'
+                    }
                   </p>
                 </div>
-              ) : (
-                <div>
-                  <p className="text-lg font-semibold text-blue-700">
-                    ${(stats.monthlyAverageSavings * 12).toLocaleString()}
+                <div className="border-t pt-3">
+                  <p className="text-xs text-gray-400">
+                    ${Math.round(savingsData.netAssetValue).toLocaleString()} ÷ ${Math.round(stats.monthlyAverageExpenses).toLocaleString()}/month
                   </p>
-                  <p className="text-sm text-gray-500">Annual Projection</p>
                 </div>
-              )}
-            </div>
+              </>
+            ) : (
+              <div>
+                <p className="text-lg font-semibold text-gray-400">N/A</p>
+                <p className="text-sm text-gray-500">Link spreadsheet to see runway</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
