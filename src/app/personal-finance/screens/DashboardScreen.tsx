@@ -20,7 +20,7 @@ import DataOverview from '../components/DataOverview';
 import DataManagementDrawer from '../components/DataManagementDrawer';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
-import { useBaseCurrency } from '../hooks/useBaseCurrency';
+import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsheetData';
 
 const DashboardScreen: React.FC = () => {
   const { processTransactionData, updateSpreadsheetInfo } = usePersonalFinanceStore();
@@ -30,7 +30,8 @@ const DashboardScreen: React.FC = () => {
     progress: getProgress() 
   });
   const { requestSpreadsheetAccess } = useIncrementalAuth();
-  const { baseCurrency } = useBaseCurrency();
+  // Get base currency from consolidated hook
+  const { baseCurrency } = useConsolidatedSpreadsheetData();
 
   // Use the TanStack Query dashboard hook
   const {
@@ -606,6 +607,14 @@ const DashboardScreen: React.FC = () => {
 // Dashboard Statistics Component
 const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransactions: any[] }> = ({ stats, filteredTransactions }) => {
   const [currentTimeFilter, setCurrentTimeFilter] = React.useState('all');
+  
+  // Use consolidated hook for all spreadsheet data including savings
+  const consolidatedData = useConsolidatedSpreadsheetData(stats.monthlyAverageExpenses);
+  const { savingsData, isLoading: savingsLoading, error: savingsError } = {
+    savingsData: consolidatedData.savingsData,
+    isLoading: consolidatedData.isLoading,
+    error: consolidatedData.error
+  };
 
   // Calculate the last month name and year
   const getLastMonthName = () => {
@@ -693,10 +702,33 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
               <p className="text-sm text-gray-500">Savings Rate</p>
             </div>
             <div className="border-t pt-3">
-              <p className="text-lg font-semibold text-blue-700">
-                ${(stats.monthlyAverageSavings * 12).toLocaleString()}
-              </p>
-              <p className="text-sm text-gray-500">Annual Projection</p>
+              {savingsLoading ? (
+                <div className="animate-pulse">
+                  <div className="h-6 bg-gray-200 rounded w-16 mb-1"></div>
+                  <div className="h-3 bg-gray-200 rounded w-12"></div>
+                </div>
+              ) : savingsError ? (
+                <div>
+                  <p className="text-lg font-semibold text-gray-400">N/A</p>
+                  <p className="text-sm text-gray-500">Runway</p>
+                </div>
+              ) : savingsData ? (
+                <div>
+                  <p className="text-lg font-semibold text-blue-700">
+                    {savingsData.runway} months
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Runway (${savingsData.netAssetValue.toLocaleString()} ÷ ${stats.monthlyAverageExpenses.toLocaleString()})
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-lg font-semibold text-blue-700">
+                    ${(stats.monthlyAverageSavings * 12).toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-500">Annual Projection</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

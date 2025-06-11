@@ -27,6 +27,16 @@ interface SpreadsheetData {
     oldest: string;
     newest: string;
   } | null;
+  config?: {
+    baseCurrency?: string;
+  };
+  savings?: {
+    latestNetAssetValue: number;
+    latestQuarter: string;
+    formattedValue: string;
+    totalEntries: number;
+  };
+  availableSheets: string[];
 }
 
 // Dashboard status query
@@ -41,12 +51,12 @@ const fetchDashboardStatus = async (): Promise<DashboardStatusData> => {
   return response.json();
 };
 
-// Spreadsheet data query
+// Combined spreadsheet data query - reads all sheets at once
 const fetchSpreadsheetData = async (
   accessToken: string,
   spreadsheetId: string
 ): Promise<SpreadsheetData> => {
-  const response = await fetch('/api/sheets/read-expense-detail', {
+  const response = await fetch('/api/sheets/read-all-data', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -55,33 +65,38 @@ const fetchSpreadsheetData = async (
     body: JSON.stringify({ spreadsheetId })
   });
 
-  const data = await response.json();
+  const result = await response.json();
   
   if (!response.ok) {
     // Handle specific Google Sheets API errors
     if (response.status === 401) {
       throw new Error('Google Sheets access expired. Please reconnect your account.');
     }
-    throw new Error(data.error || 'Failed to read from Google Sheets');
+    throw new Error(result.error || 'Failed to read from Google Sheets');
   }
 
-  if (!data.transactions || data.transactions.length === 0) {
-    throw new Error('No transaction data found in the spreadsheet');
+  const data = result.data;
+  
+  // Calculate date range for transactions if available
+  let dateRange = null;
+  if (data.transactions && data.transactions.length > 0) {
+    dateRange = {
+      oldest: data.transactions.reduce((oldest: any, t: any) => 
+        new Date(t.date) < new Date(oldest.date) ? t : oldest
+      )?.date,
+      newest: data.transactions.reduce((newest: any, t: any) => 
+        new Date(t.date) > new Date(newest.date) ? t : newest
+      )?.date
+    };
   }
-
-  const dateRange = data.transactions.length > 0 ? {
-    oldest: data.transactions.reduce((oldest: any, t: any) => 
-      new Date(t.date) < new Date(oldest.date) ? t : oldest
-    )?.date,
-    newest: data.transactions.reduce((newest: any, t: any) => 
-      new Date(t.date) > new Date(newest.date) ? t : newest
-    )?.date
-  } : null;
 
   return {
-    transactions: data.transactions,
-    transactionCount: data.transactions.length,
-    dateRange
+    transactions: data.transactions || [],
+    transactionCount: data.transactionCount || 0,
+    dateRange,
+    config: data.config,
+    savings: data.savings,
+    availableSheets: data.availableSheets || []
   };
 };
 
