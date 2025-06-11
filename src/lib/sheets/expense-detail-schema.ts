@@ -7,8 +7,10 @@ export interface ExpenseDetailRow {
   source: string;          // Column A
   date: string;           // Column B (DD/MM/YYYY format for Google Sheets)
   narrative: string;      // Column C (description)
-  amountSpent: number;    // Column D (may contain signed amounts)
+  amountSpent: number;    // Column D (original amount - may contain signed amounts)
   category: string;       // Column E
+  currencySpent: string;  // Column F (original currency)
+  amountInBaseCurrency: number; // Column G (converted amount)
 }
 
 export interface ExpenseDetailTransaction {
@@ -16,6 +18,9 @@ export interface ExpenseDetailTransaction {
   date: string;
   description: string;
   amount: number;
+  originalAmount?: number;
+  originalCurrency?: string;
+  baseCurrency?: string;
   category: string;
   account: string;
   isDebit: boolean;
@@ -30,11 +35,13 @@ export const EXPENSE_DETAIL_SCHEMA = {
   
   // Column mappings (0-based index)
   columns: {
-    source: 0,      // A
-    date: 1,        // B
-    narrative: 2,   // C
-    amountSpent: 3, // D
-    category: 4,    // E
+    source: 0,               // A
+    date: 1,                 // B
+    narrative: 2,            // C
+    amountSpent: 3,          // D (original amount)
+    category: 4,             // E
+    currencySpent: 5,        // F (original currency)
+    amountInBaseCurrency: 6, // G (converted amount)
   } as const,
   
   // Expected headers (must match exactly)
@@ -43,19 +50,21 @@ export const EXPENSE_DETAIL_SCHEMA = {
     'Date', 
     'Narrative',
     'Amount Spent',
-    'Category'
+    'Category',
+    'Currency Spent',
+    'Amount in Base Currency'
   ] as const,
   
   // Range for operations
   ranges: {
     // For reading all data including headers
-    readAll: 'Expense-Detail!A:E',
+    readAll: 'Expense-Detail!A:G',
     // For writing data (append operations)
-    writeData: 'Expense-Detail!A:E',
+    writeData: 'Expense-Detail!A:G',
     // For clearing data (keeping headers)
-    clearData: 'Expense-Detail!A2:E',
+    clearData: 'Expense-Detail!A2:G',
     // Headers only
-    headers: 'Expense-Detail!A1:E1',
+    headers: 'Expense-Detail!A1:G1',
   } as const,
   
 } as const;
@@ -80,15 +89,21 @@ function formatDateForSheet(dateString: string): string {
  * Convert internal transaction to Expense-Detail row format
  */
 export function transactionToExpenseDetailRow(transaction: ExpenseDetailTransaction): (string | number)[] {
-  // For 5-column format, use signed amount in column D
-  const signedAmount = transaction.isDebit ? -Math.abs(transaction.amount) : Math.abs(transaction.amount);
+  // Original amount (column D) - use originalAmount if available, otherwise amount
+  const originalAmount = transaction.originalAmount || transaction.amount;
+  const signedOriginalAmount = transaction.isDebit ? -Math.abs(originalAmount) : Math.abs(originalAmount);
+  
+  // Base currency amount (column G) - always use the amount field (converted)
+  const signedBaseCurrencyAmount = transaction.isDebit ? -Math.abs(transaction.amount) : Math.abs(transaction.amount);
   
   return [
     'ExpenseSorted Import',                    // Source (A)
     formatDateForSheet(transaction.date),      // Date (B) - formatted as DD/MM/YYYY
     transaction.description,                   // Narrative (C) 
-    signedAmount,                              // Amount Spent (D) - signed (negative for expenses, positive for income)
+    signedOriginalAmount,                      // Amount Spent (D) - original amount with sign
     transaction.category,                      // Category (E)
+    transaction.originalCurrency || 'AUD',    // Currency Spent (F) - original currency
+    signedBaseCurrencyAmount,                  // Amount in Base Currency (G) - converted amount with sign
   ];
 }
 
@@ -115,11 +130,14 @@ export function expenseDetailRowToTransaction(
   const source = String(row[EXPENSE_DETAIL_SCHEMA.columns.source] || '').trim();
   const rawDate = row[EXPENSE_DETAIL_SCHEMA.columns.date];
   const narrative = String(row[EXPENSE_DETAIL_SCHEMA.columns.narrative] || '').trim();
-  const rawAmount = row[EXPENSE_DETAIL_SCHEMA.columns.amountSpent];
+  const rawOriginalAmount = row[EXPENSE_DETAIL_SCHEMA.columns.amountSpent]; // Column D (original amount)
   const category = String(row[EXPENSE_DETAIL_SCHEMA.columns.category] || '').trim();
+  const originalCurrency = String(row[EXPENSE_DETAIL_SCHEMA.columns.currencySpent] || 'AUD').trim(); // Column F
+  const rawBaseCurrencyAmount = row[EXPENSE_DETAIL_SCHEMA.columns.amountInBaseCurrency]; // Column G (converted amount)
 
-  // Skip rows with missing essential data
-  if (!narrative || !rawAmount || !category) {
+  // Skip rows with missing essential data - use base currency amount for processing
+  const primaryAmount = rawBaseCurrencyAmount || rawOriginalAmount; // Prefer converted amount, fallback to original
+  if (!narrative || !primaryAmount || !category) {
     return null;
   }
 
@@ -171,26 +189,38 @@ export function expenseDetailRowToTransaction(
     return null;
   }
 
-  // Parse amount from column D (Amount Spent)
+  // Parse amount - prefer base currency amount (column G), fallback to original (column D)
   let parsedAmount: number;
+  let parsedOriginalAmount: number | undefined;
   try {
-    if (typeof rawAmount === 'number') {
-      parsedAmount = rawAmount;
-    } else if (typeof rawAmount === 'string') {
+    // Parse the primary amount for processing (base currency amount preferred)
+    if (typeof primaryAmount === 'number') {
+      parsedAmount = primaryAmount;
+    } else if (typeof primaryAmount === 'string') {
       // Remove currency symbols and parse
-      const cleanAmount = rawAmount.replace(/[$,]/g, '');
+      const cleanAmount = primaryAmount.replace(/[$,]/g, '');
       parsedAmount = parseFloat(cleanAmount);
     } else {
-      console.warn('Unsupported amount format:', rawAmount);
+      console.warn('Unsupported amount format:', primaryAmount);
       return null;
     }
 
     if (isNaN(parsedAmount)) {
-      console.warn('Invalid amount value:', rawAmount);
+      console.warn('Invalid amount value:', primaryAmount);
       return null;
     }
+
+    // Parse original amount if different from primary
+    if (rawOriginalAmount && rawOriginalAmount !== primaryAmount) {
+      if (typeof rawOriginalAmount === 'number') {
+        parsedOriginalAmount = rawOriginalAmount;
+      } else if (typeof rawOriginalAmount === 'string') {
+        const cleanOriginalAmount = rawOriginalAmount.replace(/[$,]/g, '');
+        parsedOriginalAmount = parseFloat(cleanOriginalAmount);
+      }
+    }
   } catch (error) {
-    console.warn('Error parsing amount:', rawAmount, error);
+    console.warn('Error parsing amount:', primaryAmount, error);
     return null;
   }
 
@@ -198,7 +228,10 @@ export function expenseDetailRowToTransaction(
     id: `sheet-${spreadsheetId}-${index + 2}`, // +2 because row 1 is headers and we're 0-indexed
     date: parsedDate,
     description: narrative,
-    amount: Math.abs(parsedAmount), // Always store as positive
+    amount: Math.abs(parsedAmount), // Always store as positive (converted base currency amount)
+    originalAmount: parsedOriginalAmount ? Math.abs(parsedOriginalAmount) : undefined, // Original amount if different
+    originalCurrency: originalCurrency, // Original currency from column F
+    baseCurrency: 'AUD', // Could be dynamic based on user setting
     category: category,
     account: source || 'Unknown',
     isDebit: parsedAmount < 0, // Negative amounts are debits (expenses), positive amounts are credits (income)

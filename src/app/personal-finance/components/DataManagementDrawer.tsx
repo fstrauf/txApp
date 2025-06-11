@@ -20,9 +20,11 @@ import {
   CheckIcon,
   PencilIcon,
   ChevronUpIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  CogIcon
 } from '@heroicons/react/24/outline';
 import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { convertCurrency } from '@/lib/currency';
 
 interface DataManagementDrawerProps {
   spreadsheetLinked: boolean;
@@ -34,7 +36,7 @@ interface DataManagementDrawerProps {
   onClose: () => void;
 }
 
-type TabType = 'manage' | 'upload' | 'validate';
+type TabType = 'manage' | 'upload' | 'validate' | 'settings';
 type MappedFieldType = 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'none';
 
 interface AnalysisResult {
@@ -57,6 +59,9 @@ interface ValidationTransaction {
   date: string;
   description: string;
   amount: number;
+  originalAmount?: number;
+  originalCurrency?: string;
+  baseCurrency?: string;
   category: string;
   account: string;
   isDebit: boolean;
@@ -114,6 +119,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [showOnlyUnvalidated, setShowOnlyUnvalidated] = useState(true);
   const [createNewSpreadsheetMode, setCreateNewSpreadsheetMode] = useState(false);
+  const [baseCurrency, setBaseCurrency] = useState('AUD'); // Default to AUD
 
   // Helper functions
   const getLastTransaction = () => {
@@ -353,28 +359,49 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       });
 
       // Transform to transaction format for categorization
-      const rawTransactions = processedData.map((row, index) => {
+      const rawTransactions = await Promise.all(processedData.map(async (row, index) => {
         const dateHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'date');
         const amountHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'amount');
         const descriptionHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'description');
+        const currencyHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'currency');
         
         const originalAmount = parseFloat(String(row[amountHeader!] || '0'));
+        const originalCurrency = currencyHeader ? String(row[currencyHeader] || baseCurrency).toUpperCase() : baseCurrency;
         
         // Parse and format the date properly to avoid timezone issues
         const rawDate = row[dateHeader!] || new Date().toISOString().split('T')[0];
         const parsedDate = parseTransactionDate(String(rawDate));
         const formattedDate = parsedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
 
+        // Convert currency if needed
+        let convertedAmount = Math.abs(originalAmount);
+        if (originalCurrency !== baseCurrency) {
+          try {
+            convertedAmount = await convertCurrency(
+              Math.abs(originalAmount),
+              originalCurrency,
+              baseCurrency,
+              formattedDate
+            );
+          } catch (error) {
+            console.warn(`Currency conversion failed for ${originalCurrency} to ${baseCurrency}:`, error);
+            // Keep original amount if conversion fails
+          }
+        }
+
         return {
           id: `transaction-${index}`,
           date: formattedDate,
           description: String(row[descriptionHeader!] || 'Unknown'),
-          amount: Math.abs(originalAmount),
+          amount: convertedAmount, // Use converted amount for processing
+          originalAmount: Math.abs(originalAmount), // Keep original amount
+          originalCurrency, // Store original currency
+          baseCurrency, // Store base currency
           account: 'Uploaded CSV',
           isDebit: originalAmount < 0,
           money_in: originalAmount > 0, // For ML categorization API
         };
-      });
+      }));
 
       // Filter out duplicate transactions early
       const uniqueTransactions = filterDuplicateTransactions(rawTransactions);
@@ -874,6 +901,18 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
               Validate ({validatedCount}/{totalValidationCount})
             </button>
           )}
+
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'settings'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <CogIcon className="h-5 w-5 inline mr-2" />
+            Settings
+          </button>
         </nav>
       </div>
 
@@ -1147,7 +1186,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                         <select
                           value={config.mappings?.[header] || 'none'}
                           onChange={(e) => handleMappingChange(header, e.target.value as MappedFieldType)}
-                          className="ml-4 w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          className="ml-4 w-36 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                         >
                           <option value="none">Not mapped</option>
                           <option value="date">Date</option>
@@ -1463,6 +1502,69 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            {/* Settings Info Banner */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <InformationCircleIcon className="h-5 w-5 text-gray-500 mt-0.5 mr-3 flex-shrink-0" />
+                <div className="text-sm text-gray-800">
+                  <p className="font-medium mb-1">Currency Settings</p>
+                  <p>Configure your base currency for multi-currency transaction handling. All transactions will be converted to your base currency when imported.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Base Currency Setting */}
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Base Currency</h3>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="baseCurrency" className="block text-sm font-medium text-gray-700 mb-2">
+                    Select your primary currency
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="text"
+                      id="baseCurrency"
+                      value={baseCurrency}
+                      onChange={(e) => setBaseCurrency(e.target.value.toUpperCase())}
+                      placeholder="e.g., USD, EUR, GBP, AUD"
+                      className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      maxLength={3}
+                    />
+                    <span className="text-sm text-gray-500">3-letter currency code</span>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-600">
+                    Uses <a href="https://frankfurter.dev/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">Frankfurter API</a> for free currency conversion
+                  </p>
+                </div>
+
+                {/* Current setting display */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center">
+                    <CheckIcon className="h-5 w-5 text-blue-600 mr-2" />
+                    <span className="text-sm text-blue-800">
+                      Base currency set to <strong>{baseCurrency}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Feature preview */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Multi-Currency Features</h4>
+                  <ul className="space-y-1 text-sm text-gray-600">
+                    <li>• Automatic currency detection from CSV files</li>
+                    <li>• Real-time conversion to your base currency</li>
+                    <li>• Historical exchange rates for accurate conversion</li>
+                    <li>• Both original and converted amounts stored in spreadsheet</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
