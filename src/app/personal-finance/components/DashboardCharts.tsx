@@ -51,6 +51,27 @@ const SimpleStackedBarChart: React.FC<SimpleStackedBarChartProps> = ({
   const categories = Array.from(allCategories);
   const maxTotal = Math.max(...data.map(d => d.total));
 
+  // Create grid lines based on maxTotal
+  const getGridLines = () => {
+    const gridCount = 4; // Number of horizontal grid lines
+    const step = maxTotal / gridCount;
+    const lines = [];
+    
+    for (let i = 1; i <= gridCount; i++) {
+      const value = step * i;
+      const percentage = (value / maxTotal) * 90; // 90% matches the max bar height
+      lines.push({
+        value,
+        percentage,
+        label: `$${(value / 1000).toFixed(1)}k`
+      });
+    }
+    
+    return lines;
+  };
+
+  const gridLines = getGridLines();
+
   const getColorHex = (colorName: AvailableChartColorsKeys): string => {
     const colorMap: Record<AvailableChartColorsKeys, string> = {
       indigo: '#6366f1',
@@ -106,70 +127,126 @@ const SimpleStackedBarChart: React.FC<SimpleStackedBarChartProps> = ({
     }).format(amount);
   };
 
+  const barWidth = Math.max(40, Math.min(80, (100 - data.length * 2) / data.length)); // Dynamic width with spacing
+
   return (
     <>
-      <div className="w-full h-full p-4">
-        <div className="flex items-end justify-center gap-3 h-full">
-          {data.map((month, index) => {
-            const heightPercentage = maxTotal > 0 ? (month.total / maxTotal) * 90 : 0;
-            
-            return (
-              <div key={index} className="flex flex-col items-center" style={{ flex: '1 1 0%', minWidth: '40px' }}>
-                {/* Bar Container */}
-                <div className="relative w-full flex flex-col justify-end" style={{ height: '300px' }}>
-                  {/* The actual stacked bar */}
+      <div className="w-full h-full p-4 relative overflow-hidden">
+        {/* Chart Container with proper boundaries */}
+        <div className="relative w-full h-full flex">
+          {/* Y-Axis Labels Container */}
+          <div className="flex flex-col justify-end relative" style={{ width: '60px', height: '340px' }}>
+            {/* Horizontal Grid Lines and Labels */}
+            {gridLines.map((line, index) => (
+              <div
+                key={index}
+                className="absolute right-2 text-xs text-gray-500 flex items-center"
+                style={{
+                  bottom: `${(line.percentage / 90) * 300}px`, // Adjust for 300px chart height
+                  transform: 'translateY(50%)'
+                }}
+              >
+                {line.label}
+              </div>
+            ))}
+            {/* Zero line label */}
+            <div className="absolute right-2 bottom-0 text-xs text-gray-500 flex items-center">
+              $0
+            </div>
+          </div>
+
+          {/* Chart Area */}
+          <div className="flex-1 relative">
+            {/* Horizontal Grid Lines */}
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="relative w-full" style={{ height: '300px' }}>
+                {gridLines.map((line, index) => (
                   <div
-                    className="w-full relative bg-gray-200 rounded-t-sm border border-gray-300"
+                    key={index}
+                    className="absolute w-full border-t border-gray-200"
+                    style={{
+                      bottom: `${line.percentage}%`,
+                      transform: 'translateY(50%)'
+                    }}
+                  />
+                ))}
+                {/* Zero line */}
+                <div className="absolute w-full border-t border-gray-300 bottom-0" />
+              </div>
+            </div>
+
+            {/* Chart Content */}
+            <div className="relative flex items-end justify-center h-full px-4">
+              {data.map((month, index) => {
+                const heightPercentage = maxTotal > 0 ? (month.total / maxTotal) * 90 : 0;
+                
+                return (
+                  <div 
+                    key={index} 
+                    className="flex flex-col items-center" 
                     style={{ 
-                      height: `${Math.max(heightPercentage, 2)}%`,
-                      minHeight: '10px'
+                      width: `${barWidth}px`,
+                      marginLeft: index === 0 ? '0' : '4px',
+                      marginRight: index === data.length - 1 ? '0' : '4px'
                     }}
                   >
-                    {/* Stacked segments */}
-                    {categories.map((category, catIndex) => {
-                      const categoryAmount = month[category] || 0;
-                      const segmentHeight = month.total > 0 ? (categoryAmount / month.total) * 100 : 0;
+                    {/* Bar Container */}
+                    <div className="relative w-full flex flex-col justify-end" style={{ height: '300px' }}>
+                      {/* The actual stacked bar */}
+                      <div
+                        className="w-full relative bg-gray-200 rounded-t-sm border border-gray-300"
+                        style={{ 
+                          height: `${Math.max(heightPercentage, 2)}%`,
+                          minHeight: '10px'
+                        }}
+                      >
+                        {/* Stacked segments */}
+                        {categories.map((category, catIndex) => {
+                          const categoryAmount = month[category] || 0;
+                          const segmentHeight = month.total > 0 ? (categoryAmount / month.total) * 100 : 0;
+                          
+                          if (segmentHeight === 0) return null;
+                          
+                          const isSelected = selectedCategory === category;
+                          const isOtherSelected = selectedCategory && selectedCategory !== category;
+                          
+                          return (
+                            <div
+                              key={catIndex}
+                              className={`w-full border-t border-white cursor-pointer transition-all duration-200 ${
+                                isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''
+                              }`}
+                              style={{
+                                height: `${segmentHeight}%`,
+                                backgroundColor: getColorHex(categoryColors.get(category) || 'indigo'),
+                                opacity: isOtherSelected ? 0.3 : 1,
+                                transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                                zIndex: isSelected ? 10 : 1
+                              }}
+                              onClick={(e) => handleSegmentClick(category, e)}
+                              onMouseEnter={(e) => handleSegmentHover(category, categoryAmount, month.displayMonth, e)}
+                              onMouseLeave={() => setHoveredSegment(null)}
+                              onMouseMove={(e) => handleSegmentHover(category, categoryAmount, month.displayMonth, e)}
+                            />
+                          );
+                        })}
+                      </div>
                       
-                      if (segmentHeight === 0) return null;
-                      
-                      const isSelected = selectedCategory === category;
-                      const isOtherSelected = selectedCategory && selectedCategory !== category;
-                      
-                      return (
-                        <div
-                          key={catIndex}
-                          className={`w-full border-t border-white cursor-pointer transition-all duration-200 ${
-                            isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''
-                          }`}
-                          style={{
-                            height: `${segmentHeight}%`,
-                            backgroundColor: getColorHex(categoryColors.get(category) || 'indigo'),
-                            opacity: isOtherSelected ? 0.3 : 1,
-                            transform: isSelected ? 'scale(1.05)' : 'scale(1)',
-                            zIndex: isSelected ? 10 : 1
-                          }}
-                          onClick={(e) => handleSegmentClick(category, e)}
-                          onMouseEnter={(e) => handleSegmentHover(category, categoryAmount, month.displayMonth, e)}
-                          onMouseLeave={() => setHoveredSegment(null)}
-                          onMouseMove={(e) => handleSegmentHover(category, categoryAmount, month.displayMonth, e)}
-                        />
-                      );
-                    })}
+                      {/* Value label on top */}
+                      <div className="text-xs text-gray-600 text-center mt-1">
+                        ${(month.total / 1000).toFixed(1)}k
+                      </div>
+                    </div>
+                    
+                    {/* Month Label */}
+                    <div className="text-xs text-gray-600 mt-2 text-center">
+                      {month.displayMonth?.split(' ')[0] || month.month}
+                    </div>
                   </div>
-                  
-                  {/* Value label on top */}
-                  <div className="text-xs text-gray-600 text-center mt-1">
-                    ${(month.total / 1000).toFixed(1)}k
-                  </div>
-                </div>
-                
-                {/* Month Label */}
-                <div className="text-xs text-gray-600 mt-2 text-center">
-                  {month.displayMonth?.split(' ')[0] || month.month}
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
