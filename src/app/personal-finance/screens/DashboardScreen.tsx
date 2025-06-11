@@ -20,6 +20,7 @@ import DataOverview from '../components/DataOverview';
 import DataManagementDrawer from '../components/DataManagementDrawer';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useBaseCurrency } from '../hooks/useBaseCurrency';
 
 const DashboardScreen: React.FC = () => {
   const { processTransactionData, updateSpreadsheetInfo } = usePersonalFinanceStore();
@@ -29,6 +30,7 @@ const DashboardScreen: React.FC = () => {
     progress: getProgress() 
   });
   const { requestSpreadsheetAccess } = useIncrementalAuth();
+  const { baseCurrency } = useBaseCurrency();
 
   // Use the TanStack Query dashboard hook
   const {
@@ -39,6 +41,7 @@ const DashboardScreen: React.FC = () => {
     spreadsheetUrl,
     hideTransfer,
     isLoading,
+    isRefreshing,
     error,
     setHideTransfer,
     handleRefreshData,
@@ -62,6 +65,10 @@ const DashboardScreen: React.FC = () => {
   // Use mock data for first-time users, real data otherwise
   const displayStats = isFirstTimeUser ? mockStats : dashboardStats;
   const displayTransactions = isFirstTimeUser ? [] : filteredTransactions;
+
+  // Comprehensive loading state - show loading if we're fetching initial data
+  const isInitialLoading = isLoading && !dashboardStats && spreadsheetLinked && !isFirstTimeUser;
+  const showLoadingState = isInitialLoading || (isRefreshing && !error);
 
   // Ensure help drawer is closed when dashboard loads (e.g., returning from validation screen)
   useEffect(() => {
@@ -256,8 +263,80 @@ const DashboardScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Dashboard Statistics */}
-      {displayStats && (
+      {/* Loading State */}
+      {showLoadingState && (
+        <div className="space-y-6">
+          {/* Loading Banner */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-blue-900 mb-2">Loading your financial data...</h3>
+                <p className="text-blue-700">
+                  {isRefreshing ? 'Refreshing your latest transaction data from Google Sheets' : 'Fetching your transaction data and calculating statistics'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Loading Dashboard Stats Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded mb-3 w-16"></div>
+              <div className="space-y-3">
+                <div>
+                  <div className="h-8 bg-gray-300 rounded w-32 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-24"></div>
+                </div>
+                <div className="border-t pt-3">
+                  <div className="h-6 bg-gray-300 rounded w-28 mb-1"></div>
+                  <div className="h-3 bg-gray-200 rounded w-20"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded mb-3 w-20"></div>
+              <div className="space-y-3">
+                <div>
+                  <div className="h-8 bg-gray-300 rounded w-32 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-24"></div>
+                </div>
+                <div className="border-t pt-3">
+                  <div className="h-6 bg-gray-300 rounded w-28 mb-1"></div>
+                  <div className="h-3 bg-gray-200 rounded w-20"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Loading Secondary Stats Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-pulse">
+                <div className="h-3 bg-gray-200 rounded mb-2 w-20"></div>
+                <div className="h-8 bg-gray-300 rounded w-24 mb-1"></div>
+                <div className="h-3 bg-gray-200 rounded w-32"></div>
+              </div>
+            ))}
+          </div>
+
+          {/* Loading Charts Skeleton */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-pulse">
+            <div className="h-6 bg-gray-200 rounded mb-4 w-32"></div>
+            <div className="h-64 bg-gray-100 rounded"></div>
+          </div>
+        </div>
+      )}
+
+      {/* Dashboard Statistics - only show when not loading */}
+      {!showLoadingState && displayStats && (
         <>
           {/* Top Level Controls */}
           <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -268,6 +347,10 @@ const DashboardScreen: React.FC = () => {
                 Last updated: {displayStats?.lastDataRefresh ? 
           new Date(displayStats.lastDataRefresh).toLocaleDateString() : 
           'Never'}
+              </div>
+
+              <div className='text-sm text-gray-600'>
+                Base currency: <span className="font-medium text-gray-800">{baseCurrency}</span>
               </div>
 
                 {/* Manage Data Button */}
@@ -306,42 +389,6 @@ const DashboardScreen: React.FC = () => {
             </div>
           </div>
           </div>
-
-          {/* Navigation Tabs */}
-          {/* <div className="mb-8">
-            <nav className="flex space-x-8" aria-label="Dashboard navigation">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
-                  activeTab === 'overview'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Overview
-              </button>
-              <button
-                onClick={() => setActiveTab('transactions')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
-                  activeTab === 'transactions'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Transactions
-              </button>
-              <button
-                onClick={() => setActiveTab('ai-insights')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
-                  activeTab === 'ai-insights'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                AI Insights
-              </button>
-            </nav>
-          </div> */}
 
           {/* Tab Content */}
           {activeTab === 'overview' && (
@@ -492,10 +539,8 @@ const DashboardScreen: React.FC = () => {
         </>
       )}
 
-
-
-      {/* No Data State */}
-      {!displayStats && !isLoading && (
+      {/* No Data State - only show when not loading and no data */}
+      {!showLoadingState && !displayStats && !isLoading && (
         <div className="text-center py-12">
           <ChartBarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Data Available</h3>
@@ -509,10 +554,11 @@ const DashboardScreen: React.FC = () => {
             {spreadsheetLinked ? (
               <button
                 onClick={handleManualRefresh}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                disabled={isRefreshing}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
-                <ArrowPathIcon className="h-5 w-5" />
-                Refresh Data
+                <ArrowPathIcon className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
               </button>
             ) : (
               <button
@@ -568,6 +614,9 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
     return lastMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
+  // Calculate annual income projection
+  const annualIncomeProjection = stats.monthlyAverageIncome * 12;
+
   const lastMonthName = getLastMonthName();
 
   return (
@@ -576,21 +625,27 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
       {/* <DashboardDebugger dashboardStats={stats} timeFilter={currentTimeFilter} /> */}
       
       {/* Condensed Key Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
           <h4 className="text-sm font-medium text-gray-500 mb-3">Income</h4>
           <div className="space-y-3">
             <div>
-              <p className="text-2xl font-bold text-green-600">
+              <p className="text-lg font-semibold text-green-600">
                 ${stats.monthlyAverageIncome.toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">Monthly Average</p>
             </div>
             <div className="border-t pt-3">
-              <p className="text-xl font-semibold text-green-500">
+              <p className="text-lg font-semibold text-green-500">
                 ${stats.lastMonthIncome.toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">{lastMonthName}</p>
+            </div>
+            <div className="border-t pt-3">
+              <p className="text-lg font-semibold text-green-700">
+                ${annualIncomeProjection.toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500">Annual Projection</p>
             </div>
           </div>
         </div>
@@ -599,55 +654,51 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
           <h4 className="text-sm font-medium text-gray-500 mb-3">Expenses</h4>
           <div className="space-y-3">
             <div>
-              <p className="text-2xl font-bold text-red-600">
+              <p className="text-lg font-semibold text-red-600">
                 ${stats.monthlyAverageExpenses.toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">Monthly Average</p>
             </div>
             <div className="border-t pt-3">
-              <p className="text-xl font-semibold text-red-500">
+              <p className="text-lg font-semibold text-red-500">
                 ${stats.lastMonthExpenses.toLocaleString()}
               </p>
               <p className="text-sm text-gray-500">{lastMonthName}</p>
             </div>
+            <div className="border-t pt-3">
+              <p className="text-lg font-semibold text-red-700">
+                ${stats.annualExpenseProjection.toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500">Annual Projection</p>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Secondary Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Monthly Savings</h4>
-          <p className="text-2xl font-bold text-blue-600">
-            ${stats.monthlyAverageSavings.toLocaleString()}
-          </p>
-          <p className="text-sm text-gray-400 mt-1">
-            {stats.monthlyAverageIncome > 0 ? 
-              `${Math.round((stats.monthlyAverageSavings / stats.monthlyAverageIncome) * 100)}% savings rate` :
-              'Savings rate calculation unavailable'
-            }
-          </p>
-        </div>
-        
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Annual Projection</h4>
-          <p className="text-2xl font-bold text-purple-600">
-            ${stats.annualExpenseProjection.toLocaleString()}
-          </p>
-          <p className="text-sm text-gray-400 mt-1">Based on monthly average</p>
-        </div>
 
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Financial Health</h4>
-          <p className="text-2xl font-bold text-emerald-600">
-            {stats.monthlyAverageSavings > 0 ? 'Positive' : 'Needs Work'}
-          </p>
-          <p className="text-sm text-gray-400 mt-1">
-            {stats.monthlyAverageSavings > stats.monthlyAverageExpenses * 0.2 ? 
-              'Great savings rate!' : 
-              'Consider optimizing expenses'
-            }
-          </p>
+          <h4 className="text-sm font-medium text-gray-500 mb-3">Savings</h4>
+          <div className="space-y-3">
+            <div>
+              <p className="text-lg font-semibold text-blue-600">
+                ${stats.monthlyAverageSavings.toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500">Monthly Average</p>
+            </div>
+            <div className="border-t pt-3">
+              <p className="text-lg font-semibold text-blue-500">
+                {stats.monthlyAverageIncome > 0 ? 
+                  `${Math.round((stats.monthlyAverageSavings / stats.monthlyAverageIncome) * 100)}%` :
+                  'N/A'
+                }
+              </p>
+              <p className="text-sm text-gray-500">Savings Rate</p>
+            </div>
+            <div className="border-t pt-3">
+              <p className="text-lg font-semibold text-blue-700">
+                ${(stats.monthlyAverageSavings * 12).toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500">Annual Projection</p>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -54,7 +54,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   error,
   onClearError
 }) => {
-  const { userData, processTransactionData } = usePersonalFinanceStore();
+  const { userData, processTransactionData, updateBaseCurrency } = usePersonalFinanceStore();
   const { getValidAccessToken, requestSpreadsheetAccess } = useIncrementalAuth();
   const [activeTab, setActiveTab] = useState<TabType>('manage');
   
@@ -69,7 +69,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     skipRows: 0,
   });
   const [csvStep, setCsvStep] = useState<'upload' | 'configure' | 'ready'>('upload');
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info' | 'processing'; message: string } | null>(null);
 
   // Validation state
   const [validationTransactions, setValidationTransactions] = useState<ValidationTransaction[]>([]);
@@ -81,7 +81,9 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [showOnlyUnvalidated, setShowOnlyUnvalidated] = useState(true);
   const [createNewSpreadsheetMode, setCreateNewSpreadsheetMode] = useState(false);
-  const [baseCurrency, setBaseCurrency] = useState('AUD'); // Default to AUD
+  
+  // Get base currency from store with fallback
+  const baseCurrency = userData.baseCurrency || 'USD';
 
   // Helper functions
   const getLastTransaction = () => {
@@ -512,7 +514,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             throw new Error('Training job started but did not return a prediction ID');
           }
           
-          setFeedback({ type: 'info', message: `🚀 ${acceptanceMessage || `Training job submitted. Processing your data...`}` });
+          setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Training job submitted. Processing your data...`}` });
           
           // Wait for training to complete via polling
           await new Promise((resolve, reject) => {
@@ -564,7 +566,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             throw new Error('Classification job started but did not return a prediction ID');
           }
           
-          setFeedback({ type: 'info', message: `🚀 ${acceptanceMessage || `Classification job submitted. Processing your transactions...`}` });
+          setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Classification job submitted. Processing your transactions...`}` });
           
           // Wait for classification to complete via polling
           classifiedData = await new Promise((resolve, reject) => {
@@ -654,7 +656,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             throw new Error('Auto-classification job started but did not return a prediction ID');
           }
           
-          setFeedback({ type: 'info', message: `🚀 ${acceptanceMessage || `Auto-classification job submitted. Processing your transactions...`}` });
+          setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Auto-classification job submitted. Processing your transactions...`}` });
           
           // Wait for auto-classification to complete via polling
           autoClassifiedData = await new Promise((resolve, reject) => {
@@ -1102,7 +1104,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         {activeTab === 'settings' && (
           <SettingsTab
             baseCurrency={baseCurrency}
-            onBaseCurrencyChange={setBaseCurrency}
+            onBaseCurrencyChange={updateBaseCurrency}
           />
         )}
       </div>

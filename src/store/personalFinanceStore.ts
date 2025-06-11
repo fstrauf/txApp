@@ -43,6 +43,8 @@ interface UserData {
   transactions?: Transaction[];
   categorySpending?: CategorySpending[];
   actualMonthlySpending?: number; // Calculated from transactions
+  // Currency settings
+  baseCurrency?: string; // Default base currency for the user
 }
 
 interface PersonalFinanceState {
@@ -59,6 +61,8 @@ interface PersonalFinanceState {
   // Transaction management
   updateTransactions: (transactions: Transaction[]) => void;
   processTransactionData: (transactions: Transaction[]) => void;
+  // Currency management
+  updateBaseCurrency: (currency: string) => void;
   // Data management
   clearAllData: () => void;
   exportData: () => string;
@@ -72,6 +76,7 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
     income: 0,
     spending: 0,
     savings: 0,
+    baseCurrency: 'USD', // Default base currency
   },
   
   updateIncome: (income: number) => {
@@ -213,15 +218,23 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
         });
       },
 
+      // Currency management
+      updateBaseCurrency: (currency: string) => {
+        set((state) => ({
+          userData: { ...state.userData, baseCurrency: currency }
+        }));
+      },
+
       // Data management functions
       clearAllData: () => {
-        set({
+        set((state) => ({
           userData: {
             income: 0,
             spending: 0,
             savings: 0,
+            baseCurrency: state.userData.baseCurrency || 'USD', // Preserve base currency when clearing
           }
-        });
+        }));
       },
 
       exportData: () => {
