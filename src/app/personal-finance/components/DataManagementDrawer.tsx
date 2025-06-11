@@ -1,30 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
-import { SpreadsheetLinker } from './SpreadsheetLinker';
-import { GoogleSheetsUploadArea } from './GoogleSheetsUploadArea';
-import { CSVUploadArea } from '../shared/CSVUploadArea';
+import React, { useState, useEffect } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { parseTransactionDate } from '@/lib/utils';
 import Papa from 'papaparse';
 import { 
-  DocumentPlusIcon, 
-  LinkIcon, 
+  DocumentPlusIcon,
   ArrowPathIcon,
-  InformationCircleIcon,
-  EyeIcon,
-  LightBulbIcon,
-  ClockIcon,
-  ExclamationTriangleIcon,
-  XMarkIcon,
   CheckIcon,
-  PencilIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
   CogIcon
 } from '@heroicons/react/24/outline';
 import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
 import { convertCurrency, extractCurrencyCode } from '@/lib/currency';
+
+// Import modular components
+import ManageDataTab from './data-management/ManageDataTab';
+import UploadCSVTab, { AnalysisResult, ImportConfig } from './data-management/UploadCSVTab';
+import ValidateTransactionsTab, { ValidationTransaction } from './data-management/ValidateTransactionsTab';
+import SettingsTab from './data-management/SettingsTab';
 
 interface DataManagementDrawerProps {
   spreadsheetLinked: boolean;
@@ -34,44 +27,11 @@ interface DataManagementDrawerProps {
   onRefreshData: () => void;
   isLoading: boolean;
   onClose: () => void;
+  error?: string | null;
+  onClearError?: () => void;
 }
 
 type TabType = 'manage' | 'upload' | 'validate' | 'settings';
-type MappedFieldType = 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'none';
-
-interface AnalysisResult {
-  headers: string[];
-  previewRows: Record<string, any>[];
-  detectedDelimiter: string;
-}
-
-interface ImportConfig {
-  mappings: Record<string, MappedFieldType>;
-  dateFormat: string;
-  amountFormat: 'standard' | 'negate' | 'sign_column';
-  signColumn?: string;
-  skipRows: number;
-  delimiter?: string;
-}
-
-interface ValidationTransaction {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  originalAmount?: number;
-  originalCurrency?: string;
-  baseCurrency?: string;
-  category: string;
-  account: string;
-  isDebit: boolean;
-  predicted_category?: string;
-  similarity_score?: number;
-  confidence?: number;
-  isValidated?: boolean;
-  isSelected?: boolean;
-  [key: string]: any;
-}
 
 // Define common date formats compatible with date-fns
 const commonDateFormats = [
@@ -90,7 +50,9 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   onTransactionsFromGoogleSheets,
   onRefreshData,
   isLoading,
-  onClose
+  onClose,
+  error,
+  onClearError
 }) => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
   const { getValidAccessToken, requestSpreadsheetAccess } = useIncrementalAuth();
@@ -160,6 +122,13 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   };
 
   const lastTransaction = getLastTransaction();
+
+  // Load base currency from spreadsheet on component mount
+  useEffect(() => {
+    if (userData.spreadsheetId && activeTab === 'settings') {
+      // Base currency loading is handled in the SettingsTab component
+    }
+  }, [userData.spreadsheetId, activeTab]);
 
   // Polling for completion similar to LunchMoney
   const pollForCompletion = async (
@@ -284,7 +253,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       setAnalysisResult(result);
       
       // Initialize mappings with auto-detection
-      let initialMappings = result.headers.reduce((acc: Record<string, MappedFieldType>, header: string) => {
+      let initialMappings = result.headers.reduce((acc: Record<string, any>, header: string) => {
         acc[header] = 'none';
         const lowerHeader = header.toLowerCase();
         if (lowerHeader.includes('date') || lowerHeader.includes('created')) {
@@ -301,7 +270,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       }, {});
 
       // Enforce uniqueness for auto-detected fields
-      const uniqueAutoAssignFields: MappedFieldType[] = ['date', 'amount', 'currency', 'description', 'description2'];
+      const uniqueAutoAssignFields = ['date', 'amount', 'currency', 'description', 'description2'];
       uniqueAutoAssignFields.forEach(fieldType => {
         let foundFirst = false;
         Object.keys(initialMappings).forEach(header => {
@@ -332,11 +301,11 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     }
   };
 
-  const handleMappingChange = (csvHeader: string, fieldType: MappedFieldType) => {
+  const handleMappingChange = (csvHeader: string, fieldType: any) => {
     setConfig(prevConfig => {
       const newMappings = { ...prevConfig.mappings };
 
-      const uniqueFields: MappedFieldType[] = ['date', 'amount', 'currency', 'description', 'description2'];
+      const uniqueFields = ['date', 'amount', 'currency', 'description', 'description2'];
       if (uniqueFields.includes(fieldType)) {
         const currentHeaderForField = Object.keys(newMappings).find(
           header => newMappings[header] === fieldType
@@ -352,21 +321,6 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     });
   };
 
-  const handleConfigChange = (field: keyof Omit<ImportConfig, 'mappings'>, value: string | number) => {
-    setConfig(prev => {
-      const updatedConfig = { ...prev, mappings: { ...prev.mappings } };
-      if (field === 'skipRows') {
-        updatedConfig[field] = Number(value);
-      } else {
-        updatedConfig[field as keyof Omit<ImportConfig, 'mappings' | 'skipRows'>] = String(value) as any;
-      }
-      if (field === 'amountFormat' && value !== 'sign_column') {
-        updatedConfig.signColumn = undefined;
-      }
-      return updatedConfig;
-    });
-  };
-
   const validateAndProcessData = async () => {
     if (!analysisResult || !config.mappings || !uploadedFile) {
       setFeedback({ type: 'error', message: 'No data to process. Please upload and configure a file first.' });
@@ -376,7 +330,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     // Validation
     const requiredFields = ['date', 'amount', 'description'];
     const mappingValues = Object.values(config.mappings);
-    const missingFields = requiredFields.filter(field => !mappingValues.includes(field as MappedFieldType));
+    const missingFields = requiredFields.filter(field => !mappingValues.includes(field as any));
 
     if (missingFields.length > 0) {
       setFeedback({ type: 'error', message: `Please map the following required fields: ${missingFields.join(', ')}` });
@@ -1025,53 +979,6 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     }
   };
 
-  // Get unique categories for filtering
-  const categories = Array.from(new Set(validationTransactions.map(t => t.category))).sort();
-
-  // Filter and sort validation transactions
-  const filteredValidationTransactions = validationTransactions
-    .filter(t => {
-      if (showOnlyUnvalidated && t.isValidated) return false;
-      if (filterCategory !== 'all' && t.category !== filterCategory) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      let aVal, bVal;
-      switch (sortBy) {
-        case 'date':
-          aVal = new Date(a.date).getTime();
-          bVal = new Date(b.date).getTime();
-          break;
-        case 'amount':
-          aVal = Math.abs(a.amount);
-          bVal = Math.abs(b.amount);
-          break;
-        case 'confidence':
-          aVal = a.confidence || 0;
-          bVal = b.confidence || 0;
-          break;
-        default:
-          return 0;
-      }
-      return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
-    });
-
-  const validatedCount = validationTransactions.filter(t => t.isValidated).length;
-  const totalValidationCount = validationTransactions.length;
-  const progressPercentage = totalValidationCount > 0 ? (validatedCount / totalValidationCount) * 100 : 0;
-
-  const getConfidenceColor = (confidence: number = 0) => {
-    if (confidence >= 0.8) return 'text-purple-600 bg-purple-100';
-    if (confidence >= 0.6) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
-  };
-
-  const getConfidenceText = (confidence: number = 0) => {
-    if (confidence >= 0.8) return 'High';
-    if (confidence >= 0.6) return 'Medium';
-    return 'Low';
-  };
-
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
@@ -1111,7 +1018,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
               }`}
             >
               <CheckIcon className="h-5 w-5 inline mr-2" />
-              Validate ({validatedCount}/{totalValidationCount})
+              Validate ({validationTransactions.filter(t => t.isValidated).length}/{validationTransactions.length})
             </button>
           )}
 
@@ -1132,659 +1039,75 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       {/* Tab Content */}
       <div className="space-y-6">
         {activeTab === 'manage' && (
-          <div className="space-y-6">
-            {/* Info Banner */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <InformationCircleIcon className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
-                <div className="text-sm text-blue-800">
-                  <p className="font-medium mb-1">Data Management Hub</p>
-                  <p>Link a Google Spreadsheet, refresh your data, or manage your existing data source. All your data operations are centralized here.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Current Spreadsheet Status or Link New */}
-            {spreadsheetLinked && spreadsheetUrl ? (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <CheckIcon className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
-                  <div className="text-sm text-green-800 flex-1">
-                    <p className="font-medium mb-1">Google Spreadsheet Connected</p>
-                    <p className="text-xs text-green-600 mt-1 break-all">
-                      {spreadsheetUrl}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 mt-0.5 mr-3 flex-shrink-0" />
-                  <div className="text-sm text-amber-800">
-                    <p className="font-medium mb-1">No Spreadsheet Connected</p>
-                    <p>Link a Google Spreadsheet to enable automatic data sync and dashboard updates.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Action Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Link/Change Spreadsheet */}
-              <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-                <div className="flex items-center gap-3">
-                  <LinkIcon className="h-6 w-6 text-blue-600 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-medium text-gray-900">
-                      {spreadsheetLinked ? 'Change Spreadsheet' : 'Link Google Sheet'}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {spreadsheetLinked ? 'Connect a different sheet' : 'Connect your first sheet'}
-                    </p>
-                  </div>
-                </div>
-                <SpreadsheetLinker 
-                  onSuccess={onSpreadsheetLinked} 
-                  onCreateNewWithData={() => {
-                    setCreateNewSpreadsheetMode(true);
-                    setActiveTab('upload');
-                  }}
-                />
-              </div>
-
-              {/* Refresh Data */}
-              {spreadsheetLinked && (
-                <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <ArrowPathIcon className="h-6 w-6 text-green-600 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-medium text-gray-900">Refresh Data</h4>
-                      <p className="text-sm text-gray-600">Get latest transactions from your sheet</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={onRefreshData}
-                    disabled={isLoading}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    {isLoading ? 'Refreshing...' : 'Refresh Now'}
-                  </button>
-                </div>
-              )}
-
-              {/* Open Spreadsheet */}
-              {spreadsheetLinked && spreadsheetUrl && (
-                <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <EyeIcon className="h-6 w-6 text-gray-600 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-medium text-gray-900">Open Sheet</h4>
-                      <p className="text-sm text-gray-600">View your spreadsheet in Google Sheets</p>
-                    </div>
-                  </div>
-                  <a
-                    href={spreadsheetUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    <LinkIcon className="h-4 w-4" />
-                    Open in New Tab
-                  </a>
-                </div>
-              )}
-            </div>
-
-            {/* Quick Access to Upload */}
-            <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <DocumentPlusIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-              <h4 className="font-medium text-gray-900 mb-1">Need to add more data?</h4>
-              <p className="text-sm text-gray-600 mb-4">Upload CSV files to import additional transactions</p>
-              <button
-                onClick={() => setActiveTab('upload')}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                <DocumentPlusIcon className="h-4 w-4" />
-                Go to Upload CSV
-              </button>
-            </div>
-          </div>
+          <ManageDataTab
+            spreadsheetLinked={spreadsheetLinked}
+            spreadsheetUrl={spreadsheetUrl}
+            onSpreadsheetLinked={onSpreadsheetLinked}
+            onRefreshData={onRefreshData}
+            isLoading={isLoading}
+            onSwitchToUpload={() => setActiveTab('upload')}
+            onCreateNewWithData={() => {
+              setCreateNewSpreadsheetMode(true);
+              setActiveTab('upload');
+            }}
+            error={error}
+            onClearError={onClearError}
+          />
         )}
 
         {activeTab === 'upload' && (
-          <div className="space-y-6">
-            <div className={`border rounded-lg p-4 ${
-              createNewSpreadsheetMode 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-purple-50 border-purple-200'
-            }`}>
-              <div className="flex items-start">
-                <InformationCircleIcon className={`h-5 w-5 mt-0.5 mr-3 flex-shrink-0 ${
-                  createNewSpreadsheetMode ? 'text-green-500' : 'text-purple-500'
-                }`} />
-                <div className={`text-sm ${
-                  createNewSpreadsheetMode ? 'text-green-800' : 'text-purple-800'
-                }`}>
-                  <p className="font-medium mb-1">
-                    {createNewSpreadsheetMode 
-                      ? 'Create New Spreadsheet with Your Data' 
-                      : 'Upload CSV Data'
-                    }
-                  </p>
-                  <p>
-                    {createNewSpreadsheetMode 
-                      ? 'Upload your transaction data and we\'ll create a personalized Google Spreadsheet with your data already populated!' 
-                      : 'Import transaction data from CSV files. Data will be processed and categorized automatically.'
-                    }
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Last Transaction Info - only show when not in create new spreadsheet mode */}
-            {!createNewSpreadsheetMode && (
-              lastTransaction ? (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start">
-                    <ClockIcon className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
-                    <div className="text-sm text-blue-800">
-                      <p className="font-medium mb-1">Latest Transaction in System</p>
-                      <div className="space-y-1">
-                        <p><span className="font-medium">Date:</span> {new Date(lastTransaction.date).toLocaleDateString()}</p>
-                        <p><span className="font-medium">Description:</span> {lastTransaction.description}</p>
-                        <p><span className="font-medium">Amount:</span> ${lastTransaction.amount.toFixed(2)}</p>
-                      </div>
-                      <p className="mt-2 text-xs text-blue-600 italic">
-                        💡 Upload transactions from {new Date(lastTransaction.date).toLocaleDateString()} onwards to add new data
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start">
-                    <ExclamationTriangleIcon className="h-5 w-5 text-gray-500 mt-0.5 mr-3 flex-shrink-0" />
-                    <div className="text-sm text-gray-600">
-                      <p className="font-medium mb-1">No Transaction Data Found</p>
-                      <p>This will be your first data import. Upload your complete transaction history or start from a specific date.</p>
-                    </div>
-                  </div>
-                </div>
-              )
-            )}
-
-            {/* CSV Upload and Configuration */}
-            {csvStep === 'upload' && (
-              <CSVUploadArea onFileSelect={handleFileSelect} />
-            )}
-
-            {uploadedFile && csvStep === 'upload' && (
-              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex items-center">
-                  <span className="text-lg mr-2">✅</span>
-                  <div>
-                    <div className="font-semibold text-gray-800">File uploaded successfully!</div>
-                    <div className="text-sm text-gray-600">
-                      {uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(1)} KB)
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Feedback Messages */}
-            {feedback && (
-              <div className={`p-4 rounded-lg border ${
-                feedback.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
-                feedback.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
-                'bg-blue-50 border border-blue-200 text-blue-800'
-              }`}>
-                <div className="flex items-center">
-                  <span className="text-lg mr-2">
-                    {feedback.type === 'success' ? '✅' : feedback.type === 'error' ? '❌' : '⚠️'}
-                  </span>
-                  <div className="font-medium">{feedback.message}</div>
-                </div>
-              </div>
-            )}
-
-            {/* CSV Configuration */}
-            {analysisResult && csvStep === 'configure' && (
-              <div className="space-y-6">
-                <h4 className="text-lg font-semibold text-gray-800">Configure Your Data Import</h4>
-                
-                {/* Preview Table */}
-                <div>
-                  <h5 className="text-md font-medium text-gray-800 mb-3">Preview</h5>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border border-gray-200 rounded-lg">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          {analysisResult.headers.map((header, index) => (
-                            <th key={index} className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b">
-                              {header}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {analysisResult.previewRows.slice(0, 3).map((row, rowIndex) => (
-                          <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                            {analysisResult.headers.map((header, cellIndex) => (
-                              <td key={cellIndex} className="px-4 py-3 text-sm text-gray-600 border-b">
-                                {String(row[header] || '')}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Column Mappings */}
-                <div>
-                  <h5 className="text-md font-medium text-gray-800 mb-3">Map Your Columns</h5>
-                  <div className="space-y-3">
-                    {analysisResult.headers.map((header, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-800 text-sm">{header}</div>
-                          <div className="text-xs text-gray-600">
-                            Sample: {String(analysisResult.previewRows[0]?.[header] || 'N/A')}
-                          </div>
-                        </div>
-                        <select
-                          value={config.mappings?.[header] || 'none'}
-                          onChange={(e) => handleMappingChange(header, e.target.value as MappedFieldType)}
-                          className="ml-4 w-36 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                        >
-                          <option value="none">Not mapped</option>
-                          <option value="date">Date</option>
-                          <option value="amount">Amount</option>
-                          <option value="description">Description</option>
-                          <option value="description2">Description 2</option>
-                          <option value="currency">Currency</option>
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Multiple Description Tip */}
-                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-start">
-                      <LightBulbIcon className="h-4 w-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-blue-700">
-                        <p className="font-medium mb-1">Multiple Description Fields</p>
-                        <p>Map both "Description" and "Description 2" if your bank splits transaction details across columns. They'll be combined automatically.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Combined Description Preview */}
-                  {(() => {
-                    const descFields = config.mappings ? Object.keys(config.mappings).filter(header => 
-                      config.mappings![header] === 'description' || config.mappings![header] === 'description2'
-                    ) : [];
-                    
-                    if (descFields.length > 1 && analysisResult.previewRows.length > 0) {
-                      const sortedDescFields = descFields.sort((a, b) => {
-                        const aIsDesc = config.mappings![a] === 'description';
-                        const bIsDesc = config.mappings![b] === 'description';
-                        return aIsDesc && !bIsDesc ? -1 : !aIsDesc && bIsDesc ? 1 : 0;
-                      });
-                      
-                      const sampleRow = analysisResult.previewRows[0];
-                      const combinedDesc = sortedDescFields
-                        .map(header => String(sampleRow[header] || '').trim())
-                        .filter(desc => desc.length > 0)
-                        .join(' - ');
-                        
-                      return (
-                        <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                          <div className="flex items-start">
-                            <EyeIcon className="h-4 w-4 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
-                            <div className="flex-1">
-                              <p className="font-medium text-green-800 text-sm mb-2">Combined Description Preview</p>
-                              <div className="space-y-1">
-                                {sortedDescFields.map((header, idx) => (
-                                  <div key={idx} className="text-xs text-green-700">
-                                    <span className="font-medium">{header}:</span> "{String(sampleRow[header] || '')}"
-                                  </div>
-                                ))}
-                                <div className="pt-2 mt-2 border-t border-green-300">
-                                  <span className="font-medium text-green-800 text-xs">Result:</span>
-                                  <div className="mt-1 p-2 bg-white rounded text-xs italic text-green-900">
-                                    "{combinedDesc}"
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                </div>
-
-                {/* Process Button */}
-                <button
-                  onClick={validateAndProcessData}
-                  disabled={isProcessing}
-                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {isProcessing ? 'Processing...' : 'Process Transactions'}
-                </button>
-              </div>
-            )}
-          </div>
+          <UploadCSVTab
+            createNewSpreadsheetMode={createNewSpreadsheetMode}
+            uploadedFile={uploadedFile}
+            csvStep={csvStep}
+            analysisResult={analysisResult}
+            config={config}
+            feedback={feedback}
+            isProcessing={isProcessing}
+            lastTransaction={lastTransaction}
+            onFileSelect={handleFileSelect}
+            onMappingChange={handleMappingChange}
+            onProcessTransactions={validateAndProcessData}
+          />
         )}
 
         {activeTab === 'validate' && validationTransactions.length > 0 && (
-          <div className="space-y-6">
-            {/* Progress Bar */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-blue-800">Validation Progress</span>
-                <span className="text-sm text-blue-600">{validatedCount} of {totalValidationCount} completed</span>
-              </div>
-              <div className="w-full bg-blue-200 rounded-full h-2">
-                <div 
-                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Validation Controls */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <div className="flex flex-wrap items-center gap-4 mb-4">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleSelectAll}
-                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
-                  >
-                    {selectedTransactions.size === filteredValidationTransactions.length ? 'Deselect All' : 'Select All'}
-                  </button>
-                  {selectedTransactions.size > 0 && (
-                    <button
-                      onClick={handleValidateSelected}
-                      className="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
-                    >
-                      Validate Selected ({selectedTransactions.size})
-                    </button>
-                  )}
-                </div>
-
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={showOnlyUnvalidated}
-                    onChange={(e) => setShowOnlyUnvalidated(e.target.checked)}
-                    className="rounded"
-                  />
-                  Show only unvalidated
-                </label>
-
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded"
-                >
-                  <option value="all">All categories</option>
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Sort by:</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="px-3 py-1 text-sm border border-gray-300 rounded"
-                  >
-                    <option value="confidence">Confidence</option>
-                    <option value="amount">Amount</option>
-                    <option value="date">Date</option>
-                  </select>
-                  <button
-                    onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-                    className="p-1 hover:bg-gray-100 rounded"
-                  >
-                    {sortDirection === 'asc' ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Complete Validation Button */}
-              <div className="border-t pt-4 mt-4">
-                {validatedCount === 0 ? (
-                  <div className="text-center py-2">
-                    <p className="text-sm text-gray-500 mb-2">Validate at least one transaction to continue</p>
-                    <button
-                      disabled={true}
-                      className="w-full px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed"
-                    >
-                      Complete Validation (0 transactions)
-                    </button>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600 mb-2">
-                      {createNewSpreadsheetMode 
-                        ? `Ready to create new spreadsheet with ${validatedCount} transaction${validatedCount !== 1 ? 's' : ''}`
-                        : `Ready to write ${validatedCount} transaction${validatedCount !== 1 ? 's' : ''} to your Google Sheet`
-                      }
-                    </p>
-                    <button
-                      onClick={handleCompleteValidation}
-                      disabled={isProcessing}
-                      className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {isProcessing ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                          {createNewSpreadsheetMode ? 'Creating New Spreadsheet...' : 'Writing to Google Sheet...'}
-                        </span>
-                      ) : (
-                        createNewSpreadsheetMode 
-                          ? `🎉 Create New Spreadsheet (${validatedCount} transactions)`
-                          : `✅ Complete Validation & Write to Sheet (${validatedCount} transactions)`
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Transactions Table */}
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left">
-                        <input
-                          type="checkbox"
-                          checked={selectedTransactions.size === filteredValidationTransactions.length && filteredValidationTransactions.length > 0}
-                          onChange={handleSelectAll}
-                          className="rounded"
-                        />
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Date</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Description</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Amount</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Category</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Confidence</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Status</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {filteredValidationTransactions.map((transaction, index) => (
-                      <tr key={transaction.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-4 py-3">
-                          <input
-                            type="checkbox"
-                            checked={selectedTransactions.has(transaction.id)}
-                            onChange={(e) => handleTransactionSelect(transaction.id, e.target.checked)}
-                            className="rounded"
-                          />
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {new Date(transaction.date).toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
-                          {transaction.description}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium">
-                          <span className={transaction.isDebit ? 'text-red-600' : 'text-green-600'}>
-                            {transaction.isDebit ? '-' : '+'}${Math.abs(transaction.amount).toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {editingTransaction === transaction.id ? (
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={editCategory}
-                                onChange={(e) => setEditCategory(e.target.value)}
-                                className="px-2 py-1 text-sm border border-gray-300 rounded flex-1"
-                                autoFocus
-                              />
-                              <button
-                                onClick={() => handleEditCategory(transaction.id, editCategory)}
-                                className="p-1 text-purple-600 hover:text-purple-800"
-                              >
-                                <CheckIcon className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => setEditingTransaction(null)}
-                                className="p-1 text-gray-400 hover:text-gray-600"
-                              >
-                                <XMarkIcon className="h-4 w-4" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-900">{transaction.category}</span>
-                              <button
-                                onClick={() => startEditingCategory(transaction)}
-                                className="p-1 text-gray-400 hover:text-gray-600"
-                              >
-                                <PencilIcon className="h-4 w-4" />
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 text-xs rounded-full ${getConfidenceColor(transaction.confidence)}`}>
-                            {getConfidenceText(transaction.confidence)} ({Math.round((transaction.confidence || 0) * 100)}%)
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {transaction.isValidated ? (
-                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
-                              <CheckIcon className="h-3 w-3 mr-1" />
-                              Validated
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
-                              Pending
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {!transaction.isValidated && (
-                            <button
-                              onClick={() => handleValidateTransaction(transaction.id)}
-                              className="px-3 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700"
-                            >
-                              Validate
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <ValidateTransactionsTab
+            validationTransactions={validationTransactions}
+            selectedTransactions={selectedTransactions}
+            editingTransaction={editingTransaction}
+            editCategory={editCategory}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            filterCategory={filterCategory}
+            showOnlyUnvalidated={showOnlyUnvalidated}
+            createNewSpreadsheetMode={createNewSpreadsheetMode}
+            isProcessing={isProcessing}
+            onTransactionSelect={handleTransactionSelect}
+            onSelectAll={handleSelectAll}
+            onValidateTransaction={handleValidateTransaction}
+            onValidateSelected={handleValidateSelected}
+            onEditCategory={handleEditCategory}
+            onStartEditing={startEditingCategory}
+            onStopEditing={() => setEditingTransaction(null)}
+            onEditCategoryChange={setEditCategory}
+            onSortChange={setSortBy}
+            onSortDirectionToggle={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+            onFilterCategoryChange={setFilterCategory}
+            onShowOnlyUnvalidatedChange={setShowOnlyUnvalidated}
+            onCompleteValidation={handleCompleteValidation}
+          />
         )}
 
         {activeTab === 'settings' && (
-          <div className="space-y-6">
-            {/* Settings Info Banner */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <InformationCircleIcon className="h-5 w-5 text-gray-500 mt-0.5 mr-3 flex-shrink-0" />
-                <div className="text-sm text-gray-800">
-                  <p className="font-medium mb-1">Currency Settings</p>
-                  <p>Configure your base currency for multi-currency transaction handling. All transactions will be converted to your base currency when imported.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Base Currency Setting */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Base Currency</h3>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="baseCurrency" className="block text-sm font-medium text-gray-700 mb-2">
-                    Select your primary currency
-                  </label>
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="text"
-                      id="baseCurrency"
-                      value={baseCurrency}
-                      onChange={(e) => setBaseCurrency(e.target.value.toUpperCase())}
-                      placeholder="e.g., USD, EUR, GBP, AUD"
-                      className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      maxLength={3}
-                    />
-                    <span className="text-sm text-gray-500">3-letter currency code</span>
-                  </div>
-                  <p className="mt-2 text-xs text-gray-600">
-                    Uses <a href="https://frankfurter.dev/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">Frankfurter API</a> for free currency conversion
-                  </p>
-                </div>
-
-                {/* Current setting display */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <div className="flex items-center">
-                    <CheckIcon className="h-5 w-5 text-blue-600 mr-2" />
-                    <span className="text-sm text-blue-800">
-                      Base currency set to <strong>{baseCurrency}</strong>
-                    </span>
-                  </div>
-                </div>
-
-                {/* Feature preview */}
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-2">Multi-Currency Features</h4>
-                  <ul className="space-y-1 text-sm text-gray-600">
-                    <li>• Automatic currency detection from CSV files</li>
-                    <li>• Real-time conversion to your base currency</li>
-                    <li>• Historical exchange rates for accurate conversion</li>
-                    <li>• Both original and converted amounts stored in spreadsheet</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
+          <SettingsTab
+            baseCurrency={baseCurrency}
+            onBaseCurrencyChange={setBaseCurrency}
+          />
         )}
       </div>
     </div>
   );
 };
 
-export default DataManagementDrawer; 
+export default DataManagementDrawer;

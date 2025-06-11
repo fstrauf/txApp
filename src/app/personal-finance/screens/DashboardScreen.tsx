@@ -12,12 +12,14 @@ import {
   ArrowPathIcon,
   ChartBarIcon,
   PlusCircleIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  LinkIcon
 } from '@heroicons/react/24/outline';
 import DashboardCharts from '../components/DashboardCharts';
 import DataOverview from '../components/DataOverview';
 import DataManagementDrawer from '../components/DataManagementDrawer';
 import HelpDrawer from '@/components/shared/HelpDrawer';
+import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
 
 const DashboardScreen: React.FC = () => {
   const { processTransactionData, updateSpreadsheetInfo } = usePersonalFinanceStore();
@@ -26,6 +28,7 @@ const DashboardScreen: React.FC = () => {
     currentScreen: 'dashboard', 
     progress: getProgress() 
   });
+  const { requestSpreadsheetAccess } = useIncrementalAuth();
 
   // Use the TanStack Query dashboard hook
   const {
@@ -127,22 +130,62 @@ const DashboardScreen: React.FC = () => {
     await handleRefreshData();
   };
 
-  // Helper function to extract spreadsheet ID from URL
-  const extractSpreadsheetId = (url: string): string | null => {
-    const patterns = [
-      /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/,
-      /^([a-zA-Z0-9-_]+)$/
-    ];
-    
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match) {
-        return match[1];
-      }
+  // Handle re-linking expired spreadsheet
+  const handleRelinkSpreadsheet = async () => {
+    if (!spreadsheetUrl) {
+      console.error('No spreadsheet URL available for re-linking');
+      return;
     }
-    return null;
+
+    try {
+      trackAction('relink_expired_spreadsheet_clicked', {
+        has_spreadsheet_url: !!spreadsheetUrl
+      });
+
+      // Request new Google Sheets access
+      const accessToken = await requestSpreadsheetAccess();
+      console.log('✅ Re-authentication successful, access token obtained');
+
+      // Re-link using the existing spreadsheet URL
+      const response = await fetch('/api/dashboard/link-spreadsheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spreadsheetUrl }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('✅ Spreadsheet re-linked successfully');
+        
+        // Update the store with the spreadsheet information
+        updateSpreadsheetInfo(data.spreadsheetId, data.spreadsheetUrl);
+        
+        // Clear any existing errors and refresh data
+        clearError();
+        await handleRefreshData();
+        
+        trackAction('spreadsheet_relinked_successfully', {
+          spreadsheet_id: data.spreadsheetId
+        });
+      } else {
+        throw new Error(data.error || 'Failed to re-link spreadsheet');
+      }
+    } catch (error: any) {
+      console.error('❌ Error re-linking spreadsheet:', error);
+      trackAction('spreadsheet_relink_failed', {
+        error: error.message
+      });
+    }
   };
 
+  // Check if error is about expired Google Sheets access
+  const isExpiredAccessError = Boolean(error && (
+    error.includes('access expired') || 
+    (error.includes('expired') && error.includes('Google Sheets')) ||
+    error.includes('401') ||
+    error.includes('Please use "Link Sheet" to reconnect')
+  ));
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-8">
@@ -192,9 +235,24 @@ const DashboardScreen: React.FC = () => {
 
       {/* Error Display */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-          <ExclamationTriangleIcon className="h-5 w-5 text-red-500 flex-shrink-0" />
-          <span className="text-red-800">{error}</span>
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <ExclamationTriangleIcon className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <span className="text-red-800">{error}</span>
+              {isExpiredAccessError && spreadsheetUrl && (
+                <div className="mt-3">
+                  <button
+                    onClick={handleRelinkSpreadsheet}
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors duration-200"
+                  >
+                    <LinkIcon className="h-4 w-4" />
+                    Re-link Spreadsheet
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -491,6 +549,8 @@ const DashboardScreen: React.FC = () => {
           onRefreshData={handleRefreshData}
           isLoading={isLoading}
           onClose={() => setIsHelpDrawerOpen(false)}
+          error={error}
+          onClearError={clearError}
         />
       </HelpDrawer>
     </div>
