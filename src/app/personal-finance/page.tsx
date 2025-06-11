@@ -2,20 +2,15 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { PersonalFinanceSidebar } from '@/app/personal-finance/components/PersonalFinanceSidebar';
 import DashboardScreen from '@/app/personal-finance/screens/DashboardScreen';
 import { DataPersistenceIndicator } from '@/app/personal-finance/components/DataPersistenceIndicator';
 
 const PersonalFinancePage: React.FC = () => {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <div className="flex h-screen overflow-hidden">
-        {/* Personal Finance Context-Aware Sidebar */}
-        <PersonalFinanceSidebar />
-        
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
-          <PersonalFinancePageContent />
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 py-4">
+          <DashboardScreen />
         </div>
         
         {/* Data Persistence Indicator */}
@@ -24,15 +19,5 @@ const PersonalFinancePage: React.FC = () => {
     </Suspense>
   );
 };
-
-function PersonalFinancePageContent() {
-  return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="px-4 py-4">
-        <DashboardScreen />
-      </div>
-    </div>
-  );
-}
 
 export default PersonalFinancePage;

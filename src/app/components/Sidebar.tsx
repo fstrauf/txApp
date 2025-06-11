@@ -72,11 +72,7 @@ export function Sidebar() {
   const isBetaFeatureEnabled = useFeatureFlagEnabled('betaFeature');
   const [isCollapsed, setIsCollapsed] = useState(true); // Start collapsed by default
 
-  // Don't show general sidebar on personal finance pages
-  const isPersonalFinancePage = pathname.startsWith('/personal-finance');
-  if (isPersonalFinancePage) {
-    return null;
-  }
+
 
   // Restore filtering
   const enabledNavItems = sidebarNavItems.filter(item => {

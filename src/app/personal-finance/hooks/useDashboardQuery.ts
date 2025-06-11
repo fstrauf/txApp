@@ -226,7 +226,7 @@ export const useDashboardQuery = () => {
     return calculateStatsFromTransactions(filteredTransactions);
   }, [filteredTransactions]);
 
-  const isFirstTimeUser = !spreadsheetLinked && filteredTransactions.length === 0;
+  const isFirstTimeUser = !isAuthenticated || !spreadsheetLinked;
 
   // Manual refresh handler
   const handleRefreshData = useCallback(async () => {

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
@@ -24,9 +25,11 @@ import MonthlyReminderToast from '../components/MonthlyReminderToast';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
 import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsheetData';
+import { mockTransactions, mockSavingsData } from '../utils/mockData';
 
 const DashboardScreen: React.FC = () => {
-  const { processTransactionData, updateSpreadsheetInfo } = usePersonalFinanceStore();
+  const { data: session } = useSession();
+  const { userData, processTransactionData, updateSpreadsheetInfo } = usePersonalFinanceStore();
   const { goToScreen, getProgress } = useScreenNavigation();
   const { trackAction } = usePersonalFinanceTracking({ 
     currentScreen: 'dashboard', 
@@ -61,16 +64,46 @@ const DashboardScreen: React.FC = () => {
   const mockStats = {
     monthlyAverageIncome: 4200,
     monthlyAverageSavings: 1100,
-    monthlyAverageExpenses: 3100,
+    monthlyAverageExpenses: mockSavingsData.monthlyBurnRate,
     lastMonthExpenses: 2850,
     lastMonthIncome: 4400,
-    annualExpenseProjection: 37200,
+    annualExpenseProjection: mockSavingsData.monthlyBurnRate * 12,
     lastDataRefresh: new Date(),
+    // Add runway calculation for first-time users
+    runwayMonths: mockSavingsData.runwayMonths,
+    netAssets: mockSavingsData.latestNetAssetValue,
   };
 
   // Use mock data for first-time users, real data otherwise
   const displayStats = isFirstTimeUser ? mockStats : dashboardStats;
-  const displayTransactions = isFirstTimeUser ? [] : filteredTransactions;
+  const displayTransactions = isFirstTimeUser ? mockTransactions : filteredTransactions;
+
+  // Debug logging (remove in production)
+  useEffect(() => {
+    console.log('🔍 Dashboard Debug:', {
+      isFirstTimeUser,
+      spreadsheetLinked,
+      hasUserTransactions: userData.transactions?.length || 0,
+      filteredTransactionsLength: filteredTransactions.length,
+      isAuthenticated: !!session?.user?.id
+    });
+  }, [isFirstTimeUser, spreadsheetLinked, userData.transactions, filteredTransactions, session]);
+
+  // Temporarily populate store with mock data for first-time users to enable charts/overview
+  // but only if there's no existing real data
+  useEffect(() => {
+    if (isFirstTimeUser && (!userData.transactions || userData.transactions.length === 0)) {
+      // Only set mock data if there's no real data and user is first-time
+      processTransactionData(mockTransactions);
+    } else if (!isFirstTimeUser && userData.transactions && userData.transactions.length > 0) {
+      // If user is no longer first-time but has mock data, clear it to show real data
+      const hasMockData = userData.transactions.some(t => t.id?.startsWith('mock-'));
+      if (hasMockData) {
+        // Clear mock data - real data will be loaded by the queries
+        processTransactionData([]);
+      }
+    }
+  }, [isFirstTimeUser, userData.transactions, processTransactionData]);
 
   // Comprehensive loading state - show loading if we're fetching initial data
   const isInitialLoading = isLoading && !dashboardStats && spreadsheetLinked && !isFirstTimeUser;
@@ -229,28 +262,42 @@ const DashboardScreen: React.FC = () => {
 
       {/* Demo Data Banner for First-Time Users */}
       {isFirstTimeUser && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200 mb-8">
-          <div className="flex items-start gap-4">
+        <div className="bg-gradient-to-r from-primary to-secondary-dark rounded-xl p-8 border border-primary-light mb-8 shadow-lg">
+          <div className="flex items-start gap-6">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
               </div>
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">This is demo data</h3>
-              <p className="text-blue-700 mb-4">
-                You're seeing sample financial data to preview what your dashboard could look like. 
-                Connect your bank transactions or Google Sheet to see your real financial overview.
+              <h3 className="text-2xl font-bold text-white mb-3">✨ Experience Your Financial Future</h3>
+              <p className="text-blue-100 mb-6 text-lg leading-relaxed">
+                You're exploring a complete financial dashboard with <strong>30 realistic transactions</strong>, 
+                <strong> interactive charts</strong>, <strong>expense categorization</strong>, 
+                and <strong>{mockSavingsData.runwayMonths} months runway</strong> calculation. 
+                This could be your actual financial picture!
               </p>
-              <button
-                onClick={handleLinkSpreadsheet}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-              >
-                <DocumentPlusIcon className="h-5 w-5" />
-                Connect My Data
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={handleLinkSpreadsheet}
+                  className="inline-flex items-center justify-center gap-3 px-6 py-3 bg-white text-primary-dark rounded-lg hover:bg-blue-50 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
+                >
+                  <DocumentPlusIcon className="h-5 w-5" />
+                  Make This My Dashboard
+                </button>
+                <button
+                  onClick={() => setIsHowItWorksOpen(true)}
+                  className="inline-flex items-center justify-center gap-3 px-6 py-3 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-all duration-200 font-medium backdrop-blur-sm border border-white/30"
+                >
+                  <QuestionMarkCircleIcon className="h-5 w-5" />
+                  How It Works
+                </button>
+              </div>
+              <div className="mt-4 text-sm text-blue-200">
+                🔒 Your data stays private • ⚡ Takes 2 minutes to connect • 📊 Works with Google Sheets & CSV
+              </div>
             </div>
           </div>
         </div>
@@ -375,7 +422,7 @@ const DashboardScreen: React.FC = () => {
                     setDataManagementDefaultTab('manage');
                     handleLinkSpreadsheet();
                   }}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200"
                 >
                   <DocumentPlusIcon className="h-4 w-4" />
                   {isFirstTimeUser ? 'Connect Your Data' : 'Manage Data'}
@@ -420,7 +467,7 @@ const DashboardScreen: React.FC = () => {
 
           {/* Tab Content */}
           {activeTab === 'overview' && (
-            <DashboardStatistics stats={displayStats} filteredTransactions={displayTransactions} />
+            <DashboardStatistics stats={displayStats} filteredTransactions={displayTransactions} isFirstTimeUser={isFirstTimeUser} />
           )}
 
           {activeTab === 'transactions' && (
@@ -583,7 +630,7 @@ const DashboardScreen: React.FC = () => {
               <button
                 onClick={handleManualRefresh}
                 disabled={isRefreshing}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
                 <ArrowPathIcon className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
@@ -653,16 +700,22 @@ const DashboardScreen: React.FC = () => {
 };
 
 // Dashboard Statistics Component
-const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransactions: any[] }> = ({ stats, filteredTransactions }) => {
+const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransactions: any[]; isFirstTimeUser?: boolean }> = ({ stats, filteredTransactions, isFirstTimeUser }) => {
   const [currentTimeFilter, setCurrentTimeFilter] = React.useState('all');
   
   // Use consolidated hook for all spreadsheet data including savings
   const consolidatedData = useConsolidatedSpreadsheetData(stats.monthlyAverageExpenses);
-  const { savingsData, isLoading: savingsLoading, error: savingsError } = {
-    savingsData: consolidatedData.savingsData,
-    isLoading: consolidatedData.isLoading,
-    error: consolidatedData.error
-  };
+  
+  // For first-time users, use mock savings data instead of real data
+  const savingsData = isFirstTimeUser ? {
+    netAssetValue: mockSavingsData.latestNetAssetValue,
+    quarter: mockSavingsData.latestQuarter,
+    formattedValue: mockSavingsData.formattedValue,
+    runway: mockSavingsData.runwayMonths
+  } : consolidatedData.savingsData;
+  
+  const savingsLoading = isFirstTimeUser ? false : consolidatedData.isLoading;
+  const savingsError = isFirstTimeUser ? null : consolidatedData.error;
 
   // Calculate the last month name and year
   const getLastMonthName = () => {
@@ -735,24 +788,24 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
           <h4 className="text-sm font-medium text-gray-500 mb-3">Savings</h4>
           <div className="space-y-3">
             <div>
-              <p className="text-lg font-semibold text-blue-600">
-                ${Math.round(stats.monthlyAverageSavings).toLocaleString()}
-              </p>
-              <p className="text-sm text-gray-500">Monthly Average</p>
-            </div>
-            <div className="border-t pt-3">
-              <p className="text-lg font-semibold text-blue-500">
-                {stats.monthlyAverageIncome > 0 ? 
-                  `${Math.round((stats.monthlyAverageSavings / stats.monthlyAverageIncome) * 100)}%` :
-                  'N/A'
-                }
-              </p>
-              <p className="text-sm text-gray-500">Savings Rate</p>
-            </div>
-            <div className="border-t pt-3">
-              <p className="text-lg font-semibold text-blue-700">
-                ${Math.round(stats.monthlyAverageSavings * 12).toLocaleString()}
-              </p>
+                              <p className="text-lg font-semibold text-blue-600">
+                  ${Math.round(stats.monthlyAverageSavings).toLocaleString()}
+                </p>
+                <p className="text-sm text-gray-500">Monthly Average</p>
+              </div>
+              <div className="border-t pt-3">
+                <p className="text-lg font-semibold text-blue-500">
+                  {stats.monthlyAverageIncome > 0 ? 
+                    `${Math.round((stats.monthlyAverageSavings / stats.monthlyAverageIncome) * 100)}%` :
+                    'N/A'
+                  }
+                </p>
+                <p className="text-sm text-gray-500">Savings Rate</p>
+              </div>
+              <div className="border-t pt-3">
+                <p className="text-lg font-semibold text-blue-700">
+                  ${Math.round(stats.monthlyAverageSavings * 12).toLocaleString()}
+                </p>
               <p className="text-sm text-gray-500">Annual Projection</p>
             </div>
           </div>

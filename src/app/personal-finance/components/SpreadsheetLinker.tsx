@@ -107,25 +107,25 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
           Connect Your Spreadsheet
         </h3>
         
-        <div className="space-y-4">
+        <div className="space-y-3">
           <button
             onClick={() => setLinkingOption('existing')}
-            className="w-full flex items-center gap-4 p-6 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors duration-200"
+            className="w-full flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors duration-200"
           >
-            <LinkIcon className="h-8 w-8 text-blue-600 flex-shrink-0" />
+            <LinkIcon className="h-6 w-6 text-blue-600 flex-shrink-0" />
             <div className="text-left">
               <h4 className="font-medium text-blue-800">Link Existing Spreadsheet</h4>
               <p className="text-sm text-blue-600 mt-1">
-                Connect a Google Sheet you already have
-              </p>
+                Connect the Expense Sorted sheet you already have
+              </p>              
             </div>
           </button>
 
           <button
             onClick={() => setLinkingOption('new')}
-            className="w-full flex items-center gap-4 p-6 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors duration-200"
+            className="w-full flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors duration-200"
           >
-            <DocumentPlusIcon className="h-8 w-8 text-green-600 flex-shrink-0" />
+            <DocumentPlusIcon className="h-6 w-6 text-green-600 flex-shrink-0" />
             <div className="text-left">
               <h4 className="font-medium text-green-800">Create New Spreadsheet</h4>
               <p className="text-sm text-green-600 mt-1">
