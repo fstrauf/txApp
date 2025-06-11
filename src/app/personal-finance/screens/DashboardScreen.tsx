@@ -13,11 +13,14 @@ import {
   ChartBarIcon,
   PlusCircleIcon,
   ExclamationTriangleIcon,
-  LinkIcon
+  LinkIcon,
+  QuestionMarkCircleIcon
 } from '@heroicons/react/24/outline';
 import DashboardCharts from '../components/DashboardCharts';
 import DataOverview from '../components/DataOverview';
 import DataManagementDrawer from '../components/DataManagementDrawer';
+import HowItWorksDrawer from '../components/HowItWorksDrawer';
+import MonthlyReminderToast from '../components/MonthlyReminderToast';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
 import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsheetData';
@@ -50,7 +53,9 @@ const DashboardScreen: React.FC = () => {
   } = useDashboardQuery();
 
   const [isHelpDrawerOpen, setIsHelpDrawerOpen] = useState(false);
+  const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'ai-insights'>('overview');
+  const [dataManagementDefaultTab, setDataManagementDefaultTab] = useState<'manage' | 'upload' | 'validate' | 'settings'>('manage');
 
   // Generate mock data for first-time users
   const mockStats = {
@@ -71,9 +76,10 @@ const DashboardScreen: React.FC = () => {
   const isInitialLoading = isLoading && !dashboardStats && spreadsheetLinked && !isFirstTimeUser;
   const showLoadingState = isInitialLoading || (isRefreshing && !error);
 
-  // Ensure help drawer is closed when dashboard loads (e.g., returning from validation screen)
+  // Ensure drawers are closed when dashboard loads (e.g., returning from validation screen)
   useEffect(() => {
     setIsHelpDrawerOpen(false);
+    setIsHowItWorksOpen(false);
   }, []);
 
   // Event handlers
@@ -81,6 +87,15 @@ const DashboardScreen: React.FC = () => {
     trackAction('link_spreadsheet_clicked', {
       is_first_time: isFirstTimeUser
     });
+    setDataManagementDefaultTab('manage');
+    setIsHelpDrawerOpen(true);
+  };
+
+  const handleSetMonthlyReminder = () => {
+    trackAction('monthly_reminder_clicked', {
+      user_has_data: !isFirstTimeUser
+    });
+    setDataManagementDefaultTab('settings');
     setIsHelpDrawerOpen(true);
   };
 
@@ -201,10 +216,10 @@ const DashboardScreen: React.FC = () => {
       <Header 
         variant="gradient"
         size="xl"
-        badge={{
-          text: "Personal Finance Dashboard",
-          variant: "success"
-        }}
+        // badge={{
+        //   text: "Personal Finance Dashboard",
+        //   variant: "success"
+        // }}
         // subtitle={`Last updated: ${displayStats?.lastDataRefresh ? 
         //   new Date(displayStats.lastDataRefresh).toLocaleDateString() : 
         //   'Never'}`}
@@ -356,11 +371,23 @@ const DashboardScreen: React.FC = () => {
 
                 {/* Manage Data Button */}
                 <button
-                  onClick={handleLinkSpreadsheet}
+                  onClick={() => {
+                    setDataManagementDefaultTab('manage');
+                    handleLinkSpreadsheet();
+                  }}
                   className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
                 >
                   <DocumentPlusIcon className="h-4 w-4" />
                   {isFirstTimeUser ? 'Connect Your Data' : 'Manage Data'}
+                </button>
+
+                {/* How This Works Button */}
+                <button
+                  onClick={() => setIsHowItWorksOpen(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
+                >
+                  <QuestionMarkCircleIcon className="h-4 w-4" />
+                  How This Works
                 </button>
               </div>
 
@@ -598,8 +625,29 @@ const DashboardScreen: React.FC = () => {
           onClose={() => setIsHelpDrawerOpen(false)}
           error={error}
           onClearError={clearError}
+          defaultTab={dataManagementDefaultTab}
         />
       </HelpDrawer>
+
+      {/* How This Works Drawer */}
+      <HelpDrawer
+        isOpen={isHowItWorksOpen}
+        onClose={() => setIsHowItWorksOpen(false)}
+        title="How This Works"
+        size="large"
+      >
+        <HowItWorksDrawer
+          onClose={() => setIsHowItWorksOpen(false)}
+        />
+      </HelpDrawer>
+
+      {/* Monthly Reminder Toast - only show for users with data */}
+      {!isFirstTimeUser && displayStats && (
+        <MonthlyReminderToast 
+          delay={10000} 
+          onSetReminder={handleSetMonthlyReminder}
+        />
+      )}
     </div>
   );
 };

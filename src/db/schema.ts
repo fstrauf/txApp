@@ -76,6 +76,27 @@ export const subscribers = pgTable(
   }
 );
 
+// Monthly reminders table
+export const monthlyReminders = pgTable(
+  'monthlyReminders',
+  {
+    id: text('id').primaryKey().notNull().default(sql`gen_random_uuid()`),
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' })
+      .unique(), // One reminder per user
+    isActive: boolean('isActive').default(true),
+    lastSent: timestamp('lastSent', { mode: 'date', withTimezone: true }),
+    nextSend: timestamp('nextSend', { mode: 'date', withTimezone: true }),
+    createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
+  },
+  (table) => ({
+    userIdIdx: index('monthly_reminders_user_id_idx').on(table.userId),
+    nextSendIdx: index('monthly_reminders_next_send_idx').on(table.nextSend),
+  })
+);
+
 export const accounts = pgTable(
   'accounts',
   {
@@ -382,7 +403,11 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   user: one(users, { fields: [subscriptions.userId], references: [users.id] }),
 }));
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const monthlyRemindersRelations = relations(monthlyReminders, ({ one }) => ({
+  user: one(users, { fields: [monthlyReminders.userId], references: [users.id] }),
+}));
+
+export const usersRelations = relations(users, ({ many, one }) => ({
   accounts: many(accounts),
   bankAccounts: many(bankAccounts),
   categories: many(categories),
@@ -391,4 +416,5 @@ export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   trainingJobs: many(trainingJobs),
   transactions: many(transactions),
+  monthlyReminder: one(monthlyReminders), // One reminder per user
 })); 

@@ -29,6 +29,7 @@ interface DataManagementDrawerProps {
   onClose: () => void;
   error?: string | null;
   onClearError?: () => void;
+  defaultTab?: TabType;
 }
 
 type TabType = 'manage' | 'upload' | 'validate' | 'settings';
@@ -52,11 +53,12 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   isLoading,
   onClose,
   error,
-  onClearError
+  onClearError,
+  defaultTab = 'manage'
 }) => {
   const { userData, processTransactionData, updateBaseCurrency } = usePersonalFinanceStore();
   const { getValidAccessToken, requestSpreadsheetAccess } = useIncrementalAuth();
-  const [activeTab, setActiveTab] = useState<TabType>('manage');
+  const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
   
   // CSV Processing State
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
