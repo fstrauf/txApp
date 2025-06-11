@@ -42,6 +42,24 @@ export async function POST(request: NextRequest) {
 
     // Copy the template spreadsheet directly (no need to check accessibility first)
     // The template should be publicly accessible with "Anyone with link can view"
+    console.log('🔄 Attempting to copy template spreadsheet:', {
+      templateId: TEMPLATE_SPREADSHEET_ID,
+      title: title || `Personal Finance Tracker - ${new Date().toLocaleDateString()}`,
+      accessToken: accessToken ? 'Present' : 'Missing'
+    });
+
+    // First, verify the template exists and is accessible
+    try {
+      const templateInfo = await drive.files.get({
+        fileId: TEMPLATE_SPREADSHEET_ID,
+        fields: 'id,name,permissions'
+      });
+      console.log('✅ Template spreadsheet accessible:', templateInfo.data.name);
+    } catch (templateError: any) {
+      console.error('❌ Template not accessible:', templateError);
+      throw new Error(`Template spreadsheet not accessible: ${templateError.message}`);
+    }
+
     const copiedFile = await drive.files.copy({
       fileId: TEMPLATE_SPREADSHEET_ID,
       requestBody: {
@@ -50,6 +68,8 @@ export async function POST(request: NextRequest) {
       },
       supportsAllDrives: true // This helps with shared drives
     });
+
+    console.log('✅ Successfully copied template file:', copiedFile.data);
 
     const newSpreadsheetId = copiedFile.data.id!;
 
@@ -218,7 +238,14 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Copy template error:', error);
+    console.error('❌ Copy template error:', error);
+    console.error('❌ Error details:', {
+      code: error.code,
+      status: error.status,
+      message: error.message,
+      response: error.response?.data,
+      config: error.config ? 'Present' : 'Missing'
+    });
     
     // Handle specific Google API errors
     if (error.code === 401) {
@@ -242,8 +269,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // More specific error messages
+    if (error.message?.includes('Request failed with status code')) {
+      return NextResponse.json(
+        { error: `Google API error: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: error.message || 'Failed to create copy from template' },
+      { error: `Failed to create copy from template: ${error.message || 'Unknown error'}` },
       { status: 500 }
     );
   }

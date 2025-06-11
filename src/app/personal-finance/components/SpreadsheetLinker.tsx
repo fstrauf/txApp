@@ -12,11 +12,13 @@ import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
 interface SpreadsheetLinkerProps {
   onSuccess: (data: { spreadsheetId: string; spreadsheetUrl: string }) => void;
   onCancel?: () => void;
+  onCreateNewWithData?: () => void; // New prop for redirecting to CSV upload
 }
 
 export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({ 
   onSuccess, 
-  onCancel 
+  onCancel,
+  onCreateNewWithData
 }) => {
   const { requestSpreadsheetAccess, hasSpreadsheetAccess } = useIncrementalAuth();
   const [linkingOption, setLinkingOption] = useState<'existing' | 'new' | null>(null);
@@ -75,48 +77,12 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
     }
   };
 
-  const handleCreateNew = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      console.log('📝 Creating new spreadsheet - checking OAuth permissions...');
-      
-      // First, ensure we have Google Sheets access
-      let accessToken;
-      try {
-        accessToken = await requestSpreadsheetAccess();
-        console.log('✅ OAuth permission granted for new spreadsheet');
-      } catch (oauthError) {
-        console.error('❌ OAuth permission failed:', oauthError);
-        setError('Please grant access to Google Sheets to continue');
-        setIsLoading(false);
-        return;
-      }
-
-      console.log('📊 Creating new spreadsheet...');
-      const response = await fetch('/api/dashboard/link-spreadsheet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ createNew: true }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        console.log('✅ New spreadsheet created successfully');
-        setSuccess(true);
-        setTimeout(() => {
-          onSuccess(data);
-        }, 1500);
-      } else {
-        setError(data.error || 'Failed to create new spreadsheet');
-      }
-    } catch (error) {
-      console.error('❌ Error creating spreadsheet:', error);
-      setError('Failed to create spreadsheet. Please try again.');
-    } finally {
-      setIsLoading(false);
+  const handleCreateNew = () => {
+    // Instead of creating an empty spreadsheet, guide user to upload data first
+    if (onCreateNewWithData) {
+      onCreateNewWithData();
+    } else {
+      setError('Create new spreadsheet with data flow not available');
     }
   };
 
@@ -163,7 +129,7 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
             <div className="text-left">
               <h4 className="font-medium text-green-800">Create New Spreadsheet</h4>
               <p className="text-sm text-green-600 mt-1">
-                Start fresh with our template
+                Upload your data and we'll create a personalized spreadsheet
               </p>
             </div>
           </button>

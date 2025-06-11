@@ -415,6 +415,7 @@ const TransactionValidationScreen: React.FC<ValidationScreenProps> = ({
                     setEditCategory('');
                   }}
                   isEven={index % 2 === 0}
+                  availableCategories={categories}
                 />
               ))}
             </tbody>
@@ -488,6 +489,7 @@ interface TransactionRowProps {
   onEditSave: (newCategory: string) => void;
   onEditCancel: () => void;
   isEven: boolean;
+  availableCategories: string[];
 }
 
 const TransactionRow: React.FC<TransactionRowProps> = ({
@@ -501,7 +503,8 @@ const TransactionRow: React.FC<TransactionRowProps> = ({
   onEditValueChange,
   onEditSave,
   onEditCancel,
-  isEven
+  isEven,
+  availableCategories
 }) => {
   const getConfidenceColor = (confidence: number = 0) => {
     if (confidence >= 0.8) return 'text-green-600 bg-green-50';
@@ -540,8 +543,7 @@ const TransactionRow: React.FC<TransactionRowProps> = ({
       <td className="px-4 py-3 text-sm">
         {isEditing ? (
           <div className="flex items-center gap-2">
-            <input
-              type="text"
+            <select
               value={editValue}
               onChange={(e) => onEditValueChange(e.target.value)}
               className="px-2 py-1 text-sm border border-gray-300 rounded flex-1"
@@ -550,7 +552,13 @@ const TransactionRow: React.FC<TransactionRowProps> = ({
                 if (e.key === 'Escape') onEditCancel();
               }}
               autoFocus
-            />
+            >
+              {availableCategories.map(category => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
             <button
               onClick={() => onEditSave(editValue)}
               className="p-1 text-green-600 hover:bg-green-50 rounded"

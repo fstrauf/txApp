@@ -88,7 +88,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   onClose
 }) => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
-  const { getValidAccessToken } = useIncrementalAuth();
+  const { getValidAccessToken, requestSpreadsheetAccess } = useIncrementalAuth();
   const [activeTab, setActiveTab] = useState<TabType>('manage');
   
   // CSV Processing State
@@ -113,6 +113,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [showOnlyUnvalidated, setShowOnlyUnvalidated] = useState(true);
+  const [createNewSpreadsheetMode, setCreateNewSpreadsheetMode] = useState(false);
 
   // Helper functions
   const getLastTransaction = () => {
@@ -400,9 +401,11 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       }
 
       // Step 1: Check if we have existing data for training or use generic classification
+      // When creating new spreadsheet, always use auto-classification since there's no training data
       const hasExistingData = userData.transactions && userData.transactions.length > 0;
+      const shouldUseCustomModel = hasExistingData && !createNewSpreadsheetMode;
       
-      if (hasExistingData) {
+      if (shouldUseCustomModel) {
         // Subsequent upload - use custom model training + classification
         setFeedback({ type: 'success', message: 'Training custom model on your existing data...' });
         
@@ -466,10 +469,13 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         });
 
       } else {
-        // First upload - use generic auto-classify
-        setFeedback({ type: 'success', message: 'Using generic auto-classification for first upload...' });
+        // First upload or creating new spreadsheet - use generic auto-classify
+        const message = createNewSpreadsheetMode 
+          ? 'Categorizing transactions for your new spreadsheet...'
+          : 'Using generic auto-classification for first upload...';
+        setFeedback({ type: 'success', message });
         
-        const autoClassifyResponse = await fetch('/auto-classify', {
+        const autoClassifyResponse = await fetch('/api/classify/auto-classify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -502,9 +508,12 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
 
         setValidationTransactions(categorizedTransactions);
         setActiveTab('validate');
+        const successMessage = createNewSpreadsheetMode
+          ? `Categorized ${categorizedTransactions.length} transactions for your new spreadsheet. Please review and validate!`
+          : `Auto-classified ${categorizedTransactions.length} transactions using generic model. Please review and validate!`;
         setFeedback({ 
           type: 'success', 
-          message: `Auto-classified ${categorizedTransactions.length} transactions using generic model. Please review and validate!` 
+          message: successMessage
         });
       }
 
@@ -582,6 +591,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     console.log('🔄 Starting validation completion...', {
       validatedCount: validatedTransactions.length,
       totalCount: validationTransactions.length,
+      createNewSpreadsheetMode,
       spreadsheetId: userData.spreadsheetId,
       spreadsheetUrl: userData.spreadsheetUrl,
       hasSpreadsheetId: !!userData.spreadsheetId,
@@ -593,6 +603,110 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       return;
     }
 
+    // Check if in create new spreadsheet mode
+    if (createNewSpreadsheetMode) {
+      setIsProcessing(true);
+      setFeedback({ type: 'info', message: 'Creating new spreadsheet with your data...' });
+
+      try {
+        console.log('🔑 Getting fresh OAuth access token for new spreadsheet...');
+        setFeedback({ type: 'info', message: 'Requesting Google Sheets access permissions...' });
+        
+        // Use requestSpreadsheetAccess instead of getValidAccessToken to handle expired tokens
+        const accessToken = await requestSpreadsheetAccess();
+        if (!accessToken) {
+          throw new Error('Unable to get valid Google access token. Please grant access to Google Sheets and try again.');
+        }
+        console.log('✅ Got fresh access token for new spreadsheet creation');
+        
+        setFeedback({ type: 'info', message: 'Creating new spreadsheet with your data...' });
+
+        console.log('📊 Creating new spreadsheet from template with data...');
+        // Create new spreadsheet from template with data
+        const response = await fetch('/api/sheets/create-from-template-copy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            transactions: validatedTransactions,
+            title: `ExpenseSorted Finance Tracker - ${new Date().toLocaleDateString()}`
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to create spreadsheet');
+        }
+
+        console.log('✅ New spreadsheet created:', result);
+
+        // Update user record with new spreadsheet info  
+        console.log('🔗 Linking new spreadsheet to user account...');
+        const linkResponse = await fetch('/api/dashboard/link-spreadsheet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            spreadsheetUrl: result.spreadsheetUrl,
+            accessToken 
+          }),
+        });
+
+        if (linkResponse.ok) {
+          const linkData = await linkResponse.json();
+          
+          // Update store with validated transactions
+          processTransactionData(validatedTransactions);
+          
+          // Success feedback
+          setFeedback({ 
+            type: 'success', 
+            message: `🎉 Created new spreadsheet with ${validatedTransactions.length} transactions!` 
+          });
+          
+          // Open the new spreadsheet
+          window.open(result.spreadsheetUrl, '_blank');
+          
+          // Reset state and notify parent
+          setValidationTransactions([]);
+          setSelectedTransactions(new Set());
+          setCreateNewSpreadsheetMode(false);
+          
+          setTimeout(() => {
+            onSpreadsheetLinked(linkData);
+            setActiveTab('manage');
+            onClose();
+          }, 2000);
+          
+          return;
+        } else {
+          throw new Error('Failed to link new spreadsheet to account');
+        }
+
+      } catch (error: any) {
+        console.error('❌ Error creating new spreadsheet:', error);
+        
+        let errorMessage = `Failed to create spreadsheet: ${error.message}`;
+        
+        // Handle specific OAuth/authorization errors
+        if (error.message.includes('access token') || error.message.includes('grant access')) {
+          errorMessage = 'Google Sheets access required. Please grant permissions and try again.';
+        } else if (error.message.includes('Permission denied')) {
+          errorMessage = 'Permission denied. Please ensure you have Google Sheets access and try again.';
+        }
+        
+        setFeedback({ 
+          type: 'error', 
+          message: errorMessage
+        });
+        setIsProcessing(false);
+        return;
+      }
+    }
+
+    // Original logic for existing spreadsheets
     if (!userData.spreadsheetId) {
       setFeedback({ type: 'error', message: 'No spreadsheet linked. Please link a Google Sheet first.' });
       return;
@@ -818,7 +932,13 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                     </p>
                   </div>
                 </div>
-                <SpreadsheetLinker onSuccess={onSpreadsheetLinked} />
+                <SpreadsheetLinker 
+                  onSuccess={onSpreadsheetLinked} 
+                  onCreateNewWithData={() => {
+                    setCreateNewSpreadsheetMode(true);
+                    setActiveTab('upload');
+                  }}
+                />
               </div>
 
               {/* Refresh Data */}
@@ -883,44 +1003,64 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
 
         {activeTab === 'upload' && (
           <div className="space-y-6">
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div className={`border rounded-lg p-4 ${
+              createNewSpreadsheetMode 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-purple-50 border-purple-200'
+            }`}>
               <div className="flex items-start">
-                <InformationCircleIcon className="h-5 w-5 text-purple-500 mt-0.5 mr-3 flex-shrink-0" />
-                <div className="text-sm text-purple-800">
-                  <p className="font-medium mb-1">Upload CSV Data</p>
-                  <p>Import transaction data from CSV files. Data will be processed and categorized automatically.</p>
+                <InformationCircleIcon className={`h-5 w-5 mt-0.5 mr-3 flex-shrink-0 ${
+                  createNewSpreadsheetMode ? 'text-green-500' : 'text-purple-500'
+                }`} />
+                <div className={`text-sm ${
+                  createNewSpreadsheetMode ? 'text-green-800' : 'text-purple-800'
+                }`}>
+                  <p className="font-medium mb-1">
+                    {createNewSpreadsheetMode 
+                      ? 'Create New Spreadsheet with Your Data' 
+                      : 'Upload CSV Data'
+                    }
+                  </p>
+                  <p>
+                    {createNewSpreadsheetMode 
+                      ? 'Upload your transaction data and we\'ll create a personalized Google Spreadsheet with your data already populated!' 
+                      : 'Import transaction data from CSV files. Data will be processed and categorized automatically.'
+                    }
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Last Transaction Info */}
-            {lastTransaction ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <ClockIcon className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
-                  <div className="text-sm text-blue-800">
-                    <p className="font-medium mb-1">Latest Transaction in System</p>
-                    <div className="space-y-1">
-                      <p><span className="font-medium">Date:</span> {new Date(lastTransaction.date).toLocaleDateString()}</p>
-                      <p><span className="font-medium">Description:</span> {lastTransaction.description}</p>
-                      <p><span className="font-medium">Amount:</span> ${lastTransaction.amount.toFixed(2)}</p>
+            {/* Last Transaction Info - only show when not in create new spreadsheet mode */}
+            {!createNewSpreadsheetMode && (
+              lastTransaction ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <ClockIcon className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium mb-1">Latest Transaction in System</p>
+                      <div className="space-y-1">
+                        <p><span className="font-medium">Date:</span> {new Date(lastTransaction.date).toLocaleDateString()}</p>
+                        <p><span className="font-medium">Description:</span> {lastTransaction.description}</p>
+                        <p><span className="font-medium">Amount:</span> ${lastTransaction.amount.toFixed(2)}</p>
+                      </div>
+                      <p className="mt-2 text-xs text-blue-600 italic">
+                        💡 Upload transactions from {new Date(lastTransaction.date).toLocaleDateString()} onwards to add new data
+                      </p>
                     </div>
-                    <p className="mt-2 text-xs text-blue-600 italic">
-                      💡 Upload transactions from {new Date(lastTransaction.date).toLocaleDateString()} onwards to add new data
-                    </p>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <ExclamationTriangleIcon className="h-5 w-5 text-gray-500 mt-0.5 mr-3 flex-shrink-0" />
-                  <div className="text-sm text-gray-600">
-                    <p className="font-medium mb-1">No Transaction Data Found</p>
-                    <p>This will be your first data import. Upload your complete transaction history or start from a specific date.</p>
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-gray-500 mt-0.5 mr-3 flex-shrink-0" />
+                    <div className="text-sm text-gray-600">
+                      <p className="font-medium mb-1">No Transaction Data Found</p>
+                      <p>This will be your first data import. Upload your complete transaction history or start from a specific date.</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )
             )}
 
             {/* CSV Upload and Configuration */}
@@ -1183,7 +1323,10 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                 ) : (
                   <div className="text-center">
                     <p className="text-sm text-gray-600 mb-2">
-                      Ready to write {validatedCount} transaction{validatedCount !== 1 ? 's' : ''} to your Google Sheet
+                      {createNewSpreadsheetMode 
+                        ? `Ready to create new spreadsheet with ${validatedCount} transaction${validatedCount !== 1 ? 's' : ''}`
+                        : `Ready to write ${validatedCount} transaction${validatedCount !== 1 ? 's' : ''} to your Google Sheet`
+                      }
                     </p>
                     <button
                       onClick={handleCompleteValidation}
@@ -1196,10 +1339,12 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                           </svg>
-                          Writing to Google Sheet...
+                          {createNewSpreadsheetMode ? 'Creating New Spreadsheet...' : 'Writing to Google Sheet...'}
                         </span>
                       ) : (
-                        `✅ Complete Validation & Write to Sheet (${validatedCount} transactions)`
+                        createNewSpreadsheetMode 
+                          ? `🎉 Create New Spreadsheet (${validatedCount} transactions)`
+                          : `✅ Complete Validation & Write to Sheet (${validatedCount} transactions)`
                       )}
                     </button>
                   </div>

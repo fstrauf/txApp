@@ -4,6 +4,7 @@ import { authConfig } from '@/lib/auth';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { google } from 'googleapis';
 
 // Extract spreadsheet ID from various Google Sheets URL formats
 function extractSpreadsheetId(url: string): string | null {
@@ -24,6 +25,8 @@ function extractSpreadsheetId(url: string): string | null {
   return null;
 }
 
+const TEMPLATE_SPREADSHEET_ID = '1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4';
+
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authConfig);
 
@@ -32,14 +35,88 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { spreadsheetUrl, createNew } = await request.json();
+    const { spreadsheetUrl, createNew, accessToken } = await request.json();
 
     if (createNew) {
-      // TODO: Implement creating new spreadsheet from template
-      return NextResponse.json(
-        { error: 'Creating new spreadsheets not yet implemented' },
-        { status: 501 }
-      );
+      // Create new spreadsheet from template
+      if (!accessToken) {
+        return NextResponse.json(
+          { error: 'Access token required for creating new spreadsheet' },
+          { status: 400 }
+        );
+      }
+
+      try {
+        // Create OAuth2 client with the provided token
+        const auth = new google.auth.OAuth2();
+        auth.setCredentials({ access_token: accessToken });
+
+        const drive = google.drive({ version: 'v3', auth });
+
+        // Copy the template spreadsheet
+        const copiedFile = await drive.files.copy({
+          fileId: TEMPLATE_SPREADSHEET_ID,
+          requestBody: {
+            name: `ExpenseSorted Finance Tracker - ${new Date().toLocaleDateString()}`,
+            parents: undefined // Place in user's root Drive folder
+          },
+          supportsAllDrives: true
+        });
+
+        const newSpreadsheetId = copiedFile.data.id!;
+        const newSpreadsheetUrl = `https://docs.google.com/spreadsheets/d/${newSpreadsheetId}/edit`;
+
+        console.log('Successfully created new spreadsheet:', {
+          spreadsheetId: newSpreadsheetId,
+          spreadsheetUrl: newSpreadsheetUrl
+        });
+
+        // Update user record with new spreadsheet info
+        await db
+          .update(users)
+          .set({
+            spreadsheetUrl: newSpreadsheetUrl,
+            spreadsheetId: newSpreadsheetId,
+            lastDataRefresh: new Date(),
+          })
+          .where(eq(users.id, session.user.id));
+
+        return NextResponse.json({
+          success: true,
+          spreadsheetId: newSpreadsheetId,
+          spreadsheetUrl: newSpreadsheetUrl,
+          message: 'New spreadsheet created successfully from template',
+        });
+
+      } catch (error: any) {
+        console.error('Error creating new spreadsheet:', error);
+        
+        if (error.code === 401) {
+          return NextResponse.json(
+            { error: 'Invalid or expired Google access token' },
+            { status: 401 }
+          );
+        }
+        
+        if (error.code === 403) {
+          return NextResponse.json(
+            { error: 'Insufficient permissions. Please grant access to Google Sheets and Google Drive.' },
+            { status: 403 }
+          );
+        }
+
+        if (error.code === 404) {
+          return NextResponse.json(
+            { error: 'Template spreadsheet not found or not accessible' },
+            { status: 404 }
+          );
+        }
+
+        return NextResponse.json(
+          { error: error.message || 'Failed to create new spreadsheet' },
+          { status: 500 }
+        );
+      }
     }
 
     if (!spreadsheetUrl) {

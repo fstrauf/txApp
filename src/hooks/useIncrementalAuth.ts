@@ -190,14 +190,15 @@ export const useIncrementalAuth = () => {
 
   // Check if user already has spreadsheet permissions
   const checkSpreadsheetAccess = useCallback(() => {
-    // First check stored tokens
-    if (storedTokens?.scope?.includes('spreadsheets')) {
+    // First check stored tokens - need both spreadsheets and drive.file for creating new spreadsheets
+    if (storedTokens?.scope?.includes('spreadsheets') && storedTokens?.scope?.includes('drive.file')) {
       return true;
     }
 
     // Fallback to session scope (NextAuth)
     const scopes = (session as any)?.scope as string;
-    return scopes?.includes('https://www.googleapis.com/auth/spreadsheets') || false;
+    return (scopes?.includes('https://www.googleapis.com/auth/spreadsheets') && 
+            scopes?.includes('https://www.googleapis.com/auth/drive.file')) || false;
   }, [storedTokens, session]);
 
   // Request additional Google Sheets permissions
@@ -236,7 +237,7 @@ export const useIncrementalAuth = () => {
         try {
           const tokenClient = window.google.accounts.oauth2.initTokenClient({
             client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
+            scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
             callback: (response: any) => {
               console.log('OAuth callback response:', response);
               setIsRequestingPermission(false);
@@ -247,7 +248,7 @@ export const useIncrementalAuth = () => {
                 const newTokens: GoogleTokens = {
                   access_token: response.access_token,
                   expires_at: Date.now() + (response.expires_in * 1000),
-                  scope: response.scope || 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
+                  scope: response.scope || 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
                 };
                 
                 storeTokens(newTokens);

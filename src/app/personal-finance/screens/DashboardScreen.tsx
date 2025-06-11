@@ -250,7 +250,7 @@ const DashboardScreen: React.FC = () => {
           </div>
 
           {/* Navigation Tabs */}
-          <div className="mb-8">
+          {/* <div className="mb-8">
             <nav className="flex space-x-8" aria-label="Dashboard navigation">
               <button
                 onClick={() => setActiveTab('overview')}
@@ -283,7 +283,7 @@ const DashboardScreen: React.FC = () => {
                 AI Insights
               </button>
             </nav>
-          </div>
+          </div> */}
 
           {/* Tab Content */}
           {activeTab === 'overview' && (
@@ -485,7 +485,7 @@ const DashboardScreen: React.FC = () => {
       >
         <DataManagementDrawer
           spreadsheetLinked={spreadsheetLinked}
-          spreadsheetUrl={spreadsheetUrl}
+          spreadsheetUrl={spreadsheetUrl ?? null}
           onSpreadsheetLinked={handleSpreadsheetLinked}
           onTransactionsFromGoogleSheets={handleTransactionsFromGoogleSheets}
           onRefreshData={handleRefreshData}
