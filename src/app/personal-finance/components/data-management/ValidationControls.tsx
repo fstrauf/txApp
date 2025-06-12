@@ -120,19 +120,48 @@ const ValidationControls: React.FC<ValidationControlsProps> = ({
               Choose your primary currency. All transactions will be converted to this currency in your new spreadsheet.
             </p>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
-              {[
-                'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'CHF', 'NZD',
-                'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'BGN', 'RON'
-              ].map(currency => (
-                <button
-                  key={currency}
-                  onClick={() => onCurrencySelection(currency)}
-                  className="px-3 py-2 text-sm border border-blue-300 rounded hover:bg-blue-100 hover:border-blue-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {currency}
-                </button>
-              ))}
+            <div className="max-w-xs mx-auto mb-4">
+              <label htmlFor="currency-select" className="block text-sm font-medium text-blue-800 mb-2">
+                Base Currency
+              </label>
+              <select
+                id="currency-select"
+                value={newSpreadsheetCurrency}
+                onChange={(e) => onCurrencySelection(e.target.value)}
+                className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+              >
+                <option value="">Select a currency...</option>
+                <optgroup label="Major Currencies">
+                  <option value="USD">USD - US Dollar</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="GBP">GBP - British Pound</option>
+                  <option value="JPY">JPY - Japanese Yen</option>
+                  <option value="CHF">CHF - Swiss Franc</option>
+                  <option value="CAD">CAD - Canadian Dollar</option>
+                  <option value="AUD">AUD - Australian Dollar</option>
+                  <option value="NZD">NZD - New Zealand Dollar</option>
+                </optgroup>
+                <optgroup label="European Currencies">
+                  <option value="SEK">SEK - Swedish Krona</option>
+                  <option value="NOK">NOK - Norwegian Krone</option>
+                  <option value="DKK">DKK - Danish Krone</option>
+                  <option value="PLN">PLN - Polish Złoty</option>
+                  <option value="CZK">CZK - Czech Koruna</option>
+                  <option value="HUF">HUF - Hungarian Forint</option>
+                  <option value="BGN">BGN - Bulgarian Lev</option>
+                  <option value="RON">RON - Romanian Leu</option>
+                </optgroup>
+                <optgroup label="Other Currencies">
+                  <option value="CNY">CNY - Chinese Yuan</option>
+                  <option value="INR">INR - Indian Rupee</option>
+                  <option value="KRW">KRW - South Korean Won</option>
+                  <option value="SGD">SGD - Singapore Dollar</option>
+                  <option value="HKD">HKD - Hong Kong Dollar</option>
+                  <option value="MXN">MXN - Mexican Peso</option>
+                  <option value="BRL">BRL - Brazilian Real</option>
+                  <option value="ZAR">ZAR - South African Rand</option>
+                </optgroup>
+              </select>
             </div>
             
             <div className="text-center">
