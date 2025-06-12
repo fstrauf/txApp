@@ -54,6 +54,7 @@ const DashboardScreen: React.FC = () => {
     error,
     setHideTransfer,
     handleRefreshData,
+    refetchStatus,
     clearError
   } = useDashboardQuery();
 
@@ -156,13 +157,16 @@ const DashboardScreen: React.FC = () => {
   };
 
   const handleSpreadsheetLinked = (data: { spreadsheetId: string; spreadsheetUrl: string }) => {
-    console.log('🔗 Spreadsheet linked, updating store:', data);
+    console.log('🔗 Spreadsheet linked, updating store and refreshing status:', data);
     
     // Update the store with the spreadsheet information
     updateSpreadsheetInfo(data.spreadsheetId, data.spreadsheetUrl);
     
+    // Refresh the dashboard status to pick up the new spreadsheet information
+    refetchStatus();
+    
     setIsHelpDrawerOpen(false);
-    // The useDashboard hook will automatically handle status updates
+    // The useDashboardQuery hook will automatically handle status updates
   };
 
   const handleTransactionsFromGoogleSheets = async (transactions: any[]) => {

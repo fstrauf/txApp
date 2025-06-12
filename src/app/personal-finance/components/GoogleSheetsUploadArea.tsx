@@ -19,7 +19,7 @@ export function GoogleSheetsUploadArea({ onTransactionsSelect }: GoogleSheetsUpl
   const [sheetUrl, setSheetUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { requestSpreadsheetAccess, getValidAccessToken } = useIncrementalAuth();
+  const { requestSpreadsheetAccess } = useIncrementalAuth();
 
   const extractSpreadsheetId = (url: string): string | null => {
     // Extract spreadsheet ID from various Google Sheets URL formats
@@ -53,15 +53,12 @@ export function GoogleSheetsUploadArea({ onTransactionsSelect }: GoogleSheetsUpl
     setError(null);
 
     try {
-      // First try to use stored/valid access token
-      let accessToken = await getValidAccessToken();
+      // Use centralized token handling that automatically handles expired/missing tokens
+      console.log('Requesting Google Sheets permissions...');
+      const accessToken = await requestSpreadsheetAccess();
       
       if (!accessToken) {
-        console.log('No valid stored token, requesting Google Sheets permissions...');
-        // No stored token available, request Google Sheets permissions
-        accessToken = await requestSpreadsheetAccess();
-      } else {
-        console.log('Using stored Google Sheets access token');
+        throw new Error('Unable to get valid Google access token. Please grant access to Google Sheets and try again.');
       }
 
       // Call our API to read from the Google Sheet
@@ -71,7 +68,10 @@ export function GoogleSheetsUploadArea({ onTransactionsSelect }: GoogleSheetsUpl
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         },
-        body: JSON.stringify({ spreadsheetId })
+        body: JSON.stringify({ 
+          spreadsheetId,
+          baseCurrency: 'USD' // Default fallback, ideally this should come from user settings
+        })
       });
 
       const data = await response.json();
@@ -91,7 +91,14 @@ export function GoogleSheetsUploadArea({ onTransactionsSelect }: GoogleSheetsUpl
 
     } catch (err: any) {
       console.error('Google Sheets import error:', err);
-      setError(err.message || 'Failed to import from Google Sheets');
+      let errorMessage = err.message || 'Failed to import from Google Sheets';
+      
+      // Handle specific OAuth/authorization errors
+      if (err.message.includes('access token') || err.message.includes('grant access')) {
+        errorMessage = 'Google Sheets access required. Please grant permissions and try again.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

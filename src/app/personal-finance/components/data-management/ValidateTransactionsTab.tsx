@@ -33,6 +33,8 @@ interface ValidateTransactionsTabProps {
   filterCategory: string;
   showOnlyUnvalidated: boolean;
   createNewSpreadsheetMode: boolean;
+  showCurrencySelection: boolean;
+  newSpreadsheetCurrency: string;
   isProcessing: boolean;
   onTransactionSelect: (id: string, selected: boolean) => void;
   onSelectAll: () => void;
@@ -47,6 +49,7 @@ interface ValidateTransactionsTabProps {
   onFilterCategoryChange: (category: string) => void;
   onShowOnlyUnvalidatedChange: (show: boolean) => void;
   onCompleteValidation: () => void;
+  onCurrencySelection: (selectedCurrency: string) => void;
 }
 
 const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
@@ -59,6 +62,8 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
   filterCategory,
   showOnlyUnvalidated,
   createNewSpreadsheetMode,
+  showCurrencySelection,
+  newSpreadsheetCurrency,
   isProcessing,
   onTransactionSelect,
   onSelectAll,
@@ -72,7 +77,8 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
   onSortDirectionToggle,
   onFilterCategoryChange,
   onShowOnlyUnvalidatedChange,
-  onCompleteValidation
+  onCompleteValidation,
+  onCurrencySelection
 }) => {
   // Get unique categories for filtering
   const categories = Array.from(new Set(validationTransactions.map(t => t.category))).sort();
@@ -136,6 +142,8 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
         categories={categories}
         validatedCount={validatedCount}
         createNewSpreadsheetMode={createNewSpreadsheetMode}
+        showCurrencySelection={showCurrencySelection}
+        newSpreadsheetCurrency={newSpreadsheetCurrency}
         isProcessing={isProcessing}
         onSelectAll={onSelectAll}
         onValidateSelected={onValidateSelected}
@@ -144,6 +152,7 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
         onSortChange={onSortChange}
         onSortDirectionToggle={onSortDirectionToggle}
         onCompleteValidation={onCompleteValidation}
+        onCurrencySelection={onCurrencySelection}
       />
 
       {/* Transactions Table */}

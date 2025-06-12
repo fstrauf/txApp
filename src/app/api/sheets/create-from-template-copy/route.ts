@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { 
+  ExpenseDetailTransaction,
+  transactionsToExpenseDetailRows 
+} from '@/lib/sheets/expense-detail-schema';
 
 interface Transaction {
   id: string;
   date: string;
   description: string;
   amount: number;
+  originalAmount?: number;
+  originalCurrency?: string;
   category: string;
   account: string;
   isDebit: boolean;
@@ -24,7 +30,11 @@ export async function POST(request: NextRequest) {
     }
 
     const accessToken = authHeader.replace('Bearer ', '');
-    const { transactions, title }: { transactions: Transaction[]; title: string } = await request.json();
+    const { transactions, title, baseCurrency }: { 
+      transactions: Transaction[]; 
+      title: string;
+      baseCurrency?: string;
+    } = await request.json();
 
     if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
       return NextResponse.json(
@@ -109,18 +119,24 @@ export async function POST(request: NextRequest) {
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
-    // Prepare transaction data for the Expense-Detail sheet
-    // Format: Source, Date, Narrative, Amount Spent, Category, Currency Spent, Amount in Base Currency: AUD
-    const transactionRows = sortedTransactions.map((t: Transaction) => [
-      'ExpenseSorted Import', // Source (A)
-      t.date, // Date (B)
-      t.description, // Narrative (C)
-      Math.abs(t.amount), // Amount Spent (D) - always positive
-      t.category, // Category (E)
-      'AUD', // Currency Spent (F)
-      Math.abs(t.amount), // Amount in Base Currency: AUD (G)
-      '' // Column H (empty)
-    ]);
+    // Convert transactions to proper format for centralized schema
+    const defaultBaseCurrency = baseCurrency || 'USD'; // Default to USD if not provided
+    const expenseDetailTransactions: ExpenseDetailTransaction[] = sortedTransactions.map((t: Transaction) => ({
+      id: t.id,
+      date: t.date,
+      description: t.description,
+      amount: t.amount,
+      originalAmount: t.originalAmount || t.amount,
+      originalCurrency: t.originalCurrency || defaultBaseCurrency,
+      baseCurrency: defaultBaseCurrency,
+      category: t.category,
+      account: t.account,
+      isDebit: t.isDebit,
+      confidence: 1.0
+    }));
+
+    // Use centralized schema function to ensure consistent amount handling
+    const transactionRows = transactionsToExpenseDetailRows(expenseDetailTransactions);
 
     // Add transactions to the Expense-Detail sheet starting from row 2
     await sheets.spreadsheets.values.update({
@@ -132,8 +148,8 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Set up headers if they don't exist (in case the template doesn't have them)
-    const headers = ['Source', 'Date', 'Narrative', 'Amount Spent', 'Category', 'Currency Spent', 'Amount in Base Currency: AUD', ''];
+    // Set up headers with dynamic base currency
+    const headers = ['Source', 'Date', 'Narrative', 'Amount Spent', 'Category', 'Currency Spent', `Amount in Base Currency: ${defaultBaseCurrency}`, ''];
     await sheets.spreadsheets.values.update({
       spreadsheetId: newSpreadsheetId,
       range: `${sheetName}!A1`,
@@ -225,6 +241,32 @@ export async function POST(request: NextRequest) {
         ]
       }
     });
+
+    // Write base currency to Config sheet (cell B2)
+    try {
+      // Check if Config sheet exists
+      const configSheet = spreadsheetInfo.data.sheets?.find(
+        sheet => sheet.properties?.title === 'Config'
+      );
+      
+      if (configSheet) {
+        console.log('📝 Writing base currency to Config sheet...');
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: newSpreadsheetId,
+          range: 'Config!B2',
+          valueInputOption: 'USER_ENTERED',
+          requestBody: {
+            values: [[defaultBaseCurrency]]
+          }
+        });
+        console.log(`✅ Base currency ${defaultBaseCurrency} written to Config sheet`);
+      } else {
+        console.log('⚠️ Config sheet not found in template, skipping base currency setup');
+      }
+    } catch (configError: any) {
+      console.error('❌ Error writing to Config sheet:', configError);
+      // Don't fail the entire operation if Config write fails
+    }
 
     const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${newSpreadsheetId}/edit`;
 

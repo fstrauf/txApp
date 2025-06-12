@@ -1,17 +1,24 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { parseTransactionDate } from '@/lib/utils';
 import Papa from 'papaparse';
 import { 
-  DocumentPlusIcon,
+  XMarkIcon, 
+  CloudArrowUpIcon,
+  TableCellsIcon,
   ArrowPathIcon,
   CheckIcon,
-  CogIcon
+  CogIcon,
+  ChevronRightIcon,
+  ChevronDownIcon,
+  DocumentCheckIcon
 } from '@heroicons/react/24/outline';
 import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
 import { convertCurrency, extractCurrencyCode } from '@/lib/currency';
+import { ensureApiAccessForTraining } from '@/lib/apiKeyUtils';
 
 // Import modular components
 import ManageDataTab from './data-management/ManageDataTab';
@@ -56,8 +63,9 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   onClearError,
   defaultTab = 'manage'
 }) => {
+  const { data: session } = useSession();
   const { userData, processTransactionData, updateBaseCurrency } = usePersonalFinanceStore();
-  const { getValidAccessToken, requestSpreadsheetAccess } = useIncrementalAuth();
+  const { requestSpreadsheetAccess } = useIncrementalAuth();
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
   
   // CSV Processing State
@@ -83,6 +91,10 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [showOnlyUnvalidated, setShowOnlyUnvalidated] = useState(true);
   const [createNewSpreadsheetMode, setCreateNewSpreadsheetMode] = useState(false);
+  
+  // Currency selection for new spreadsheet
+  const [newSpreadsheetCurrency, setNewSpreadsheetCurrency] = useState<string>('');
+  const [showCurrencySelection, setShowCurrencySelection] = useState(false);
   
   // Get base currency from store with fallback
   const baseCurrency = userData.baseCurrency || 'USD';
@@ -326,6 +338,28 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   };
 
   const validateAndProcessData = async () => {
+    console.log('🚀 validateAndProcessData called with state:', {
+      createNewSpreadsheetMode,
+      'userData.transactions count': userData.transactions?.length || 0,
+      uploadedFile: uploadedFile?.name,
+      analysisResult: !!analysisResult,
+      'config.mappings': Object.keys(config.mappings || {}).length
+    });
+
+    console.log('🔍 CRITICAL DEBUG - createNewSpreadsheetMode value:', createNewSpreadsheetMode);
+    console.log('🔍 CRITICAL DEBUG - typeof createNewSpreadsheetMode:', typeof createNewSpreadsheetMode);
+
+    // Auto-detect if user should be in createNewSpreadsheetMode
+    // If user has no linked spreadsheet, they should be creating a new one
+    const shouldCreateNewSpreadsheet = !userData.spreadsheetId || !spreadsheetLinked;
+    const effectiveCreateNewMode = shouldCreateNewSpreadsheet || createNewSpreadsheetMode;
+    
+    if (shouldCreateNewSpreadsheet && !createNewSpreadsheetMode) {
+      console.log('🎯 Auto-detecting: User has no linked spreadsheet, will use createNewSpreadsheet logic');
+      // Update the state for future calls, but continue with current call using effectiveCreateNewMode
+      setCreateNewSpreadsheetMode(true);
+    }
+
     if (!analysisResult || !config.mappings || !uploadedFile) {
       setFeedback({ type: 'error', message: 'No data to process. Please upload and configure a file first.' });
       return;
@@ -337,13 +371,16 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     const missingFields = requiredFields.filter(field => !mappingValues.includes(field as any));
 
     if (missingFields.length > 0) {
-      setFeedback({ type: 'error', message: `Please map the following required fields: ${missingFields.join(', ')}` });
+      setFeedback({ 
+        type: 'error', 
+        message: `Missing required fields: ${missingFields.join(', ')}. Please map these columns before processing.` 
+      });
       return;
     }
 
     setIsProcessing(true);
-    setCsvStep('ready');
-    
+    setFeedback({ type: 'info', message: 'Processing your transaction data...' });
+
     try {
       setFeedback({ type: 'success', message: 'Parsing CSV file...' });
       
@@ -454,11 +491,35 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         };
       }));
 
-      // Filter out duplicate transactions early
-      const uniqueTransactions = filterDuplicateTransactions(rawTransactions);
-      const duplicateCount = rawTransactions.length - uniqueTransactions.length;
+      // Filter out duplicate transactions early - but skip this for new spreadsheet mode
+      let uniqueTransactions;
+      let duplicateCount = 0;
+      
+      console.log('🔍 Duplicate filtering decision:', {
+        createNewSpreadsheetMode,
+        'rawTransactions.length': rawTransactions.length,
+        'userData.transactions?.length': userData.transactions?.length || 0
+      });
+      
+      if (effectiveCreateNewMode) {
+        // When creating a new spreadsheet, process all transactions (no duplicate filtering)
+        uniqueTransactions = rawTransactions;
+        console.log('📋 Creating new spreadsheet - processing all transactions without duplicate filtering');
+        console.log('📋 uniqueTransactions.length:', uniqueTransactions.length);
+      } else {
+        // For existing spreadsheets, filter out duplicates
+        uniqueTransactions = filterDuplicateTransactions(rawTransactions);
+        duplicateCount = rawTransactions.length - uniqueTransactions.length;
+        console.log('🔍 Filtered duplicates - uniqueTransactions.length:', uniqueTransactions.length, 'duplicateCount:', duplicateCount);
+      }
 
       if (uniqueTransactions.length === 0) {
+        console.error('❌ uniqueTransactions.length is 0!', {
+          createNewSpreadsheetMode,
+          'rawTransactions.length': rawTransactions.length,
+          'userData.transactions?.length': userData.transactions?.length || 0,
+          duplicateCount
+        });
         setFeedback({ 
           type: 'error', 
           message: `All ${rawTransactions.length} transactions are duplicates. No new data to process.` 
@@ -474,18 +535,71 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       } else {
         setFeedback({ 
           type: 'success', 
-          message: `Processing ${uniqueTransactions.length} new transactions. Starting categorization...` 
+          message: `Processing ${uniqueTransactions.length} ${effectiveCreateNewMode ? '' : 'new '}transactions. Starting categorization...` 
         });
       }
 
       // Step 1: Check if we have existing data for training or use generic classification
       // When creating new spreadsheet, always use auto-classification since there's no training data
       const hasExistingData = userData.transactions && userData.transactions.length > 0;
-      const shouldUseCustomModel = hasExistingData && !createNewSpreadsheetMode;
+      // FORCE auto-classify for new spreadsheet mode - no training should happen
+      const shouldUseCustomModel = effectiveCreateNewMode ? false : hasExistingData;
+      
+      console.log('🔍 Training vs Auto-classify decision:', {
+        hasExistingData,
+        'userData.transactions': userData.transactions?.length || 0,
+        createNewSpreadsheetMode,
+        shouldUseCustomModel,
+        'Flow choice': shouldUseCustomModel ? 'TRAINING + CLASSIFICATION' : 'AUTO-CLASSIFY',
+        'Logic': effectiveCreateNewMode ? 'FORCED AUTO-CLASSIFY (new spreadsheet)' : hasExistingData ? 'TRAINING (has existing data)' : 'AUTO-CLASSIFY (no existing data)'
+      });
+      
+      // EXPLICIT CHECKPOINT
+      if (effectiveCreateNewMode) {
+        console.log('✅ CONFIRMED: In createNewSpreadsheetMode - MUST use auto-classify');
+        console.log('✅ shouldUseCustomModel should be FALSE:', shouldUseCustomModel);
+      } else {
+        console.log('ℹ️ NOT in createNewSpreadsheetMode - checking for existing data');
+        console.log('ℹ️ hasExistingData:', hasExistingData);
+        console.log('ℹ️ shouldUseCustomModel:', shouldUseCustomModel);
+      }
       
       if (shouldUseCustomModel) {
+        console.log('🚨 ABOUT TO CALL TRAINING ENDPOINT - This should NOT happen for createNewSpreadsheetMode!');
         // Subsequent upload - use custom model training + classification
         setFeedback({ type: 'success', message: 'Training custom model on your existing data...' });
+        
+        // Check and ensure API access before training
+        try {
+          setFeedback({ type: 'info', message: '🎯 Making this your own! Setting up your personal AI trainer...' });
+          
+          if (!session?.user?.id) {
+            throw new Error('User not authenticated. Please log in to use AI training.');
+          }
+          
+          const accessResult = await ensureApiAccessForTraining(session.user.id);
+          
+          if (!accessResult.success) {
+            if (accessResult.needsSubscription) {
+              setFeedback({ 
+                type: 'error', 
+                message: '💎 Upgrade needed! AI training requires an active subscription to create your personalized model. Please upgrade to continue.' 
+              });
+              return;
+            } else {
+              throw new Error(accessResult.message);
+            }
+          }
+          
+          setFeedback({ type: 'success', message: '🚀 All set! Training your personal AI model on your existing data...' });
+        } catch (error) {
+          console.error('Failed to setup API access:', error);
+          setFeedback({ 
+            type: 'error', 
+            message: `❌ Setup failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or contact support.` 
+          });
+          return;
+        }
         
         // Step 1: Train the model using existing transactions
         const trainResponse = await fetch('/api/classify/train', {
@@ -504,7 +618,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         if (trainResponse.status === 200) {
           // Synchronous training completion
           const trainResult = await trainResponse.json();
-          if (trainResponse.ok && trainResult.success) {
+          if (trainResponse.ok && (trainResult.success || trainResult.status === 'completed' || trainResult.message?.includes('completed successfully'))) {
             setFeedback({ type: 'success', message: 'Model trained! Now categorizing new transactions...' });
           } else {
             throw new Error(trainResult.message || 'Training failed despite 200 OK response');
@@ -556,7 +670,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           // Synchronous classification completion
           classifiedData = await classifyResponse.json();
           
-          if (classifyResponse.ok && classifiedData.status === 'completed' && classifiedData.results) {
+          if (classifyResponse.ok && (classifiedData.status === 'completed' || classifiedData.success || classifiedData.results)) {
             // Validation successful - proceed
           } else {
             throw new Error(classifiedData.message || 'Classification completed but with unexpected response format');
@@ -622,8 +736,9 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         });
 
       } else {
+        console.log('✅ TAKING AUTO-CLASSIFY PATH - This is correct for createNewSpreadsheetMode');
         // First upload or creating new spreadsheet - use generic auto-classify
-        const message = createNewSpreadsheetMode 
+        const message = effectiveCreateNewMode 
           ? 'Categorizing transactions for your new spreadsheet...'
           : 'Using generic auto-classification for first upload...';
         setFeedback({ type: 'success', message });
@@ -646,7 +761,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           // Synchronous auto-classification completion
           autoClassifiedData = await autoClassifyResponse.json();
           
-          if (autoClassifyResponse.ok && autoClassifiedData.status === 'completed' && autoClassifiedData.results) {
+          if (autoClassifyResponse.ok && (autoClassifiedData.status === 'completed' || autoClassifiedData.success || autoClassifiedData.results)) {
             // Validation successful - proceed
           } else {
             throw new Error(autoClassifiedData.message || 'Auto-classification completed but with unexpected response format');
@@ -706,7 +821,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
 
         setValidationTransactions(categorizedTransactions);
         setActiveTab('validate');
-        const successMessage = createNewSpreadsheetMode
+        const successMessage = effectiveCreateNewMode
           ? `Categorized ${categorizedTransactions.length} transactions for your new spreadsheet. Please review and validate!`
           : `Auto-classified ${categorizedTransactions.length} transactions using generic model. Please review and validate!`;
         setFeedback({ 
@@ -783,6 +898,15 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     setEditCategory(transaction.category);
   };
 
+  const handleCurrencySelection = (selectedCurrency: string) => {
+    setNewSpreadsheetCurrency(selectedCurrency);
+    // Also update the user's base currency in the store for future use
+    updateBaseCurrency(selectedCurrency);
+    setShowCurrencySelection(false);
+    // Now proceed with validation completion
+    setTimeout(() => handleCompleteValidation(), 100);
+  };
+
   const handleCompleteValidation = async () => {
     const validatedTransactions = validationTransactions.filter(t => t.isValidated);
     
@@ -793,7 +917,9 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       spreadsheetId: userData.spreadsheetId,
       spreadsheetUrl: userData.spreadsheetUrl,
       hasSpreadsheetId: !!userData.spreadsheetId,
-      hasSpreadsheetUrl: !!userData.spreadsheetUrl
+      hasSpreadsheetUrl: !!userData.spreadsheetUrl,
+      currentBaseCurrency: baseCurrency,
+      newSpreadsheetCurrency: newSpreadsheetCurrency
     });
     
     if (validatedTransactions.length === 0) {
@@ -801,8 +927,17 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       return;
     }
 
-    // Check if in create new spreadsheet mode
+    // Check if in create new spreadsheet mode and need to collect currency
     if (createNewSpreadsheetMode) {
+      // Always show currency selection for new spreadsheets if not already selected
+      if (!newSpreadsheetCurrency) {
+        setShowCurrencySelection(true);
+        return;
+      }
+      
+      // Use the selected currency for new spreadsheet
+      const currencyToUse = newSpreadsheetCurrency;
+      
       setIsProcessing(true);
       setFeedback({ type: 'info', message: 'Creating new spreadsheet with your data...' });
 
@@ -829,7 +964,8 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           },
           body: JSON.stringify({
             transactions: validatedTransactions,
-            title: `ExpenseSorted Finance Tracker - ${new Date().toLocaleDateString()}`
+            title: `ExpenseSorted Finance Tracker - ${new Date().toLocaleDateString()}`,
+            baseCurrency: currencyToUse
           })
         });
 
@@ -871,6 +1007,8 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           setValidationTransactions([]);
           setSelectedTransactions(new Set());
           setCreateNewSpreadsheetMode(false);
+          setNewSpreadsheetCurrency('');
+          setShowCurrencySelection(false);
           
           setTimeout(() => {
             onSpreadsheetLinked(linkData);
@@ -918,14 +1056,19 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       // Update the store with validated transactions
       processTransactionData(validatedTransactions);
 
-      console.log('🔑 Getting fresh OAuth access token...');
-      const accessToken = await getValidAccessToken();
+      console.log('🔑 Getting fresh OAuth access token for spreadsheet access...');
+      setFeedback({ type: 'info', message: 'Requesting Google Sheets access permissions...' });
+      
+      // Use requestSpreadsheetAccess instead of getValidAccessToken to handle expired tokens
+      const accessToken = await requestSpreadsheetAccess();
       if (!accessToken) {
-        throw new Error('Unable to get valid Google access token. Please re-authorize spreadsheet access.');
+        throw new Error('Unable to get valid Google access token. Please grant access to Google Sheets and try again.');
       }
       console.log('✅ Got valid access token, calling API...');
 
       console.log('📝 Calling API to append transactions to spreadsheet...');
+      setFeedback({ type: 'info', message: 'Writing transactions to your Google Sheet...' });
+      
       const response = await fetch('/api/sheets/append-validated-transactions', {
         method: 'POST',
         headers: {
@@ -968,10 +1111,10 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       let errorMessage = `Failed to write to spreadsheet: ${error.message}`;
       
       // Handle specific OAuth/authorization errors
-      if (error.message.includes('access token') || error.message.includes('Unauthorized')) {
-        errorMessage = 'Authorization expired. Please refresh the page and try again, or re-link your spreadsheet if the issue persists.';
+      if (error.message.includes('access token') || error.message.includes('grant access')) {
+        errorMessage = 'Google Sheets access required. Please grant permissions and try again.';
       } else if (error.message.includes('Permission denied')) {
-        errorMessage = 'Permission denied. Please ensure your spreadsheet is accessible and you have edit permissions.';
+        errorMessage = 'Permission denied. Please ensure you have Google Sheets access and try again.';
       }
       
       setFeedback({ 
@@ -1008,7 +1151,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            <DocumentPlusIcon className="h-5 w-5 inline mr-2" />
+            <CloudArrowUpIcon className="h-5 w-5 inline mr-2" />
             Upload CSV
           </button>
 
@@ -1051,8 +1194,12 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             isLoading={isLoading}
             onSwitchToUpload={() => setActiveTab('upload')}
             onCreateNewWithData={() => {
+              console.log('🎯 onCreateNewWithData clicked - setting createNewSpreadsheetMode to true');
               setCreateNewSpreadsheetMode(true);
+              setNewSpreadsheetCurrency('');
+              setShowCurrencySelection(false);
               setActiveTab('upload');
+              console.log('🎯 After setting - createNewSpreadsheetMode should now be true');
             }}
             error={error}
             onClearError={onClearError}
@@ -1086,6 +1233,8 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             filterCategory={filterCategory}
             showOnlyUnvalidated={showOnlyUnvalidated}
             createNewSpreadsheetMode={createNewSpreadsheetMode}
+            showCurrencySelection={showCurrencySelection}
+            newSpreadsheetCurrency={newSpreadsheetCurrency}
             isProcessing={isProcessing}
             onTransactionSelect={handleTransactionSelect}
             onSelectAll={handleSelectAll}
@@ -1100,6 +1249,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             onFilterCategoryChange={setFilterCategory}
             onShowOnlyUnvalidatedChange={setShowOnlyUnvalidated}
             onCompleteValidation={handleCompleteValidation}
+            onCurrencySelection={handleCurrencySelection}
           />
         )}
 

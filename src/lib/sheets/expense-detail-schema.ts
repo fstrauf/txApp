@@ -96,13 +96,16 @@ export function transactionToExpenseDetailRow(transaction: ExpenseDetailTransact
   // Base currency amount (column G) - always use the amount field (converted)
   const signedBaseCurrencyAmount = transaction.isDebit ? -Math.abs(transaction.amount) : Math.abs(transaction.amount);
   
+  // Use dynamic currencies from transaction data, with fallbacks
+  const originalCurrency = transaction.originalCurrency || transaction.baseCurrency || 'USD';
+  
   return [
     'ExpenseSorted Import',                    // Source (A)
     formatDateForSheet(transaction.date),      // Date (B) - formatted as DD/MM/YYYY
     transaction.description,                   // Narrative (C) 
     signedOriginalAmount,                      // Amount Spent (D) - original amount with sign
     transaction.category,                      // Category (E)
-    transaction.originalCurrency || 'AUD',    // Currency Spent (F) - original currency
+    originalCurrency,                          // Currency Spent (F) - original currency (dynamic)
     signedBaseCurrencyAmount,                  // Amount in Base Currency (G) - converted amount with sign
   ];
 }
@@ -120,7 +123,8 @@ export function transactionsToExpenseDetailRows(transactions: ExpenseDetailTrans
 export function expenseDetailRowToTransaction(
   row: (string | number)[], 
   index: number,
-  spreadsheetId: string
+  spreadsheetId: string,
+  defaultBaseCurrency: string = 'USD'
 ): ExpenseDetailTransaction | null {
   // Skip empty rows
   if (!row || row.length === 0 || row.every(cell => !cell)) {
@@ -132,7 +136,7 @@ export function expenseDetailRowToTransaction(
   const narrative = String(row[EXPENSE_DETAIL_SCHEMA.columns.narrative] || '').trim();
   const rawOriginalAmount = row[EXPENSE_DETAIL_SCHEMA.columns.amountSpent]; // Column D (original amount)
   const category = String(row[EXPENSE_DETAIL_SCHEMA.columns.category] || '').trim();
-  const originalCurrency = String(row[EXPENSE_DETAIL_SCHEMA.columns.currencySpent] || 'AUD').trim(); // Column F
+  const originalCurrency = String(row[EXPENSE_DETAIL_SCHEMA.columns.currencySpent] || defaultBaseCurrency).trim(); // Column F
   const rawBaseCurrencyAmount = row[EXPENSE_DETAIL_SCHEMA.columns.amountInBaseCurrency]; // Column G (converted amount)
 
   // Skip rows with missing essential data - use base currency amount for processing
@@ -231,7 +235,7 @@ export function expenseDetailRowToTransaction(
     amount: Math.abs(parsedAmount), // Always store as positive (converted base currency amount)
     originalAmount: parsedOriginalAmount ? Math.abs(parsedOriginalAmount) : undefined, // Original amount if different
     originalCurrency: originalCurrency, // Original currency from column F
-    baseCurrency: 'AUD', // Could be dynamic based on user setting
+    baseCurrency: defaultBaseCurrency, // Dynamic base currency
     category: category,
     account: source || 'Unknown',
     isDebit: parsedAmount < 0, // Negative amounts are debits (expenses), positive amounts are credits (income)
@@ -244,7 +248,8 @@ export function expenseDetailRowToTransaction(
  */
 export function parseExpenseDetailRows(
   rows: (string | number)[][],
-  spreadsheetId: string
+  spreadsheetId: string,
+  defaultBaseCurrency: string = 'USD'
 ): ExpenseDetailTransaction[] {
   if (!rows || rows.length < 2) {
     return [];
@@ -255,7 +260,7 @@ export function parseExpenseDetailRows(
   const transactions: ExpenseDetailTransaction[] = [];
 
   dataRows.forEach((row, index) => {
-    const transaction = expenseDetailRowToTransaction(row, index, spreadsheetId);
+    const transaction = expenseDetailRowToTransaction(row, index, spreadsheetId, defaultBaseCurrency);
     if (transaction) {
       transactions.push(transaction);
     }
@@ -276,8 +281,17 @@ export function validateExpenseDetailHeaders(headers: string[]): { isValid: bool
 
   EXPENSE_DETAIL_SCHEMA.headers.forEach((expectedHeader, index) => {
     const actualHeader = headers[index]?.trim();
-    if (actualHeader !== expectedHeader) {
-      errors.push(`Column ${String.fromCharCode(65 + index)} should be "${expectedHeader}" but found "${actualHeader || 'empty'}"`);
+    
+    // Special case for "Amount in Base Currency" - allow with currency suffix
+    if (expectedHeader === 'Amount in Base Currency') {
+      if (!actualHeader || (!actualHeader.startsWith('Amount in Base Currency'))) {
+        errors.push(`Column ${String.fromCharCode(65 + index)} should start with "${expectedHeader}" but found "${actualHeader || 'empty'}"`);
+      }
+    } else {
+      // Exact match for other headers
+      if (actualHeader !== expectedHeader) {
+        errors.push(`Column ${String.fromCharCode(65 + index)} should be "${expectedHeader}" but found "${actualHeader || 'empty'}"`);
+      }
     }
   });
 

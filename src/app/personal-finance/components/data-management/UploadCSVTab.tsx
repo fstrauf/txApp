@@ -143,26 +143,6 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
         </div>
       )}
 
-      {/* Feedback Messages */}
-      {feedback && (
-        <div className={`p-4 rounded-lg border ${
-          feedback.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
-          feedback.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
-          feedback.type === 'processing' ? 'bg-blue-50 border-blue-200 text-blue-800' :
-          'bg-gray-50 border-gray-200 text-gray-800'
-        }`}>
-          <div className="flex items-center">
-            <span className="text-lg mr-2">
-              {feedback.type === 'success' ? '✅' : 
-               feedback.type === 'error' ? '❌' : 
-               feedback.type === 'processing' ? '🔄' : 
-               'ℹ️'}
-            </span>
-            <div className="font-medium">{feedback.message}</div>
-          </div>
-        </div>
-      )}
-
       {/* CSV Configuration */}
       {analysisResult && csvStep === 'configure' && (
         <div className="space-y-6">
@@ -268,6 +248,26 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
           >
             {isProcessing ? 'Processing...' : 'Process Transactions'}
           </button>
+
+          {/* Feedback Messages - moved to underneath the button for better visibility */}
+          {feedback && (
+            <div className={`p-4 rounded-lg border ${
+              feedback.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+              feedback.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+              feedback.type === 'processing' ? 'bg-blue-50 border-blue-200 text-blue-800' :
+              'bg-gray-50 border-gray-200 text-gray-800'
+            }`}>
+              <div className="flex items-center">
+                <span className="text-lg mr-2">
+                  {feedback.type === 'success' ? '✅' : 
+                   feedback.type === 'error' ? '❌' : 
+                   feedback.type === 'processing' ? '🔄' : 
+                   'ℹ️'}
+                </span>
+                <div className="font-medium">{feedback.message}</div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

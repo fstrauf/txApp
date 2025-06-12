@@ -22,7 +22,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
   onBaseCurrencyChange
 }) => {
   const { userData } = usePersonalFinanceStore();
-  const { getValidAccessToken } = useIncrementalAuth();
+  const { requestSpreadsheetAccess } = useIncrementalAuth();
   
   // Monthly reminder state
   const [isSubmittingReminder, setIsSubmittingReminder] = useState(false);
@@ -65,9 +65,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
     if (!userData.spreadsheetId) return;
 
     try {
-      const accessToken = await getValidAccessToken();
+      const accessToken = await requestSpreadsheetAccess();
       if (!accessToken) {
-        throw new Error('Unable to get valid Google access token');
+        throw new Error('Unable to get valid Google access token. Please grant access to Google Sheets and try again.');
       }
 
       const response = await fetch('/api/sheets/update-config', {

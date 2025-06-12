@@ -59,7 +59,10 @@ export const useSpreadsheetRefresh = ({ onSuccess, onError }: SpreadsheetRefresh
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${accessToken}`
             },
-            body: JSON.stringify({ spreadsheetId })
+            body: JSON.stringify({ 
+              spreadsheetId,
+              baseCurrency: 'USD' // Default fallback, ideally this should come from user settings
+            })
           });
 
           const spreadsheetData = await response.json();

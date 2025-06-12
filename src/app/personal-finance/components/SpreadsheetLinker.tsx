@@ -103,9 +103,6 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
   if (!linkingOption) {
     return (
       <div className="max-w-md mx-auto">
-        <h3 className="text-xl font-bold text-gray-800 mb-6 text-center">
-          Connect Your Spreadsheet
-        </h3>
         
         <div className="space-y-3">
           <button
@@ -121,7 +118,7 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
             </div>
           </button>
 
-          <button
+          {/* <button
             onClick={() => setLinkingOption('new')}
             className="w-full flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors duration-200"
           >
@@ -132,7 +129,7 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
                 Upload your data and we'll create a personalized spreadsheet
               </p>
             </div>
-          </button>
+          </button> */}
         </div>
 
         {onCancel && (

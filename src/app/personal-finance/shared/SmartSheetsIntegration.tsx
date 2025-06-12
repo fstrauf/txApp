@@ -41,8 +41,7 @@ export const SmartSheetsIntegration: React.FC<SmartSheetsIntegrationProps> = ({
     isRequestingPermission, 
     hasSpreadsheetAccess, 
     isSignedIn,
-    isGoogleLoaded,
-    getValidAccessToken
+    isGoogleLoaded
   } = useIncrementalAuth();
   
   const [currentStep, setCurrentStep] = useState<IntegrationStep>('offer');
@@ -61,19 +60,8 @@ export const SmartSheetsIntegration: React.FC<SmartSheetsIntegrationProps> = ({
     setError(null);
     
     try {
-      // First try to get a valid stored token (no UI needed)
-      console.log('Checking for stored Google Sheets access...');
-      let token = await getValidAccessToken();
-      
-      if (token) {
-        console.log('Using stored Google Sheets access token');
-        setAuthToken(token);
-        setCurrentStep('choice');
-        return;
-      }
-
-      // No stored token available, need to request new authorization
-      console.log('No stored token found, requesting new authorization...');
+      // Use centralized token handling that automatically handles expired/missing tokens
+      console.log('Requesting Google Sheets permissions...');
       
       if (!isGoogleLoaded) {
         setError('Google services are still loading. Please try again in a moment.');
@@ -88,7 +76,11 @@ export const SmartSheetsIntegration: React.FC<SmartSheetsIntegrationProps> = ({
 
       setCurrentStep('auth');
       
-      token = await requestSpreadsheetAccess();
+      const token = await requestSpreadsheetAccess();
+      if (!token) {
+        throw new Error('Unable to get valid Google access token. Please grant access to Google Sheets and try again.');
+      }
+      
       setAuthToken(token);
       setCurrentStep('choice');
       
@@ -102,6 +94,8 @@ export const SmartSheetsIntegration: React.FC<SmartSheetsIntegrationProps> = ({
         setError('Permission denied. Please allow access to Google Sheets to continue.');
       } else if (err.message.includes('Google Identity Services not loaded')) {
         setError('Google services failed to load. Please check your internet connection and try again.');
+      } else if (err.message.includes('access token') || err.message.includes('grant access')) {
+        setError('Google Sheets access required. Please grant permissions and try again.');
       } else {
         setError(`Permission error: ${err.message}. Please try again or check your Google account permissions.`);
       }
@@ -162,7 +156,8 @@ export const SmartSheetsIntegration: React.FC<SmartSheetsIntegrationProps> = ({
         },
         body: JSON.stringify({
           transactions,
-          title: `ExpenseSorted Finance Tracker - ${new Date().toLocaleDateString()}`
+          title: `ExpenseSorted Finance Tracker - ${new Date().toLocaleDateString()}`,
+          baseCurrency: 'USD' // Default fallback, ideally this should come from props
         })
       });
 

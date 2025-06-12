@@ -90,17 +90,6 @@ const ManageDataTab: React.FC<ManageDataTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Info Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start">
-          <InformationCircleIcon className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
-          <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Data Management Hub</p>
-            <p>Link a Google Spreadsheet, refresh your data, or manage your existing data source. All your data operations are centralized here.</p>
-          </div>
-        </div>
-      </div>
-
       {/* Error Display with Re-link Option */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -125,53 +114,48 @@ const ManageDataTab: React.FC<ManageDataTabProps> = ({
         </div>
       )}
 
-      {/* Current Spreadsheet Status or Link New */}
-      {spreadsheetLinked && spreadsheetUrl ? (
-        <div className={`border rounded-lg p-4 ${isExpiredAccessError ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
-          <div className="flex items-start">
-            {isExpiredAccessError ? (
-              <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 mt-0.5 mr-3 flex-shrink-0" />
-            ) : (
-              <CheckIcon className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
-            )}
-            <div className={`text-sm flex-1 ${isExpiredAccessError ? 'text-amber-800' : 'text-green-800'}`}>
-              <p className="font-medium mb-1">
-                {isExpiredAccessError ? 'Google Spreadsheet - Access Expired' : 'Google Spreadsheet Connected'}
-              </p>
-              <p className={`text-xs mt-1 break-all ${isExpiredAccessError ? 'text-amber-600' : 'text-green-600'}`}>
-                {spreadsheetUrl}
-              </p>
-              {isExpiredAccessError && (
-                <p className="text-xs text-amber-600 mt-1">Please re-authenticate to restore connection.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-start">
-            <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 mt-0.5 mr-3 flex-shrink-0" />
-            <div className="text-sm text-amber-800">
-              <p className="font-medium mb-1">No Spreadsheet Connected</p>
-              <p>Link a Google Spreadsheet to enable automatic data sync and dashboard updates.</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Action Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Link/Change Spreadsheet */}
-        <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-          <div className="flex items-center gap-3">
-            <LinkIcon className="h-6 w-6 text-blue-600 flex-shrink-0" />
-            <div>
-              <h4 className="font-medium text-gray-900">
-                {spreadsheetLinked ? 'Change Spreadsheet' : 'Link Google Sheet'}
-              </h4>
-              <p className="text-sm text-gray-600">
-                {spreadsheetLinked ? 'Connect a different sheet' : 'Connect your first sheet'}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* Link Existing Spreadsheet */}
+        <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <LinkIcon className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <h4 className="font-medium text-gray-900 mb-2">Link Existing Spreadsheet</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Connect the Expense Sorted sheet you already have
               </p>
+              
+              {/* Current spreadsheet status */}
+              {spreadsheetLinked && spreadsheetUrl ? (
+                <div className={`rounded-lg p-3 mb-4 ${isExpiredAccessError ? 'bg-amber-50 border border-amber-200' : 'bg-green-50 border border-green-200'}`}>
+                  <div className="flex items-start gap-2">
+                    {isExpiredAccessError ? (
+                      <ExclamationTriangleIcon className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                    ) : (
+                      <CheckIcon className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    )}
+                    <div className={`text-xs ${isExpiredAccessError ? 'text-amber-800' : 'text-green-800'}`}>
+                      <p className="font-medium">
+                        {isExpiredAccessError ? 'Access Expired' : 'Connected'}
+                      </p>
+                      <p className={`break-all mt-1 ${isExpiredAccessError ? 'text-amber-600' : 'text-green-600'}`}>
+                        {spreadsheetUrl}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                  <div className="flex items-start gap-2">
+                    <ExclamationTriangleIcon className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-amber-800">
+                      <p className="font-medium">No spreadsheet connected</p>
+                      <p className="text-amber-600 mt-1">Link a sheet to enable data sync</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <SpreadsheetLinker 
@@ -180,20 +164,81 @@ const ManageDataTab: React.FC<ManageDataTabProps> = ({
           />
         </div>
 
-        {/* Refresh Data */}
-        {spreadsheetLinked && (
-          <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+        {/* Create New Spreadsheet */}
+        <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <DocumentPlusIcon className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <h4 className="font-medium text-gray-900 mb-2">Create New Spreadsheet</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Upload your data and we'll create a personalized spreadsheet
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <div className="text-xs text-blue-800">
+                  <p className="font-medium">What you'll get:</p>
+                  <ul className="text-blue-600 mt-1 space-y-1">
+                    <li>• Automated expense categorization</li>
+                    <li>• Monthly spending summaries</li>
+                    <li>• Real-time dashboard sync</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            {/* Recommended Option - Upload CSV */}
+            <div className="relative">
+              <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                Recommended
+              </div>
+              <button
+                onClick={onSwitchToUpload}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              >
+                <DocumentPlusIcon className="h-4 w-4" />
+                Upload CSV Data
+              </button>
+            </div>
+            
+            {/* Alternative Option - Create from Template */}
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex-1 border-t border-gray-200"></div>
+                <span className="text-xs text-gray-500 px-2">or</span>
+                <div className="flex-1 border-t border-gray-200"></div>
+              </div>
+              <button
+                onClick={onCreateNewWithData}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors border border-gray-300"
+              >
+                <DocumentPlusIcon className="h-4 w-4" />
+                Create from Template
+              </button>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Start with an empty spreadsheet template
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Actions - Only show if spreadsheet is linked */}
+      {spreadsheetLinked && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Refresh Data */}
+          <div className="border border-gray-200 rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-3">
-              <ArrowPathIcon className="h-6 w-6 text-green-600 flex-shrink-0" />
+              <ArrowPathIcon className="h-5 w-5 text-green-600 flex-shrink-0" />
               <div>
                 <h4 className="font-medium text-gray-900">Refresh Data</h4>
-                <p className="text-sm text-gray-600">Get latest transactions from your sheet</p>
+                <p className="text-xs text-gray-600">Get latest transactions from your sheet</p>
               </div>
             </div>
             <button
               onClick={onRefreshData}
               disabled={isLoading || isExpiredAccessError}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               {isLoading ? 'Refreshing...' : 'Refresh Now'}
@@ -202,44 +247,30 @@ const ManageDataTab: React.FC<ManageDataTabProps> = ({
               <p className="text-xs text-amber-600 text-center">Re-link spreadsheet to enable refresh</p>
             )}
           </div>
-        )}
 
-        {/* Open Spreadsheet */}
-        {spreadsheetLinked && spreadsheetUrl && (
-          <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <EyeIcon className="h-6 w-6 text-gray-600 flex-shrink-0" />
-              <div>
-                <h4 className="font-medium text-gray-900">Open Sheet</h4>
-                <p className="text-sm text-gray-600">View your spreadsheet in Google Sheets</p>
+          {/* Open Spreadsheet */}
+          {spreadsheetUrl && (
+            <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <EyeIcon className="h-5 w-5 text-gray-600 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-gray-900">Open Sheet</h4>
+                  <p className="text-xs text-gray-600">View your spreadsheet in Google Sheets</p>
+                </div>
               </div>
+              <a
+                href={spreadsheetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                <LinkIcon className="h-4 w-4" />
+                Open in New Tab
+              </a>
             </div>
-            <a
-              href={spreadsheetUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              <LinkIcon className="h-4 w-4" />
-              Open in New Tab
-            </a>
-          </div>
-        )}
-      </div>
-
-      {/* Quick Access to Upload */}
-      <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center">
-        <DocumentPlusIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-        <h4 className="font-medium text-gray-900 mb-1">Need to add more data?</h4>
-        <p className="text-sm text-gray-600 mb-4">Upload CSV files to import additional transactions</p>
-        <button
-          onClick={onSwitchToUpload}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-        >
-          <DocumentPlusIcon className="h-4 w-4" />
-          Go to Upload CSV
-        </button>
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

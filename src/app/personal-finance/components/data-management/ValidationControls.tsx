@@ -14,6 +14,8 @@ interface ValidationControlsProps {
   categories: string[];
   validatedCount: number;
   createNewSpreadsheetMode: boolean;
+  showCurrencySelection: boolean;
+  newSpreadsheetCurrency: string;
   isProcessing: boolean;
   onSelectAll: () => void;
   onValidateSelected: () => void;
@@ -22,6 +24,7 @@ interface ValidationControlsProps {
   onSortChange: (field: 'date' | 'amount' | 'confidence') => void;
   onSortDirectionToggle: () => void;
   onCompleteValidation: () => void;
+  onCurrencySelection: (selectedCurrency: string) => void;
 }
 
 const ValidationControls: React.FC<ValidationControlsProps> = ({
@@ -34,6 +37,8 @@ const ValidationControls: React.FC<ValidationControlsProps> = ({
   categories,
   validatedCount,
   createNewSpreadsheetMode,
+  showCurrencySelection,
+  newSpreadsheetCurrency,
   isProcessing,
   onSelectAll,
   onValidateSelected,
@@ -41,7 +46,8 @@ const ValidationControls: React.FC<ValidationControlsProps> = ({
   onFilterCategoryChange,
   onSortChange,
   onSortDirectionToggle,
-  onCompleteValidation
+  onCompleteValidation,
+  onCurrencySelection
 }) => {
   return (
     <div className="bg-white rounded-lg p-4 border border-gray-200">
@@ -106,6 +112,37 @@ const ValidationControls: React.FC<ValidationControlsProps> = ({
 
       {/* Complete Validation Button */}
       <div className="border-t pt-4 mt-4">
+        {/* Currency Selection for New Spreadsheets */}
+        {showCurrencySelection && createNewSpreadsheetMode && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <h4 className="font-medium text-blue-900 mb-3">Select Base Currency</h4>
+            <p className="text-sm text-blue-700 mb-4">
+              Choose your primary currency. All transactions will be converted to this currency in your new spreadsheet.
+            </p>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+              {[
+                'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'CHF', 'NZD',
+                'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'BGN', 'RON'
+              ].map(currency => (
+                <button
+                  key={currency}
+                  onClick={() => onCurrencySelection(currency)}
+                  className="px-3 py-2 text-sm border border-blue-300 rounded hover:bg-blue-100 hover:border-blue-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {currency}
+                </button>
+              ))}
+            </div>
+            
+            <div className="text-center">
+              <p className="text-xs text-blue-600">
+                More currencies available via <a href="https://frankfurter.dev/" target="_blank" rel="noopener noreferrer" className="underline">Frankfurter API</a>
+              </p>
+            </div>
+          </div>
+        )}
+
         {validatedCount === 0 ? (
           <div className="text-center py-2">
             <p className="text-sm text-gray-500 mb-2">Validate at least one transaction to continue</p>
@@ -114,6 +151,18 @@ const ValidationControls: React.FC<ValidationControlsProps> = ({
               className="w-full px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed"
             >
               Complete Validation (0 transactions)
+            </button>
+          </div>
+        ) : showCurrencySelection && createNewSpreadsheetMode ? (
+          <div className="text-center">
+            <p className="text-sm text-gray-600 mb-2">
+              Please select your base currency to create a new spreadsheet with {validatedCount} transaction{validatedCount !== 1 ? 's' : ''}
+            </p>
+            <button
+              disabled={true}
+              className="w-full px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed"
+            >
+              ⬆️ Select Currency Above
             </button>
           </div>
         ) : (

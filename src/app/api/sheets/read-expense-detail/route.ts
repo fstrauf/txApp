@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     const accessToken = authHeader.replace('Bearer ', '');
-    const { spreadsheetId }: { spreadsheetId: string } = await request.json();
+    const { spreadsheetId, baseCurrency }: { spreadsheetId: string; baseCurrency?: string } = await request.json();
 
     if (!spreadsheetId) {
       return NextResponse.json(
@@ -102,8 +102,9 @@ export async function POST(request: NextRequest) {
     console.log('Headers validated:', headers);
     console.log('Raw data rows count:', rows.length - 1);
 
-    // Parse rows using centralized schema
-    const allTransactions = parseExpenseDetailRows(rows, spreadsheetId);
+    // Parse rows using centralized schema with dynamic base currency
+    const defaultBaseCurrency = baseCurrency || 'USD';
+    const allTransactions = parseExpenseDetailRows(rows, spreadsheetId, defaultBaseCurrency);
     console.log('Parsed transactions:', allTransactions.length);
 
     // Filter to last 12 months (according to memory)

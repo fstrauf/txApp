@@ -112,7 +112,29 @@ export async function POST(request: NextRequest) {
     // Execute all reads in parallel
     const results = await Promise.allSettled(readPromises);
 
-    // Process results
+    // First, process config data to get base currency
+    let baseCurrency = 'USD'; // Default fallback
+    for (const promiseResult of results) {
+      if (promiseResult.status === 'fulfilled') {
+        const { type, data } = promiseResult.value;
+        
+        if (type === 'config' && data && data.length > 0) {
+          // Process Config data - look for base currency in cell B2
+          if (data.length >= 2 && data[1] && data[1][1]) {
+            const baseCurrencyValue = String(data[1][1]).trim();
+            if (baseCurrencyValue && baseCurrencyValue.length === 3) {
+              baseCurrency = baseCurrencyValue.toUpperCase();
+              result.config = {
+                baseCurrency: baseCurrency
+              };
+            }
+          }
+          break; // Exit early once we find config
+        }
+      }
+    }
+
+    // Now process other data with the base currency
     for (const promiseResult of results) {
       if (promiseResult.status === 'fulfilled') {
         const { type, data } = promiseResult.value;
@@ -123,24 +145,12 @@ export async function POST(request: NextRequest) {
           const headerValidation = validateExpenseDetailHeaders(headers);
           
           if (headerValidation.isValid) {
-            const allTransactions = parseExpenseDetailRows(data, spreadsheetId);
-            const recentTransactions = filterRecentTransactions(allTransactions, 12);
-            const transactions = sortTransactionsByDate(recentTransactions);
-            
-            result.transactions = transactions;
-            result.transactionCount = transactions.length;
-          }
-        }
-
-        if (type === 'config' && data && data.length > 0) {
-          // Process Config data - look for base currency in cell B2
-          if (data.length >= 2 && data[1] && data[1][1]) {
-            const baseCurrencyValue = String(data[1][1]).trim();
-            if (baseCurrencyValue && baseCurrencyValue.length === 3) {
-              result.config = {
-                baseCurrency: baseCurrencyValue.toUpperCase()
-              };
-            }
+            const allTransactions = parseExpenseDetailRows(data, spreadsheetId, baseCurrency);
+            const recentTransactions = filterRecentTransactions(allTransactions);
+            result.transactions = recentTransactions;
+            result.transactionCount = recentTransactions.length;
+          } else {
+            console.error('❌ Header validation failed:', headerValidation.errors);
           }
         }
 
