@@ -37,6 +37,7 @@ interface SpreadsheetData {
     totalEntries: number;
   };
   availableSheets: string[];
+  spreadsheetName?: string;
 }
 
 // Dashboard status query
@@ -96,7 +97,8 @@ const fetchSpreadsheetData = async (
     dateRange,
     config: data.config,
     savings: data.savings,
-    availableSheets: data.availableSheets || []
+    availableSheets: data.availableSheets || [],
+    spreadsheetName: data.spreadsheetName
   };
 };
 

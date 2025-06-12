@@ -39,7 +39,7 @@ const DashboardScreen: React.FC = () => {
   });
   const { requestSpreadsheetAccess } = useIncrementalAuth();
   // Get base currency from consolidated hook
-  const { baseCurrency } = useConsolidatedSpreadsheetData();
+  const { baseCurrency, spreadsheetName } = useConsolidatedSpreadsheetData();
 
   // Use the TanStack Query dashboard hook
   const {
@@ -724,6 +724,7 @@ const DashboardScreen: React.FC = () => {
           error={error}
           onClearError={clearError}
           defaultTab={dataManagementDefaultTab}
+          spreadsheetData={{ spreadsheetName }}
         />
       </HelpDrawer>
 

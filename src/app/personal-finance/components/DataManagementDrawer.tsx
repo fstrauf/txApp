@@ -37,6 +37,7 @@ interface DataManagementDrawerProps {
   error?: string | null;
   onClearError?: () => void;
   defaultTab?: TabType;
+  spreadsheetData?: { spreadsheetName?: string };
 }
 
 type TabType = 'manage' | 'upload' | 'validate' | 'settings';
@@ -61,7 +62,8 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   onClose,
   error,
   onClearError,
-  defaultTab = 'manage'
+  defaultTab = 'manage',
+  spreadsheetData
 }) => {
   const { data: session } = useSession();
   const { userData, processTransactionData, updateBaseCurrency } = usePersonalFinanceStore();
@@ -1203,6 +1205,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             }}
             error={error}
             onClearError={onClearError}
+            data={spreadsheetData || {}}
           />
         )}
 

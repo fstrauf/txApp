@@ -24,6 +24,7 @@ interface AllSheetsData {
   };
   availableSheets: string[];
   spreadsheetId: string;
+  spreadsheetName?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -70,7 +71,8 @@ export async function POST(request: NextRequest) {
     const availableSheets = spreadsheetInfo.data.sheets?.map(s => s.properties?.title).filter((title): title is string => Boolean(title)) || [];
     const result: AllSheetsData = {
       availableSheets,
-      spreadsheetId
+      spreadsheetId,
+      spreadsheetName: spreadsheetInfo.data.properties?.title || undefined
     };
 
     // Read multiple sheets in parallel for efficiency

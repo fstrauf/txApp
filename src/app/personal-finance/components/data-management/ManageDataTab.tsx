@@ -10,7 +10,8 @@ import {
   InformationCircleIcon,
   EyeIcon,
   ExclamationTriangleIcon,
-  CheckIcon
+  CheckIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { Box } from '@/components/ui/Box';
 
@@ -24,6 +25,7 @@ interface ManageDataTabProps {
   onCreateNewWithData: () => void;
   error?: string | null;
   onClearError?: () => void;
+  data: { spreadsheetName?: string };
 }
 
 const ManageDataTab: React.FC<ManageDataTabProps> = ({
@@ -35,7 +37,8 @@ const ManageDataTab: React.FC<ManageDataTabProps> = ({
   onSwitchToUpload,
   onCreateNewWithData,
   error,
-  onClearError
+  onClearError,
+  data
 }) => {
   const { requestSpreadsheetAccess } = useIncrementalAuth();
 
@@ -128,30 +131,37 @@ const ManageDataTab: React.FC<ManageDataTabProps> = ({
               </p>
               {/* Current spreadsheet status */}
               {spreadsheetLinked && spreadsheetUrl ? (
-                <Box variant={isExpiredAccessError ? "warning" : "success"} padding="sm" className="mb-4"> 
-                  <div className="flex items-start gap-2">
+                <Box variant={isExpiredAccessError ? 'warning' : 'success'} padding="sm" className="mb-4">
+                  <div className="flex items-start gap-3">
                     {isExpiredAccessError ? (
-                      <ExclamationTriangleIcon className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <ExclamationTriangleIcon className="h-5 w-5 flex-shrink-0 mt-0.5" />
                     ) : (
-                      <CheckIcon className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <CheckCircleIcon className="h-5 w-5 flex-shrink-0 mt-0.5" />
                     )}
-                    <div className={`text-xs ${isExpiredAccessError ? 'text-amber-800' : 'text-green-800'}`}> 
-                      <p className="font-medium">
-                        {isExpiredAccessError ? 'Access Expired' : 'Connected'}
-                      </p>
-                      <p className={`break-all mt-1 ${isExpiredAccessError ? 'text-amber-600' : 'text-green-600'}`}> 
-                        {spreadsheetUrl}
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      {isExpiredAccessError ? (
+                        <>
+                          <p className="font-medium mb-1">Access Expired</p>
+                          <p className="text-sm mb-2">Your Google Sheets access has expired. Please re-link your spreadsheet to continue.</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-medium mb-1">
+                            Connected to: {data.spreadsheetName || 'Spreadsheet'}
+                          </p>
+                          <p className="text-xs text-gray-600 break-all">{spreadsheetUrl}</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 </Box>
               ) : (
                 <Box variant="warning" padding="sm" className="mb-4">
-                  <div className="flex items-start gap-2">
-                    <ExclamationTriangleIcon className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                    <div className="text-xs text-amber-800">
-                      <p className="font-medium">No spreadsheet connected</p>
-                      <p className="text-amber-600 mt-1">Link a sheet to enable data sync</p>
+                  <div className="flex items-start gap-3">
+                    <ExclamationTriangleIcon className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium mb-1">No Spreadsheet Connected</p>
+                      <p className="text-sm">Connect a Google Sheet to start analyzing your financial data.</p>
                     </div>
                   </div>
                 </Box>

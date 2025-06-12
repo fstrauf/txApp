@@ -19,6 +19,7 @@ interface ConsolidatedSpreadsheetData {
   
   // Sheet info
   availableSheets: string[];
+  spreadsheetName?: string;
   
   // Loading and error states
   isLoading: boolean;
@@ -64,6 +65,7 @@ export const useConsolidatedSpreadsheetData = (monthlyAverageExpenses?: number):
     
     // Sheet info
     availableSheets: spreadsheetData?.availableSheets || [],
+    spreadsheetName: spreadsheetData?.spreadsheetName,
     
     // Loading and error states from dashboard query
     isLoading: dashboardQuery.isLoading,
