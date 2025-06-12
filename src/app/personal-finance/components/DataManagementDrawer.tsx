@@ -91,7 +91,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'confidence'>('confidence');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [showOnlyUnvalidated, setShowOnlyUnvalidated] = useState(true);
+  const [showOnlyUnvalidated, setShowOnlyUnvalidated] = useState(false);
   const [createNewSpreadsheetMode, setCreateNewSpreadsheetMode] = useState(false);
   
   // Currency selection for new spreadsheet
@@ -172,6 +172,27 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           console.log(`[Poll] Response Status: ${response.status}`);
 
           if (!response.ok) {
+            // Handle authentication errors immediately - don't retry
+            if (response.status === 401) {
+              const errorData = await response.json().catch(() => ({ error: 'Authentication failed' }));
+              const errorMessage = `Authentication failed: ${errorData.error || 'Invalid API key'}. Please check your API key configuration.`;
+              console.error(`[Poll] Authentication error (401):`, errorMessage);
+              setFeedback({ type: 'error', message: errorMessage });
+              onError(errorMessage);
+              return;
+            }
+            
+            // Handle other non-retryable errors (403, 404, 500, etc.)
+            if (response.status >= 400 && response.status !== 429) {
+              const errorData = await response.json().catch(() => ({ error: 'Request failed' }));
+              const errorMessage = `Request failed (${response.status}): ${errorData.error || response.statusText}`;
+              console.error(`[Poll] Non-retryable error:`, errorMessage);
+              setFeedback({ type: 'error', message: errorMessage });
+              onError(errorMessage);
+              return;
+            }
+            
+            // For retryable errors (429, network issues), retry a few times
             if (pollCount > 3) {
               throw new Error(`Status endpoint error: ${response.status} ${response.statusText}`);
             } else {
@@ -202,6 +223,15 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
               const errorMessage = data.error || 'Job failed';
               console.error(`[Poll] Job failed:`, errorMessage);
               setFeedback({ type: 'error', message: `${operationType} failed: ${errorMessage}` });
+              if (onError) {
+                onError(errorMessage);
+              }
+              return;
+            } else if (data.status === 'error') {
+              // Handle explicit error status from API
+              const errorMessage = data.error || data.message || 'Job encountered an error';
+              console.error(`[Poll] Job error:`, errorMessage);
+              setFeedback({ type: 'error', message: `${operationType} error: ${errorMessage}` });
               if (onError) {
                 onError(errorMessage);
               }
@@ -887,6 +917,13 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     setSelectedTransactions(new Set());
   };
 
+  const handleValidateAllRemaining = () => {
+    setValidationTransactions(prev => prev.map(t => 
+      !t.isValidated ? { ...t, isValidated: true } : t
+    ));
+    setSelectedTransactions(new Set());
+  };
+
   const handleEditCategory = (transactionId: string, newCategory: string) => {
     setValidationTransactions(prev => prev.map(t => 
       t.id === transactionId ? { ...t, category: newCategory, isValidated: true } : t
@@ -1243,6 +1280,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             onSelectAll={handleSelectAll}
             onValidateTransaction={handleValidateTransaction}
             onValidateSelected={handleValidateSelected}
+            onValidateAllRemaining={handleValidateAllRemaining}
             onEditCategory={handleEditCategory}
             onStartEditing={startEditingCategory}
             onStopEditing={() => setEditingTransaction(null)}

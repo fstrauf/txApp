@@ -1,35 +1,28 @@
 'use client';
 
 import React from 'react';
-import { CheckIcon, XMarkIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { CheckIcon } from '@heroicons/react/24/outline';
+import Select from '@/components/ui/Select';
 import type { ValidationTransaction } from './ValidateTransactionsTab';
 
 interface TransactionValidationTableProps {
   transactions: ValidationTransaction[];
   selectedTransactions: Set<string>;
-  editingTransaction: string | null;
-  editCategory: string;
+  categories: string[];
   onTransactionSelect: (id: string, selected: boolean) => void;
   onSelectAll: () => void;
   onValidateTransaction: (id: string) => void;
   onEditCategory: (id: string, category: string) => void;
-  onStartEditing: (transaction: ValidationTransaction) => void;
-  onStopEditing: () => void;
-  onEditCategoryChange: (category: string) => void;
 }
 
 const TransactionValidationTable: React.FC<TransactionValidationTableProps> = ({
   transactions,
   selectedTransactions,
-  editingTransaction,
-  editCategory,
+  categories,
   onTransactionSelect,
   onSelectAll,
   onValidateTransaction,
-  onEditCategory,
-  onStartEditing,
-  onStopEditing,
-  onEditCategoryChange
+  onEditCategory
 }) => {
   const getConfidenceColor = (confidence: number = 0) => {
     if (confidence >= 0.8) return 'text-purple-600 bg-purple-100';
@@ -54,7 +47,7 @@ const TransactionValidationTable: React.FC<TransactionValidationTableProps> = ({
                   type="checkbox"
                   checked={selectedTransactions.size === transactions.length && transactions.length > 0}
                   onChange={onSelectAll}
-                  className="rounded"
+                  className="rounded border-gray-300 text-primary focus:ring-primary"
                 />
               </th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Date</th>
@@ -68,13 +61,22 @@ const TransactionValidationTable: React.FC<TransactionValidationTableProps> = ({
           </thead>
           <tbody className="divide-y divide-gray-200">
             {transactions.map((transaction, index) => (
-              <tr key={transaction.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+              <tr 
+                key={transaction.id} 
+                className={`
+                  ${transaction.isValidated 
+                    ? 'bg-green-50 border-l-4 border-l-green-400' 
+                    : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                  }
+                  transition-colors duration-200
+                `}
+              >
                 <td className="px-4 py-3">
                   <input
                     type="checkbox"
                     checked={selectedTransactions.has(transaction.id)}
                     onChange={(e) => onTransactionSelect(transaction.id, e.target.checked)}
-                    className="rounded"
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
                   />
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-900">
@@ -89,39 +91,21 @@ const TransactionValidationTable: React.FC<TransactionValidationTableProps> = ({
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm">
-                  {editingTransaction === transaction.id ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={editCategory}
-                        onChange={(e) => onEditCategoryChange(e.target.value)}
-                        className="px-2 py-1 text-sm border border-gray-300 rounded flex-1"
-                        autoFocus
-                      />
-                      <button
-                        onClick={() => onEditCategory(transaction.id, editCategory)}
-                        className="p-1 text-purple-600 hover:text-purple-800"
-                      >
-                        <CheckIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={onStopEditing}
-                        className="p-1 text-gray-400 hover:text-gray-600"
-                      >
-                        <XMarkIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-900">{transaction.category}</span>
-                      <button
-                        onClick={() => onStartEditing(transaction)}
-                        className="p-1 text-gray-400 hover:text-gray-600"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
+                  <div className="min-w-[120px]">
+                    <Select
+                      value={transaction.category}
+                      onChange={(newCategory) => {
+                        // Update category and automatically validate if changed
+                        onEditCategory(transaction.id, newCategory);
+                        if (newCategory !== transaction.category) {
+                          onValidateTransaction(transaction.id);
+                        }
+                      }}
+                      options={categories.map(cat => ({ value: cat, label: cat }))}
+                      size="sm"
+                      className="w-full"
+                    />
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 text-xs rounded-full ${getConfidenceColor(transaction.confidence)}`}>
@@ -130,7 +114,7 @@ const TransactionValidationTable: React.FC<TransactionValidationTableProps> = ({
                 </td>
                 <td className="px-4 py-3">
                   {transaction.isValidated ? (
-                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
                       <CheckIcon className="h-3 w-3 mr-1" />
                       Validated
                     </span>
@@ -141,10 +125,17 @@ const TransactionValidationTable: React.FC<TransactionValidationTableProps> = ({
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  {!transaction.isValidated && (
+                  {transaction.isValidated ? (
+                    <button
+                      disabled
+                      className="px-3 py-1 text-xs bg-gray-300 text-gray-500 rounded cursor-not-allowed"
+                    >
+                      Validated
+                    </button>
+                  ) : (
                     <button
                       onClick={() => onValidateTransaction(transaction.id)}
-                      className="px-3 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700"
+                      className="px-3 py-1 text-xs bg-primary text-white rounded hover:bg-primary-dark transition-colors"
                     >
                       Validate
                     </button>

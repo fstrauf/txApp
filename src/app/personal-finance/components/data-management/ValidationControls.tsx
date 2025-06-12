@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import Select from '@/components/ui/Select';
 import type { ValidationTransaction } from './ValidateTransactionsTab';
 
 interface ValidationControlsProps {
@@ -19,6 +20,7 @@ interface ValidationControlsProps {
   isProcessing: boolean;
   onSelectAll: () => void;
   onValidateSelected: () => void;
+  onValidateAllRemaining: () => void;
   onShowOnlyUnvalidatedChange: (show: boolean) => void;
   onFilterCategoryChange: (category: string) => void;
   onSortChange: (field: 'date' | 'amount' | 'confidence') => void;
@@ -42,6 +44,7 @@ const ValidationControls: React.FC<ValidationControlsProps> = ({
   isProcessing,
   onSelectAll,
   onValidateSelected,
+  onValidateAllRemaining,
   onShowOnlyUnvalidatedChange,
   onFilterCategoryChange,
   onSortChange,
@@ -49,61 +52,75 @@ const ValidationControls: React.FC<ValidationControlsProps> = ({
   onCompleteValidation,
   onCurrencySelection
 }) => {
+  // Calculate remaining unvalidated transactions
+  const unvalidatedCount = filteredTransactions.filter(t => !t.isValidated).length;
   return (
     <div className="bg-white rounded-lg p-4 border border-gray-200">
-      <div className="flex flex-wrap items-center gap-4 mb-4">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4 mb-4 overflow-x-auto">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={onSelectAll}
-            className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+            className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 transition-colors whitespace-nowrap"
           >
             {selectedTransactions.size === filteredTransactions.length ? 'Deselect All' : 'Select All'}
           </button>
           {selectedTransactions.size > 0 && (
             <button
               onClick={onValidateSelected}
-              className="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+              className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary-dark transition-colors whitespace-nowrap"
             >
               Validate Selected ({selectedTransactions.size})
             </button>
           )}
+          {unvalidatedCount > 0 && (
+            <button
+              onClick={onValidateAllRemaining}
+              className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors whitespace-nowrap"
+            >
+              Validate All Remaining ({unvalidatedCount})
+            </button>
+          )}
         </div>
 
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm flex-shrink-0">
           <input
             type="checkbox"
             checked={showOnlyUnvalidated}
             onChange={(e) => onShowOnlyUnvalidatedChange(e.target.checked)}
-            className="rounded"
+            className="rounded border-gray-300 text-primary focus:ring-primary"
           />
-          Show only unvalidated
+          <span className="whitespace-nowrap">Show only unvalidated</span>
         </label>
 
-        <select
-          value={filterCategory}
-          onChange={(e) => onFilterCategoryChange(e.target.value)}
-          className="px-3 py-1 text-sm border border-gray-300 rounded"
-        >
-          <option value="all">All categories</option>
-          {categories.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
+        <div className="flex-shrink-0">
+          <Select
+            value={filterCategory}
+            onChange={onFilterCategoryChange}
+            options={[
+              { value: 'all', label: 'All categories' },
+              ...categories.map(cat => ({ value: cat, label: cat }))
+            ]}
+            size="sm"
+            className="min-w-[140px]"
+          />
+        </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Sort by:</span>
-          <select
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-sm text-gray-600 whitespace-nowrap">Sort by:</span>
+          <Select
             value={sortBy}
-            onChange={(e) => onSortChange(e.target.value as any)}
-            className="px-3 py-1 text-sm border border-gray-300 rounded"
-          >
-            <option value="confidence">Confidence</option>
-            <option value="amount">Amount</option>
-            <option value="date">Date</option>
-          </select>
+            onChange={(value) => onSortChange(value as 'date' | 'amount' | 'confidence')}
+            options={[
+              { value: 'confidence', label: 'Confidence' },
+              { value: 'amount', label: 'Amount' },
+              { value: 'date', label: 'Date' }
+            ]}
+            size="sm"
+            className="min-w-[100px]"
+          />
           <button
             onClick={onSortDirectionToggle}
-            className="p-1 hover:bg-gray-100 rounded"
+            className="p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
           >
             {sortDirection === 'asc' ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
           </button>
@@ -121,47 +138,54 @@ const ValidationControls: React.FC<ValidationControlsProps> = ({
             </p>
             
             <div className="max-w-xs mx-auto mb-4">
-              <label htmlFor="currency-select" className="block text-sm font-medium text-blue-800 mb-2">
-                Base Currency
-              </label>
-              <select
-                id="currency-select"
+              <Select
                 value={newSpreadsheetCurrency}
-                onChange={(e) => onCurrencySelection(e.target.value)}
-                className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
-              >
-                <option value="">Select a currency...</option>
-                <optgroup label="Major Currencies">
-                  <option value="USD">USD - US Dollar</option>
-                  <option value="EUR">EUR - Euro</option>
-                  <option value="GBP">GBP - British Pound</option>
-                  <option value="JPY">JPY - Japanese Yen</option>
-                  <option value="CHF">CHF - Swiss Franc</option>
-                  <option value="CAD">CAD - Canadian Dollar</option>
-                  <option value="AUD">AUD - Australian Dollar</option>
-                  <option value="NZD">NZD - New Zealand Dollar</option>
-                </optgroup>
-                <optgroup label="European Currencies">
-                  <option value="SEK">SEK - Swedish Krona</option>
-                  <option value="NOK">NOK - Norwegian Krone</option>
-                  <option value="DKK">DKK - Danish Krone</option>
-                  <option value="PLN">PLN - Polish Złoty</option>
-                  <option value="CZK">CZK - Czech Koruna</option>
-                  <option value="HUF">HUF - Hungarian Forint</option>
-                  <option value="BGN">BGN - Bulgarian Lev</option>
-                  <option value="RON">RON - Romanian Leu</option>
-                </optgroup>
-                <optgroup label="Other Currencies">
-                  <option value="CNY">CNY - Chinese Yuan</option>
-                  <option value="INR">INR - Indian Rupee</option>
-                  <option value="KRW">KRW - South Korean Won</option>
-                  <option value="SGD">SGD - Singapore Dollar</option>
-                  <option value="HKD">HKD - Hong Kong Dollar</option>
-                  <option value="MXN">MXN - Mexican Peso</option>
-                  <option value="BRL">BRL - Brazilian Real</option>
-                  <option value="ZAR">ZAR - South African Rand</option>
-                </optgroup>
-              </select>
+                onChange={onCurrencySelection}
+                placeholder="Select a currency..."
+                label="Base Currency"
+                variant="blue"
+                optGroups={[
+                  {
+                    label: 'Major Currencies',
+                    options: [
+                      { value: 'USD', label: 'USD - US Dollar' },
+                      { value: 'EUR', label: 'EUR - Euro' },
+                      { value: 'GBP', label: 'GBP - British Pound' },
+                      { value: 'JPY', label: 'JPY - Japanese Yen' },
+                      { value: 'CHF', label: 'CHF - Swiss Franc' },
+                      { value: 'CAD', label: 'CAD - Canadian Dollar' },
+                      { value: 'AUD', label: 'AUD - Australian Dollar' },
+                      { value: 'NZD', label: 'NZD - New Zealand Dollar' }
+                    ]
+                  },
+                  {
+                    label: 'European Currencies',
+                    options: [
+                      { value: 'SEK', label: 'SEK - Swedish Krona' },
+                      { value: 'NOK', label: 'NOK - Norwegian Krone' },
+                      { value: 'DKK', label: 'DKK - Danish Krone' },
+                      { value: 'PLN', label: 'PLN - Polish Złoty' },
+                      { value: 'CZK', label: 'CZK - Czech Koruna' },
+                      { value: 'HUF', label: 'HUF - Hungarian Forint' },
+                      { value: 'BGN', label: 'BGN - Bulgarian Lev' },
+                      { value: 'RON', label: 'RON - Romanian Leu' }
+                    ]
+                  },
+                  {
+                    label: 'Other Currencies',
+                    options: [
+                      { value: 'CNY', label: 'CNY - Chinese Yuan' },
+                      { value: 'INR', label: 'INR - Indian Rupee' },
+                      { value: 'KRW', label: 'KRW - South Korean Won' },
+                      { value: 'SGD', label: 'SGD - Singapore Dollar' },
+                      { value: 'HKD', label: 'HKD - Hong Kong Dollar' },
+                      { value: 'MXN', label: 'MXN - Mexican Peso' },
+                      { value: 'BRL', label: 'BRL - Brazilian Real' },
+                      { value: 'ZAR', label: 'ZAR - South African Rand' }
+                    ]
+                  }
+                ]}
+              />
             </div>
             
             <div className="text-center">
@@ -205,7 +229,7 @@ const ValidationControls: React.FC<ValidationControlsProps> = ({
             <button
               onClick={onCompleteValidation}
               disabled={isProcessing}
-              className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               {isProcessing ? (
                 <span className="flex items-center justify-center gap-2">

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import ValidationControls from './ValidationControls';
 import TransactionValidationTable from './TransactionValidationTable';
 
@@ -40,6 +41,7 @@ interface ValidateTransactionsTabProps {
   onSelectAll: () => void;
   onValidateTransaction: (id: string) => void;
   onValidateSelected: () => void;
+  onValidateAllRemaining: () => void;
   onEditCategory: (id: string, category: string) => void;
   onStartEditing: (transaction: ValidationTransaction) => void;
   onStopEditing: () => void;
@@ -69,6 +71,7 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
   onSelectAll,
   onValidateTransaction,
   onValidateSelected,
+  onValidateAllRemaining,
   onEditCategory,
   onStartEditing,
   onStopEditing,
@@ -80,8 +83,32 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
   onCompleteValidation,
   onCurrencySelection
 }) => {
-  // Get unique categories for filtering
-  const categories = Array.from(new Set(validationTransactions.map(t => t.category))).sort();
+  const { userData } = usePersonalFinanceStore();
+
+  // Get unique categories from existing spreadsheet data (userData.transactions)
+  // This gives users their actual categories they've been using
+  const categories = React.useMemo(() => {
+    const existingCategories = new Set<string>();
+    
+    // Add categories from existing spreadsheet data
+    if (userData.transactions && userData.transactions.length > 0) {
+      userData.transactions.forEach(transaction => {
+        if (transaction.category && transaction.category.trim() !== '') {
+          existingCategories.add(transaction.category.trim());
+        }
+      });
+    }
+    
+    // Also add categories from validation transactions as fallback
+    validationTransactions.forEach(transaction => {
+      if (transaction.category && transaction.category.trim() !== '') {
+        existingCategories.add(transaction.category.trim());
+      }
+    });
+    
+    // Convert to sorted array
+    return Array.from(existingCategories).sort();
+  }, [userData.transactions, validationTransactions]);
 
   // Filter and sort validation transactions
   const filteredValidationTransactions = validationTransactions
@@ -147,6 +174,7 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
         isProcessing={isProcessing}
         onSelectAll={onSelectAll}
         onValidateSelected={onValidateSelected}
+        onValidateAllRemaining={onValidateAllRemaining}
         onShowOnlyUnvalidatedChange={onShowOnlyUnvalidatedChange}
         onFilterCategoryChange={onFilterCategoryChange}
         onSortChange={onSortChange}
@@ -159,15 +187,11 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
       <TransactionValidationTable
         transactions={filteredValidationTransactions}
         selectedTransactions={selectedTransactions}
-        editingTransaction={editingTransaction}
-        editCategory={editCategory}
+        categories={categories}
         onTransactionSelect={onTransactionSelect}
         onSelectAll={onSelectAll}
         onValidateTransaction={onValidateTransaction}
         onEditCategory={onEditCategory}
-        onStartEditing={onStartEditing}
-        onStopEditing={onStopEditing}
-        onEditCategoryChange={onEditCategoryChange}
       />
     </div>
   );

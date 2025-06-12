@@ -163,7 +163,10 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
                   <div className="flex-1">
                     <div className="font-medium text-gray-800 text-sm">{header}</div>
                     <div className="text-xs text-gray-600">
-                      Sample: {String(analysisResult.previewRows[0]?.[header] || 'N/A')}
+                      Samples: {analysisResult.previewRows
+                        .slice(0, 3)
+                        .map(row => String(row[header] || 'N/A'))
+                        .join(', ')}
                     </div>
                   </div>
                   <select
