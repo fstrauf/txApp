@@ -290,8 +290,8 @@ const DashboardScreen: React.FC = () => {
       {/* Demo Data Banner for First-Time Users */}
       {isFirstTimeUser && (
         <div className="bg-gradient-to-r from-primary to-secondary-dark rounded-xl p-8 border border-primary-light mb-8 shadow-lg">
-          <div className="flex items-start gap-6">
-            <div className="flex-shrink-0">
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+            <div className="flex-shrink-0 mb-4 sm:mb-0">
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -306,11 +306,11 @@ const DashboardScreen: React.FC = () => {
                 and <strong>{mockSavingsData.runwayMonths} months runway</strong> calculation. 
                 This could be your actual financial picture!
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <button
                   onClick={handleLinkSpreadsheet}
                   disabled={status === 'loading'}
-                  className="inline-flex items-center justify-center gap-3 px-6 py-3 bg-white text-primary-dark rounded-lg hover:bg-blue-50 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className="inline-flex items-center justify-center gap-3 px-6 py-3 bg-white text-primary-dark rounded-lg hover:bg-blue-50 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none w-full sm:w-auto"
                 >
                   <DocumentPlusIcon className="h-5 w-5" />
                   {status === 'loading' 
@@ -322,7 +322,7 @@ const DashboardScreen: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setIsHowItWorksOpen(true)}
-                  className="inline-flex items-center justify-center gap-3 px-6 py-3 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-all duration-200 font-medium backdrop-blur-sm border border-white/30"
+                  className="inline-flex items-center justify-center gap-3 px-6 py-3 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-all duration-200 font-medium backdrop-blur-sm border border-white/30 w-full sm:w-auto"
                 >
                   <QuestionMarkCircleIcon className="h-5 w-5" />
                   How It Works
@@ -437,17 +437,16 @@ const DashboardScreen: React.FC = () => {
           {/* Top Level Controls */}
           <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-4">
-                
-              <div className='text-sm text-gray-600'>
-                Last updated: {displayStats?.lastDataRefresh ? 
-          new Date(displayStats.lastDataRefresh).toLocaleDateString() : 
-          'Never'}
-              </div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className='text-sm text-gray-600'>
+                  Last updated: {displayStats?.lastDataRefresh ? 
+            new Date(displayStats.lastDataRefresh).toLocaleDateString() : 
+            'Never'}
+                </div>
 
-              <div className='text-sm text-gray-600'>
-                Base currency: <span className="font-medium text-gray-800">{baseCurrency}</span>
-              </div>
+                <div className='text-sm text-gray-600'>
+                  Base currency: <span className="font-medium text-gray-800">{baseCurrency}</span>
+                </div>
 
                 {/* Manage Data Button */}
                 <button
@@ -467,7 +466,7 @@ const DashboardScreen: React.FC = () => {
                     handleLinkSpreadsheet();
                   }}
                   disabled={status === 'loading'}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                 >
                   <DocumentPlusIcon className="h-4 w-4" />
                   {status === 'loading' 
@@ -483,16 +482,16 @@ const DashboardScreen: React.FC = () => {
                 {/* How This Works Button */}
                 <button
                   onClick={() => setIsHowItWorksOpen(true)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200 w-full sm:w-auto"
                 >
                   <QuestionMarkCircleIcon className="h-4 w-4" />
                   How This Works
                 </button>
               </div>
 
-<div className='flex items-center gap-2'>
-                              {/* Hide Transfer Toggle - only for real data */}
-                              {!isFirstTimeUser && (
+              <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2'>
+                {/* Hide Transfer Toggle - only for real data */}
+                {!isFirstTimeUser && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-700">Hide Transfer:</span>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -507,14 +506,14 @@ const DashboardScreen: React.FC = () => {
                   </div>
                 )}
 
-              <div className="text-sm text-gray-600">
-                {isFirstTimeUser 
-                  ? 'Demo mode - showing sample data'
-                  : `Affects both KPIs and charts • ${displayTransactions.length} transactions shown`
-                }
+                <div className="text-sm text-gray-600">
+                  {isFirstTimeUser 
+                    ? 'Demo mode - showing sample data'
+                    : `Affects both KPIs and charts • ${displayTransactions.length} transactions shown`
+                  }
+                </div>
               </div>
             </div>
-          </div>
           </div>
 
           {/* Tab Content */}

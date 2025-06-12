@@ -25,13 +25,20 @@ function extractSpreadsheetId(url: string): string | null {
   return null;
 }
 
-const TEMPLATE_SPREADSHEET_ID = '1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4';
+const TEMPLATE_SPREADSHEET_ID = process.env.TEMPLATE_SPREADSHEET_ID;
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authConfig);
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!TEMPLATE_SPREADSHEET_ID) {
+    return NextResponse.json(
+      { error: 'Template spreadsheet ID not configured in environment' },
+      { status: 500 }
+    );
   }
 
   try {

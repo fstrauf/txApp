@@ -17,10 +17,17 @@ interface Transaction {
   isDebit: boolean;
 }
 
-const TEMPLATE_SPREADSHEET_ID = '1zwvIEWCynocHpl3WGN7FToHsUuNaYStKjcZwh9ivAx4';
+const TEMPLATE_SPREADSHEET_ID = process.env.TEMPLATE_SPREADSHEET_ID;
 
 export async function POST(request: NextRequest) {
   try {
+    if (!TEMPLATE_SPREADSHEET_ID) {
+      return NextResponse.json(
+        { error: 'Template spreadsheet ID not configured in environment' },
+        { status: 500 }
+      );
+    }
+
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(

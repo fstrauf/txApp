@@ -107,12 +107,12 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
         <div className="space-y-3">
           <button
             onClick={() => setLinkingOption('existing')}
-            className="w-full flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors duration-200"
+            className="w-full flex items-center gap-3 p-4 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200 font-medium"
           >
-            <LinkIcon className="h-6 w-6 text-blue-600 flex-shrink-0" />
+            <LinkIcon className="h-6 w-6 text-white flex-shrink-0" />
             <div className="text-left">
-              <h4 className="font-medium text-blue-800">Link Existing Spreadsheet</h4>
-              <p className="text-sm text-blue-600 mt-1">
+              <h4 className="font-medium text-white">Link Existing Spreadsheet</h4>
+              <p className="text-sm text-blue-100 mt-1">
                 Connect the Expense Sorted sheet you already have
               </p>              
             </div>
@@ -190,20 +190,22 @@ export const SpreadsheetLinker: React.FC<SpreadsheetLinkerProps> = ({
           </div>
 
           <div className="flex gap-3">
-            <button
-              onClick={() => setLinkingOption(null)}
-              className="flex-1 px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
-              disabled={isLoading}
-            >
-              Back
-            </button>
-            <button
-              onClick={handleLinkExisting}
-              disabled={isLoading || !spreadsheetUrl.trim()}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Linking...' : 'Link Spreadsheet'}
-            </button>
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                onClick={() => setLinkingOption(null)}
+                className="flex-1 px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+                disabled={isLoading}
+              >
+                Back
+              </button>
+              <button
+                onClick={handleLinkExisting}
+                disabled={isLoading || !spreadsheetUrl.trim()}
+                className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {isLoading ? 'Linking...' : 'Link Spreadsheet'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
