@@ -26,9 +26,11 @@ import HelpDrawer from '@/components/shared/HelpDrawer';
 import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
 import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsheetData';
 import { mockTransactions, mockSavingsData } from '../utils/mockData';
+import { useRouter } from 'next/navigation';
 
 const DashboardScreen: React.FC = () => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const { userData, processTransactionData, updateSpreadsheetInfo } = usePersonalFinanceStore();
   const { goToScreen, getProgress } = useScreenNavigation();
   const { trackAction } = usePersonalFinanceTracking({ 
@@ -118,8 +120,29 @@ const DashboardScreen: React.FC = () => {
   // Event handlers
   const handleLinkSpreadsheet = () => {
     trackAction('link_spreadsheet_clicked', {
-      is_first_time: isFirstTimeUser
+      is_first_time: isFirstTimeUser,
+      is_authenticated: status === 'authenticated'
     });
+
+    // Check authentication status
+    if (status === 'loading') {
+      // Still loading session, wait a moment
+      return;
+    }
+
+    if (status === 'unauthenticated') {
+      // User is not authenticated, redirect to login with return URL
+      trackAction('redirect_to_login_from_dashboard', {
+        source: 'make_this_my_dashboard_button'
+      });
+      
+      // Redirect to login with callback to return to personal finance dashboard
+      const callbackUrl = encodeURIComponent('/personal-finance');
+      router.push(`/auth/signin?callbackUrl=${callbackUrl}`);
+      return;
+    }
+
+    // User is authenticated, proceed with normal flow
     setDataManagementDefaultTab('manage');
     setIsHelpDrawerOpen(true);
   };
@@ -282,10 +305,16 @@ const DashboardScreen: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={handleLinkSpreadsheet}
-                  className="inline-flex items-center justify-center gap-3 px-6 py-3 bg-white text-primary-dark rounded-lg hover:bg-blue-50 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
+                  disabled={status === 'loading'}
+                  className="inline-flex items-center justify-center gap-3 px-6 py-3 bg-white text-primary-dark rounded-lg hover:bg-blue-50 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   <DocumentPlusIcon className="h-5 w-5" />
-                  Make This My Dashboard
+                  {status === 'loading' 
+                    ? 'Loading...'
+                    : status === 'unauthenticated' 
+                      ? 'Make This Dashboard Yours'
+                      : 'Make This My Dashboard'
+                  }
                 </button>
                 <button
                   onClick={() => setIsHowItWorksOpen(true)}
@@ -419,13 +448,32 @@ const DashboardScreen: React.FC = () => {
                 {/* Manage Data Button */}
                 <button
                   onClick={() => {
+                    if (status === 'loading') return;
+                    
+                    if (status === 'unauthenticated') {
+                      trackAction('redirect_to_login_from_connect_data', {
+                        source: 'connect_your_data_button'
+                      });
+                      const callbackUrl = encodeURIComponent('/personal-finance');
+                      router.push(`/auth/signin?callbackUrl=${callbackUrl}`);
+                      return;
+                    }
+                    
                     setDataManagementDefaultTab('manage');
                     handleLinkSpreadsheet();
                   }}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200"
+                  disabled={status === 'loading'}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <DocumentPlusIcon className="h-4 w-4" />
-                  {isFirstTimeUser ? 'Connect Your Data' : 'Manage Data'}
+                  {status === 'loading' 
+                    ? 'Loading...'
+                    : status === 'unauthenticated'
+                      ? 'Claim This Dashboard'
+                      : isFirstTimeUser 
+                        ? 'Connect Your Data' 
+                        : 'Manage Data'
+                  }
                 </button>
 
                 {/* How This Works Button */}
