@@ -133,6 +133,45 @@ export default function PivacyPolicy() {
               data within 30 days
             </li>
           </ul>
+          
+          <h2 className="mb-4 text-xl font-bold">
+            Google Workspace APIs and AI/ML Model Training
+          </h2>
+          <p className="mb-4">
+            <strong>We explicitly affirm that Google Workspace APIs are NOT used to develop, improve, or train generalized AI and/or ML models.</strong>
+          </p>
+          <p className="mb-4">
+            When our application accesses your Google Sheets data through Google Workspace APIs, this data is used solely for:
+          </p>
+          <ul className="mb-4 ml-6 list-disc">
+            <li>
+              Providing our expense categorization and financial tracking services to you
+            </li>
+            <li>
+              Reading and writing data to your Google Sheets as requested by you
+            </li>
+            <li>
+              Displaying your financial information within our application interface
+            </li>
+          </ul>
+          <p className="mb-4">
+            Your Google Workspace data obtained through these APIs is never used for:
+          </p>
+          <ul className="mb-4 ml-6 list-disc">
+            <li>
+              Training artificial intelligence or machine learning models
+            </li>
+            <li>
+              Developing or improving generalized AI systems
+            </li>
+            <li>
+              Creating datasets for AI/ML research or development
+            </li>
+            <li>
+              Any purpose other than providing our direct services to you
+            </li>
+          </ul>
+          
           <h2 className="mb-4 text-xl font-bold">Changes to Our Privacy Policy</h2>
           <p className="mb-4">
             We may update this Privacy Policy from time to time. We will notify
