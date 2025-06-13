@@ -804,7 +804,7 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
                  Showing cached data - Google Sheets access expired
                </h3>
                <p className="mt-1 text-sm text-amber-700">
-                 Income, expenses, and savings data is from your last sync. Runway data requires fresh access to your Google Sheet. Use "Re-link Spreadsheet" to get the latest data.
+                 Income, expenses, savings, and runway data is from your last sync. Use "Re-link Spreadsheet" to get the latest data.
                </p>
                {consolidatedData.lastDataRefresh && (
                  <p className="mt-1 text-xs text-amber-600">
@@ -917,7 +917,7 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+        <div className={`bg-white rounded-lg p-6 shadow-sm border ${showCachedDataWarning && savingsData ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
           <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
             Runway
             {showCachedDataWarning && savingsData && (
@@ -935,7 +935,7 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
             ) : hasExpiredToken && !savingsData ? (
               <div>
                 <p className="text-lg font-semibold text-gray-400">N/A</p>
-                <p className="text-sm text-gray-500">Requires fresh Google Sheets access</p>
+                <p className="text-sm text-gray-500">No savings data</p>
                 <p className="text-xs text-amber-600 mt-1">Use "Re-link Spreadsheet" to update</p>
               </div>
             ) : savingsError ? (

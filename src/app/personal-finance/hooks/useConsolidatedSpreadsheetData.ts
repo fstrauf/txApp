@@ -64,8 +64,11 @@ export const useConsolidatedSpreadsheetData = (monthlyAverageExpenses?: number):
 
   // Determine if we're using cached data (have local transactions but no fresh spreadsheet data)
   const isUsingCachedData = useMemo(() => {
-    return Boolean(hasExpiredToken && userData.transactions && userData.transactions.length > 0);
-  }, [hasExpiredToken, userData.transactions]);
+    return Boolean(hasExpiredToken && (
+      (userData.transactions && userData.transactions.length > 0) ||
+      userData.savingsSheetData
+    ));
+  }, [hasExpiredToken, userData.transactions, userData.savingsSheetData]);
 
   // Cache fresh savings data when available
   useMemo(() => {
@@ -101,7 +104,7 @@ export const useConsolidatedSpreadsheetData = (monthlyAverageExpenses?: number):
     
     if (hasExpiredToken) {
       if (isUsingCachedData) {
-        return `${dashboardQuery.error} (showing cached transaction data)`;
+        return `${dashboardQuery.error} (showing cached data)`;
       } else {
         return `${dashboardQuery.error} (no cached data available)`;
       }

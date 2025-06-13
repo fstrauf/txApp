@@ -48,13 +48,7 @@ export default function HomePageClient() {
                 href="/personal-finance"
                 className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-lg text-lg"
               >
-                Start Free Financial Check →
-              </Link>
-              <Link
-                href="#tools"
-                className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition-all duration-200"
-              >
-                Or Use Our Tools
+                Get Your Finances Under Control
               </Link>
             </div>
             <p className="text-sm text-gray-500 mt-4 text-center md:text-left">

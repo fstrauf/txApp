@@ -104,7 +104,7 @@ const fetchSpreadsheetData = async (
 
 export const useDashboardQuery = () => {
   const { data: session } = useSession();
-  const { userData, processTransactionData, updateSpreadsheetInfo } = usePersonalFinanceStore();
+  const { userData, processTransactionData, updateSpreadsheetInfo, updateSavingsSheetData } = usePersonalFinanceStore();
   const { getValidAccessToken } = useIncrementalAuth();
   const queryClient = useQueryClient();
   
@@ -192,9 +192,15 @@ export const useDashboardQuery = () => {
         processTransactionData(data.transactions);
       }
       
+      // Cache savings data when available
+      if (data.savings) {
+        updateSavingsSheetData(data.savings);
+      }
+      
       console.log('✅ Successfully refreshed spreadsheet data:', {
         transactionCount: data.transactionCount,
-        dateRange: data.dateRange
+        dateRange: data.dateRange,
+        hasSavingsData: !!data.savings
       });
     },
     onError: (error) => {
@@ -207,7 +213,11 @@ export const useDashboardQuery = () => {
     if (spreadsheetData?.transactions) {
       processTransactionData(spreadsheetData.transactions);
     }
-  }, [spreadsheetData?.transactions, processTransactionData]);
+    // Cache savings data when available
+    if (spreadsheetData?.savings) {
+      updateSavingsSheetData(spreadsheetData.savings);
+    }
+  }, [spreadsheetData?.transactions, spreadsheetData?.savings, processTransactionData, updateSavingsSheetData]);
 
   // Update spreadsheet info in store when status changes
   useMemo(() => {

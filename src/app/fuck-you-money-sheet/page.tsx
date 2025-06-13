@@ -46,45 +46,86 @@ export default function FinancialFreedomSheet() {
         <div className="bg-surface rounded-2xl shadow-soft p-4 md:p-8 space-y-6 md:space-y-8 max-w-full overflow-x-hidden">
           <PageHeader title="Financial Freedom - Cost of Living Tracking" />
 
-          {/* Add-on Cross-Promotion Banner */}
-          <div className="max-w-3xl mx-auto bg-linear-to-r from-primary/10 to-secondary/10 rounded-xl p-4 border border-primary/20 mb-6 overflow-hidden">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center">
-                <div className="bg-white p-2 rounded-full shadow-sm mr-4 flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <div className="max-w-full sm:max-w-md">
-                  <h3 className="font-semibold text-gray-900">Supercharge Your Spreadsheet</h3>
-                  <p className="text-sm text-gray-700">Automatically categorize transactions in seconds with our Google Sheets Add-on</p>
+          {/* Combined Promotional Section */}
+          <div className="max-w-4xl mx-auto bg-gradient-to-br from-primary/10 via-secondary/5 to-primary/5 rounded-2xl p-6 md:p-8 border border-primary/20 mb-8 shadow-lg">
+            {/* Header with Icon */}
+            <div className="flex items-center mb-6">
+              <div className="bg-white p-3 rounded-full shadow-md mr-4 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Supercharge Your Spreadsheet Finances</h2>
+                <p className="text-gray-700 mt-1">Transform your monthly financial routine with our AI-powered workflow</p>
+              </div>
+            </div>
+
+            {/* Two-column layout for larger screens */}
+            <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+              {/* Left column - Value proposition */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Why This Changes Everything</h3>
+                <p className="text-gray-700 mb-4">
+                  Our simple workflow helps you get your finances under control in just a few minutes each month. 
+                  No more manual categorization, no more spreadsheet headaches.
+                </p>
+                <div className="bg-white/50 rounded-lg p-4 border border-primary/10">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="font-medium">Save 2+ hours per month</span>
+                  </div>
                 </div>
               </div>
-              <AddOnButton size="md" variant="primary" text="Install Add-on" className="whitespace-nowrap shrink-0 w-full sm:w-auto" />
-            </div>
-          </div>
 
-          {/* Key Benefits Summary - Added for immediate value clarity */}
-          <div className="max-w-3xl mx-auto bg-primary/5 rounded-xl p-4 md:p-6 mb-6 md:mb-8">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 md:mb-4">What You'll Get:</h2>
-            <ul className="space-y-2 md:space-y-3 text-sm md:text-base">
-              <li className="flex items-start">
-                <span className="text-primary font-bold mr-2">✓</span>
-                <span>Track all your expenses automatically with smart categorization</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-primary font-bold mr-2">✓</span>
-                <span>Calculate your financial runway - exactly how long your savings will last</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-primary font-bold mr-2">✓</span>
-                <span>Visualize your progress toward financial independence</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-primary font-bold mr-2">✓</span>
-                <span>One-time setup, lifetime value - no ongoing subscription fees</span>
-              </li>
-            </ul>
+              {/* Right column - Workflow steps */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Your New Monthly Routine</h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start">
+                    <span className="bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">1</span>
+                    <span className="text-sm text-gray-700">Download your latest bank statement</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">2</span>
+                    <span className="text-sm text-gray-700">
+                      Go to <Link href="/personal-finance" className="text-primary hover:text-primary-dark font-medium underline decoration-primary/30 hover:decoration-primary">My Finance Overview</Link> and upload your statement
+                    </span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">3</span>
+                    <span className="text-sm text-gray-700">Review AI-categorized transactions and import to your spreadsheet</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">4</span>
+                    <span className="text-sm text-gray-700">Get instant insights on spending patterns and financial runway</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Call-to-action footer */}
+            <div className="mt-6 pt-6 border-t border-primary/10">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-center sm:text-left">
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium text-gray-900">Ready to transform your finances?</span> 
+                    Start with the spreadsheet below, then supercharge it with our tool.
+                  </p>
+                </div>
+                <Link 
+                  href="/personal-finance" 
+                  className="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-md hover:shadow-lg flex items-center gap-2 whitespace-nowrap"
+                >
+                  Try It Now
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
+            </div>
           </div>
 
           <div className="max-w-3xl mx-auto">
@@ -130,10 +171,10 @@ export default function FinancialFreedomSheet() {
             
             {/* Final Add-on Cross-Promotion */}
             <div className="mt-12 bg-gray-50 p-6 rounded-xl border border-gray-200">
-              <h3 className="text-xl font-bold text-center mb-4">Ready to save hours every month?</h3>
+              <h3 className="text-xl font-bold text-center mb-4">Just want to categorize your transactions?</h3>
               <div className="flex flex-col items-center">
                 <p className="text-center text-gray-700 max-w-2xl mb-6">
-                  This spreadsheet works great on its own, but with our AI-powered add-on, you can automatically categorize all your transactions in seconds instead of spending hours doing it manually.
+                  Level up any spreadsheet with our AI-powered transaction categorisation add-on.
                 </p>
                 <AddOnButton 
                   size="lg" 
@@ -141,7 +182,6 @@ export default function FinancialFreedomSheet() {
                   text="Install the AI Add-on" 
                   className="shadow-md"
                 />
-                <p className="mt-3 text-xs text-gray-500">One-time purchase, no subscription required</p>
               </div>
             </div>
           </div>
