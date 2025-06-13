@@ -755,8 +755,8 @@ const DashboardScreen: React.FC = () => {
 const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransactions: any[]; isFirstTimeUser?: boolean }> = ({ stats, filteredTransactions, isFirstTimeUser }) => {
   const [currentTimeFilter, setCurrentTimeFilter] = React.useState('all');
   
-  // Use consolidated hook for all spreadsheet data including savings
-  const consolidatedData = useConsolidatedSpreadsheetData(stats.monthlyAverageExpenses);
+  // Use consolidated hook only for base currency and data freshness indicators
+  const consolidatedData = useConsolidatedSpreadsheetData();
   
   // For first-time users, use mock savings data instead of real data
   const savingsData = isFirstTimeUser ? {
@@ -764,11 +764,13 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
     quarter: mockSavingsData.latestQuarter,
     formattedValue: mockSavingsData.formattedValue,
     runway: mockSavingsData.runwayMonths
-  } : consolidatedData.savingsData;
+  } : stats.runwayMonths ? {
+    netAssetValue: stats.totalSavings || 0,
+    quarter: stats.savingsQuarter || '',
+    formattedValue: `$${(stats.totalSavings || 0).toLocaleString()}`,
+    runway: stats.runwayMonths
+  } : null;
   
-  const savingsLoading = isFirstTimeUser ? false : consolidatedData.isLoading;
-  const savingsError = isFirstTimeUser ? null : consolidatedData.error;
-
   // Use the enhanced data freshness indicators from consolidated hook
   const hasExpiredToken = isFirstTimeUser ? false : consolidatedData.hasExpiredToken;
   const isUsingCachedData = isFirstTimeUser ? false : consolidatedData.isUsingCachedData;
@@ -927,23 +929,7 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
             )}
           </h4>
           <div className="space-y-3">
-            {savingsLoading ? (
-              <div className="animate-pulse">
-                <div className="h-6 bg-gray-200 rounded w-16 mb-1"></div>
-                <div className="h-3 bg-gray-200 rounded w-12"></div>
-              </div>
-            ) : hasExpiredToken && !savingsData ? (
-              <div>
-                <p className="text-lg font-semibold text-gray-400">N/A</p>
-                <p className="text-sm text-gray-500">No savings data</p>
-                <p className="text-xs text-amber-600 mt-1">Use "Re-link Spreadsheet" to update</p>
-              </div>
-            ) : savingsError ? (
-              <div>
-                <p className="text-lg font-semibold text-gray-400">N/A</p>
-                <p className="text-sm text-gray-500">No savings data</p>
-              </div>
-            ) : savingsData ? (
+            {savingsData ? (
               <>
                 <div>
                   <p className="text-lg font-semibold text-purple-600">

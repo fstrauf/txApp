@@ -6,6 +6,10 @@ export interface DashboardStats {
   lastMonthIncome: number;
   annualExpenseProjection: number;
   lastDataRefresh?: Date;
+  // Runway data (calculated from cached savings data)
+  runwayMonths?: number;
+  totalSavings?: number;
+  savingsQuarter?: string;
 }
 
 export interface Transaction {
@@ -13,6 +17,13 @@ export interface Transaction {
   amount: number;
   isDebit: boolean;
   category?: string;
+}
+
+export interface SavingsSheetData {
+  latestNetAssetValue: number;
+  latestQuarter: string;
+  formattedValue: string;
+  totalEntries: number;
 }
 
 export const calculateStatsFromTransactions = (transactions: Transaction[]): DashboardStats => {
@@ -92,6 +103,32 @@ export const calculateStatsFromTransactions = (transactions: Transaction[]): Das
     annualExpenseProjection: Math.round(monthlyAverageExpenses * 12),
     lastDataRefresh: new Date(),
   };
+};
+
+/**
+ * Calculate complete dashboard stats including runway from cached data
+ * This ensures all metrics (income, expenses, savings, runway) use the same caching strategy
+ */
+export const calculateStatsWithRunway = (
+  transactions: Transaction[], 
+  cachedSavingsData?: SavingsSheetData
+): DashboardStats => {
+  // Get base stats from transactions
+  const baseStats = calculateStatsFromTransactions(transactions);
+  
+  // Add runway calculation if we have cached savings data
+  if (cachedSavingsData && baseStats.monthlyAverageExpenses > 0) {
+    const runwayMonths = Math.round(cachedSavingsData.latestNetAssetValue / baseStats.monthlyAverageExpenses);
+    
+    return {
+      ...baseStats,
+      runwayMonths,
+      totalSavings: cachedSavingsData.latestNetAssetValue,
+      savingsQuarter: cachedSavingsData.latestQuarter
+    };
+  }
+  
+  return baseStats;
 };
 
 export const filterTransferTransactions = (transactions: Transaction[], hideTransfer: boolean): Transaction[] => {

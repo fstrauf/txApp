@@ -7,6 +7,7 @@ import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { 
   calculateStatsFromTransactions, 
+  calculateStatsWithRunway,
   filterTransferTransactions, 
   DashboardStats 
 } from '../utils/dashboardStats';
@@ -235,8 +236,9 @@ export const useDashboardQuery = () => {
     if (filteredTransactions.length === 0) {
       return null;
     }
-    return calculateStatsFromTransactions(filteredTransactions);
-  }, [filteredTransactions]);
+    // Use the new unified calculation that includes runway from cached savings data
+    return calculateStatsWithRunway(filteredTransactions, userData.savingsSheetData);
+  }, [filteredTransactions, userData.savingsSheetData]);
 
   const isFirstTimeUser = !isAuthenticated || !spreadsheetLinked;
 

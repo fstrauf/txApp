@@ -314,4 +314,4 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
 );
 
 // Export types for use in components
-export type { UserData, Transaction, CategorySpending, SavingsBreakdown };
+export type { UserData, Transaction, CategorySpending, SavingsBreakdown, SavingsSheetData };
