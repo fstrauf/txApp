@@ -28,6 +28,13 @@ interface CategorySpending {
   transactionCount: number;
 }
 
+interface SavingsSheetData {
+  latestNetAssetValue: number;
+  latestQuarter: string;
+  formattedValue: string;
+  totalEntries: number;
+}
+
 interface UserData {
   income: number;
   spending: number;
@@ -43,6 +50,8 @@ interface UserData {
   transactions?: Transaction[];
   categorySpending?: CategorySpending[];
   actualMonthlySpending?: number; // Calculated from transactions
+  // Savings sheet data (cached from Google Sheets)
+  savingsSheetData?: SavingsSheetData;
   // Currency settings
   baseCurrency?: string; // Default base currency for the user
 }
@@ -61,6 +70,8 @@ interface PersonalFinanceState {
   // Transaction management
   updateTransactions: (transactions: Transaction[]) => void;
   processTransactionData: (transactions: Transaction[]) => void;
+  // Savings sheet data management
+  updateSavingsSheetData: (savingsData: SavingsSheetData) => void;
   // Currency management
   updateBaseCurrency: (currency: string) => void;
   // Data management
@@ -216,6 +227,20 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
           
           return { userData: newUserData };
         });
+      },
+
+      // Savings sheet data management
+      updateSavingsSheetData: (savingsData: SavingsSheetData) => {
+        set((state) => ({
+          userData: { ...state.userData, savingsSheetData: savingsData }
+        }));
+      },
+
+      // Savings sheet data management
+      updateSavingsSheetData: (savingsData: SavingsSheetData) => {
+        set((state) => ({
+          userData: { ...state.userData, savingsSheetData: savingsData }
+        }));
       },
 
       // Currency management

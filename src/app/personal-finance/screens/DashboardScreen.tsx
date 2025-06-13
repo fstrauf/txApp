@@ -769,6 +769,10 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
   const savingsLoading = isFirstTimeUser ? false : consolidatedData.isLoading;
   const savingsError = isFirstTimeUser ? null : consolidatedData.error;
 
+  // Use the enhanced data freshness indicators from consolidated hook
+  const hasExpiredToken = isFirstTimeUser ? false : consolidatedData.hasExpiredToken;
+  const isUsingCachedData = isFirstTimeUser ? false : consolidatedData.isUsingCachedData;
+
   // Calculate the last month name and year
   const getLastMonthName = () => {
     const now = new Date();
@@ -781,15 +785,51 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
 
   const lastMonthName = getLastMonthName();
 
+  // Show cached data warning when using cached data due to expired token
+  const showCachedDataWarning = isUsingCachedData;
+
   return (
     <div className="space-y-8">
+      {/* Show warning banner when using cached data */}
+      {showCachedDataWarning && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+                         <div className="ml-3">
+               <h3 className="text-sm font-medium text-amber-800">
+                 Showing cached data - Google Sheets access expired
+               </h3>
+               <p className="mt-1 text-sm text-amber-700">
+                 Income, expenses, and savings data is from your last sync. Runway data requires fresh access to your Google Sheet. Use "Re-link Spreadsheet" to get the latest data.
+               </p>
+               {consolidatedData.lastDataRefresh && (
+                 <p className="mt-1 text-xs text-amber-600">
+                   Last updated: {consolidatedData.lastDataRefresh.toLocaleDateString()} at {consolidatedData.lastDataRefresh.toLocaleTimeString()}
+                 </p>
+               )}
+             </div>
+          </div>
+        </div>
+      )}
+      
       {/* Debug Component - Remove this in production */}
       {/* <DashboardDebugger dashboardStats={stats} timeFilter={currentTimeFilter} /> */}
       
       {/* Condensed Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h4 className="text-sm font-medium text-gray-500 mb-3">Income</h4>
+        <div className={`bg-white rounded-lg p-6 shadow-sm border ${showCachedDataWarning ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
+          <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
+            Income
+            {showCachedDataWarning && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                Cached
+              </span>
+            )}
+          </h4>
           <div className="space-y-3">
             <div>
               <p className="text-lg font-semibold text-green-600">
@@ -812,8 +852,15 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
           </div>
         </div>
         
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h4 className="text-sm font-medium text-gray-500 mb-3">Expenses</h4>
+        <div className={`bg-white rounded-lg p-6 shadow-sm border ${showCachedDataWarning ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
+          <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
+            Expenses
+            {showCachedDataWarning && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                Cached
+              </span>
+            )}
+          </h4>
           <div className="space-y-3">
             <div>
               <p className="text-lg font-semibold text-red-600">
@@ -836,40 +883,60 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h4 className="text-sm font-medium text-gray-500 mb-3">Savings</h4>
+        <div className={`bg-white rounded-lg p-6 shadow-sm border ${showCachedDataWarning ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
+          <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
+            Savings
+            {showCachedDataWarning && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                Cached
+              </span>
+            )}
+          </h4>
           <div className="space-y-3">
             <div>
-                              <p className="text-lg font-semibold text-blue-600">
-                  ${Math.round(stats.monthlyAverageSavings).toLocaleString()}
-                </p>
-                <p className="text-sm text-gray-500">Monthly Average</p>
-              </div>
-              <div className="border-t pt-3">
-                <p className="text-lg font-semibold text-blue-500">
-                  {stats.monthlyAverageIncome > 0 ? 
-                    `${Math.round((stats.monthlyAverageSavings / stats.monthlyAverageIncome) * 100)}%` :
-                    'N/A'
-                  }
-                </p>
-                <p className="text-sm text-gray-500">Savings Rate</p>
-              </div>
-              <div className="border-t pt-3">
-                <p className="text-lg font-semibold text-blue-700">
-                  ${Math.round(stats.monthlyAverageSavings * 12).toLocaleString()}
-                </p>
+              <p className="text-lg font-semibold text-blue-600">
+                ${Math.round(stats.monthlyAverageSavings).toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500">Monthly Average</p>
+            </div>
+            <div className="border-t pt-3">
+              <p className="text-lg font-semibold text-blue-500">
+                {stats.monthlyAverageIncome > 0 ? 
+                  `${Math.round((stats.monthlyAverageSavings / stats.monthlyAverageIncome) * 100)}%` :
+                  'N/A'
+                }
+              </p>
+              <p className="text-sm text-gray-500">Savings Rate</p>
+            </div>
+            <div className="border-t pt-3">
+              <p className="text-lg font-semibold text-blue-700">
+                ${Math.round(stats.monthlyAverageSavings * 12).toLocaleString()}
+              </p>
               <p className="text-sm text-gray-500">Annual Projection</p>
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h4 className="text-sm font-medium text-gray-500 mb-3">Runway</h4>
+          <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
+            Runway
+            {showCachedDataWarning && savingsData && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                Cached
+              </span>
+            )}
+          </h4>
           <div className="space-y-3">
             {savingsLoading ? (
               <div className="animate-pulse">
                 <div className="h-6 bg-gray-200 rounded w-16 mb-1"></div>
                 <div className="h-3 bg-gray-200 rounded w-12"></div>
+              </div>
+            ) : hasExpiredToken && !savingsData ? (
+              <div>
+                <p className="text-lg font-semibold text-gray-400">N/A</p>
+                <p className="text-sm text-gray-500">Requires fresh Google Sheets access</p>
+                <p className="text-xs text-amber-600 mt-1">Use "Re-link Spreadsheet" to update</p>
               </div>
             ) : savingsError ? (
               <div>
