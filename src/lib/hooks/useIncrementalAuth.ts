@@ -59,7 +59,7 @@ export const useIncrementalAuth = () => {
         if (tokens.expires_at && Date.now() < tokens.expires_at) {
           console.log('✅ Tokens are still valid, using them');
           setStoredTokens(tokens);
-          setHasSpreadsheetAccess(tokens.scope?.includes('spreadsheets') || false);
+          setHasSpreadsheetAccess(tokens.scope?.includes('drive.file') || false);
           return tokens;
         } else {
           console.log('⏰ Tokens expired, attempting refresh...');
@@ -88,7 +88,7 @@ export const useIncrementalAuth = () => {
     try {
       localStorage.setItem(GOOGLE_TOKEN_STORAGE_KEY, JSON.stringify(tokens));
       setStoredTokens(tokens);
-      setHasSpreadsheetAccess(tokens.scope?.includes('spreadsheets') || false);
+      setHasSpreadsheetAccess(tokens.scope?.includes('drive.file') || false);
     } catch (error) {
       console.error('Error storing Google tokens:', error);
     }
