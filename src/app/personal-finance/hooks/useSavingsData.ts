@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 
 interface RawSavingsData {
   netAssetValue: number;

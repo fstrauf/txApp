@@ -7,7 +7,7 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon 
 } from '@heroicons/react/24/outline';
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 
 interface SpreadsheetLinkerProps {
   onSuccess: (data: { spreadsheetId: string; spreadsheetUrl: string }) => void;

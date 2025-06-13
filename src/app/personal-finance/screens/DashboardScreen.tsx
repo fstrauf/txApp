@@ -23,7 +23,7 @@ import DataManagementDrawer from '../components/DataManagementDrawer';
 import HowItWorksDrawer from '../components/HowItWorksDrawer';
 import MonthlyReminderToast from '../components/MonthlyReminderToast';
 import HelpDrawer from '@/components/shared/HelpDrawer';
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsheetData';
 import { mockTransactions, mockSavingsData } from '../utils/mockData';
 import { useRouter } from 'next/navigation';

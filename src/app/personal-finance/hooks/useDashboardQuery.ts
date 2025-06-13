@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { 
   calculateStatsFromTransactions, 
   filterTransferTransactions, 

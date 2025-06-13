@@ -1,4 +1,4 @@
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 
 /**
  * Centralized utility for handling Google Sheets authentication

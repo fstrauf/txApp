@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 
 export const GoogleSheetsDebugInfo: React.FC = () => {
   const { isGoogleLoaded, isSignedIn, hasSpreadsheetAccess, storedTokens, clearGoogleAuth } = useIncrementalAuth();

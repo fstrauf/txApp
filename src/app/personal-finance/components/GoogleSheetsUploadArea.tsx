@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 
 interface GoogleSheetsUploadAreaProps {
   onTransactionsSelect: (transactions: any[]) => void;

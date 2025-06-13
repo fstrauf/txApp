@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { extractCurrencyCode } from '@/lib/currency';
 
 export const useBaseCurrency = () => {

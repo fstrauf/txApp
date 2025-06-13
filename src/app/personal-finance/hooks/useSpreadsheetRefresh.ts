@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useRateLimit } from './useRateLimit';
 

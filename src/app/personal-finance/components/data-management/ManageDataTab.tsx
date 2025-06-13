@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SpreadsheetLinker } from '../SpreadsheetLinker';
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { 
   DocumentPlusIcon, 
   LinkIcon, 

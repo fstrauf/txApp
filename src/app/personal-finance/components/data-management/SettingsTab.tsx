@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { useConsolidatedSpreadsheetData } from '../../hooks/useConsolidatedSpreadsheetData';
 import { 
   InformationCircleIcon,

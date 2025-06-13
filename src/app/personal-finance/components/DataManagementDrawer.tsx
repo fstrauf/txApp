@@ -16,7 +16,7 @@ import {
   ChevronDownIcon,
   DocumentCheckIcon
 } from '@heroicons/react/24/outline';
-import { useIncrementalAuth } from '@/hooks/useIncrementalAuth';
+import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { convertCurrency, extractCurrencyCode } from '@/lib/currency';
 import { ensureApiAccessForTraining } from '@/lib/apiKeyUtils';
 
