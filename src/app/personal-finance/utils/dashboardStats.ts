@@ -4,6 +4,7 @@ export interface DashboardStats {
   monthlyAverageExpenses: number;
   lastMonthExpenses: number;
   lastMonthIncome: number;
+  lastMonthSavings: number;
   annualExpenseProjection: number;
   lastDataRefresh?: Date;
   // Runway data (calculated from cached savings data)
@@ -34,6 +35,7 @@ export const calculateStatsFromTransactions = (transactions: Transaction[]): Das
       monthlyAverageSavings: 0,
       lastMonthExpenses: 0,
       lastMonthIncome: 0,
+      lastMonthSavings: 0,
       annualExpenseProjection: 0,
       lastDataRefresh: new Date(),
     };
@@ -94,12 +96,16 @@ export const calculateStatsFromTransactions = (transactions: Transaction[]): Das
     })
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
   
+  // === LAST MONTH SAVINGS (calculated from last month income - expenses) ===
+  const lastMonthSavings = lastMonthIncome - lastMonthExpenses;
+  
   return {
     monthlyAverageIncome: Math.round(monthlyAverageIncome),
     monthlyAverageExpenses: Math.round(monthlyAverageExpenses),
     monthlyAverageSavings: Math.round(monthlyAverageSavings),
     lastMonthExpenses: Math.round(lastMonthExpenses),
     lastMonthIncome: Math.round(lastMonthIncome),
+    lastMonthSavings: Math.round(lastMonthSavings),
     annualExpenseProjection: Math.round(monthlyAverageExpenses * 12),
     lastDataRefresh: new Date(),
   };

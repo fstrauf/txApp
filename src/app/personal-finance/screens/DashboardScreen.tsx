@@ -64,17 +64,19 @@ const DashboardScreen: React.FC = () => {
   const [dataManagementDefaultTab, setDataManagementDefaultTab] = useState<'manage' | 'upload' | 'validate' | 'settings'>('manage');
 
   // Generate mock data for first-time users
-  const mockStats = {
-    monthlyAverageIncome: 4200,
-    monthlyAverageSavings: 1100,
+  const mockStats: DashboardStats = {
+    monthlyAverageIncome: 5040,
+    monthlyAverageSavings: 3232,
     monthlyAverageExpenses: mockSavingsData.monthlyBurnRate,
     lastMonthExpenses: 2850,
     lastMonthIncome: 4400,
+    lastMonthSavings: 1550, // lastMonthIncome - lastMonthExpenses = 4400 - 2850
     annualExpenseProjection: mockSavingsData.monthlyBurnRate * 12,
     lastDataRefresh: new Date(),
     // Add runway calculation for first-time users
     runwayMonths: mockSavingsData.runwayMonths,
-    netAssets: mockSavingsData.latestNetAssetValue,
+    totalSavings: mockSavingsData.latestNetAssetValue,
+    savingsQuarter: mockSavingsData.latestQuarter,
   };
 
   // Use mock data for first-time users, real data otherwise
@@ -902,13 +904,38 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
               <p className="text-sm text-gray-500">Monthly Average</p>
             </div>
             <div className="border-t pt-3">
-              <p className="text-lg font-semibold text-blue-500">
-                {stats.monthlyAverageIncome > 0 ? 
-                  `${Math.round((stats.monthlyAverageSavings / stats.monthlyAverageIncome) * 100)}%` :
-                  'N/A'
-                }
-              </p>
-              <p className="text-sm text-gray-500">Savings Rate</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-lg font-semibold text-blue-500">
+                    ${Math.round(stats.lastMonthSavings).toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-500">{lastMonthName}</p>
+                </div>
+                <div className="text-right">
+                  {stats.lastMonthIncome > 0 ? (
+                    stats.lastMonthSavings >= 0 ? (
+                      <div>
+                        <p className="text-xs font-medium text-green-600">
+                          {Math.round((stats.lastMonthSavings / stats.lastMonthIncome) * 100)}%
+                        </p>
+                        <p className="text-xs text-gray-400">Savings Rate</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-medium text-red-600">
+                          {stats.totalSavings && stats.totalSavings > 0 
+                            ? `${(Math.abs(stats.lastMonthSavings) / stats.totalSavings * 100).toFixed(2)}%`
+                            : 'N/A'
+                          }
+                        </p>
+                        <p className="text-xs text-gray-400">Burn Rate</p>
+                      </div>
+                    )
+                  ) : (
+                    <p className="text-xs text-gray-400">N/A</p>
+                  )}
+                </div>
+              </div>
             </div>
             <div className="border-t pt-3">
               <p className="text-lg font-semibold text-blue-700">
