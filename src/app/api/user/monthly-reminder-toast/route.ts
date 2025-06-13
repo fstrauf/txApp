@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { db } from '@/db/drizzle';
+import { authConfig } from '@/lib/auth';
+import { db } from '@/db/index';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authConfig);
     
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
