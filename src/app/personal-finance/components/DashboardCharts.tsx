@@ -317,8 +317,6 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
   const allTransactions = propTransactions || userData.transactions || [];
   const hasData = allTransactions.length > 0;
 
-
-
   // Filter transactions based on time period
   const filteredTransactions = useMemo(() => {
     if (timeFilter === 'all') return allTransactions;
@@ -413,6 +411,8 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
       };
     }).slice(-12); // Last 12 months
   }, [dataEngine, categorySpending]);
+
+  
 
   // Create color mapping for categories
   const chartColors: AvailableChartColorsKeys[] = ['indigo', 'blue', 'emerald', 'amber', 'red', 'orange', 'teal', 'violet', 'pink', 'cyan'];
@@ -581,6 +581,29 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
           )}
         </div>
       </div>
+
+      {/* Savings Rate Chart */}
+      {/* <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+          Savings/Burn Rate Over Time
+        </h3>
+        <p className="text-sm text-gray-600 text-center mb-6">
+          Green bars show savings rate (positive), red bars show burn rate (negative)
+        </p>
+        {dataEngine && monthlySavingsRateData.length > 1 ? (
+          <div className="flex justify-center">
+            <SavingsRateChart data={monthlySavingsRateData} />
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-64 text-gray-500">
+            <div className="text-center">
+              <ChartBarIcon className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+              <p>Need more monthly data to show savings rate trends</p>
+              <p className="text-sm">Add transactions from multiple months</p>
+            </div>
+          </div>
+        )}
+      </div> */}
 
       {/* Category Breakdown with Collapsible Transactions */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
