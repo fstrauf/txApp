@@ -25,6 +25,7 @@ import MonthlyReminderToast from '../components/MonthlyReminderToast';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsheetData';
+import { getUserMonthlyReminderToastStatus } from '../utils/monthlyReminderUtils';
 import { mockTransactions, mockSavingsData } from '../utils/mockData';
 import { useRouter } from 'next/navigation';
 
@@ -62,6 +63,23 @@ const DashboardScreen: React.FC = () => {
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'ai-insights'>('overview');
   const [dataManagementDefaultTab, setDataManagementDefaultTab] = useState<'manage' | 'upload' | 'validate' | 'settings'>('manage');
+  const [userToastStatus, setUserToastStatus] = useState<string | null>(null);
+
+  // Fetch user's monthly reminder toast status
+  useEffect(() => {
+    const fetchToastStatus = async () => {
+      if (session?.user?.email) {
+        try {
+          const status = await getUserMonthlyReminderToastStatus(session.user.email);
+          setUserToastStatus(status);
+        } catch (error) {
+          console.error('Failed to fetch toast status:', error);
+        }
+      }
+    };
+
+    fetchToastStatus();
+  }, [session?.user?.email]);
 
   // Generate mock data for first-time users
   const mockStats: DashboardStats = {
@@ -747,6 +765,7 @@ const DashboardScreen: React.FC = () => {
         <MonthlyReminderToast 
           delay={10000} 
           onSetReminder={handleSetMonthlyReminder}
+          userToastStatus={userToastStatus}
         />
       )}
     </div>

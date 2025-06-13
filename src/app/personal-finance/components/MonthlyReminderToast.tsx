@@ -5,24 +5,46 @@ interface MonthlyReminderToastProps {
   delay?: number;
   onClose?: () => void;
   onSetReminder?: () => void; // Callback to open settings tab
+  userToastStatus?: string | null; // Pass the user's current toast status
 }
 
 const MonthlyReminderToast: React.FC<MonthlyReminderToastProps> = ({ 
   delay = 10000,
   onClose,
-  onSetReminder
+  onSetReminder,
+  userToastStatus
 }) => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    // Don't show the toast if user has already dismissed it or set a reminder
+    if (userToastStatus === 'DISMISSED' || userToastStatus === 'SET_REMINDER') {
+      return;
+    }
+
     const timer = setTimeout(() => {
       setVisible(true);
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [delay]);
+  }, [delay, userToastStatus]);
 
-  const handleReminderClick = () => {
+  const updateToastStatus = async (status: 'DISMISSED' | 'SET_REMINDER') => {
+    try {
+      await fetch('/api/user/monthly-reminder-toast', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+    } catch (error) {
+      console.error('Failed to update toast status:', error);
+    }
+  };
+
+  const handleReminderClick = async () => {
+    await updateToastStatus('SET_REMINDER');
     if (onSetReminder) {
       onSetReminder();
     }
@@ -31,7 +53,8 @@ const MonthlyReminderToast: React.FC<MonthlyReminderToastProps> = ({
     }
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    await updateToastStatus('DISMISSED');
     setVisible(false);
     if (onClose) {
       onClose();

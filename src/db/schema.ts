@@ -17,6 +17,9 @@ import {
 // App beta opt in status enum
 export const appBetaOptInStatusEnum = pgEnum('appBetaOptInStatus', ['OPTED_IN', 'DISMISSED']);
 
+// Monthly reminder toast status enum
+export const monthlyReminderToastStatusEnum = pgEnum('monthlyReminderToastStatus', ['DISMISSED', 'SET_REMINDER']);
+
 // Subscription plan enum - simplified
 export const subscriptionPlanEnum = pgEnum('subscriptionPlan', ['FREE', 'TRIAL', 'SILVER', 'GOLD']);
 
@@ -50,6 +53,7 @@ export const users = pgTable('users', {
   monthlyCategorizations: integer('monthlyCategorizations').default(0),
   categoriesResetDate: timestamp('categoriesResetDate', { mode: 'date', withTimezone: true }),
   appBetaOptIn: appBetaOptInStatusEnum('appBetaOptIn'),
+  monthlyReminderToastStatus: monthlyReminderToastStatusEnum('monthlyReminderToastStatus'),
   // Spreadsheet-centric fields
   spreadsheetUrl: text('spreadsheetUrl'),
   spreadsheetId: text('spreadsheetId'),
