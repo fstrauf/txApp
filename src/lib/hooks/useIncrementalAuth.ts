@@ -188,17 +188,17 @@ export const useIncrementalAuth = () => {
     return null;
   }, [loadStoredTokens, refreshAccessToken]);
 
-  // Check if user already has spreadsheet permissions
-  const checkSpreadsheetAccess = useCallback(() => {
-    // Check for drive.file scope only (recommended by Google)
-    if (storedTokens?.scope?.includes('drive.file')) {
-      return true;
-    }
-
-    // Fallback to session scope (NextAuth)
-    const scopes = (session as any)?.scope as string;
-    return scopes?.includes('https://www.googleapis.com/auth/drive.file') || false;
-  }, [storedTokens, session]);
+      // Check if user already has spreadsheet permissions
+    const checkSpreadsheetAccess = useCallback(() => {
+     // Check for drive.file scope (non-sensitive per Google's own documentation)
+     if (storedTokens?.scope?.includes('drive.file')) {
+       return true;
+     }
+ 
+     // Fallback to session scope (NextAuth)
+     const scopes = (session as any)?.scope as string;
+     return scopes?.includes('https://www.googleapis.com/auth/drive.file') || false;
+   }, [storedTokens, session]);
 
   // Request additional Google Sheets permissions
   const requestSpreadsheetAccess = useCallback((): Promise<string> => {
@@ -234,10 +234,11 @@ export const useIncrementalAuth = () => {
         setIsRequestingPermission(true);
 
         try {
-          const tokenClient = window.google.accounts.oauth2.initTokenClient({
-            client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive.file',
-            callback: (response: any) => {
+                      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+              client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+              scope: 'https://www.googleapis.com/auth/drive.file',
+              include_granted_scopes: true,
+              callback: (response: any) => {
               console.log('OAuth callback response:', response);
               setIsRequestingPermission(false);
               if (response.error) {
@@ -263,9 +264,7 @@ export const useIncrementalAuth = () => {
 
           console.log('Requesting access token...');
           tokenClient.requestAccessToken({
-            prompt: 'consent', // Force permission dialog
-            // Request offline access to get refresh token
-            access_type: 'offline',
+            prompt: '', // Let Google decide when to show consent
           });
         } catch (error: any) {
           console.error('Error initializing token client:', error);
