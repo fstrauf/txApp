@@ -24,19 +24,9 @@ export const NavBarButtons = () => {
               : "text-gray-700 hover:text-primary"
           }`}
         >
-          Financial Check
+          My Finance Overview
         </Link>
-        
-        <Link
-          href="/integrations"
-          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-gray-50 ${
-            pathname === "/integrations" 
-              ? "text-primary bg-primary/5 border border-primary/20" 
-              : "text-gray-700 hover:text-primary"
-          }`}
-        >
-          Templates
-        </Link>
+
       </div>
       
       {/* Authentication Buttons */}

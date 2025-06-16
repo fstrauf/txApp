@@ -17,6 +17,9 @@ import {
 // App beta opt in status enum
 export const appBetaOptInStatusEnum = pgEnum('appBetaOptInStatus', ['OPTED_IN', 'DISMISSED']);
 
+// Monthly reminder toast status enum
+export const monthlyReminderToastStatusEnum = pgEnum('monthlyReminderToastStatus', ['DISMISSED', 'SET_REMINDER']);
+
 // Subscription plan enum - simplified
 export const subscriptionPlanEnum = pgEnum('subscriptionPlan', ['FREE', 'TRIAL', 'SILVER', 'GOLD']);
 
@@ -50,6 +53,13 @@ export const users = pgTable('users', {
   monthlyCategorizations: integer('monthlyCategorizations').default(0),
   categoriesResetDate: timestamp('categoriesResetDate', { mode: 'date', withTimezone: true }),
   appBetaOptIn: appBetaOptInStatusEnum('appBetaOptIn'),
+  monthlyReminderToastStatus: monthlyReminderToastStatusEnum('monthlyReminderToastStatus'),
+  // Spreadsheet-centric fields
+  spreadsheetUrl: text('spreadsheetUrl'),
+  spreadsheetId: text('spreadsheetId'),
+  lastDataRefresh: timestamp('lastDataRefresh', { mode: 'date', withTimezone: true }),
+  emailRemindersEnabled: boolean('emailRemindersEnabled').default(false),
+  oauthRefreshToken: text('oauthRefreshToken'), // Encrypted Google Sheets OAuth token
 }, (table) => {
   return {
     emailIdx: index('users_email_idx').on(table.email),
@@ -68,6 +78,27 @@ export const subscribers = pgTable(
     createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
   }
+);
+
+// Monthly reminders table
+export const monthlyReminders = pgTable(
+  'monthlyReminders',
+  {
+    id: text('id').primaryKey().notNull().default(sql`gen_random_uuid()`),
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' })
+      .unique(), // One reminder per user
+    isActive: boolean('isActive').default(true),
+    lastSent: timestamp('lastSent', { mode: 'date', withTimezone: true }),
+    nextSend: timestamp('nextSend', { mode: 'date', withTimezone: true }),
+    createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
+  },
+  (table) => ({
+    userIdIdx: index('monthly_reminders_user_id_idx').on(table.userId),
+    nextSendIdx: index('monthly_reminders_next_send_idx').on(table.nextSend),
+  })
 );
 
 export const accounts = pgTable(
@@ -376,7 +407,11 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   user: one(users, { fields: [subscriptions.userId], references: [users.id] }),
 }));
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const monthlyRemindersRelations = relations(monthlyReminders, ({ one }) => ({
+  user: one(users, { fields: [monthlyReminders.userId], references: [users.id] }),
+}));
+
+export const usersRelations = relations(users, ({ many, one }) => ({
   accounts: many(accounts),
   bankAccounts: many(bankAccounts),
   categories: many(categories),
@@ -385,4 +420,5 @@ export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   trainingJobs: many(trainingJobs),
   transactions: many(transactions),
+  monthlyReminder: one(monthlyReminders), // One reminder per user
 })); 

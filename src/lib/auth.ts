@@ -1,15 +1,11 @@
 import { NextAuthOptions, User as NextAuthUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { compare } from "bcryptjs";
 import { db } from "@/db";
 import * as schema from "@/db/schema"; // Import all schemas
 import { sql, eq } from "drizzle-orm";
 import * as bcrypt from 'bcryptjs';
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { Account } from "next-auth"; // Import Account type for JWT context
-
-// No longer need custom AuthorizeUser with accessToken
 
 // Simplified auth configuration with direct SQL queries
 export const authConfig: NextAuthOptions = {
@@ -25,6 +21,11 @@ export const authConfig: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
       allowDangerousEmailAccountLinking: true,
+      authorization: {
+        params: {
+          scope: "openid email profile https://www.googleapis.com/auth/drive.file"
+        }
+      }
     }),
     CredentialsProvider({
       name: "credentials",

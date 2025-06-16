@@ -74,10 +74,10 @@ const ChartTooltip = ({
         className={cn(
           // base
           "rounded-md border text-sm shadow-md",
-          // border color
-          "border-gray-200 dark:border-gray-800",
-          // background color
-          "bg-white dark:bg-gray-950",
+          // border color - always light
+          "border-gray-200",
+          // background color - always white
+          "bg-white",
         )}
       >
         <div className={cn("space-y-1 px-4 py-2")}>
@@ -98,8 +98,8 @@ const ChartTooltip = ({
                   className={cn(
                     // base
                     "text-right whitespace-nowrap",
-                    // text color
-                    "text-gray-700 dark:text-gray-300",
+                    // text color - always dark for readability on white background
+                    "text-gray-700",
                   )}
                 >
                   {category}
@@ -109,8 +109,8 @@ const ChartTooltip = ({
                 className={cn(
                   // base
                   "text-right font-medium whitespace-nowrap tabular-nums",
-                  // text color
-                  "text-gray-900 dark:text-gray-50",
+                  // text color - always dark for readability on white background
+                  "text-gray-900",
                 )}
               >
                 {valueFormatter(value)}

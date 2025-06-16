@@ -11,13 +11,25 @@ export const metadata: Metadata = {
   description: "Create a new ExpenseSorted account",
 };
 
-export default async function SignUpPage() {
+interface SignUpPageProps {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const session = await getServerSession(authConfig);
   
-  // If user is already signed in, redirect to main site
+  // Extract callback URL from search params
+  const callbackUrl = searchParams?.callbackUrl as string;
+  
+  // If user is already signed in, redirect to callback URL or main site
   if (session?.user) {
-    redirect("/");
+    redirect(callbackUrl || "/");
   }
+
+  // Construct signin URL with callback URL preserved
+  const signinUrl = callbackUrl 
+    ? `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`
+    : '/auth/signin';
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-12 sm:px-6 lg:px-8">
@@ -28,7 +40,7 @@ export default async function SignUpPage() {
         <p className="mt-2 text-center text-sm text-gray-600">
           Or{" "}
           <Link
-            href="/auth/signin"
+            href={signinUrl}
             className="font-medium text-blue-600 hover:text-blue-500"
           >
             sign in to your existing account

@@ -55,7 +55,7 @@ export default async function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} flex flex-col min-h-screen`}>
+      <body className={`${inter.className} flex flex-col min-h-screen`} suppressHydrationWarning={true}>
         <SessionProvider>
           <QueryProvider>
             <MobileNavigationProvider>

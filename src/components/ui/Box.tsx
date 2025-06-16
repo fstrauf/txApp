@@ -3,7 +3,7 @@ import React from 'react';
 
 export interface BoxProps {
   children: React.ReactNode;
-  variant?: 'default' | 'gradient' | 'glass' | 'elevated' | 'bordered';
+  variant?: 'default' | 'gradient' | 'glass' | 'elevated' | 'bordered' | 'error' | 'warning' | 'success';
   padding?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   onClick?: () => void;
@@ -53,6 +53,24 @@ export const Box: React.FC<BoxProps> = ({
       bg-white 
       shadow-md
       border-2 border-primary/20
+    `,
+    error: `
+      bg-red-50
+      border border-red-400
+      text-red-900
+      shadow-md
+    `,
+    warning: `
+      bg-amber-50
+      border border-amber-400
+      text-amber-900
+      shadow-md
+    `,
+    success: `
+      bg-green-50
+      border border-green-400
+      text-green-900
+      shadow-md
     `
   };
 

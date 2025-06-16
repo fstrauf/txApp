@@ -57,21 +57,41 @@ export function parseTransactionDate(dateString: string): Date {
         month <= 11 &&
         year >= 1900
       ) {
-        return new Date(year, month, day);
+        // Create date as noon UTC to avoid timezone shifting
+        const isoString = `${year.toString().padStart(4, '0')}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T12:00:00.000Z`;
+        return new Date(isoString);
       }
     }
   }
 
-  // Fallback to standard Date parsing for other formats
-  const fallbackDate = new Date(dateString);
-
-  // If still invalid, return current date as last resort
-  if (isNaN(fallbackDate.getTime())) {
-    console.warn(
-      `Invalid date format: ${dateString}, using current date as fallback`
-    );
-    return new Date();
+  // Handle YYYY-MM-DD format (common in CSV exports)
+  if (typeof dateString === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    // Create date as noon UTC to avoid timezone shifting
+    const isoString = `${dateString}T12:00:00.000Z`;
+    return new Date(isoString);
   }
 
-  return fallbackDate;
+  // Fallback to standard Date parsing for other formats, but try to preserve the date
+  let fallbackDate = new Date(dateString);
+  
+  // If the standard parsing creates a time component, reset it to noon to avoid timezone issues
+  if (!isNaN(fallbackDate.getTime())) {
+    // Check if this is just a date (no time) by seeing if it's at midnight
+    const timeComponent = fallbackDate.getHours() + fallbackDate.getMinutes() + fallbackDate.getSeconds();
+    if (timeComponent === 0) {
+      // This was probably just a date, so create it as noon UTC instead
+      const year = fallbackDate.getFullYear();
+      const month = fallbackDate.getMonth();
+      const day = fallbackDate.getDate();
+      const isoString = `${year.toString().padStart(4, '0')}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T12:00:00.000Z`;
+      return new Date(isoString);
+    }
+    return fallbackDate;
+  }
+
+  // If still invalid, return current date as last resort
+  console.warn(
+    `Invalid date format: ${dateString}, using current date as fallback`
+  );
+  return new Date();
 }

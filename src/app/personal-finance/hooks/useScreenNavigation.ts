@@ -5,14 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback } from 'react';
 import { usePersonalFinanceTracking } from './usePersonalFinanceTracking';
 
-// Define the screen flow order
-const SCREEN_ORDER = [
+// Define the step flow order (excluding dashboard which is separate)
+const STEP_FLOW_ORDER = [
   'welcome',
   'income', 
   'spending',
   'savings',
   'initialInsights',
   'spendingAnalysisUpload',
+  'transactionValidation',
   'spendingAnalysisResults',
   'savingsAnalysisInput',
   'whatHappensNext',
@@ -20,17 +21,21 @@ const SCREEN_ORDER = [
   'dataManagement'
 ] as const;
 
-export type Screen = typeof SCREEN_ORDER[number];
+// All possible screens (including dashboard)
+const ALL_SCREENS = ['dashboard', ...STEP_FLOW_ORDER] as const;
+
+export type Screen = typeof ALL_SCREENS[number];
 
 export const useScreenNavigation = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Get current screen from URL, default to 'welcome'
-  const currentScreen = (searchParams.get('screen') as Screen) || 'welcome';
+  // Get current screen from URL, default to 'dashboard'
+  const currentScreen = (searchParams.get('screen') as Screen) || 'dashboard';
   
-  // Get progress percentage
-  const progress = Math.round(((SCREEN_ORDER.indexOf(currentScreen) + 1) / SCREEN_ORDER.length) * 100);
+  // Get progress percentage (only for step flow screens, not dashboard)
+  const stepIndex = STEP_FLOW_ORDER.indexOf(currentScreen as any);
+  const progress = stepIndex >= 0 ? Math.round(((stepIndex + 1) / STEP_FLOW_ORDER.length) * 100) : 0;
   
   // Initialize tracking
   const { trackNavigation } = usePersonalFinanceTracking({ currentScreen, progress });
@@ -41,21 +46,21 @@ export const useScreenNavigation = () => {
     router.push(`?screen=${screen}`);
   }, [router, currentScreen, trackNavigation]);
   
-  // Navigate to next screen in order
+  // Navigate to next screen in step flow order
   const nextScreen = useCallback(() => {
-    const currentIndex = SCREEN_ORDER.indexOf(currentScreen);
-    if (currentIndex < SCREEN_ORDER.length - 1) {
-      const next = SCREEN_ORDER[currentIndex + 1];
+    const currentIndex = STEP_FLOW_ORDER.indexOf(currentScreen as any);
+    if (currentIndex >= 0 && currentIndex < STEP_FLOW_ORDER.length - 1) {
+      const next = STEP_FLOW_ORDER[currentIndex + 1];
       trackNavigation(currentScreen, next, 'next');
       goToScreen(next);
     }
   }, [currentScreen, goToScreen, trackNavigation]);
   
-  // Navigate to previous screen in order
+  // Navigate to previous screen in step flow order
   const prevScreen = useCallback(() => {
-    const currentIndex = SCREEN_ORDER.indexOf(currentScreen);
+    const currentIndex = STEP_FLOW_ORDER.indexOf(currentScreen as any);
     if (currentIndex > 0) {
-      const prev = SCREEN_ORDER[currentIndex - 1];
+      const prev = STEP_FLOW_ORDER[currentIndex - 1];
       trackNavigation(currentScreen, prev, 'back');
       goToScreen(prev);
     }
@@ -72,7 +77,7 @@ export const useScreenNavigation = () => {
     nextScreen,
     prevScreen,
     getProgress,
-    canGoNext: SCREEN_ORDER.indexOf(currentScreen) < SCREEN_ORDER.length - 1,
-    canGoBack: SCREEN_ORDER.indexOf(currentScreen) > 0
+    canGoNext: STEP_FLOW_ORDER.indexOf(currentScreen as any) < STEP_FLOW_ORDER.length - 1,
+    canGoBack: STEP_FLOW_ORDER.indexOf(currentScreen as any) > 0
   };
 };

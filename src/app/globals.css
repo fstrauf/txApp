@@ -99,6 +99,7 @@ img {
 }
 
 @theme {
+  /* Keep the original color values but use proper theme variable format */
   --color-primary: #4361ee;
   --color-primary-light: #3B82F6;
   --color-primary-dark: #1D4ED8;
@@ -110,6 +111,16 @@ img {
   --color-accent: #f72585;
   --color-accent-light: #A78BFA;
   --color-accent-dark: #7C3AED;
+  
+  /* Also add numbered scales for consistency with Tailwind conventions */
+  --color-primary-500: #4361ee;
+  --color-primary-400: #3B82F6;
+  --color-primary-600: #1D4ED8;
+  --color-primary-700: #1e40af;
+  
+  --color-secondary-500: #b5179e;
+  --color-secondary-400: #d31eb3;
+  --color-secondary-600: #8a1277;
   
   --color-background: #F9FAFB;
   --color-background-dark: #1F2937;

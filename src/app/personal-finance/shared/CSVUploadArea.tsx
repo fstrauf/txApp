@@ -80,7 +80,7 @@ export const CSVUploadArea: React.FC<CSVUploadAreaProps> = ({
           <LockClosedIcon className="h-5 w-5 text-gray-600 mr-3" />
           <div>
             <div className="font-semibold text-gray-800 text-sm">Your data stays private</div>
-            <div className="text-xs text-gray-600">All analysis happens in your browser. No data is sent to our servers.</div>
+            <div className="text-xs text-gray-600">All analysis happens in your browser. No data is stored on our servers.</div>
           </div>
         </div>
       </div>
