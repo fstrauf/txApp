@@ -19,6 +19,7 @@ import {
 import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { convertCurrency, extractCurrencyCode } from '@/lib/currency';
 import { ensureApiAccessForTraining } from '@/lib/apiKeyUtils';
+import { useRouter } from 'next/navigation';
 
 // Import modular components
 import ManageDataTab from './data-management/ManageDataTab';
@@ -65,6 +66,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   defaultTab = 'manage',
   spreadsheetData
 }) => {
+  const router = useRouter();
   const { data: session } = useSession();
   const { userData, processTransactionData, updateBaseCurrency } = usePersonalFinanceStore();
   const { requestSpreadsheetAccess } = useIncrementalAuth();
@@ -617,6 +619,12 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
                 type: 'error', 
                 message: '💎 Upgrade needed! AI training requires an active subscription to create your personalized model. Please upgrade to continue.' 
               });
+              
+              // Redirect to API key page after showing the message
+              setTimeout(() => {
+                router.push('/api-key');
+              }, 2000); // Give user time to read the message
+              
               return;
             } else {
               throw new Error(accessResult.message);
