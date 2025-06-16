@@ -6,7 +6,11 @@ import { useSession } from "next-auth/react";
 import { Button } from '@headlessui/react'; // Import Headless UI Button
 import Link from 'next/link'; // Ensure Link is imported if needed for asChild replacement
 
-export default function GetItHereButton() {
+interface GetItHereButtonProps {
+  showApiKeyButton?: boolean;
+}
+
+export default function GetItHereButton({ showApiKeyButton = true }: GetItHereButtonProps) {
   const [email, setEmail] = useState("");
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -103,16 +107,18 @@ export default function GetItHereButton() {
             >
               Access Spreadsheet
           </Link>
-          <div className="mt-4">
-            {/* Replaced Button asChild with styled Link */}
-            <Link
-                href="/api-key"
-                rel="noopener noreferrer"
-              className={primaryButtonClasses} // Apply button styles
-              >
-                Get API Key
-            </Link>
-          </div>
+          {showApiKeyButton && (
+            <div className="mt-4">
+              {/* Replaced Button asChild with styled Link */}
+              <Link
+                  href="/api-key"
+                  rel="noopener noreferrer"
+                className={primaryButtonClasses} // Apply button styles
+                >
+                  Get API Key
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -137,19 +143,21 @@ export default function GetItHereButton() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
           </Link>
-          <div className="mt-4">
-            {/* Replaced Button asChild with styled Link */}
-            <Link
-                href="/api-key"
-                rel="noopener noreferrer"
-              className={primaryButtonClasses} // Apply button styles
-              >
-                Get API Key
-                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-            </Link>
-          </div>
+          {showApiKeyButton && (
+            <div className="mt-4">
+              {/* Replaced Button asChild with styled Link */}
+              <Link
+                  href="/api-key"
+                  rel="noopener noreferrer"
+                className={primaryButtonClasses} // Apply button styles
+                >
+                  Get API Key
+                  <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+              </Link>
+            </div>
+          )}
         </div>
       )}
 
