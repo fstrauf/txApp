@@ -28,6 +28,7 @@ import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsh
 import { getUserMonthlyReminderToastStatus } from '../utils/monthlyReminderUtils';
 import { mockTransactions, mockSavingsData } from '../utils/mockData';
 import { useRouter } from 'next/navigation';
+import posthog from 'posthog-js';
 
 const DashboardScreen: React.FC = () => {
   const { data: session, status } = useSession();
@@ -62,6 +63,17 @@ const DashboardScreen: React.FC = () => {
   const [isHelpDrawerOpen, setIsHelpDrawerOpen] = useState(false);
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'ai-insights'>('overview');
+
+  // Track tab changes
+  const handleTabChange = (newTab: 'overview' | 'transactions' | 'ai-insights') => {
+    posthog.capture('dashboard_tab_changed', {
+      from_tab: activeTab,
+      to_tab: newTab,
+      is_first_time_user: isFirstTimeUser,
+      has_transactions: (displayTransactions?.length || 0) > 0
+    });
+    setActiveTab(newTab);
+  };
   const [dataManagementDefaultTab, setDataManagementDefaultTab] = useState<'manage' | 'upload' | 'validate' | 'settings'>('manage');
   const [userToastStatus, setUserToastStatus] = useState<string | null>(null);
 
@@ -100,6 +112,20 @@ const DashboardScreen: React.FC = () => {
   // Use mock data for first-time users, real data otherwise
   const displayStats = isFirstTimeUser ? mockStats : dashboardStats;
   const displayTransactions = isFirstTimeUser ? mockTransactions : filteredTransactions;
+
+  // Track dashboard screen view
+  useEffect(() => {
+    posthog.capture('dashboard_screen_viewed', {
+      is_first_time_user: isFirstTimeUser,
+      spreadsheet_linked: spreadsheetLinked,
+      has_transactions: (displayTransactions?.length || 0) > 0,
+      user_authenticated: !!session?.user?.id,
+      transaction_count: displayTransactions?.length || 0,
+      has_error: !!error,
+      is_loading: isLoading,
+      has_stats: !!displayStats
+    });
+  }, [isFirstTimeUser, spreadsheetLinked, displayTransactions?.length, session?.user?.id, error, isLoading, displayStats]);
 
   // Debug logging (remove in production)
   useEffect(() => {
@@ -145,6 +171,13 @@ const DashboardScreen: React.FC = () => {
       is_authenticated: status === 'authenticated'
     });
 
+    posthog.capture('dashboard_data_management_drawer_opened', {
+      source: 'link_spreadsheet_button',
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: status === 'authenticated',
+      default_tab: 'manage'
+    });
+
     // Check authentication status
     if (status === 'loading') {
       // Still loading session, wait a moment
@@ -172,12 +205,26 @@ const DashboardScreen: React.FC = () => {
     trackAction('monthly_reminder_clicked', {
       user_has_data: !isFirstTimeUser
     });
+
+    posthog.capture('dashboard_data_management_drawer_opened', {
+      source: 'monthly_reminder_button',
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: !!session?.user?.id,
+      default_tab: 'settings'
+    });
+
     setDataManagementDefaultTab('settings');
     setIsHelpDrawerOpen(true);
   };
 
   const handleSpreadsheetLinked = (data: { spreadsheetId: string; spreadsheetUrl: string }) => {
     console.log('🔗 Spreadsheet linked, updating store and refreshing status:', data);
+    
+    posthog.capture('dashboard_spreadsheet_linked_successfully', {
+      spreadsheet_id: data.spreadsheetId,
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: !!session?.user?.id
+    });
     
     // Update the store with the spreadsheet information
     updateSpreadsheetInfo(data.spreadsheetId, data.spreadsheetUrl);
@@ -202,6 +249,14 @@ const DashboardScreen: React.FC = () => {
         expense_count: transactions.filter(t => t.isDebit).length,
         income_count: transactions.filter(t => !t.isDebit).length
       });
+
+      posthog.capture('dashboard_csv_transactions_uploaded', {
+        transaction_count: transactions.length,
+        expense_count: transactions.filter(t => t.isDebit).length,
+        income_count: transactions.filter(t => !t.isDebit).length,
+        is_first_time_user: isFirstTimeUser,
+        needs_validation: true
+      });
       
       // Navigate to validation screen
       processTransactionData(transactions); // Store in app state for validation screen
@@ -220,6 +275,14 @@ const DashboardScreen: React.FC = () => {
         income_count: transactions.filter(t => !t.isDebit).length
       });
 
+      posthog.capture('dashboard_google_sheets_imported', {
+        transaction_count: transactions.length,
+        expense_count: transactions.filter(t => t.isDebit).length,
+        income_count: transactions.filter(t => !t.isDebit).length,
+        is_first_time_user: isFirstTimeUser,
+        needs_validation: false
+      });
+
       // The useDashboard hook will automatically handle stats calculation and state updates
     }
   };
@@ -228,6 +291,13 @@ const DashboardScreen: React.FC = () => {
     trackAction('refresh_data_clicked', {
       has_existing_data: !!dashboardStats,
       has_spreadsheet_url: !!spreadsheetUrl
+    });
+
+    posthog.capture('dashboard_manual_refresh_clicked', {
+      has_existing_data: !!dashboardStats,
+      has_spreadsheet_url: !!spreadsheetUrl,
+      is_first_time_user: isFirstTimeUser,
+      transaction_count: displayTransactions.length
     });
 
     await handleRefreshData();
@@ -243,6 +313,12 @@ const DashboardScreen: React.FC = () => {
     try {
       trackAction('relink_expired_spreadsheet_clicked', {
         has_spreadsheet_url: !!spreadsheetUrl
+      });
+
+      posthog.capture('dashboard_relink_spreadsheet_attempted', {
+        has_spreadsheet_url: !!spreadsheetUrl,
+        is_first_time_user: isFirstTimeUser,
+        error_type: 'expired_access'
       });
 
       // Request new Google Sheets access
@@ -271,6 +347,11 @@ const DashboardScreen: React.FC = () => {
         trackAction('spreadsheet_relinked_successfully', {
           spreadsheet_id: data.spreadsheetId
         });
+
+        posthog.capture('dashboard_relink_spreadsheet_successful', {
+          spreadsheet_id: data.spreadsheetId,
+          is_first_time_user: isFirstTimeUser
+        });
       } else {
         throw new Error(data.error || 'Failed to re-link spreadsheet');
       }
@@ -278,6 +359,12 @@ const DashboardScreen: React.FC = () => {
       console.error('❌ Error re-linking spreadsheet:', error);
       trackAction('spreadsheet_relink_failed', {
         error: error.message
+      });
+
+      posthog.capture('dashboard_relink_spreadsheet_failed', {
+        error_message: error.message,
+        is_first_time_user: isFirstTimeUser,
+        has_spreadsheet_url: !!spreadsheetUrl
       });
     }
   };
@@ -341,7 +428,14 @@ const DashboardScreen: React.FC = () => {
                   }
                 </button>
                 <button
-                  onClick={() => setIsHowItWorksOpen(true)}
+                  onClick={() => {
+                    posthog.capture('dashboard_how_it_works_drawer_opened', {
+                      source: 'demo_banner_button',
+                      is_first_time_user: isFirstTimeUser,
+                      user_authenticated: !!session?.user?.id
+                    });
+                    setIsHowItWorksOpen(true);
+                  }}
                   className="inline-flex items-center justify-center gap-3 px-6 py-3 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-all duration-200 font-medium backdrop-blur-sm border border-white/30 w-full sm:w-auto"
                 >
                   <QuestionMarkCircleIcon className="h-5 w-5" />
@@ -477,10 +571,20 @@ const DashboardScreen: React.FC = () => {
                       trackAction('redirect_to_login_from_connect_data', {
                         source: 'connect_your_data_button'
                       });
+                      posthog.capture('dashboard_connect_data_unauthenticated', {
+                        source: 'connect_your_data_button',
+                        is_first_time_user: isFirstTimeUser
+                      });
                       const callbackUrl = encodeURIComponent('/personal-finance');
                       router.push(`/auth/signin?callbackUrl=${callbackUrl}`);
                       return;
                     }
+                    
+                    posthog.capture('dashboard_connect_data_button_clicked', {
+                      source: 'connect_your_data_button',
+                      is_first_time_user: isFirstTimeUser,
+                      user_authenticated: true
+                    });
                     
                     setDataManagementDefaultTab('manage');
                     handleLinkSpreadsheet();
@@ -501,7 +605,14 @@ const DashboardScreen: React.FC = () => {
 
                 {/* How This Works Button */}
                 <button
-                  onClick={() => setIsHowItWorksOpen(true)}
+                  onClick={() => {
+                    posthog.capture('dashboard_how_it_works_drawer_opened', {
+                      source: 'controls_button',
+                      is_first_time_user: isFirstTimeUser,
+                      user_authenticated: !!session?.user?.id
+                    });
+                    setIsHowItWorksOpen(true);
+                  }}
                   className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200 w-full sm:w-auto"
                 >
                   <QuestionMarkCircleIcon className="h-4 w-4" />
@@ -518,7 +629,14 @@ const DashboardScreen: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={hideTransfer}
-                        onChange={(e) => setHideTransfer(e.target.checked)}
+                        onChange={(e) => {
+                          posthog.capture('dashboard_hide_transfer_toggled', {
+                            new_value: e.target.checked,
+                            is_first_time_user: isFirstTimeUser,
+                            transaction_count: displayTransactions.length
+                          });
+                          setHideTransfer(e.target.checked);
+                        }}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -729,7 +847,13 @@ const DashboardScreen: React.FC = () => {
       {/* Data Management Help Drawer */}
       <HelpDrawer
         isOpen={isHelpDrawerOpen}
-        onClose={() => setIsHelpDrawerOpen(false)}
+        onClose={() => {
+          posthog.capture('dashboard_data_management_drawer_closed', {
+            is_first_time_user: isFirstTimeUser,
+            user_authenticated: !!session?.user?.id
+          });
+          setIsHelpDrawerOpen(false);
+        }}
         title="Data Management"
         size="large"
       >
@@ -751,7 +875,13 @@ const DashboardScreen: React.FC = () => {
       {/* How This Works Drawer */}
       <HelpDrawer
         isOpen={isHowItWorksOpen}
-        onClose={() => setIsHowItWorksOpen(false)}
+        onClose={() => {
+          posthog.capture('dashboard_how_it_works_drawer_closed', {
+            is_first_time_user: isFirstTimeUser,
+            user_authenticated: !!session?.user?.id
+          });
+          setIsHowItWorksOpen(false);
+        }}
         title="How This Works"
         size="large"
       >
