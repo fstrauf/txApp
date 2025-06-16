@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authConfig } from '@/lib/auth';
-// Remove db imports if only used for apiKey fetch
-// import { db } from '@/db';
-// import { users } from '@/db/schema';
-// import { eq } from 'drizzle-orm';
+import { db } from '@/db'; // Import database instance
+import { users } from '@/db/schema'; // Import users table schema
+import { eq } from 'drizzle-orm'; // Import eq operator
 
 const EXTERNAL_STATUS_URL_TEMPLATE = process.env.EXPENSE_SORTED_API + '/status/{predictionId}';
 
@@ -17,7 +16,7 @@ export async function GET(
   request: NextRequest
   // Remove destructured params: { params }: { params: RouteParams }
 ) {
-  // *** CHANGE: Parse predictionId from URL path ***
+  // Parse predictionId from URL path
   const pathname = request.nextUrl.pathname;
   const segments = pathname.split('/');
   const predictionId = segments.pop() || segments.pop(); // Handle potential trailing slash
@@ -28,31 +27,38 @@ export async function GET(
 
   const session = await getServerSession(authConfig);
 
-  // Add type assertion for session to include apiKey
-  const typedSession = session as (typeof session & { apiKey?: string });
-
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const userId = session.user.id;
 
-  // *** CHANGE: Get API key from session ***
-  const userApiKey = typedSession?.apiKey;
+  let userApiKey: string | null = null;
 
-  // *** REMOVED: Database query for API key ***
-  /*
-  const userResult = await db
-    .select({ apiKey: users.api_key })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  const userApiKey = userResult[0]?.apiKey;
-  */
+  try {
+    // Fetch API key from database (same as train endpoint)
+    const user = await db.query.users.findFirst({
+      columns: {
+        api_key: true,
+      },
+      where: eq(users.id, userId),
+    });
 
-  if (!userApiKey) {
-    console.warn(`User ${userId} does not have an API key configured or it's missing from session.`);
-    return NextResponse.json({ error: 'API key not configured or unavailable in session.' }, { status: 400 });
+    if (!user) {
+      console.error(`User data not found in DB for session user ID: ${userId}`);
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (!user.api_key) {
+      console.warn(`User ${userId} does not have an API key configured in the database.`);
+      return NextResponse.json({ error: 'API key not configured for this user.' }, { status: 400 });
+    }
+
+    userApiKey = user.api_key;
+
+  } catch (dbError) {
+    console.error(`Database error fetching API key for user ${userId}:`, dbError);
+    return NextResponse.json({ error: 'Failed to retrieve user data' }, { status: 500 });
   }
 
   // Construct the external URL
@@ -64,7 +70,7 @@ export async function GET(
     const externalResponse = await fetch(externalUrl, {
       method: 'GET',
       headers: {
-        'X-API-Key': userApiKey, // Use key from session
+        'X-API-Key': userApiKey, // Use key from database
         'Accept': 'application/json',
       },
       // Add cache control to prevent Next.js from caching the status response aggressively

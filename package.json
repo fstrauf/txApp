@@ -50,6 +50,7 @@
     "drizzle-orm": "^0.41.0",
     "figlet": "^1.7.0",
     "geist": "^1.4.2",
+    "googleapis": "^150.0.1",
     "gradient-string": "^2.0.2",
     "gray-matter": "^4.0.3",
     "jose": "^6.0.10",

@@ -1,0 +1,2 @@
+CREATE TYPE "public"."monthlyReminderToastStatus" AS ENUM('DISMISSED', 'SET_REMINDER');--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN "monthlyReminderToastStatus" "monthlyReminderToastStatus";

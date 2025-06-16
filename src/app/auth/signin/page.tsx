@@ -19,10 +19,18 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   // Check if user is already signed in
   const session = await getServerSession(authConfig);
   
-  // If user is already signed in, redirect to main site
+  // Extract callback URL from search params
+  const callbackUrl = searchParams?.callbackUrl as string;
+  
+  // If user is already signed in, redirect to callback URL or main site
   if (session?.user) {
-    redirect("/");
+    redirect(callbackUrl || "/");
   }
+
+  // Construct signup URL with callback URL preserved
+  const signupUrl = callbackUrl 
+    ? `/auth/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`
+    : '/auth/signup';
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-12 sm:px-6 lg:px-8 bg-white">
@@ -33,7 +41,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <p className="mt-2 text-center text-sm text-gray-600">
           Or{" "}
           <Link
-            href="/auth/signup"
+            href={signupUrl}
             className="font-medium text-blue-600 hover:text-blue-500"
           >
             create a new account

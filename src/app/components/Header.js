@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { NavBarButtons } from "@/app/components/nav-bar-buttons";
 import { MobileMenu } from "@/components/navigation/MobileMenu";
-import { useNavigationConfig } from "@/hooks/useNavigationConfig";
+import { useNavigationConfig } from "@/lib/hooks/useNavigationConfig";
 import { useMobileNavigation } from "@/contexts/MobileNavigationContext";
 
 export default function Header() {

@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState } from "react";
-import { useFeatureFlagEnabled } from 'posthog-js/react';
+// import { useFeatureFlagEnabled } from 'posthog-js/react';
 import { 
   CreditCardIcon,
   ChartBarIcon,
   BuildingLibraryIcon,
   DocumentTextIcon,
-  CpuChipIcon,
-  ArrowDownTrayIcon,
+  // CpuChipIcon,
+  // ArrowDownTrayIcon,
   LinkIcon,
   KeyIcon,
   UserIcon
@@ -39,18 +39,6 @@ const sidebarNavItems = [
     icon: DocumentTextIcon,
   },
   {
-    title: "AutoAccountant",
-    href: "/auto-accountant",
-    icon: CpuChipIcon,
-    featureFlag: 'betaFeature'
-  },
-  {
-    title: "Import",
-    href: "/import-transactions",
-    icon: ArrowDownTrayIcon,
-    featureFlag: 'betaFeature'
-  },
-  {
     title: "Try Our API",
     href: "/api-landing",
     icon: LinkIcon,
@@ -69,23 +57,13 @@ const sidebarNavItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const isBetaFeatureEnabled = useFeatureFlagEnabled('betaFeature');
+  // const isBetaFeatureEnabled = useFeatureFlagEnabled('betaFeature');
   const [isCollapsed, setIsCollapsed] = useState(true); // Start collapsed by default
 
-  // Don't show general sidebar on personal finance pages
-  const isPersonalFinancePage = pathname.startsWith('/personal-finance');
-  if (isPersonalFinancePage) {
-    return null;
-  }
+
 
   // Restore filtering
   const enabledNavItems = sidebarNavItems.filter(item => {
-    if (!item.featureFlag) {
-      return true;
-    }
-    if (item.featureFlag === 'betaFeature') {
-      return isBetaFeatureEnabled ?? false;
-    }
     return true;
   });
 

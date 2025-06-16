@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useEmailSignup } from "@/hooks/useEmailSignup";
+import { useEmailSignup } from "@/lib/hooks/useEmailSignup";
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
 interface ExportFeedbackDialogProps {

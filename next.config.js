@@ -3,6 +3,11 @@ const nextConfig = {
   async redirects() {
     return [
       // Removed /demo redirect - now has its own page
+      {
+        source: '/sheets-extension',
+        destination: '/fuck-you-money-sheet',
+        permanent: true,
+      },
     ]
   },
   experimental: {
@@ -26,6 +31,13 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+    images: {
+      formats: ['image/avif', 'image/webp'],
+      deviceSizes: [640, 768, 1024, 1280, 1536, 1920, 2048, 3840],
+      imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+      minimumCacheTTL: 60,
+    },
+
 }
 
 module.exports = nextConfig 

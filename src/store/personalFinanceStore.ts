@@ -28,6 +28,13 @@ interface CategorySpending {
   transactionCount: number;
 }
 
+interface SavingsSheetData {
+  latestNetAssetValue: number;
+  latestQuarter: string;
+  formattedValue: string;
+  totalEntries: number;
+}
+
 interface UserData {
   income: number;
   spending: number;
@@ -35,10 +42,18 @@ interface UserData {
   savingsBreakdown?: SavingsBreakdown;
   selectedBank?: string;
   savingsGoal?: string;
+  // Spreadsheet integration
+  spreadsheetId?: string;
+  spreadsheetUrl?: string;
+  lastDataRefresh?: string;
   // Transaction data
   transactions?: Transaction[];
   categorySpending?: CategorySpending[];
   actualMonthlySpending?: number; // Calculated from transactions
+  // Savings sheet data (cached from Google Sheets)
+  savingsSheetData?: SavingsSheetData;
+  // Currency settings
+  baseCurrency?: string; // Default base currency for the user
 }
 
 interface PersonalFinanceState {
@@ -49,9 +64,16 @@ interface PersonalFinanceState {
   updateSavingsBreakdown: (breakdown: SavingsBreakdown) => void;
   updateSelectedBank: (bank: string) => void;
   updateSavingsGoal: (goal: string) => void;
+  // Spreadsheet management
+  updateSpreadsheetInfo: (spreadsheetId: string, spreadsheetUrl: string) => void;
+  updateLastDataRefresh: (timestamp: string) => void;
   // Transaction management
   updateTransactions: (transactions: Transaction[]) => void;
   processTransactionData: (transactions: Transaction[]) => void;
+  // Savings sheet data management
+  updateSavingsSheetData: (savingsData: SavingsSheetData) => void;
+  // Currency management
+  updateBaseCurrency: (currency: string) => void;
   // Data management
   clearAllData: () => void;
   exportData: () => string;
@@ -65,6 +87,7 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
     income: 0,
     spending: 0,
     savings: 0,
+    baseCurrency: 'USD', // Default base currency
   },
   
   updateIncome: (income: number) => {
@@ -103,6 +126,18 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
     }));
   },
 
+  updateSpreadsheetInfo: (spreadsheetId: string, spreadsheetUrl: string) => {
+    set((state) => ({
+      userData: { ...state.userData, spreadsheetId, spreadsheetUrl }
+    }));
+  },
+
+  updateLastDataRefresh: (timestamp: string) => {
+    set((state) => ({
+      userData: { ...state.userData, lastDataRefresh: timestamp }
+    }));
+  },
+
   updateTransactions: (transactions: Transaction[]) => {
     set((state) => ({
       userData: { ...state.userData, transactions }
@@ -110,10 +145,18 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
   },
 
       processTransactionData: (transactions: Transaction[]) => {
-        console.log('ProcessTransactionData called with:', {
+        console.log('🔄 ProcessTransactionData called with:', {
           transactionCount: transactions.length,
           sampleTransactions: transactions.slice(0, 3),
-          transactionTypes: transactions.map(t => ({ isDebit: t.isDebit, amount: t.amount, category: t.category })).slice(0, 5)
+          transactionTypes: transactions.map(t => ({ isDebit: t.isDebit, amount: t.amount, category: t.category })).slice(0, 5),
+          dateRange: transactions.length > 0 ? {
+            oldest: transactions.reduce((oldest, t) => 
+              new Date(t.date) < new Date(oldest.date) ? t : oldest
+            )?.date,
+            newest: transactions.reduce((newest, t) => 
+              new Date(t.date) > new Date(newest.date) ? t : newest
+            )?.date
+          } : null
         });
 
         // Process transactions to calculate spending breakdown and categories
@@ -161,27 +204,62 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
           topCategories: categorySpending.slice(0, 5)
         });
 
-        set((state) => ({
-          userData: { 
+        console.log('📝 Updating store with new transaction data...');
+        set((state) => {
+          const newUserData = { 
             ...state.userData, 
             transactions,
             categorySpending,
             actualMonthlySpending,
             // Update spending if significantly different or if not set
             spending: state.userData.spending === 0 ? actualMonthlySpending : state.userData.spending
-          }
+          };
+          
+          console.log('✅ Store updated - New userData transaction count:', newUserData.transactions?.length || 0);
+          console.log('📊 Store updated - Date range:', newUserData.transactions?.length > 0 ? {
+            oldest: newUserData.transactions.reduce((oldest, t) => 
+              new Date(t.date) < new Date(oldest.date) ? t : oldest
+            )?.date,
+            newest: newUserData.transactions.reduce((newest, t) => 
+              new Date(t.date) > new Date(newest.date) ? t : newest
+            )?.date
+          } : 'No transactions');
+          
+          return { userData: newUserData };
+        });
+      },
+
+      // Savings sheet data management
+      updateSavingsSheetData: (savingsData: SavingsSheetData) => {
+        set((state) => ({
+          userData: { ...state.userData, savingsSheetData: savingsData }
+        }));
+      },
+
+      // Savings sheet data management
+      updateSavingsSheetData: (savingsData: SavingsSheetData) => {
+        set((state) => ({
+          userData: { ...state.userData, savingsSheetData: savingsData }
+        }));
+      },
+
+      // Currency management
+      updateBaseCurrency: (currency: string) => {
+        set((state) => ({
+          userData: { ...state.userData, baseCurrency: currency }
         }));
       },
 
       // Data management functions
       clearAllData: () => {
-        set({
+        set((state) => ({
           userData: {
             income: 0,
             spending: 0,
             savings: 0,
+            baseCurrency: state.userData.baseCurrency || 'USD', // Preserve base currency when clearing
           }
-        });
+        }));
       },
 
       exportData: () => {
@@ -236,4 +314,4 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
 );
 
 // Export types for use in components
-export type { UserData, Transaction, CategorySpending, SavingsBreakdown };
+export type { UserData, Transaction, CategorySpending, SavingsBreakdown, SavingsSheetData };

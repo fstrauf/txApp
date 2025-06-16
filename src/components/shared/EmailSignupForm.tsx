@@ -1,6 +1,6 @@
 "use client";
 
-import { useEmailSignup } from "@/hooks/useEmailSignup";
+import { useEmailSignup } from "@/lib/hooks/useEmailSignup";
 
 interface EmailSignupFormProps {
   source: string;
