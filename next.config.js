@@ -3,6 +3,11 @@ const nextConfig = {
   async redirects() {
     return [
       // Removed /demo redirect - now has its own page
+      {
+        source: '/sheets-extension',
+        destination: '/fuck-you-money-sheet',
+        permanent: true,
+      },
     ]
   },
   experimental: {
