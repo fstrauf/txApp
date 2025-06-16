@@ -3,11 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import GetItHereButton from "./getItHereButton";
-import Instructions from "./instructions";
-import Intro from "./intro";
-import StayUpToDate from "./stayUpToDate";
 import PageHeader from "../../components/PageHeader";
-import AddOnButton from "../components/buttons/AddOnButton";
 
 export const metadata: Metadata = {
   title: "Financial Freedom Calculator - Smart Sheet + App System | Expense Sorted",

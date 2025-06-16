@@ -33,6 +33,9 @@ Your runway directly correlates with your life choices. More runway equals more 
 
 ## The Complete Financial Runway Calculator
 
+![Financial Overview Dashboard](/es_financial_overview_dashboard.png)
+*Complete financial overview showing your runway calculation, savings rate, and spending patterns in one clear dashboard*
+
 ### Step 1: Calculate Your True Monthly Expenses
 
 Unlike emergency fund calculations that assume reduced spending, runway calculations use your actual lifestyle costs—because the goal is maintaining your chosen quality of life, not just surviving.
@@ -160,6 +163,9 @@ Excludes emergency fund money—how much runway you have for planned opportuniti
 3. Eliminate unnecessary recurring expenses
 4. Focus on debt payments to reduce monthly obligations
 
+![Data Management Interface](/es_data_managemenmt.png)
+*Comprehensive data management makes tracking your true expenses effortless - essential for accurate runway calculations*
+
 **Phase 2: Stability (3-6 months runway)**
 1. Automate savings—save runway money first, spend what's left
 2. Optimize major expenses (housing, transportation, food)
@@ -189,6 +195,9 @@ Excludes emergency fund money—how much runway you have for planned opportuniti
 - Focus on the big three: housing, transportation, food
 - Eliminate subscription creep and recurring charges
 - Optimize for value, not just lowest cost
+
+![Smart Category Analysis](/es_category_selection.png)
+*Intelligent category analysis helps identify where your money goes and optimize your runway-building strategy*
 
 **Savings Rate Focus:**
 - Track your savings rate as closely as your runway
@@ -227,6 +236,9 @@ Review your runway quarterly:
 - Recalculate available resources
 - Adjust for any major life changes
 - Plan for seasonal expense variations
+
+![Bank Statement Import](/es_bank_import_mapping.png)
+*Seamless bank statement import ensures your runway calculations stay accurate with minimal time investment*
 
 ### Runway vs. Investment Balance
 As your runway grows, consider whether additional months provide diminishing returns compared to investing for long-term growth.

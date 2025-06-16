@@ -30,20 +30,20 @@ export default function DemoPage() {
         <Box variant="elevated" padding="lg" className="mb-16">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              AI Categorization in Action
+              Financial Overview Dashboard
             </h2>
             <p className="text-lg text-gray-600">
-              Watch transactions get categorized automatically in seconds
+              See your complete financial picture at a glance with AI-powered insights
             </p>
           </div>
           
           <div className="max-w-4xl mx-auto">
             <div className="relative rounded-xl overflow-hidden shadow-xl">
               <Image
-                src="/hero expense sorted.gif"
-                width={1920}
-                height={1080}
-                alt="ExpenseSorted AI categorization demo"
+                src="/es_financial_overview_dashboard.png"
+                width={1433}
+                height={1207}
+                alt="ExpenseSorted financial overview dashboard"
                 className="w-full"
                 priority
               />
@@ -63,16 +63,16 @@ export default function DemoPage() {
               <div className="bg-gradient-to-r from-primary to-secondary rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                 <span className="text-white font-bold text-xl">1</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Import Your Data</h3>
+              <h3 className="text-xl font-semibold mb-3">Import & Map Your Data</h3>
               <p className="text-gray-600 mb-4">
-                Upload your bank transactions via CSV, connect your bank account, or use our Google Sheets add-on.
+                Upload your bank statements and map columns to our standardized format. Support for all major banks and CSV formats.
               </p>
               <div className="bg-gray-50 rounded-lg p-4 h-48 flex items-center justify-center">
                 <Image
-                  src="/f-you-money-import-transactions.png"
+                  src="/es_bank_import_mapping.png"
                   width={300}
                   height={200}
-                  alt="Import transactions demo"
+                  alt="Import and map bank transactions"
                   className="max-w-full max-h-full object-contain"
                 />
               </div>
@@ -83,16 +83,16 @@ export default function DemoPage() {
               <div className="bg-gradient-to-r from-primary to-secondary rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                 <span className="text-white font-bold text-xl">2</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">AI Categorizes</h3>
+              <h3 className="text-xl font-semibold mb-3">AI Suggests & Learns</h3>
               <p className="text-gray-600 mb-4">
-                Our AI instantly categorizes all your transactions with 95%+ accuracy. No manual rules needed.
+                Smart AI suggestions that learn from your preferences. Review and adjust categories to train the system for even better accuracy.
               </p>
               <div className="bg-gray-50 rounded-lg p-4 h-48 flex items-center justify-center">
                 <Image
-                  src="/f-you-money-categorise-transactions.png"
+                  src="/es_ex_suggestion_adjustment.png"
                   width={300}
                   height={200}
-                  alt="AI categorization demo"
+                  alt="AI categorization with smart suggestions"
                   className="max-w-full max-h-full object-contain"
                 />
               </div>
@@ -103,20 +103,44 @@ export default function DemoPage() {
               <div className="bg-gradient-to-r from-primary to-secondary rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                 <span className="text-white font-bold text-xl">3</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Get Insights</h3>
+              <h3 className="text-xl font-semibold mb-3">Review & Analyze</h3>
               <p className="text-gray-600 mb-4">
-                See exactly where your money goes and identify opportunities to save hundreds per month.
+                Review all categorized transactions, track spending patterns, and sync everything back to your Google Sheet automatically.
               </p>
               <div className="bg-gray-50 rounded-lg p-4 h-48 flex items-center justify-center">
                 <Image
-                  src="/f-you-money-analyse-transactions.png"
+                  src="/es_category_selection.png"
                   width={300}
                   height={200}
-                  alt="Financial analysis demo"
+                  alt="Review categorized transactions and insights"
                   className="max-w-full max-h-full object-contain"
                 />
               </div>
             </Box>
+          </div>
+        </Box>
+
+        {/* Data Management Section */}
+        <Box variant="elevated" padding="lg" className="mb-16">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Powerful Data Management
+            </h2>
+            <p className="text-lg text-gray-600">
+              Import from multiple sources, manage your data, and sync with Google Sheets
+            </p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto">
+            <div className="relative rounded-xl overflow-hidden shadow-xl">
+              <Image
+                src="/es_data_managemenmt.png"
+                width={1433}
+                height={1207}
+                alt="Data management interface"
+                className="w-full"
+              />
+            </div>
           </div>
         </Box>
 

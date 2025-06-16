@@ -29,6 +29,9 @@ Is maintaining your transaction categories really worth $10,200 of your time eac
 
 ## How AI Bank Transaction Categorization Works (In Plain English)
 
+![Financial Overview Dashboard](/es_financial_overview_dashboard.png)
+*Complete financial overview with AI-powered categorization - see your money insights in minutes, not hours*
+
 AI transaction categorization isn't futuristic science fiction—it's practical technology that works by:
 
 1. **Learning from patterns**: The system recognizes that "SBUX" is always coffee

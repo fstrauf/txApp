@@ -28,6 +28,9 @@ The newest trend involves sending transaction data to ChatGPT or Claude for cate
 
 Sentence transformers offer a sweet spot between accuracy and efficiency. Unlike keyword matching or rule-based systems, they understand semantic meaning. Unlike large language models, they run locally and process transactions in milliseconds.
 
+![AI-Powered Category Suggestions](/es_ex_suggestion_adjustment.png)
+*Advanced AI categorization that learns from your patterns while maintaining complete privacy*
+
 Here's how it works:
 
 **1. Semantic Understanding**

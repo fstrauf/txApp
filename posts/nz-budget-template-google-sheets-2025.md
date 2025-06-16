@@ -16,6 +16,9 @@ Best of all? **It's completely free, and your financial data stays 100% private*
 
 ## What This Template Actually Does
 
+![Financial Overview Dashboard](/es_financial_overview_dashboard.png)
+*Complete financial overview showing expense tracking, savings rate, and financial runway - everything a Kiwi needs to understand their money*
+
 Let me be upfront about what you're getting. This isn't a comprehensive financial planning suite—it's a focused expense tracking system that does four things really well:
 
 ### **1. Import Your Bank Transactions**
@@ -27,6 +30,9 @@ Let me be upfront about what you're getting. This isn't a comprehensive financia
 - Smart categorization tool that learns your spending patterns
 - Pre-loaded with common NZ expense categories
 - Easily customizable for your specific needs
+
+![AI-Powered Categorization](/es_ex_suggestion_adjustment.png)
+*Smart categorization suggestions that learn your spending patterns and work with any NZ bank*
 
 ### **3. Track Monthly Spending Patterns**
 - Automatic monthly rollups of all your categories
@@ -120,6 +126,9 @@ Ready-to-use categories that match how Kiwis actually spend:
 - **Personal**: Healthcare, clothing, personal care
 - **Entertainment**: Streaming, activities, sports, hobbies
 
+![Category Management](/es_category_selection.png)
+*Comprehensive category management with NZ-specific categories that match how Kiwis actually spend their money*
+
 ### **Currency and Tax Considerations**
 - Handles GST-inclusive pricing for contractors
 - Supports multiple currencies for overseas spending
@@ -136,6 +145,9 @@ Ready-to-use categories that match how Kiwis actually spend:
 1. **Log into your online banking**
 2. **Export last month's transactions** as CSV
 3. **Save the file** to your computer (remember the location)
+
+![Bank CSV Import](/es_bank_csv_import.png)
+*Streamlined CSV import process that works with all major NZ banks - ANZ, ASB, Westpac, BNZ, and more*
 
 ### **Step 3: Import and Categorize**
 1. **Open the Expense Detail tab** in your template
@@ -178,6 +190,9 @@ Google Sheets automatically saves version history. You can always revert to an e
 - [ ] Add any custom categories you need
 - [ ] Update your savings balances in the Savings tab
 - [ ] Check your financial runway calculation
+
+![Data Management Interface](/es_data_managemenmt.png)
+*Comprehensive data management interface that makes tracking multiple accounts and categories effortless*
 
 ### **Week 3: Analysis**
 - [ ] Review your Monthly Expenses breakdown
@@ -233,6 +248,9 @@ If you run into technical problems with the template, email me directly. I respo
 
 ### **Bank Import Problems**  
 Different banks format their CSV files differently. If your bank's format doesn't work perfectly, let me know and I'll help you adjust the import process.
+
+![Bank Statement Mapping](/es_bank_import_mapping.png)
+*Intelligent bank statement mapping handles different CSV formats from all major NZ banks automatically*
 
 ### **Categorization Questions**
 The categorization tool improves with use, but everyone's spending patterns are different. I'm happy to help you set up custom categories for your specific situation.

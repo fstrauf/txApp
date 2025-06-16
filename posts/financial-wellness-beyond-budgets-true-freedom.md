@@ -35,6 +35,9 @@ It's like becoming an expert at navigating traffic jams instead of learning to w
 
 ## The Time Freedom Framework: A Different Approach
 
+![Financial Overview Dashboard](/es_financial_overview_dashboard.png)
+*True financial wellness: See your complete financial picture focused on time freedom, not just account balances*
+
 Real financial wellness starts with a fundamental shift in perspective: **time is your most valuable currency, and money is just a tool for purchasing time**.
 
 This leads to completely different questions:
@@ -120,6 +123,9 @@ Traditional wealth-building focuses on accumulating assets that might provide fu
 
 Result: He reduced his working hours from 50 to 25 per week while maintaining his income.
 
+![AI-Powered Financial Insights](/es_ex_suggestion_adjustment.png)
+*Smart financial suggestions help you build anti-fragile systems that adapt and improve over time*
+
 ### **Pillar 4: Develop Anti-Fragile Financial Systems**
 
 Traditional financial planning optimizes for predictable scenarios. Time freedom financial wellness builds systems that get stronger during chaos.
@@ -196,6 +202,9 @@ Rate yourself honestly on each dimension (1-10 scale):
 
 **Goal**: Establish basic financial security without lifestyle inflation
 
+![Data Management Interface](/es_data_managemenmt.png)
+*Comprehensive data management makes tracking your true expenses and building financial independence effortless*
+
 **Actions**:
 1. **Calculate your actual required income** (not your current income)
 2. **Identify expense categories** that don't improve your life quality
@@ -246,6 +255,9 @@ Rate yourself honestly on each dimension (1-10 scale):
 **Solution**: Audit your expenses for their actual impact on your well-being. Often you'll find that the most expensive parts of your lifestyle provide the least actual satisfaction.
 
 **Framework**: For each expense category, ask: "Does this expense buy me time, freedom, health, or genuine happiness?" If not, it's a candidate for reduction.
+
+![Smart Expense Analysis](/es_category_selection.png)
+*Intelligent expense categorization helps you analyze which spending truly contributes to your time freedom and life satisfaction*
 
 ### **"I Don't Have Skills That Work Remotely"**
 
@@ -352,6 +364,9 @@ Systematically optimize your income-to-cost-of-living ratio:
 - [ ] Identify top 3 expense categories that don't enhance life quality
 - [ ] Audit current skills for location independence potential
 - [ ] Set up basic tracking systems for time-to-income ratios
+
+![Bank Statement Import](/es_bank_import_mapping.png)
+*Streamlined bank data import makes the foundation phase effortless - get your complete financial picture in minutes*
 
 ### **Days 31-60: Optimization and Experimentation**
 - [ ] Reduce identified wasteful expenses by 50%

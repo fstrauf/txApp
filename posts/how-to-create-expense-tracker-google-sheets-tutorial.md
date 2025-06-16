@@ -88,6 +88,9 @@ This is where you'll log every expense. Set up these columns in Row 1:
 
 Switch to the **Categories** tab and create this structure:
 
+![Transaction Validation](/es_tx_validating_suggestion.png)
+*Smart category suggestions help validate and improve your transaction categorization*
+
 | A | B | C |
 |---|---|---|
 | **Main Category** | **Subcategory** | **Keywords** |

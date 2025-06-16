@@ -55,6 +55,9 @@ Many people would only count the $4,000 in "savings" and report a 5% savings rat
 
 ## The Savings Rate Calculator
 
+![Financial Overview Dashboard](/es_financial_overview_dashboard.png)
+*Complete financial overview showing your savings rate, spending patterns, and path to financial independence*
+
 ### Step 1: Calculate Your Monthly Income
 
 **Employment Income:**
@@ -180,6 +183,9 @@ Let me share my actual progression to illustrate how savings rates can grow over
 
 **Key insight:** My savings rate increased faster than my income because I treated raises as savings opportunities, not lifestyle upgrades.
 
+![AI-Powered Insights](/es_ex_suggestion_adjustment.png)
+*Smart suggestions help optimize your spending and identify opportunities to increase your savings rate*
+
 ## Strategies to Increase Your Savings Rate
 
 ### The Two-Lever Approach
@@ -191,6 +197,9 @@ You can increase your savings rate by:
 Most people focus entirely on expense reduction, but the highest savings rates come from optimizing both.
 
 ### Expense Optimization Strategies
+
+![Smart Category Analysis](/es_category_selection.png)
+*Intelligent expense categorization helps identify the biggest opportunities for increasing your savings rate*
 
 **The Big Three (Focus Here First):**
 
@@ -264,6 +273,9 @@ High savings rates require automation:
 - **Automatic bill pay:** Reduce decision fatigue on fixed expenses
 - **Savings rate increases:** Automatically increase contributions with raises
 
+![Bank Statement Import](/es_bank_import_mapping.png)
+*Seamless bank data import ensures your savings rate calculations stay accurate with minimal effort*
+
 ## Common Savings Rate Mistakes
 
 ### Mistake 1: Focusing on Percentages Too Early
@@ -327,6 +339,9 @@ The high savings rate wins by over 20 years, even with significantly lower inves
 2. Calculate your true savings rate using the complete formula
 3. Determine your current FIRE timeline
 4. Set improvement targets
+
+![Data Management Interface](/es_data_managemenmt.png)
+*Comprehensive data management makes calculating and tracking your savings rate effortless*
 
 ### Week 2: Optimize the Big Three
 1. Analyze housing costs and alternatives

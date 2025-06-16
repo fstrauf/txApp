@@ -29,6 +29,9 @@ Before diving into the template, let's address the obvious question: why use Goo
 
 This expense tracker goes far beyond basic input-output tracking:
 
+![Financial Overview Dashboard](/es_financial_overview_dashboard.png)
+*Complete financial overview with automated categorization and spending insights*
+
 ### Automatic Categorization
 Smart formulas automatically categorize common expenses based on merchant names and descriptions. No more manually sorting every coffee purchase or grocery bill.
 
@@ -85,6 +88,9 @@ Enter transactions manually. Yes, it takes more time, but you'll become intimate
 
 **Option 2: CSV Import**
 Most banks allow you to export transaction data as CSV files. Import these monthly for bulk updates.
+
+![Bank CSV Import Interface](/es_bank_csv_import.png)
+*Streamlined CSV import with automatic column mapping for all major banks*
 
 **Option 3: Google Sheets Banking Add-ons**
 Several add-ons can connect directly to your bank accounts. Research security carefully before using these options.
