@@ -45,6 +45,9 @@ For most people, this means spending 1-2 hours every month just on transaction c
 
 What if your Google Sheets expense tracker could intelligently categorize transactions based on their meaning rather than rigid rules? This is now possible thanks to advances in AI, specifically sentence transformer models.
 
+![Data Management Interface](/es_data_managemenmt.png)
+*Comprehensive data management with multiple import sources and intelligent categorization*
+
 Here's how an AI-powered approach transforms the expense tracking process:
 
 1. Download transactions from your bank (same as before)
@@ -80,6 +83,9 @@ There are two approaches to implementing this AI-powered upgrade:
 ### Option 1: Use the Expense Sorted Extension (Recommended)
 
 The easiest way to add AI categorization to your Google Sheets expense tracking is with the [Expense Sorted](https://expensesorted.com) extension:
+
+![Bank Import Mapping](/es_bank_import_mapping.png)
+*Intelligent bank statement import with automatic column mapping and format detection*
 
 1. Install the Expense Sorted extension from the Google Workspace Marketplace
 2. Connect it to your existing expense tracking spreadsheet

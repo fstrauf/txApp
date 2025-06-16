@@ -77,6 +77,9 @@ The good news? You can build a more powerful, completely private expense trackin
 
 ## The Complete Private Expense Tracking System
 
+![Private Data Management](/es_data_managemenmt.png)
+*Complete data management with full privacy control - your financial data stays yours*
+
 ### **Foundation: The Smart Category System**
 
 Most people fail at expense tracking because they use generic categories that don't match their actual spending patterns. Here's how to build categories that work:

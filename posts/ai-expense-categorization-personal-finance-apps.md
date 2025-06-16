@@ -90,6 +90,9 @@ AI-powered categorization doesn't just incrementally improve the user experience
 
 Not all AI categorization systems are created equal. The best solutions incorporate these five essential elements:
 
+![AI Expense Suggestion Interface](/es_ex_suggestion_adjustment.png)
+*AI-powered categorization suggestions with confidence scoring and user feedback loop*
+
 ### 1. Multi-Factor Analysis
 Looks beyond simple merchant names to include:
 - Transaction amount patterns
@@ -182,6 +185,9 @@ Three simple steps:
 3. Display to user with confidence level
 
 ## Real Results: The Personal Finance App Transformation
+
+![Category Selection and Review](/es_category_selection.png)
+*Advanced category management with smart suggestions and bulk operations*
 
 When we implemented AI categorization in a personal finance app:
 

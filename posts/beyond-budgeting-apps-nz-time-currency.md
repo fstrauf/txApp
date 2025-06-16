@@ -91,6 +91,9 @@ Let me be frank about the main players in New Zealand:
 
 ## The Four-Input Alternative That Actually Works
 
+![Financial Overview Dashboard](/es_financial_overview_dashboard.png)
+*Simple, powerful financial overview that gives you clarity in minutes, not hours*
+
 Here's what I've discovered after years of financial coaching: **You don't need to track every transaction to achieve financial clarity**.
 
 You need four numbers, updated monthly:
@@ -115,9 +118,15 @@ Traditional budgeting asks you to predict and control the future. "I'll spend ex
 
 The four-input system acknowledges reality: **Life is unpredictable, but your financial trajectory doesn't have to be**.
 
+![AI-Powered Suggestions](/es_ex_suggestion_adjustment.png)
+*Smart suggestions that help you make better time-value decisions without micromanaging every transaction*
+
 Instead of micromanaging categories, you optimize for the one thing that matters: **increasing the gap between income and essential spending**.
 
 ## Building Your Time-Focused Financial System
+
+![Data Management Interface](/es_data_managemenmt.png)
+*Streamlined data management that saves hours while maintaining complete privacy and control*
 
 If you want to implement this approach, here's your action plan:
 
@@ -135,6 +144,9 @@ Instead of tracking every expense, track every **time decision**:
 - What did you buy to save time? (Uber instead of bus, takeaways instead of cooking)
 - What did you buy that cost you time? (Things that require maintenance, subscription services you forget about)
 - Where did you spend money to buy back your weekend?
+
+![Smart Category Selection](/es_category_selection.png)
+*Smart categorization that focuses on time-value decisions rather than endless micro-categories*
 
 This shifts your focus from guilt about spending to **strategic thinking about time**.
 
