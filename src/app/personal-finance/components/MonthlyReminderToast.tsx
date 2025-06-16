@@ -6,13 +6,15 @@ interface MonthlyReminderToastProps {
   onClose?: () => void;
   onSetReminder?: () => void; // Callback to open settings tab
   userToastStatus?: string | null; // Pass the user's current toast status
+  onStatusUpdate?: (status: 'DISMISSED' | 'SET_REMINDER') => void; // Callback to update parent state
 }
 
 const MonthlyReminderToast: React.FC<MonthlyReminderToastProps> = ({ 
   delay = 10000,
   onClose,
   onSetReminder,
-  userToastStatus
+  userToastStatus,
+  onStatusUpdate
 }) => {
   const [visible, setVisible] = useState(false);
 
@@ -38,6 +40,11 @@ const MonthlyReminderToast: React.FC<MonthlyReminderToastProps> = ({
         },
         body: JSON.stringify({ status }),
       });
+      
+      // Update parent state immediately after successful API call
+      if (onStatusUpdate) {
+        onStatusUpdate(status);
+      }
     } catch (error) {
       console.error('Failed to update toast status:', error);
     }

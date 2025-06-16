@@ -380,8 +380,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       'config.mappings': Object.keys(config.mappings || {}).length
     });
 
-    console.log('🔍 CRITICAL DEBUG - createNewSpreadsheetMode value:', createNewSpreadsheetMode);
-    console.log('🔍 CRITICAL DEBUG - typeof createNewSpreadsheetMode:', typeof createNewSpreadsheetMode);
+    
 
     // Auto-detect if user should be in createNewSpreadsheetMode
     // If user has no linked spreadsheet, they should be creating a new one
@@ -590,16 +589,11 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       
       // EXPLICIT CHECKPOINT
       if (effectiveCreateNewMode) {
-        console.log('✅ CONFIRMED: In createNewSpreadsheetMode - MUST use auto-classify');
-        console.log('✅ shouldUseCustomModel should be FALSE:', shouldUseCustomModel);
-      } else {
-        console.log('ℹ️ NOT in createNewSpreadsheetMode - checking for existing data');
-        console.log('ℹ️ hasExistingData:', hasExistingData);
-        console.log('ℹ️ shouldUseCustomModel:', shouldUseCustomModel);
-      }
+
+              }
       
       if (shouldUseCustomModel) {
-        console.log('🚨 ABOUT TO CALL TRAINING ENDPOINT - This should NOT happen for createNewSpreadsheetMode!');
+
         // Subsequent upload - use custom model training + classification
         setFeedback({ type: 'success', message: 'Training custom model on your existing data...' });
         
@@ -776,7 +770,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         });
 
       } else {
-        console.log('✅ TAKING AUTO-CLASSIFY PATH - This is correct for createNewSpreadsheetMode');
+
         // First upload or creating new spreadsheet - use generic auto-classify
         const message = effectiveCreateNewMode 
           ? 'Categorizing transactions for your new spreadsheet...'

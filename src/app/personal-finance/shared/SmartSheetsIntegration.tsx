@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { PrimaryButton } from './PrimaryButton';
-import { GoogleSheetsDebugInfo } from './GoogleSheetsDebugInfo';
+
 import { 
   TableCellsIcon, 
   PlusIcon, 
@@ -282,7 +282,7 @@ export const SmartSheetsIntegration: React.FC<SmartSheetsIntegrationProps> = ({
                </div>
              )}
              
-             <GoogleSheetsDebugInfo />
+     
            </div>
          </div>
        </div>

@@ -127,16 +127,7 @@ const DashboardScreen: React.FC = () => {
     });
   }, [isFirstTimeUser, spreadsheetLinked, displayTransactions?.length, session?.user?.id, error, isLoading, displayStats]);
 
-  // Debug logging (remove in production)
-  useEffect(() => {
-    console.log('🔍 Dashboard Debug:', {
-      isFirstTimeUser,
-      spreadsheetLinked,
-      hasUserTransactions: userData.transactions?.length || 0,
-      filteredTransactionsLength: filteredTransactions.length,
-      isAuthenticated: !!session?.user?.id
-    });
-  }, [isFirstTimeUser, spreadsheetLinked, userData.transactions, filteredTransactions, session]);
+
 
   // Temporarily populate store with mock data for first-time users to enable charts/overview
   // but only if there's no existing real data
@@ -896,6 +887,7 @@ const DashboardScreen: React.FC = () => {
           delay={10000} 
           onSetReminder={handleSetMonthlyReminder}
           userToastStatus={userToastStatus}
+          onStatusUpdate={(status) => setUserToastStatus(status)}
         />
       )}
     </div>
@@ -969,8 +961,7 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
         </div>
       )}
       
-      {/* Debug Component - Remove this in production */}
-      {/* <DashboardDebugger dashboardStats={stats} timeFilter={currentTimeFilter} /> */}
+      
       
       {/* Condensed Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
