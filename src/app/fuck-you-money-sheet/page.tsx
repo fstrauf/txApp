@@ -124,7 +124,7 @@ export default function FinancialFreedomSheet() {
               <div className="mb-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">Ready to Transform Your Finances?</h3>
                 <p className="text-gray-700 text-lg">Start with the sheet, then supercharge it with our app</p>
-              </div>
+                </div>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link 
                   href="/personal-finance" 
@@ -245,7 +245,7 @@ export default function FinancialFreedomSheet() {
               <div className="flex mt-4">
                 <span className="text-yellow-400 text-lg">★★★★★</span>
               </div>
-            </div>            
+            </div>
             <div className="prose prose-lg max-w-none mt-16 prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-a:text-primary hover:prose-a:text-primary-dark">
               <section id="instructions">
                 <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Step-by-Step Instructions</h2>
@@ -399,10 +399,10 @@ export default function FinancialFreedomSheet() {
                         <li>Update the Monthly Expense tab with the new month's data.</li>
                         <li>Review your financial progress in the Expenses vs. Saving tab.</li>
                       </ol>
-                    </div>
-                  </div>
-                </div>
-
+            </div>
+            </div>
+            </div>
+            
                 <p className="text-gray-700 mt-8">
                   To get into the right mindset, I recommend reading:{" "}
                   <a

@@ -19,7 +19,7 @@ export default function HomePageClient() {
         {/* New Hero Section - Personal Finance Health Check */}
         <div className="flex flex-col md:flex-row items-start gap-8 md:gap-12 mb-16 md:mb-24">
           {/* Left Column: New Value Prop */}
-          <div className="w-full md:w-1/2 text-center md:text-left">
+          <div className="w-full md:w-2/5 text-center md:text-left">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 mb-6">
               <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
               <span className="text-sm font-medium text-primary">New: Personal Finance Health Check</span>
@@ -56,16 +56,22 @@ export default function HomePageClient() {
             </p>
           </div>
 
-          <div className="w-full md:w-1/2">
+          <div className="w-full md:w-3/5">
             <div className="mb-4">
               <Image
-                src="/expense-sorted_tx_analysis.png"
+                src="/es_dashboard_close.webp"
                 alt="Personal Finance Dashboard showing expense categorization and savings opportunities"
-                width={1663}
-                height={1618}
+                width={415}
+                height={409}
                 className="w-full h-auto rounded-xl shadow-lg"
-                sizes="(max-width: 768px) 100vw, 50vw"
+                sizes="(max-width: 768px) 100vw, 60vw"
+                quality={100}
                 priority
+                unoptimized={true}
+                style={{
+                  imageRendering: 'crisp-edges',
+                  WebkitFontSmoothing: 'antialiased',
+                }}
               />
             </div>
             <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-md border border-gray-100">
