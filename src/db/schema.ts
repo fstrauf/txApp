@@ -30,7 +30,7 @@ export const subscriptionStatusEnum = pgEnum('subscriptionStatus', ['ACTIVE', 'C
 export const billingCycleEnum = pgEnum('billingCycle', ['MONTHLY', 'ANNUAL']);
 
 // Subscribers source enum
-export const subscriberSourceEnum = pgEnum('subscriberSource', ['SPREADSHEET', 'BETA_ACCESS', 'PREMIUM_WAITLIST', 'EXPORT_FEEDBACK', 'OTHER']);
+export const subscriberSourceEnum = pgEnum('subscriberSource', ['SPREADSHEET', 'BETA_ACCESS', 'PREMIUM_WAITLIST', 'EXPORT_FEEDBACK', 'BUSINESS_BETA', 'OTHER']);
 
 // Auth-related tables
 export const users = pgTable('users', {

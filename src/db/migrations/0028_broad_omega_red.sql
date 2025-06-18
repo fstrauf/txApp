@@ -1,0 +1,1 @@
+ALTER TYPE "public"."subscriberSource" ADD VALUE 'BUSINESS_BETA' BEFORE 'OTHER';
