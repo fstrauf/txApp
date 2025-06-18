@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth';
 
-const TXCLASSIFY_API_URL = process.env.TXCLASSIFY_API_URL || 'http://localhost:80';
+const TXCLASSIFY_API_URL = process.env.EXPENSE_SORTED_API || 'http://localhost:80';
 const TXCLASSIFY_API_KEY = process.env.TXCLASSIFY_API_KEY || 'test-api-key-123';
 
 interface TransactionInput {
