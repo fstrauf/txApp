@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
@@ -210,7 +210,7 @@ export const useDashboardQuery = () => {
   });
 
   // Update store when spreadsheet data changes
-  useMemo(() => {
+  useEffect(() => {
     if (spreadsheetData?.transactions) {
       processTransactionData(spreadsheetData.transactions);
     }
@@ -221,7 +221,7 @@ export const useDashboardQuery = () => {
   }, [spreadsheetData?.transactions, spreadsheetData?.savings, processTransactionData, updateSavingsSheetData]);
 
   // Update spreadsheet info in store when status changes
-  useMemo(() => {
+  useEffect(() => {
     if (dashboardStatus?.spreadsheetId && dashboardStatus?.spreadsheetUrl) {
       updateSpreadsheetInfo(dashboardStatus.spreadsheetId, dashboardStatus.spreadsheetUrl);
     }

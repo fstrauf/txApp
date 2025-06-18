@@ -15,7 +15,9 @@ import {
   PlusCircleIcon,
   ExclamationTriangleIcon,
   LinkIcon,
-  QuestionMarkCircleIcon
+  QuestionMarkCircleIcon,
+  CurrencyDollarIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import DashboardCharts from '../components/DashboardCharts';
 import DataOverview from '../components/DataOverview';
@@ -25,10 +27,172 @@ import MonthlyReminderToast from '../components/MonthlyReminderToast';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsheetData';
-import { getUserMonthlyReminderToastStatus } from '../utils/monthlyReminderUtils';
+
 import { mockTransactions, mockSavingsData } from '../utils/mockData';
 import { useRouter } from 'next/navigation';
 import posthog from 'posthog-js';
+import { AIFinancialInsights } from '../ai/AIFinancialInsights';
+import { TransactionAnalyzer } from '../ai/transaction-analyzer';
+import { AdvancedFinancialAnalytics } from '../components/AdvancedFinancialAnalytics';
+import { Box } from '@/components/ui/Box';
+
+const TransactionAnalysisSection: React.FC<{ transactions: any[] }> = ({ transactions }) => {
+  const [analysis, setAnalysis] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (transactions.length > 10) {
+      setLoading(true);
+      try {
+        const result = TransactionAnalyzer.analyzeTransactions(transactions);
+        setAnalysis(result);
+      } catch (error) {
+        console.error('Transaction analysis failed:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }, [transactions]);
+
+  if (loading) {
+    return (
+      <Box variant="default" className="p-6 mt-6">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <span className="ml-3 text-gray-600">Analyzing your spending patterns...</span>
+        </div>
+      </Box>
+    );
+  }
+
+  if (!analysis) return null;
+
+  return (
+    <Box variant="gradient" className="p-6 mt-6">
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+          <ChartBarIcon className="h-5 w-5 text-indigo-600 mr-2" />
+          Smart Transaction Analysis
+          <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+            Calculation-Based
+          </span>
+        </h3>
+        <p className="text-sm text-gray-600">
+          AI-powered insights from {analysis.totalTransactions} transactions
+        </p>
+      </div>
+
+      {/* Summary */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <p className="text-blue-800 font-medium">{analysis.summary}</p>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Recurring Expenses */}
+        {analysis.recurringExpenses.length > 0 && (
+          <div>
+            <h4 className="font-medium text-gray-800 mb-3 flex items-center">
+              <CurrencyDollarIcon className="h-4 w-4 text-red-500 mr-1" />
+              Expenses That Add Up
+            </h4>
+            <div className="space-y-3">
+              {analysis.recurringExpenses.slice(0, 3).map((expense: any, index: number) => (
+                <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{expense.category}</p>
+                      <p className="text-xs text-gray-600">{expense.frequency} transactions</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-red-600">${expense.annualCost.toFixed(0)}/year</p>
+                      <p className="text-xs text-gray-500">${expense.averageAmount.toFixed(2)} avg</p>
+                    </div>
+                  </div>
+                  <div className="text-xs bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
+                    <p className="text-yellow-800">{expense.insight}</p>
+                  </div>
+                  <div className="text-xs bg-green-50 p-2 rounded border-l-4 border-green-400 mt-2">
+                    <p className="text-green-800"><strong>💡 Action:</strong> {expense.actionable}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Savings Opportunities */}
+        {analysis.topSavingsOpportunities.length > 0 && (
+          <div>
+            <h4 className="font-medium text-gray-800 mb-3 flex items-center">
+              <ClockIcon className="h-4 w-4 text-green-500 mr-1" />
+              Top Savings Opportunities
+            </h4>
+            <div className="space-y-3">
+              {analysis.topSavingsOpportunities.slice(0, 3).map((opportunity: any, index: number) => (
+                <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium text-gray-900 text-sm">{opportunity.title}</p>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          opportunity.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
+                          opportunity.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {opportunity.difficulty}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-2">{opportunity.description}</p>
+                    </div>
+                    <div className="text-right ml-4">
+                      <p className="font-semibold text-green-600">${opportunity.savings.toFixed(0)}</p>
+                      <p className="text-xs text-gray-500">potential</p>
+                    </div>
+                  </div>
+                  <div className="text-xs bg-blue-50 p-2 rounded">
+                    <p className="text-blue-800">{opportunity.recommendation}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Category Insights */}
+      {analysis.categoryInsights.length > 0 && (
+        <div className="mt-6">
+          <h4 className="font-medium text-gray-800 mb-3 flex items-center">
+            <ExclamationTriangleIcon className="h-4 w-4 text-blue-500 mr-1" />
+            Category Spending Patterns
+          </h4>
+          <div className="grid md:grid-cols-2 gap-3">
+            {analysis.categoryInsights.slice(0, 4).map((category: any, index: number) => (
+              <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
+                <div className="flex justify-between items-start mb-2">
+                  <p className="font-medium text-gray-900 text-sm">{category.title}</p>
+                  <div className="text-right">
+                    <p className="font-semibold text-blue-600">${category.savings.toFixed(0)}</p>
+                    <p className="text-xs text-gray-500">potential</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600 mb-2">{category.description}</p>
+                <p className="text-xs text-green-800 bg-green-50 p-2 rounded">{category.recommendation}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="mt-6 pt-4 border-t border-gray-200 text-center">
+        <p className="text-xs text-gray-500">
+          Analysis based on mathematical patterns and spending behavior insights
+        </p>
+      </div>
+    </Box>
+  );
+};
 
 const DashboardScreen: React.FC = () => {
   const { data: session, status } = useSession();
@@ -82,8 +246,19 @@ const DashboardScreen: React.FC = () => {
     const fetchToastStatus = async () => {
       if (session?.user?.email) {
         try {
-          const status = await getUserMonthlyReminderToastStatus(session.user.email);
-          setUserToastStatus(status);
+          const response = await fetch('/api/user/monthly-reminder-toast', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setUserToastStatus(data.status);
+          } else {
+            console.error('Failed to fetch toast status:', response.statusText);
+          }
         } catch (error) {
           console.error('Failed to fetch toast status:', error);
         }
@@ -112,6 +287,8 @@ const DashboardScreen: React.FC = () => {
   // Use mock data for first-time users, real data otherwise
   const displayStats = isFirstTimeUser ? mockStats : dashboardStats;
   const displayTransactions = isFirstTimeUser ? mockTransactions : filteredTransactions;
+
+  // No separate transaction insights hook needed - using existing AI system
 
   // Track dashboard screen view
   useEffect(() => {
@@ -545,7 +722,11 @@ const DashboardScreen: React.FC = () => {
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className='text-sm text-gray-600'>
                   Last updated: {displayStats?.lastDataRefresh ? 
-            new Date(displayStats.lastDataRefresh).toLocaleDateString() : 
+            new Date(displayStats.lastDataRefresh).toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric', 
+              year: 'numeric' 
+            }) : 
             'Never'}
                 </div>
 
@@ -638,7 +819,7 @@ const DashboardScreen: React.FC = () => {
                 <div className="text-sm text-gray-600">
                   {isFirstTimeUser 
                     ? 'Demo mode - showing sample data'
-                    : `Affects both KPIs and charts • ${displayTransactions.length} transactions shown`
+                    : `${displayTransactions.length} transactions shown`
                   }
                 </div>
               </div>
@@ -647,7 +828,18 @@ const DashboardScreen: React.FC = () => {
 
           {/* Tab Content */}
           {activeTab === 'overview' && (
-            <DashboardStatistics stats={displayStats} filteredTransactions={displayTransactions} isFirstTimeUser={isFirstTimeUser} />
+            <>
+              <DashboardStatistics stats={displayStats} filteredTransactions={displayTransactions} isFirstTimeUser={isFirstTimeUser} />
+              
+              {/* Advanced Financial Analytics Section */}
+              {displayTransactions.length > 5 && (
+                <AdvancedFinancialAnalytics 
+                  transactions={displayTransactions} 
+                  autoAnalyze={!isFirstTimeUser}
+                  className="mt-6"
+                />
+              )}
+            </>
           )}
 
           {activeTab === 'transactions' && (
@@ -661,7 +853,11 @@ const DashboardScreen: React.FC = () => {
                         <p className="font-medium text-gray-900">{transaction.category || 'Transaction'}</p>
                         <p className="text-sm text-gray-600">{transaction.isDebit ? 'Expense' : 'Income'}</p>
                         <p className="text-xs text-gray-500">
-                          {transaction.date ? new Date(transaction.date).toLocaleDateString() : 'No date'}
+                          {transaction.date ? new Date(transaction.date).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          }) : 'No date'}
                         </p>
                       </div>
                       <div className="text-right">
@@ -953,7 +1149,15 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
                </p>
                {consolidatedData.lastDataRefresh && (
                  <p className="mt-1 text-xs text-amber-600">
-                   Last updated: {consolidatedData.lastDataRefresh.toLocaleDateString()} at {consolidatedData.lastDataRefresh.toLocaleTimeString()}
+                   Last updated: {consolidatedData.lastDataRefresh.toLocaleDateString('en-US', { 
+                     month: 'short', 
+                     day: 'numeric', 
+                     year: 'numeric' 
+                   })} at {consolidatedData.lastDataRefresh.toLocaleTimeString('en-US', {
+                     hour: 'numeric',
+                     minute: '2-digit',
+                     hour12: true
+                   })}
                  </p>
                )}
              </div>

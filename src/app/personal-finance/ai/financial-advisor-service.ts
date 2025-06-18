@@ -23,6 +23,7 @@ import type {
   AIFinancialInsight, 
   FinancialAdvisorQuery 
 } from "./index";
+import { TransactionAnalyzer } from "./transaction-analyzer";
 
 // Schema for structured AI recommendations
 const recommendationSchema = z.object({
@@ -64,6 +65,21 @@ export class FinancialAdvisorService {
       const savingsRate = query.userData.income > 0 ? ((query.userData.income - query.userData.spending) / query.userData.income) * 100 : 0;
       const monthsOfExpenses = query.userData.spending > 0 ? query.userData.savings / query.userData.spending : 0;
 
+      // Analyze transactions if provided
+      let transactionAnalysis = null;
+      if (query.transactions && query.transactions.length > 10) {
+        try {
+          transactionAnalysis = TransactionAnalyzer.analyzeTransactions(query.transactions);
+          console.log('✅ Transaction analysis completed:', {
+            totalTransactions: transactionAnalysis.totalTransactions,
+            recurringExpenses: transactionAnalysis.recurringExpenses.length,
+            topSavings: transactionAnalysis.topSavingsOpportunities.length
+          });
+        } catch (error) {
+          console.error('Transaction analysis failed:', error);
+        }
+      }
+
       // Create comprehensive context for AI
       const financialContext = `
 # User's Financial Situation
@@ -90,6 +106,18 @@ ${optimizedReturns ? `
 - Optimized Return Rate: ${formatPercentage(optimizedReturns.optimizedRate)}
 - Potential Annual Gain: ${formatCurrency(optimizedReturns.optimizedAnnualReturn - optimizedReturns.currentAnnualReturn)}
 ` : 'Not enough savings for investment optimization analysis'}
+
+## Transaction Analysis
+${transactionAnalysis ? `
+- Total Transactions Analyzed: ${transactionAnalysis.totalTransactions}
+- Total Expenses: ${formatCurrency(transactionAnalysis.expenseTotal)}
+- Recurring Expenses Found: ${transactionAnalysis.recurringExpenses.length}
+- Top Recurring Expenses: ${transactionAnalysis.recurringExpenses.slice(0, 3).map(exp => 
+  `${exp.category} ($${exp.annualCost.toFixed(0)}/year)`
+).join(', ')}
+- Potential Savings Identified: ${formatCurrency(transactionAnalysis.topSavingsOpportunities.reduce((sum, opp) => sum + opp.savings, 0))}
+- Analysis Summary: ${transactionAnalysis.summary}
+` : 'No transaction data provided for detailed spending analysis'}
 
 ## Context
 User's question: ${query.question || 'General financial advice'}
@@ -135,6 +163,12 @@ Format your response as structured recommendations with clear priorities and act
         contextualFactors,
         nextSteps: structuredResponse.nextSteps,
         educationalTopics: structuredResponse.educationalTopics,
+        transactionInsights: transactionAnalysis ? {
+          recurringExpenses: transactionAnalysis.recurringExpenses,
+          categoryInsights: transactionAnalysis.categoryInsights,
+          topSavingsOpportunities: transactionAnalysis.topSavingsOpportunities,
+          summary: transactionAnalysis.summary
+        } : undefined,
       };
 
     } catch (error) {

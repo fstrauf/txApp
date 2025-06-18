@@ -336,6 +336,105 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
               </div>
             )}
 
+            {/* Transaction Insights */}
+            {insight.transactionInsights && (
+              <div className="space-y-4 mt-6 pt-6 border-t border-gray-200">
+                <h4 className="font-semibold text-gray-800 mb-3">
+                  <ChartBarIcon className="h-5 w-5 text-indigo-600 mr-2 inline" />
+                  Smart Transaction Analysis
+                </h4>
+                
+                {/* Summary */}
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 mb-4">
+                  <p className="text-purple-800 font-medium">{insight.transactionInsights.summary}</p>
+                </div>
+
+                {/* Recurring Expenses */}
+                {insight.transactionInsights.recurringExpenses.length > 0 && (
+                  <div className="mb-4">
+                    <h5 className="font-medium text-gray-700 mb-2">💰 Recurring Expenses That Add Up</h5>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {insight.transactionInsights.recurringExpenses.slice(0, 4).map((expense: any, index: number) => (
+                        <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900 text-sm">{expense.category}</p>
+                              <p className="text-xs text-gray-600">{expense.pattern}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-red-600">${expense.annualCost.toFixed(0)}/year</p>
+                              <p className="text-xs text-gray-500">${expense.averageAmount.toFixed(2)} avg</p>
+                            </div>
+                          </div>
+                          <div className="bg-blue-50 border-l-4 border-blue-400 p-2">
+                            <p className="text-xs text-blue-800">{expense.insight}</p>
+                          </div>
+                          <div className="bg-green-50 border-l-4 border-green-400 p-2 mt-2">
+                            <p className="text-xs text-green-800"><strong>Action:</strong> {expense.actionable}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Top Savings Opportunities */}
+                {insight.transactionInsights.topSavingsOpportunities.length > 0 && (
+                  <div className="mb-4">
+                    <h5 className="font-medium text-gray-700 mb-2">🎯 Top Savings Opportunities</h5>
+                    <div className="space-y-2">
+                      {insight.transactionInsights.topSavingsOpportunities.slice(0, 3).map((opportunity: any, index: number) => (
+                        <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-medium text-gray-900 text-sm">{opportunity.title}</p>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  opportunity.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
+                                  opportunity.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {opportunity.difficulty}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-600 mb-2">{opportunity.description}</p>
+                              <p className="text-xs text-blue-800">{opportunity.recommendation}</p>
+                            </div>
+                            <div className="text-right ml-4">
+                              <p className="font-semibold text-green-600">${opportunity.savings.toFixed(0)}</p>
+                              <p className="text-xs text-gray-500">potential savings</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Category Insights */}
+                {insight.transactionInsights.categoryInsights.length > 0 && (
+                  <div>
+                    <h5 className="font-medium text-gray-700 mb-2">📊 Category Spending Patterns</h5>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {insight.transactionInsights.categoryInsights.slice(0, 4).map((category: any, index: number) => (
+                        <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
+                          <div className="flex justify-between items-start mb-2">
+                            <p className="font-medium text-gray-900 text-sm">{category.title}</p>
+                            <div className="text-right">
+                              <p className="font-semibold text-blue-600">${category.savings.toFixed(0)}</p>
+                              <p className="text-xs text-gray-500">potential</p>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-600 mb-2">{category.description}</p>
+                          <p className="text-xs text-green-800 bg-green-50 p-2 rounded">{category.recommendation}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Get New Advice Button */}
             <div className="flex gap-2 pt-2">
               <PrimaryButton
@@ -355,6 +454,105 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
               </PrimaryButton>
             </div>
           </div>
+
+          {/* Keep the old structure but remove the duplicated content */}
+          {insight.transactionInsights && false && (
+            <div className="space-y-4 mt-6 pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-800 mb-3">
+                <ChartBarIcon className="h-5 w-5 text-indigo-600 mr-2 inline" />
+                Smart Transaction Analysis
+              </h4>
+              
+              {/* Summary */}
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 mb-4">
+                <p className="text-purple-800 font-medium">{insight.transactionInsights.summary}</p>
+              </div>
+
+              {/* Recurring Expenses */}
+              {insight.transactionInsights.recurringExpenses.length > 0 && (
+                <div className="mb-4">
+                  <h5 className="font-medium text-gray-700 mb-2">💰 Recurring Expenses That Add Up</h5>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {insight.transactionInsights.recurringExpenses.slice(0, 4).map((expense: any, index: number) => (
+                      <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900 text-sm">{expense.category}</p>
+                            <p className="text-xs text-gray-600">{expense.pattern}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-red-600">${expense.annualCost.toFixed(0)}/year</p>
+                            <p className="text-xs text-gray-500">${expense.averageAmount.toFixed(2)} avg</p>
+                          </div>
+                        </div>
+                        <div className="bg-blue-50 border-l-4 border-blue-400 p-2">
+                          <p className="text-xs text-blue-800">{expense.insight}</p>
+                        </div>
+                        <div className="bg-green-50 border-l-4 border-green-400 p-2 mt-2">
+                          <p className="text-xs text-green-800"><strong>Action:</strong> {expense.actionable}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Top Savings Opportunities */}
+              {insight.transactionInsights.topSavingsOpportunities.length > 0 && (
+                <div className="mb-4">
+                  <h5 className="font-medium text-gray-700 mb-2">🎯 Top Savings Opportunities</h5>
+                  <div className="space-y-2">
+                    {insight.transactionInsights.topSavingsOpportunities.slice(0, 3).map((opportunity: any, index: number) => (
+                      <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-gray-900 text-sm">{opportunity.title}</p>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                opportunity.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
+                                opportunity.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {opportunity.difficulty}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600 mb-2">{opportunity.description}</p>
+                            <p className="text-xs text-blue-800">{opportunity.recommendation}</p>
+                          </div>
+                          <div className="text-right ml-4">
+                            <p className="font-semibold text-green-600">${opportunity.savings.toFixed(0)}</p>
+                            <p className="text-xs text-gray-500">potential savings</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Category Insights */}
+              {insight.transactionInsights.categoryInsights.length > 0 && (
+                <div>
+                  <h5 className="font-medium text-gray-700 mb-2">📊 Category Spending Patterns</h5>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {insight.transactionInsights.categoryInsights.slice(0, 4).map((category: any, index: number) => (
+                      <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="font-medium text-gray-900 text-sm">{category.title}</p>
+                          <div className="text-right">
+                            <p className="font-semibold text-blue-600">${category.savings.toFixed(0)}</p>
+                            <p className="text-xs text-gray-500">potential</p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-600 mb-2">{category.description}</p>
+                        <p className="text-xs text-green-800 bg-green-50 p-2 rounded">{category.recommendation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         )}
       </Box>
     </div>
