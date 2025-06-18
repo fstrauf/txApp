@@ -11,7 +11,8 @@ import type { AIFinancialInsight } from './index';
 
 interface UseFinancialAdvisorOptions {
   autoLoad?: boolean;
-  context?: 'general' | 'savings_optimization' | 'spending_analysis' | 'goal_planning';
+  context?: 'general' | 'savings_optimization' | 'spending_analysis' | 'goal_planning' | 'transaction_analysis';
+  transactions?: any[];
 }
 
 export function useFinancialAdvisor(options: UseFinancialAdvisorOptions = {}) {
@@ -25,7 +26,7 @@ export function useFinancialAdvisor(options: UseFinancialAdvisorOptions = {}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { autoLoad = false, context = 'general' } = options;
+  const { autoLoad = false, context = 'general', transactions } = options;
 
   // Debug: Log userData changes
   useEffect(() => {
@@ -67,6 +68,7 @@ export function useFinancialAdvisor(options: UseFinancialAdvisorOptions = {}) {
           },
           question,
           context: (specificContext || context),
+          transactions: transactions || undefined,
         }),
       });
 

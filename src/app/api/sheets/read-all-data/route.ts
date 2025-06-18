@@ -25,6 +25,12 @@ interface AllSheetsData {
   availableSheets: string[];
   spreadsheetId: string;
   spreadsheetName?: string;
+  validationErrors?: {
+    sheet: string;
+    errors: string[];
+    expectedHeaders: string[];
+  };
+  isExpenseSortedFormat?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -61,14 +67,72 @@ export async function POST(request: NextRequest) {
     } catch (error: any) {
       if (error.code === 404) {
         return NextResponse.json(
-          { error: 'Spreadsheet not found or not accessible. Make sure the spreadsheet is shared or you have access.' },
+          { 
+            error: 'Spreadsheet not found or not accessible',
+            errorType: 'ACCESS_DENIED',
+            details: 'This could happen for several reasons:',
+            reasons: [
+              'The spreadsheet URL is incorrect or invalid',
+              'The spreadsheet has been deleted or moved',
+              'You don\'t have permission to access this spreadsheet',
+              'The spreadsheet is private and hasn\'t been shared with you'
+            ],
+            suggestions: [
+              'Double-check the spreadsheet URL',
+              'Ask the owner to share the spreadsheet with you',
+              'Make sure you\'re signed in to the correct Google account',
+              'Try creating a new spreadsheet with our template instead'
+            ]
+          },
           { status: 404 }
+        );
+      }
+      if (error.code === 403) {
+        return NextResponse.json(
+          { 
+            error: 'Permission denied to access this spreadsheet',
+            errorType: 'PERMISSION_DENIED',
+            details: 'You don\'t have the necessary permissions to read this spreadsheet.',
+            reasons: [
+              'The spreadsheet is private and you don\'t have access',
+              'Your Google account doesn\'t have read permissions',
+              'The spreadsheet owner needs to grant you access'
+            ],
+            suggestions: [
+              'Ask the spreadsheet owner to share it with your email address',
+              'Request "Editor" or "Viewer" permissions from the owner',
+              'Make sure you\'re signed in to the correct Google account',
+              'Try creating a new spreadsheet with our template instead'
+            ]
+          },
+          { status: 403 }
+        );
+      }
+      if (error.code === 401) {
+        return NextResponse.json(
+          { 
+            error: 'Your Google Sheets access has expired',
+            errorType: 'AUTH_EXPIRED',
+            details: 'Your authorization to access Google Sheets is no longer valid.',
+            suggestions: [
+              'Click "Re-link Spreadsheet" to refresh your access',
+              'Sign out and sign back in to refresh your Google connection',
+              'Check if you\'ve revoked access to this app in your Google account settings'
+            ]
+          },
+          { status: 401 }
         );
       }
       throw error;
     }
 
     const availableSheets = spreadsheetInfo.data.sheets?.map(s => s.properties?.title).filter((title): title is string => Boolean(title)) || [];
+    
+    // Check if this looks like our expected format
+    const hasExpenseDetailSheet = availableSheets.includes('Expense-Detail');
+    const hasConfigSheet = availableSheets.includes('Config');
+    const isExpenseSortedFormat = hasExpenseDetailSheet || hasConfigSheet;
+    
     const result: AllSheetsData = {
       availableSheets,
       spreadsheetId,
@@ -153,6 +217,12 @@ export async function POST(request: NextRequest) {
             result.transactionCount = recentTransactions.length;
           } else {
             console.error('❌ Header validation failed:', headerValidation.errors);
+            // Store validation errors for the response
+            result.validationErrors = {
+              sheet: 'Expense-Detail',
+              errors: headerValidation.errors,
+              expectedHeaders: EXPENSE_DETAIL_SCHEMA.headers as any as string[]
+            };
           }
         }
 
@@ -196,6 +266,50 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Add format compatibility flag
+    result.isExpenseSortedFormat = isExpenseSortedFormat;
+
+    // Check if we have an incompatible format
+    if (!isExpenseSortedFormat) {
+      return NextResponse.json({
+        success: false,
+        error: 'Spreadsheet format not compatible',
+        errorType: 'INCOMPATIBLE_FORMAT',
+        details: 'This spreadsheet doesn\'t have the required Expense Sorted format.',
+        data: result,
+        reasons: [
+          'Missing "Expense-Detail" sheet with transaction data',
+          'Missing "Config" sheet with settings',
+          'The spreadsheet may be using a different format or template'
+        ],
+        suggestions: [
+          'Create a new spreadsheet using our Expense Sorted template',
+          'Convert your existing data to match our format',
+          'Upload your CSV/data and we\'ll create a properly formatted spreadsheet for you'
+        ],
+        availableSheets: availableSheets,
+        requiresNewSpreadsheet: true
+      }, { status: 422 });
+    }
+
+    // If we have validation errors but the basic format is correct
+    if (result.validationErrors) {
+      return NextResponse.json({
+        success: false,
+        error: 'Spreadsheet structure needs adjustment',
+        errorType: 'STRUCTURE_MISMATCH',
+        details: 'The spreadsheet has the right sheets but wrong column headers.',
+        data: result,
+        validationErrors: result.validationErrors,
+        suggestions: [
+          'Update your column headers to match our format',
+          'Create a new spreadsheet with our template',
+          'Upload your data and we\'ll create a properly formatted spreadsheet for you'
+        ],
+        requiresNewSpreadsheet: true
+      }, { status: 422 });
+    }
+
     return NextResponse.json({
       success: true,
       data: result,
@@ -207,29 +321,63 @@ export async function POST(request: NextRequest) {
     
     // Handle specific Google API errors
     if (error.code === 401) {
-      return NextResponse.json(
-        { error: 'Invalid or expired Google access token' },
-        { status: 401 }
-      );
+      return NextResponse.json({
+        error: 'Your Google Sheets access has expired',
+        errorType: 'AUTH_EXPIRED',
+        details: 'Your authorization to access Google Sheets is no longer valid.',
+        suggestions: [
+          'Click "Re-link Spreadsheet" to refresh your access',
+          'Sign out and sign back in to refresh your Google connection',
+          'Check if you\'ve revoked access to this app in your Google account settings'
+        ]
+      }, { status: 401 });
     }
     
     if (error.code === 403) {
-      return NextResponse.json(
-        { error: 'Insufficient permissions. Please grant access to Google Sheets.' },
-        { status: 403 }
-      );
+      return NextResponse.json({
+        error: 'Insufficient permissions to access Google Sheets',
+        errorType: 'PERMISSION_DENIED',
+        details: 'You don\'t have the necessary permissions to read from Google Sheets.',
+        reasons: [
+          'The app doesn\'t have permission to access your Google Sheets',
+          'Your Google account settings may have changed',
+          'The specific spreadsheet may have restricted access'
+        ],
+        suggestions: [
+          'Grant access to Google Sheets when prompted',
+          'Check your Google account permissions for this app',
+          'Try re-linking your Google account'
+        ]
+      }, { status: 403 });
     }
 
     if (error.code === 404) {
-      return NextResponse.json(
-        { error: 'Spreadsheet not found or not accessible' },
-        { status: 404 }
-      );
+      return NextResponse.json({
+        error: 'Spreadsheet not found or not accessible',
+        errorType: 'ACCESS_DENIED',
+        details: 'The spreadsheet could not be accessed.',
+        reasons: [
+          'The spreadsheet URL is incorrect or invalid',
+          'The spreadsheet has been deleted or moved',
+          'You don\'t have permission to access this spreadsheet'
+        ],
+        suggestions: [
+          'Double-check the spreadsheet URL',
+          'Ask the owner to share the spreadsheet with you',
+          'Try creating a new spreadsheet with our template instead'
+        ]
+      }, { status: 404 });
     }
 
-    return NextResponse.json(
-      { error: error.message || 'Failed to read Google Sheets' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      error: 'Unexpected error reading Google Sheets',
+      errorType: 'UNKNOWN_ERROR',
+      details: error.message || 'An unexpected error occurred while trying to read your spreadsheet.',
+      suggestions: [
+        'Try refreshing the page and linking again',
+        'Check your internet connection',
+        'Contact support if the problem persists'
+      ]
+    }, { status: 500 });
   }
 } 

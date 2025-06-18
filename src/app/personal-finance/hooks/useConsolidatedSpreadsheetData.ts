@@ -1,6 +1,6 @@
 import { useDashboardQuery } from './useDashboardQuery';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 
 interface ConsolidatedSpreadsheetData {
   // Transaction data
@@ -71,7 +71,7 @@ export const useConsolidatedSpreadsheetData = (monthlyAverageExpenses?: number):
   }, [hasExpiredToken, userData.transactions, userData.savingsSheetData]);
 
   // Cache fresh savings data when available
-  useMemo(() => {
+  useEffect(() => {
     if (spreadsheetData?.savings && !hasExpiredToken) {
       updateSavingsSheetData(spreadsheetData.savings);
     }

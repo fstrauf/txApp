@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
@@ -70,10 +70,21 @@ const fetchSpreadsheetData = async (
   const result = await response.json();
   
   if (!response.ok) {
-    // Handle specific Google Sheets API errors
+    // For detailed error responses, throw the full error object as JSON string
+    if (result.errorType && (result.details || result.suggestions)) {
+      throw new Error(JSON.stringify(result));
+    }
+    
+    // Handle specific Google Sheets API errors (legacy)
     if (response.status === 401) {
       throw new Error('Google Sheets access expired. Please reconnect your account.');
     }
+    
+    // Handle format compatibility errors (422 status)
+    if (response.status === 422) {
+      throw new Error(JSON.stringify(result));
+    }
+    
     throw new Error(result.error || 'Failed to read from Google Sheets');
   }
 
@@ -210,7 +221,7 @@ export const useDashboardQuery = () => {
   });
 
   // Update store when spreadsheet data changes
-  useMemo(() => {
+  useEffect(() => {
     if (spreadsheetData?.transactions) {
       processTransactionData(spreadsheetData.transactions);
     }
@@ -221,7 +232,7 @@ export const useDashboardQuery = () => {
   }, [spreadsheetData?.transactions, spreadsheetData?.savings, processTransactionData, updateSavingsSheetData]);
 
   // Update spreadsheet info in store when status changes
-  useMemo(() => {
+  useEffect(() => {
     if (dashboardStatus?.spreadsheetId && dashboardStatus?.spreadsheetUrl) {
       updateSpreadsheetInfo(dashboardStatus.spreadsheetId, dashboardStatus.spreadsheetUrl);
     }
@@ -302,8 +313,20 @@ export const useDashboardQuery = () => {
     refetchStatus,
     refetchSpreadsheet,
     clearError: () => {
+      // Reset mutation errors
       refreshMutation.reset();
-      queryClient.removeQueries({ queryKey: ['spreadsheetData'], type: 'inactive' });
+      
+      // Cancel any pending queries to avoid race conditions
+      queryClient.cancelQueries({ queryKey: ['spreadsheetData'] });
+      queryClient.cancelQueries({ queryKey: ['dashboardStatus'] });
+      
+      // Invalidate queries to clear errors and remove data
+      queryClient.invalidateQueries({ queryKey: ['spreadsheetData'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStatus'] });
+      
+      // Remove all query data to force a fresh state
+      queryClient.removeQueries({ queryKey: ['spreadsheetData'] });
+      queryClient.removeQueries({ queryKey: ['dashboardStatus'] });
     }
   };
 }; 

@@ -41,11 +41,18 @@ export interface AIFinancialInsight {
   contextualFactors: string[];
   nextSteps: string[];
   educationalTopics: string[];
+  transactionInsights?: {
+    recurringExpenses: any[];
+    categoryInsights: any[];
+    topSavingsOpportunities: any[];
+    summary: string;
+  };
 }
 
 export interface FinancialAdvisorQuery {
   userData: UserFinancialData;
   question?: string;
-  context?: 'general' | 'savings_optimization' | 'spending_analysis' | 'goal_planning';
+  context?: 'general' | 'savings_optimization' | 'spending_analysis' | 'goal_planning' | 'transaction_analysis';
   previousRecommendations?: string[];
+  transactions?: any[]; // Transaction data for analysis
 }
