@@ -120,6 +120,57 @@ const ManageDataTab: React.FC<ManageDataTabProps> = ({
 
       {/* Action Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* Create New Spreadsheet */}
+        <Box variant="elevated" padding="lg" className="space-y-4">
+          <div className="flex items-start gap-3">
+            <DocumentPlusIcon className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <h4 className="font-medium text-gray-900 mb-2">Create New Spreadsheet</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Upload your data and we'll create a personalized spreadsheet
+              </p>
+              <Box variant="gradient" padding="sm" className="mb-4 border-blue-200">
+                <div className="text-xs">
+                  <p className="font-medium">What you'll get:</p>
+                  <ul className="mt-1 space-y-1">
+                    <li>• Automated expense categorization</li>
+                    <li>• Monthly spending summaries</li>
+                    <li>• Real-time dashboard sync</li>
+                  </ul>
+                </div>
+              </Box>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3">
+            <div className="relative">            
+              <button
+                onClick={onSwitchToUpload}
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-br from-primary to-secondary hover:from-primary-dark hover:to-secondary-dark text-white rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                <DocumentPlusIcon className="h-4 w-4" />
+                Create New Spreadsheet With Your Data
+              </button>
+            </div>
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex-1 border-t border-gray-200"></div>
+                <span className="text-xs text-gray-500 px-2">or</span>
+                <div className="flex-1 border-t border-gray-200"></div>
+              </div>
+              <button
+                onClick={onCreateNewWithData}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors border border-gray-300"
+              >
+                <DocumentPlusIcon className="h-4 w-4" />
+                Create from Template
+              </button>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Start with an empty spreadsheet template
+              </p>
+            </div>
+          </div>
+        </Box>
+
         {/* Link Existing Spreadsheet */}
         <Box variant="elevated" padding="lg" className="space-y-4">
           <div className="flex items-start gap-3">
@@ -189,58 +240,6 @@ const ManageDataTab: React.FC<ManageDataTabProps> = ({
                   onCreateNewWithData={onCreateNewWithData}
                 />
               )}
-            </div>
-          </div>
-        </Box>
-
-        {/* Create New Spreadsheet */}
-        <Box variant="elevated" padding="lg" className="space-y-4">
-          <div className="flex items-start gap-3">
-            <DocumentPlusIcon className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
-            <div className="flex-1">
-              <h4 className="font-medium text-gray-900 mb-2">Create New Spreadsheet</h4>
-              <p className="text-sm text-gray-600 mb-4">
-                Upload your data and we'll create a personalized spreadsheet
-              </p>
-              <Box variant="gradient" padding="sm" className="mb-4 border-blue-200">
-                <div className="text-xs">
-                  <p className="font-medium">What you'll get:</p>
-                  <ul className="mt-1 space-y-1">
-                    <li>• Automated expense categorization</li>
-                    <li>• Monthly spending summaries</li>
-                    <li>• Real-time dashboard sync</li>
-                  </ul>
-                </div>
-              </Box>
-            </div>
-          </div>
-          <div className="flex flex-col gap-3">
-            <div className="relative">
-              <span className="absolute -top-2 right-2 z-10 px-2 py-1 bg-secondary text-white text-xs rounded-full font-medium shadow-md">Recommended</span>
-              <button
-                onClick={onSwitchToUpload}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium"
-              >
-                <DocumentPlusIcon className="h-4 w-4" />
-                Upload CSV Data
-              </button>
-            </div>
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex-1 border-t border-gray-200"></div>
-                <span className="text-xs text-gray-500 px-2">or</span>
-                <div className="flex-1 border-t border-gray-200"></div>
-              </div>
-              <button
-                onClick={onCreateNewWithData}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors border border-gray-300"
-              >
-                <DocumentPlusIcon className="h-4 w-4" />
-                Create from Template
-              </button>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                Start with an empty spreadsheet template
-              </p>
             </div>
           </div>
         </Box>
