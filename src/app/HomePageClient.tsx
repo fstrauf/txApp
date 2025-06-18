@@ -568,6 +568,70 @@ export default function HomePageClient() {
           </div>
         </Box>
 
+        {/* Business Version Teaser */}
+        <Box variant="bordered" padding="lg" className="mb-16 border-2 border-blue-500/20">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-800 mb-6">
+              <span className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span>
+              <span className="text-sm font-medium">Coming Soon</span>
+            </div>
+            
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Business Edition in Development
+            </h2>
+            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+              We're building a specialized version for <span className="font-semibold text-blue-600">freelancers</span>, 
+              <span className="font-semibold text-blue-600"> sole traders</span>, and 
+              <span className="font-semibold text-blue-600"> small businesses</span>. 
+              Get the same AI-powered insights, but designed for business expenses, tax deductions, and profit tracking.
+            </p>
+            
+            <div className="grid md:grid-cols-3 gap-6 mb-8 text-gray-900">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+                <div className="font-semibold mb-1">Tax-Ready Categories</div>
+                <div className="text-sm text-gray-600">Business expense categorization for tax time</div>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                  </svg>
+                </div>
+                <div className="font-semibold mb-1">Profit & Loss Tracking</div>
+                <div className="text-sm text-gray-600">See your business financial health at a glance</div>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                </div>
+                <div className="font-semibold mb-1">Invoice Integration</div>
+                <div className="text-sm text-gray-600">Connect income and expenses automatically</div>
+              </div>
+            </div>
+
+            <Link
+              href="/business-finance"
+              className="inline-flex items-center px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold hover:shadow-xl transition-all duration-200 text-lg"
+            >
+              Request Beta Access
+              <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </Link>
+            
+            <p className="text-sm text-gray-500 mt-4">
+              Join the waitlist to be notified when the business edition launches
+            </p>
+          </div>
+        </Box>
+
         {/* References Section */}
 
           <References />
