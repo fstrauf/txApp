@@ -42,7 +42,7 @@ const ManageDataTab: React.FC<ManageDataTabProps> = ({
 }) => {
   const { requestSpreadsheetAccess } = useIncrementalAuth();
 
-  // Check if error is about expired Google Sheets access
+  // Check if error is about expired Google Sheets access (simplified for re-link functionality)
   const isExpiredAccessError = Boolean(error && (
     error.includes('access expired') || 
     (error.includes('expired') && error.includes('Google Sheets')) ||
@@ -94,30 +94,6 @@ const ManageDataTab: React.FC<ManageDataTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Error Display with Re-link Option */}
-      {error && (
-        <Box variant="error" padding="md" className="mb-6">
-          <div className="flex items-start gap-3">
-            <ExclamationTriangleIcon className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-medium mb-1">Connection Error</p>
-              <p className="text-sm">{error}</p>
-              {isExpiredAccessError && spreadsheetUrl && (
-                <div className="mt-3">
-                  <button
-                    onClick={handleRelinkSpreadsheet}
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors duration-200"
-                  >
-                    <LinkIcon className="h-4 w-4" />
-                    Re-link Spreadsheet
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </Box>
-      )}
-
       {/* Action Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {/* Create New Spreadsheet */}

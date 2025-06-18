@@ -35,6 +35,7 @@ import { AIFinancialInsights } from '../ai/AIFinancialInsights';
 import { TransactionAnalyzer } from '../ai/transaction-analyzer';
 import { AdvancedFinancialAnalytics } from '../components/AdvancedFinancialAnalytics';
 import { Box } from '@/components/ui/Box';
+import { ErrorDisplayBox } from '../components/ErrorDisplayBox';
 
 const TransactionAnalysisSection: React.FC<{ transactions: any[] }> = ({ transactions }) => {
   const [analysis, setAnalysis] = React.useState<any>(null);
@@ -537,13 +538,7 @@ const DashboardScreen: React.FC = () => {
     }
   };
 
-  // Check if error is about expired Google Sheets access
-  const isExpiredAccessError = Boolean(error && (
-    error.includes('access expired') || 
-    (error.includes('expired') && error.includes('Google Sheets')) ||
-    error.includes('401') ||
-    error.includes('Please use "Link Sheet" to reconnect')
-  ));
+
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-8">
@@ -618,28 +613,18 @@ const DashboardScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Error Display */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-start gap-3">
-            <ExclamationTriangleIcon className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <span className="text-red-800">{error}</span>
-              {isExpiredAccessError && spreadsheetUrl && (
-                <div className="mt-3">
-                  <button
-                    onClick={handleRelinkSpreadsheet}
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors duration-200"
-                  >
-                    <LinkIcon className="h-4 w-4" />
-                    Re-link Spreadsheet
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Enhanced Error Display */}
+      <ErrorDisplayBox 
+        error={error}
+        onRelink={handleRelinkSpreadsheet}
+        onCreateNew={() => {
+          setDataManagementDefaultTab('upload');
+          handleLinkSpreadsheet();
+        }}
+        onRetry={handleRefreshData}
+        onClear={clearError}
+        showRelinkButton={!!spreadsheetUrl}
+      />
 
       {/* Loading State */}
       {showLoadingState && (
