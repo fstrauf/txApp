@@ -36,6 +36,7 @@ import { TransactionAnalyzer } from '../ai/transaction-analyzer';
 import { AdvancedFinancialAnalytics } from '../components/AdvancedFinancialAnalytics';
 import { Box } from '@/components/ui/Box';
 import { ErrorDisplayBox } from '../components/ErrorDisplayBox';
+import PostHogApiSurvey from '@/components/shared/PostHogApiSurvey';
 
 const TransactionAnalysisSection: React.FC<{ transactions: any[] }> = ({ transactions }) => {
   const [analysis, setAnalysis] = React.useState<any>(null);
@@ -241,6 +242,7 @@ const DashboardScreen: React.FC = () => {
   };
   const [dataManagementDefaultTab, setDataManagementDefaultTab] = useState<'manage' | 'upload' | 'validate' | 'settings'>('manage');
   const [userToastStatus, setUserToastStatus] = useState<string | null>(null);
+  const [showExitSurvey, setShowExitSurvey] = useState(false);
 
   // Fetch user's monthly reminder toast status
   useEffect(() => {
@@ -332,6 +334,39 @@ const DashboardScreen: React.FC = () => {
     setIsHelpDrawerOpen(false);
     setIsHowItWorksOpen(false);
   }, []);
+
+  // Check if user has uploaded any data in this session
+  const hasUploadedDataInSession = () => {
+    // For exit survey purposes, we only care if they linked a spreadsheet 
+    // in this session, not if they have historical data
+    return spreadsheetLinked;
+  };
+
+  // Handle data management drawer close with exit survey logic
+  const handleDataManagementDrawerClose = () => {
+    console.log('🚪 Data management drawer closing - checking for exit survey...');
+    console.log('📊 Upload state:', { 
+      spreadsheetLinked, 
+      hasTransactions: userData.transactions?.length || 0,
+      hasUploadedDataInSession: hasUploadedDataInSession()
+    });
+    
+    posthog.capture('dashboard_data_management_drawer_closed', {
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: !!session?.user?.id
+    });
+    
+    // Close the drawer first
+    setIsHelpDrawerOpen(false);
+    
+    // Show exit survey if user hasn't uploaded any data in this session
+    if (!hasUploadedDataInSession()) {
+      console.log('📋 No data uploaded in this session, showing exit survey...');
+      setShowExitSurvey(true);
+    } else {
+      console.log('✅ User has uploaded data in this session, not showing exit survey');
+    }
+  };
 
   // Event handlers
   const handleLinkSpreadsheet = () => {
@@ -1019,13 +1054,7 @@ const DashboardScreen: React.FC = () => {
       {/* Data Management Help Drawer */}
       <HelpDrawer
         isOpen={isHelpDrawerOpen}
-        onClose={() => {
-          posthog.capture('dashboard_data_management_drawer_closed', {
-            is_first_time_user: isFirstTimeUser,
-            user_authenticated: !!session?.user?.id
-          });
-          setIsHelpDrawerOpen(false);
-        }}
+        onClose={handleDataManagementDrawerClose}
         title="Data Management"
         size="large"
       >
@@ -1071,6 +1100,16 @@ const DashboardScreen: React.FC = () => {
           onStatusUpdate={(status) => setUserToastStatus(status)}
         />
       )}
+
+      {/* Exit Intent Survey */}
+      <PostHogApiSurvey
+        surveyId="01978a09-ff78-0000-52ee-30eb2fe209ab"
+        isVisible={showExitSurvey}
+        onClose={() => setShowExitSurvey(false)}
+        onComplete={() => setShowExitSurvey(false)}
+        position="center"
+        variant="modal"
+      />
     </div>
   );
 };
