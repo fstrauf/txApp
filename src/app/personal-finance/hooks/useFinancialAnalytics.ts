@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import posthog from 'posthog-js';
+import { mockFinancialAnalytics } from '../utils/mockData';
 
 interface FinancialAnalyticsRequest {
   transactions: any[];
@@ -167,15 +168,19 @@ export const useFinancialAnalytics = (options: UseFinancialAnalyticsOptions = {}
   const userId = session?.user?.id;
   const transactionCount = transactions.length;
   const excludedCategoriesString = excludedCategories.sort().join(',');
-  const shouldAnalyze = enabled && !!userId && transactionCount > 5;
+  
+  // Check if we're dealing with mock data (first-time users)
+  const isMockData = transactions.length > 0 && transactions[0]?.id?.startsWith('mock-');
+  const shouldAnalyze = enabled && (!!userId || isMockData) && transactionCount > 5;
 
   // Create a stable, unique key that won't change unnecessarily
   const queryKey = useMemo(() => [
     'financialAnalytics', 
-    userId, 
+    userId || 'demo-user', 
     transactionCount, 
-    excludedCategoriesString
-  ], [userId, transactionCount, excludedCategoriesString]);
+    excludedCategoriesString,
+    isMockData
+  ], [userId, transactionCount, excludedCategoriesString, isMockData]);
 
   console.log('🔑 Memoized query key:', queryKey, 'Enabled:', shouldAnalyze);
 
@@ -190,6 +195,14 @@ export const useFinancialAnalytics = (options: UseFinancialAnalyticsOptions = {}
     queryKey,
     queryFn: async () => {
       console.log(`🔍 [${Date.now()}] Starting financial analysis for ${transactions.length} transactions`);
+      
+      // If we're dealing with mock data (first-time users), return mock analytics
+      if (isMockData) {
+        console.log('🎭 Using mock financial analytics for demo user');
+        // Add a small delay to simulate processing
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return mockFinancialAnalytics as FinancialAnalyticsResult;
+      }
       
       const analyticsResult = await fetchFinancialAnalytics({
         transactions,
@@ -315,7 +328,7 @@ export const useFinancialAnalytics = (options: UseFinancialAnalyticsOptions = {}
 
     // Status flags
     hasData: !!result,
-    canAnalyze: shouldAnalyze,
+    canAnalyze: shouldAnalyze, // This now includes mock data check
     transactionCount: transactions.length
   };
 }; 

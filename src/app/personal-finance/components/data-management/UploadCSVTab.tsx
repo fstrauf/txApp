@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CSVUploadArea } from '../../shared/CSVUploadArea';
 import CSVPreviewTable from './CSVPreviewTable';
 import { 
@@ -8,7 +8,10 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
   LightBulbIcon,
-  EyeIcon
+  EyeIcon,
+  SparklesIcon,
+  CheckCircleIcon,
+  XCircleIcon
 } from '@heroicons/react/24/outline';
 
 export interface AnalysisResult {
@@ -62,6 +65,128 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
   onMappingChange,
   onProcessTransactions
 }) => {
+  const [isGettingSuggestions, setIsGettingSuggestions] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+  const [hasGottenSuggestions, setHasGottenSuggestions] = useState(false);
+
+  const getMappingSuggestions = async () => {
+    if (!analysisResult?.headers || hasGottenSuggestions) return;
+
+    setIsGettingSuggestions(true);
+    setSuggestionsError(null);
+
+    try {
+      const response = await fetch('/api/csv/suggest-mappings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          headers: analysisResult.headers,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get suggestions');
+      }
+
+      const { suggestions } = await response.json();
+
+      // Apply suggestions to mappings
+      Object.entries(suggestions).forEach(([header, mapping]) => {
+        onMappingChange(header, mapping as any);
+      });
+      
+      setHasGottenSuggestions(true);
+    } catch (error) {
+      console.error('Error getting mapping suggestions:', error);
+      setSuggestionsError('Failed to get AI suggestions. Please map columns manually.');
+    } finally {
+      setIsGettingSuggestions(false);
+    }
+  };
+
+  // Reset suggestions state when new file is uploaded
+  useEffect(() => {
+    if (csvStep === 'upload') {
+      setHasGottenSuggestions(false);
+      setSuggestionsError(null);
+    }
+  }, [csvStep]);
+
+  // Automatically get AI suggestions when analysis result is available
+  useEffect(() => {
+    if (analysisResult?.headers && csvStep === 'configure' && !hasGottenSuggestions) {
+      getMappingSuggestions();
+    }
+  }, [analysisResult, csvStep, hasGottenSuggestions]);
+
+  // Get mapping status for visual indicators
+  const getMappingStatus = (): {
+    mapped: number;
+    total: number;
+    hasRequiredFields: boolean;
+    requiredFields: string[];
+    mappedRequiredFields: string[];
+  } => {
+    const requiredFields = ['date', 'amount', 'description'];
+    
+    if (!config.mappings) {
+      return { 
+        mapped: 0, 
+        total: 0, 
+        hasRequiredFields: false,
+        requiredFields,
+        mappedRequiredFields: []
+      };
+    }
+    
+    const mappings = config.mappings;
+    const mappedFields = Object.values(mappings).filter(mapping => mapping !== 'none');
+    const mappedRequiredFields = requiredFields.filter(field => 
+      Object.values(mappings).includes(field as any)
+    );
+    const hasRequiredFields = requiredFields.every(field => 
+      Object.values(mappings).includes(field as any)
+    );
+
+    return {
+      mapped: mappedFields.length,
+      total: Object.keys(mappings).length,
+      hasRequiredFields,
+      requiredFields,
+      mappedRequiredFields
+    };
+  };
+
+  const mappingStatus = getMappingStatus();
+
+  const getColumnMappingIndicator = (header: string) => {
+    const mapping = config.mappings?.[header] || 'none';
+    const isRequired = ['date', 'amount', 'description'].includes(mapping);
+    const isMapped = mapping !== 'none';
+
+    if (isMapped) {
+      return (
+        <div className={`flex items-center text-xs ${
+          isRequired ? 'text-green-700' : 'text-blue-700'
+        }`}>
+          <CheckCircleIcon className={`h-3 w-3 mr-1 ${
+            isRequired ? 'text-green-500' : 'text-blue-500'
+          }`} />
+          {isRequired ? 'Required ✓' : 'Optional ✓'}
+        </div>
+      );
+    } else {
+      return (
+        <div className="flex items-center text-xs text-gray-500">
+          <XCircleIcon className="h-3 w-3 mr-1 text-gray-400" />
+          Not mapped
+        </div>
+      );
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className={`border rounded-lg p-4 ${
@@ -146,7 +271,96 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
       {/* CSV Configuration */}
       {analysisResult && csvStep === 'configure' && (
         <div className="space-y-6">
-          <h4 className="text-lg font-semibold text-gray-800">Configure Your Data Import</h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-lg font-semibold text-gray-800">Configure Your Data Import</h4>
+            
+            {/* AI Processing Status */}
+            {isGettingSuggestions && (
+              <div className="flex items-center px-3 py-2 bg-purple-100 text-purple-700 text-sm rounded-lg">
+                <SparklesIcon className="h-4 w-4 mr-2 animate-spin" />
+                Getting AI suggestions...
+              </div>
+            )}
+            
+            {hasGottenSuggestions && !isGettingSuggestions && (
+              <div className="flex items-center px-3 py-2 bg-green-100 text-green-700 text-sm rounded-lg">
+                <SparklesIcon className="h-4 w-4 mr-2" />
+                AI suggestions applied
+              </div>
+            )}
+          </div>
+
+          {/* AI Info Banner */}
+          {!isGettingSuggestions && !hasGottenSuggestions && !suggestionsError && (
+            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <div className="flex items-start">
+                <SparklesIcon className="h-4 w-4 text-purple-600 mr-2 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-purple-800">
+                  <p className="font-medium mb-1">AI-Powered Column Mapping</p>
+                  <p>We'll automatically analyze your CSV headers and suggest the best field mappings to get you started quickly.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Suggestions Error */}
+          {suggestionsError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="text-sm text-red-800">{suggestionsError}</div>
+            </div>
+          )}
+
+          {/* Mapping Status Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-800">{mappingStatus.mapped}</div>
+                <div className="text-sm text-gray-600">Columns Mapped</div>
+              </div>
+            </div>
+            <div className={`border rounded-lg p-4 ${
+              mappingStatus.hasRequiredFields ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
+            }`}>
+              <div className="text-center">
+                <div className={`text-2xl font-bold ${
+                  mappingStatus.hasRequiredFields ? 'text-green-800' : 'text-yellow-800'
+                }`}>
+                  {mappingStatus.mappedRequiredFields.length}/3
+                </div>
+                <div className={`text-sm ${
+                  mappingStatus.hasRequiredFields ? 'text-green-600' : 'text-yellow-600'
+                }`}>
+                  Required Fields
+                </div>
+              </div>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-800">{analysisResult.headers.length}</div>
+                <div className="text-sm text-blue-600">Total Columns</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Required Fields Status */}
+          {!mappingStatus.hasRequiredFields && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-start">
+                <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500 mt-0.5 mr-3 flex-shrink-0" />
+                <div className="text-sm text-yellow-800">
+                  <p className="font-medium mb-2">Missing Required Mappings</p>
+                  <p className="mb-2">Please map these required fields to continue:</p>
+                                     <ul className="list-disc list-inside space-y-1">
+                     {(['date', 'amount', 'description'] as const).filter(field => 
+                       !mappingStatus.mappedRequiredFields.includes(field)
+                     ).map(field => (
+                       <li key={field} className="capitalize">{field}</li>
+                     ))}
+                   </ul>
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* Preview Table */}
           <CSVPreviewTable 
@@ -158,31 +372,48 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
           <div>
             <h5 className="text-md font-medium text-gray-800 mb-3">Map Your Columns</h5>
             <div className="space-y-3">
-              {analysisResult.headers.map((header, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-800 text-sm">{header}</div>
-                    <div className="text-xs text-gray-600">
-                      Samples: {analysisResult.previewRows
-                        .slice(0, 3)
-                        .map(row => String(row[header] || 'N/A'))
-                        .join(', ')}
+              {analysisResult.headers.map((header, index) => {
+                const currentMapping = config.mappings?.[header] || 'none';
+                const isRequired = ['date', 'amount', 'description'].includes(currentMapping);
+                const isMapped = currentMapping !== 'none';
+                
+                return (
+                  <div key={index} className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                    isRequired ? 'border-green-300 bg-green-50' :
+                    isMapped ? 'border-blue-300 bg-blue-50' :
+                    'border-gray-200 bg-white'
+                  }`}>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="font-medium text-gray-800 text-sm">{header}</div>
+                        {getColumnMappingIndicator(header)}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        Samples: {analysisResult.previewRows
+                          .slice(0, 3)
+                          .map(row => String(row[header] || 'N/A'))
+                          .join(', ')}
+                      </div>
                     </div>
+                    <select
+                      value={currentMapping}
+                      onChange={(e) => onMappingChange(header, e.target.value as any)}
+                      className={`ml-4 w-36 px-2 py-1 text-sm border rounded focus:ring-2 focus:border-purple-500 transition-colors ${
+                        isRequired ? 'border-green-300 focus:ring-green-500' :
+                        isMapped ? 'border-blue-300 focus:ring-blue-500' :
+                        'border-gray-300 focus:ring-purple-500'
+                      }`}
+                    >
+                      <option value="none">Not mapped</option>
+                      <option value="date">Date</option>
+                      <option value="amount">Amount</option>
+                      <option value="description">Description</option>
+                      <option value="description2">Description 2</option>
+                      <option value="currency">Currency</option>
+                    </select>
                   </div>
-                  <select
-                    value={config.mappings?.[header] || 'none'}
-                    onChange={(e) => onMappingChange(header, e.target.value as any)}
-                    className="ml-4 w-36 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  >
-                    <option value="none">Not mapped</option>
-                    <option value="date">Date</option>
-                    <option value="amount">Amount</option>
-                    <option value="description">Description</option>
-                    <option value="description2">Description 2</option>
-                    <option value="currency">Currency</option>
-                  </select>
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             {/* Multiple Description Tip */}
@@ -246,10 +477,12 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
           {/* Process Button */}
           <button
             onClick={onProcessTransactions}
-            disabled={isProcessing}
+            disabled={isProcessing || !mappingStatus.hasRequiredFields}
             className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isProcessing ? 'Processing...' : 'Process Transactions'}
+            {isProcessing ? 'Processing...' : 
+             !mappingStatus.hasRequiredFields ? 'Map Required Fields to Continue' :
+             'Process Transactions'}
           </button>
 
           {/* Feedback Messages - moved to underneath the button for better visibility */}
