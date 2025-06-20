@@ -915,7 +915,7 @@ const DashboardScreen: React.FC = () => {
               {displayTransactions.length > 5 && (
                 <AdvancedFinancialAnalytics 
                   transactions={displayTransactions} 
-                  autoAnalyze={!isFirstTimeUser}
+                  autoAnalyze={true} // Always auto-analyze for demo data to show capabilities
                   className="mt-6"
                 />
               )}

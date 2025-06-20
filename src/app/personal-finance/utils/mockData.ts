@@ -43,11 +43,15 @@ export const generateMockTransactions = (): MockTransaction[] => {
 
   let transactionId = 1;
 
-  // Generate transactions for both months
-  const months = [
-    { month: prevMonth, year: prevYear, maxDay: 28 },
-    { month: currentMonth, year: currentYear, maxDay: Math.min(28, currentDate.getDate()) }
-  ];
+  // Generate transactions for last 4 months to get better subscription patterns
+  const months = [];
+  for (let i = 3; i >= 0; i--) {
+    const targetDate = new Date(currentYear, currentMonth - i, 1);
+    const month = targetDate.getMonth();
+    const year = targetDate.getFullYear();
+    const maxDay = i === 0 ? Math.min(28, currentDate.getDate()) : 28;
+    months.push({ month, year, maxDay });
+  }
 
   months.forEach(({ month, year, maxDay }) => {
     // Fixed monthly income (salary on 15th, freelance on random day)
@@ -85,7 +89,10 @@ export const generateMockTransactions = (): MockTransaction[] => {
       { category: 'Insurance', description: 'Auto Insurance Premium', amount: 185 },
       { category: 'Subscriptions', description: 'Netflix Subscription', amount: 15.99 },
       { category: 'Subscriptions', description: 'Spotify Premium', amount: 9.99 },
-      { category: 'Subscriptions', description: 'Adobe Creative Suite', amount: 52.99 }
+      { category: 'Subscriptions', description: 'Adobe Creative Suite', amount: 52.99 },
+      { category: 'Subscriptions', description: 'GitHub Pro', amount: 4.00 },
+      { category: 'Subscriptions', description: 'Gym Membership - FitLife', amount: 29.99 },
+      { category: 'Subscriptions', description: 'Cloud Storage - Google One', amount: 2.99 }
     ];
 
     fixedExpenses.forEach((expense, index) => {
@@ -140,6 +147,35 @@ export const generateMockTransactions = (): MockTransaction[] => {
             isDebit: true
           });
         }
+      }
+    });
+
+    // Add some higher-value transactions for anomaly detection (1-2 per month)
+    const highValueTransactions = [
+      { category: 'Shopping', description: 'MacBook Pro Purchase', amount: 2499, chance: 0.05 }, // 5% chance per month
+      { category: 'Entertainment', description: 'Concert Tickets - Taylor Swift', amount: 350, chance: 0.15 },
+      { category: 'Travel', description: 'Flight to NYC', amount: 485, chance: 0.1 },
+      { category: 'Shopping', description: 'Home Appliance - Washer', amount: 1250, chance: 0.08 },
+      { category: 'Medical', description: 'Dental Crown Procedure', amount: 1800, chance: 0.05 },
+      { category: 'Shopping', description: 'iPhone 15 Pro', amount: 1199, chance: 0.06 },
+      { category: 'Entertainment', description: 'Weekend Getaway Resort', amount: 650, chance: 0.12 },
+      { category: 'Auto & Transport', description: 'Car Repair - Transmission', amount: 2200, chance: 0.03 }
+    ];
+
+    highValueTransactions.forEach(({ category, description, amount, chance }) => {
+      if (seededRandom() < chance) {
+        const day = Math.floor(seededRandom() * maxDay) + 1;
+        const date = new Date(year, month, day);
+        
+        transactions.push({
+          id: `mock-${transactionId++}`,
+          date: date.toISOString().split('T')[0],
+          description,
+          amount,
+          category,
+          account: 'Checking Account',
+          isDebit: true
+        });
       }
     });
   });
@@ -201,6 +237,272 @@ export const generateMockSavingsData = (): MockSavingsData => {
   };
 };
 
+// Mock financial analytics result for demo purposes
+export interface MockFinancialAnalyticsResult {
+  user_id: string;
+  analysis_period: {
+    start_date: string;
+    end_date: string;
+    total_transactions: number;
+  };
+  categories_found: {
+    all_categories: string[];
+    spending_categories: string[];
+    income_categories: string[];
+    transfer_categories: string[];
+  };
+  insights: {
+    vendor_intelligence: {
+      vendors: any[];
+      insights: string[];
+    };
+    anomaly_detection: {
+      anomalies: any[];
+      insights: string[];
+    };
+    subscription_analysis: any;
+    savings_opportunities: {
+      opportunities: any[];
+      insights: string[];
+    };
+    cash_flow_prediction: {
+      predictions: any;
+      insights: string[];
+    };
+  };
+  processed_at: string;
+}
+
+// Generate mock financial analytics data
+export const generateMockFinancialAnalytics = (): MockFinancialAnalyticsResult => {
+  const currentDate = new Date();
+  const fourMonthsAgo = new Date(currentDate.getFullYear(), currentDate.getMonth() - 4, 1);
+  
+  return {
+    user_id: 'demo-user',
+    analysis_period: {
+      start_date: fourMonthsAgo.toISOString().split('T')[0],
+      end_date: currentDate.toISOString().split('T')[0],
+      total_transactions: 125
+    },
+    categories_found: {
+      all_categories: ['Restaurants', 'Groceries', 'Coffee', 'Salary', 'Gas & Fuel', 'Transportation', 'Shopping', 'Entertainment', 'Subscriptions', 'Freelance', 'Insurance', 'Phone', 'Internet', 'Utilities', 'Travel', 'Medical', 'Auto & Transport'],
+      spending_categories: ['Restaurants', 'Groceries', 'Coffee', 'Gas & Fuel', 'Transportation', 'Shopping', 'Entertainment', 'Subscriptions', 'Insurance', 'Phone', 'Internet', 'Utilities', 'Travel', 'Medical', 'Auto & Transport'],
+      income_categories: ['Salary', 'Freelance'],
+      transfer_categories: []
+    },
+    insights: {
+      vendor_intelligence: {
+        vendors: [
+          {
+            name: 'Starbucks',
+            category: 'Coffee',
+            total_spent: 145.50,
+            visit_count: 18,
+            average_transaction: 8.08,
+            first_visit: '2024-01-01',
+            last_visit: '2024-02-28',
+            visits_per_month: 9
+          },
+          {
+            name: 'Amazon Purchase',
+            category: 'Shopping',
+            total_spent: 387.25,
+            visit_count: 8,
+            average_transaction: 48.41,
+            first_visit: '2024-01-03',
+            last_visit: '2024-02-25',
+            visits_per_month: 4
+          },
+          {
+            name: 'Local Bistro',
+            category: 'Restaurants',
+            total_spent: 325.80,
+            visit_count: 12,
+            average_transaction: 27.15,
+            first_visit: '2024-01-05',
+            last_visit: '2024-02-26',
+            visits_per_month: 6
+          },
+          {
+            name: 'Whole Foods Market',
+            category: 'Groceries',
+            total_spent: 580.40,
+            visit_count: 10,
+            average_transaction: 58.04,
+            first_visit: '2024-01-02',
+            last_visit: '2024-02-27',
+            visits_per_month: 5
+          },
+          {
+            name: 'Shell Station',
+            category: 'Gas & Fuel',
+            total_spent: 195.60,
+            visit_count: 6,
+            average_transaction: 32.60,
+            first_visit: '2024-01-07',
+            last_visit: '2024-02-20',
+            visits_per_month: 3
+          }
+        ],
+        insights: [
+          'Your top 5 vendors account for $1,634.55 (52%) of total spending',
+          'Coffee spending shows highest frequency - potential optimization target',
+          'Premium grocery purchases suggest quality preference over cost savings'
+        ]
+      },
+      anomaly_detection: {
+        anomalies: [
+          {
+            amount: 350.00,
+            category: 'Entertainment',
+            description: 'Concert Tickets - Taylor Swift',
+            type: 'amount_spike',
+            severity: 'high',
+            date: '2024-01-15',
+            vendor: 'TicketMaster'
+          },
+          {
+            amount: 1199.00,
+            category: 'Shopping',
+            description: 'iPhone 15 Pro',
+            type: 'amount_spike',
+            severity: 'high',
+            date: '2024-02-08',
+            vendor: 'Apple Store'
+          },
+          {
+            amount: 485.00,
+            category: 'Travel',
+            description: 'Flight to NYC',
+            type: 'amount_spike',
+            severity: 'medium',
+            date: '2024-01-22',
+            vendor: 'Delta Airlines'
+          }
+        ],
+        insights: [
+          '3 significant spending anomalies detected in the last 4 months',
+          'High-value purchases include electronics ($1,199) and entertainment ($350)',
+          'Travel expenses show seasonal patterns with occasional flight purchases',
+          'Shopping anomalies suggest planned major purchases rather than impulse buying'
+        ]
+      },
+      subscription_analysis: {
+        subscriptions: [
+          {
+            vendor: 'Netflix Subscription',
+            frequency: 1,
+            average_amount: 15.99,
+            category: 'Subscriptions',
+            projected_annual_cost: 191.88,
+            monthly_estimate: 15.99,
+            total_spent_so_far: 31.98,
+            severity: 'low',
+            first_transaction: '2024-01-01',
+            last_transaction: '2024-02-01',
+            date_range_days: 31
+          },
+          {
+            vendor: 'Spotify Premium',
+            frequency: 1,
+            average_amount: 9.99,
+            category: 'Subscriptions',
+            projected_annual_cost: 119.88,
+            monthly_estimate: 9.99,
+            total_spent_so_far: 19.98,
+            severity: 'low',
+            first_transaction: '2024-01-01',
+            last_transaction: '2024-02-01',
+            date_range_days: 31
+          },
+          {
+            vendor: 'Adobe Creative Suite',
+            frequency: 1,
+            average_amount: 52.99,
+            category: 'Subscriptions',
+            projected_annual_cost: 635.88,
+            monthly_estimate: 52.99,
+            total_spent_so_far: 105.98,
+            severity: 'medium',
+            first_transaction: '2024-01-01',
+            last_transaction: '2024-02-01',
+            date_range_days: 31
+          }
+        ],
+        insights: [
+          'You have 3 active subscriptions totaling $78.97/month',
+          'Annual subscription cost: $947.64 (18.8% of monthly income)',
+          'All subscriptions appear to be regularly used based on payment consistency'
+        ],
+        summary: {
+          total_subscriptions_detected: 3,
+          total_projected_annual_cost: 947.64,
+          average_monthly_cost: 78.97,
+          highest_cost_subscription: 'Adobe Creative Suite',
+          highest_annual_cost: 635.88,
+          total_spent_so_far: 157.94
+        }
+      },
+      savings_opportunities: {
+        opportunities: [
+          {
+            category: 'Coffee',
+            current_spending: 72.75,
+            potential_savings: 45.00,
+            type: 'category_reduction',
+            recommendation: 'Consider making coffee at home 3 days per week. At $8 per coffee shop visit vs $1.50 for home-made coffee, you could save $45/month.'
+          },
+          {
+            category: 'Restaurants',
+            current_spending: 162.90,
+            potential_savings: 65.00,
+            type: 'category_reduction',
+            recommendation: 'Replace 4 restaurant meals per month with home cooking. Average restaurant meal $27 vs $8 home-cooked meal = $76 savings potential.'
+          },
+          {
+            category: 'Shopping',
+            current_spending: 193.63,
+            potential_savings: 58.00,
+            type: 'category_reduction',
+            recommendation: 'Wait 24 hours before making purchases over $50. This reduces impulse buying by ~30% according to behavioral studies.'
+          },
+          {
+            category: 'Subscriptions',
+            current_spending: 78.97,
+            potential_savings: 15.99,
+            type: 'vendor_consolidation',
+            recommendation: 'Cancel Netflix if you primarily use other streaming services. Consider sharing family plans with trusted contacts.',
+            vendors: ['Netflix Subscription']
+          }
+        ],
+        insights: [
+          'Total potential monthly savings: $183.99',
+          'Highest impact: Reducing coffee shop visits (easy difficulty, high confidence)',
+          'Quick wins: Review subscriptions and implement purchase waiting periods',
+          'Annual potential savings: $2,207.88 (43.8% of current expenses)'
+        ]
+      },
+      cash_flow_prediction: {
+        predictions: {
+          weekly_spending_estimate: 712.5,
+          weekly_income_estimate: 1260,
+          weekly_net: 547.5,
+          monthly_net_estimate: 2190
+        },
+        insights: [
+          'Projected savings rate for next month: 43.5% (excellent)',
+          'Income appears stable with consistent salary and freelance work',
+          'Spending patterns show good consistency and predictability',
+          'No concerning seasonal spending spikes detected'
+        ]
+      }
+    },
+    processed_at: new Date().toISOString()
+  };
+};
+
 // Static mock data that gets generated once
 export const mockTransactions = generateMockTransactions();
-export const mockSavingsData = generateMockSavingsData(); 
+export const mockSavingsData = generateMockSavingsData();
+export const mockFinancialAnalytics = generateMockFinancialAnalytics(); 
