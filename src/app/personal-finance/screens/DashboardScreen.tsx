@@ -14,7 +14,6 @@ import {
   ChartBarIcon,
   PlusCircleIcon,
   ExclamationTriangleIcon,
-  LinkIcon,
   QuestionMarkCircleIcon,
   CurrencyDollarIcon,
   ClockIcon
@@ -31,12 +30,13 @@ import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsh
 import { mockTransactions, mockSavingsData } from '../utils/mockData';
 import { useRouter } from 'next/navigation';
 import posthog from 'posthog-js';
-import { AIFinancialInsights } from '../ai/AIFinancialInsights';
 import { TransactionAnalyzer } from '../ai/transaction-analyzer';
 import { AdvancedFinancialAnalytics } from '../components/AdvancedFinancialAnalytics';
 import { Box } from '@/components/ui/Box';
 import { ErrorDisplayBox } from '../components/ErrorDisplayBox';
 import PostHogApiSurvey from '@/components/shared/PostHogApiSurvey';
+import { DEMO_DASHBOARD_HEADLINE_TEST, DEMO_DASHBOARD_CTA_TEST, getVariantDisplayText } from '../utils/abTestingConfig';
+
 
 const TransactionAnalysisSection: React.FC<{ transactions: any[] }> = ({ transactions }) => {
   const [analysis, setAnalysis] = React.useState<any>(null);
@@ -209,6 +209,35 @@ const DashboardScreen: React.FC = () => {
   // Get base currency from consolidated hook
   const { baseCurrency, spreadsheetName } = useConsolidatedSpreadsheetData();
 
+  // A/B Testing for demo dashboard messaging
+  const headlineVariant = posthog.getFeatureFlag('demo-dashboard-headline') as string;
+  const ctaButtonVariant = posthog.getFeatureFlag('demo-dashboard-cta-button') as string;
+
+  // Get headline text based on A/B test variant
+  const getHeadlineText = () => {
+    return getVariantDisplayText(DEMO_DASHBOARD_HEADLINE_TEST, headlineVariant || 'control');
+  };
+
+  // Get CTA button text based on A/B test variant
+  const getCtaButtonText = () => {
+    // Handle loading states first
+    if (status === 'loading') {
+      return 'Loading...';
+    }
+    
+    // Get A/B test variant text, fallback to default based on auth status
+    const variantText = getVariantDisplayText(DEMO_DASHBOARD_CTA_TEST, ctaButtonVariant || 'control');
+    
+    // For control variant, customize based on auth status
+    if ((ctaButtonVariant || 'control') === 'control') {
+      return status === 'unauthenticated' 
+        ? 'Make This Dashboard Yours'
+        : 'Make This My Dashboard';
+    }
+    
+    return variantText;
+  };
+
   // Use the TanStack Query dashboard hook
   const {
     dashboardStats,
@@ -306,6 +335,33 @@ const DashboardScreen: React.FC = () => {
       has_stats: !!displayStats
     });
   }, [isFirstTimeUser, spreadsheetLinked, displayTransactions?.length, session?.user?.id, error, isLoading, displayStats]);
+
+  // Track A/B test exposure when demo banner is shown
+  useEffect(() => {
+    if (isFirstTimeUser) {
+      posthog.capture('demo_dashboard_banner_viewed', {
+        headline_variant: headlineVariant || 'control',
+        cta_variant: ctaButtonVariant || 'control',
+        is_first_time_user: isFirstTimeUser,
+        user_authenticated: !!session?.user?.id
+      });
+
+      // Also send experiment exposure events for PostHog experiments
+      if (headlineVariant) {
+        posthog.capture('$experiment_started', {
+          $feature_flag: 'demo-dashboard-headline',
+          $feature_flag_response: headlineVariant
+        });
+      }
+      
+      if (ctaButtonVariant) {
+        posthog.capture('$experiment_started', {
+          $feature_flag: 'demo-dashboard-cta-button', 
+          $feature_flag_response: ctaButtonVariant
+        });
+      }
+    }
+  }, [isFirstTimeUser, headlineVariant, ctaButtonVariant, session?.user?.id]);
 
 
 
@@ -604,7 +660,7 @@ const DashboardScreen: React.FC = () => {
               </div>
             </div>
             <div className="flex-1">
-              <h3 className="text-2xl font-bold text-white mb-3">✨ Experience Your Financial Future</h3>
+              <h3 className="text-2xl font-bold text-white mb-3">{getHeadlineText()}</h3>
               <p className="text-blue-100 mb-6 text-lg leading-relaxed">
                 You're exploring a complete financial dashboard with <strong>30 realistic transactions</strong>, 
                 <strong> interactive charts</strong>, <strong>expense categorization</strong>, 
@@ -613,17 +669,21 @@ const DashboardScreen: React.FC = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <button
-                  onClick={handleLinkSpreadsheet}
+                  onClick={() => {
+                    // Track A/B test interaction
+                    posthog.capture('demo_dashboard_cta_button_clicked', {
+                      headline_variant: headlineVariant || 'control',
+                      cta_variant: ctaButtonVariant || 'control',
+                      is_first_time_user: isFirstTimeUser,
+                      user_authenticated: !!session?.user?.id
+                    });
+                    handleLinkSpreadsheet();
+                  }}
                   disabled={status === 'loading'}
                   className="inline-flex items-center justify-center gap-3 px-6 py-3 bg-white text-primary-dark rounded-lg hover:bg-blue-50 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none w-full sm:w-auto"
                 >
                   <DocumentPlusIcon className="h-5 w-5" />
-                  {status === 'loading' 
-                    ? 'Loading...'
-                    : status === 'unauthenticated' 
-                      ? 'Make This Dashboard Yours'
-                      : 'Make This My Dashboard'
-                  }
+                  {getCtaButtonText()}
                 </button>
                 <button
                   onClick={() => {
