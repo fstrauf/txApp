@@ -1,3 +1,5 @@
+const { withSentryConfig } = require('@sentry/nextjs');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async redirects() {
@@ -40,4 +42,15 @@ const nextConfig = {
 
 }
 
-module.exports = nextConfig 
+// Sentry configuration options
+const sentryWebpackPluginOptions = {
+  // For all available options, see:
+  // https://github.com/getsentry/sentry-webpack-plugin#options
+
+  // Suppresses source map uploading logs during build
+  silent: true,
+  org: "florian-strauf",
+  project: "javascript-nextjs",
+};
+
+module.exports = withSentryConfig(nextConfig, sentryWebpackPluginOptions);

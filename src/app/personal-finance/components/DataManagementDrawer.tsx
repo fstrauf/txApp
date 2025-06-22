@@ -280,8 +280,12 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   // CSV Processing Functions
   const handleFileSelect = async (file: File) => {
     setUploadedFile(file);
-    setFeedback(null);
+    setIsProcessing(true);
+    setFeedback({ type: 'info', message: `✅ File "${file.name}" selected! Starting intelligent analysis...` });
     setCsvStep('upload');
+    
+    // Small delay to show the immediate feedback
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Automatically analyze the file
     await handleAnalyze(file);
@@ -293,12 +297,13 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       return;
     }
 
-    setIsProcessing(true);
-    setFeedback(null);
+    // isProcessing is already set by handleFileSelect
+    setFeedback({ type: 'info', message: '🔍 Analyzing your CSV file structure and detecting columns...' });
     const formData = new FormData();
     formData.append('file', selectedFile);
 
     try {
+      // Step 1: Analyze the file structure
       const response = await fetch('/api/transactions/analyze', { 
         method: 'POST',
         body: formData,
@@ -311,9 +316,47 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       }
 
       setAnalysisResult(result);
+      setFeedback({ type: 'info', message: '🤖 Getting AI-powered column mapping suggestions...' });
       
-      // Initialize mappings with auto-detection
+      // Step 2: Get AI mapping suggestions with sample data
+      let aiSuggestions: Record<string, string> = {};
+      try {
+        // Pick 3 random sample rows for better AI analysis
+        const sampleRows = result.previewRows.length > 5 
+          ? result.previewRows.sort(() => 0.5 - Math.random()).slice(0, 5)
+          : result.previewRows;
+
+        const suggestionsResponse = await fetch('/api/csv/suggest-mappings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            headers: result.headers,
+            sampleRows: sampleRows,
+          }),
+        });
+
+        if (suggestionsResponse.ok) {
+          const suggestionsResult = await suggestionsResponse.json();
+          aiSuggestions = suggestionsResult.suggestions || {};
+          console.log('AI suggestions received:', aiSuggestions);
+        } else {
+          console.warn('AI suggestions failed, falling back to basic auto-detection');
+        }
+      } catch (suggestionsError) {
+        console.warn('AI suggestions error, falling back to basic auto-detection:', suggestionsError);
+      }
+      
+      // Step 3: Combine AI suggestions with basic auto-detection fallback
       let initialMappings = result.headers.reduce((acc: Record<string, any>, header: string) => {
+        // Start with AI suggestion if available
+        if (aiSuggestions[header] && aiSuggestions[header] !== 'none') {
+          acc[header] = aiSuggestions[header];
+          return acc;
+        }
+        
+        // Fallback to basic auto-detection
         acc[header] = 'none';
         const lowerHeader = header.toLowerCase();
         if (lowerHeader.includes('date') || lowerHeader.includes('created')) {
@@ -325,12 +368,14 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           acc[header] = hasDescriptionMapped ? 'description2' : 'description';
         } else if (lowerHeader.includes('currency')) {
           acc[header] = 'currency';
+        } else if (lowerHeader.includes('direction') || lowerHeader.includes('type')) {
+          acc[header] = 'direction';
         }
         return acc;
       }, {});
 
-      // Enforce uniqueness for auto-detected fields
-      const uniqueAutoAssignFields = ['date', 'amount', 'currency', 'description', 'description2'];
+      // Enforce uniqueness for fields that should only be mapped once
+      const uniqueAutoAssignFields = ['date', 'amount', 'currency', 'description', 'description2', 'direction'];
       uniqueAutoAssignFields.forEach(fieldType => {
         let foundFirst = false;
         Object.keys(initialMappings).forEach(header => {
@@ -350,8 +395,16 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         delimiter: result.detectedDelimiter || prev.delimiter
       }));
 
+      // Now show the configure screen with AI suggestions already applied
       setCsvStep('configure');
-      setFeedback({ type: 'success', message: 'File analyzed successfully! Please configure the column mappings below.' });
+      
+      const hasAiSuggestions = Object.keys(aiSuggestions).length > 0;
+      setFeedback({ 
+        type: 'success', 
+        message: hasAiSuggestions 
+          ? '🎉 File analyzed and AI suggestions applied! Review the mappings below.' 
+          : '✅ File analyzed successfully! Please configure the column mappings below.' 
+      });
 
     } catch (error: any) {
       setFeedback({ type: 'error', message: `Analysis Error: ${error.message}` });
@@ -365,7 +418,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     setConfig(prevConfig => {
       const newMappings = { ...prevConfig.mappings };
 
-      const uniqueFields = ['date', 'amount', 'currency', 'description', 'description2'];
+      const uniqueFields = ['date', 'amount', 'currency', 'description', 'description2', 'direction'];
       if (uniqueFields.includes(fieldType)) {
         const currentHeaderForField = Object.keys(newMappings).find(
           header => newMappings[header] === fieldType
@@ -489,10 +542,70 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         const amountHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'amount');
         const descriptionHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'description');
         const currencyHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'currency');
+        const directionHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'direction');
         
         const originalAmount = parseFloat(String(row[amountHeader!] || '0'));
         const rawCurrency = currencyHeader ? String(row[currencyHeader] || baseCurrency) : baseCurrency;
         const originalCurrency = extractCurrencyCode(rawCurrency) || baseCurrency;
+        
+        // Handle direction field to determine if transaction is debit or credit
+        let isDebit = originalAmount < 0; // Default based on amount sign
+        let money_in = originalAmount > 0; // Default based on amount sign
+        
+        // Debug direction field mapping
+        console.log('🔍 Direction field debug:', {
+          index,
+          directionHeader,
+          'row[directionHeader]': directionHeader ? row[directionHeader] : 'N/A',
+          'config.mappings': config.mappings,
+          originalAmount,
+          'default isDebit': isDebit,
+          'default money_in': money_in
+        });
+        
+        if (directionHeader && row[directionHeader]) {
+          const directionValue = String(row[directionHeader]).trim().toLowerCase();
+          
+          console.log('🎯 Processing direction field:', {
+            index,
+            directionHeader,
+            rawDirectionValue: row[directionHeader],
+            directionValue,
+            originalAmount
+          });
+          
+          // Determine transaction direction based on various formats
+          if (['out', 'debit', 'dr', '-', 'negative'].includes(directionValue)) {
+            isDebit = true;
+            money_in = false;
+            console.log('✅ Direction matched DEBIT pattern:', directionValue);
+          } else if (['in', 'credit', 'cr', '+', 'positive'].includes(directionValue)) {
+            isDebit = false;
+            money_in = true;
+            console.log('✅ Direction matched CREDIT pattern:', directionValue);
+          } else if (directionValue === 'neutral') {
+            // For neutral transactions, keep original amount sign logic
+            isDebit = originalAmount < 0;
+            money_in = originalAmount > 0;
+            console.log('✅ Direction matched NEUTRAL pattern:', directionValue);
+          } else {
+            console.log('⚠️ Direction value not recognized:', directionValue, 'keeping default logic');
+          }
+          
+          console.log('🔄 Final direction processing result:', {
+            index,
+            directionValue,
+            originalAmount,
+            isDebit,
+            money_in
+          });
+        } else {
+          console.log('⚠️ No direction field found or empty:', {
+            index,
+            directionHeader,
+            'row[directionHeader]': directionHeader ? row[directionHeader] : 'N/A'
+          });
+        }
         
         // Debug currency extraction
         if (currencyHeader && rawCurrency !== originalCurrency) {
@@ -529,8 +642,9 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           originalCurrency, // Store original currency
           baseCurrency, // Store base currency
           account: 'Uploaded CSV',
-          isDebit: originalAmount < 0,
-          money_in: originalAmount > 0, // For ML categorization API
+          isDebit, // Use direction-aware logic
+          money_in, // Use direction-aware logic
+          direction: directionHeader ? String(row[directionHeader] || '') : undefined, // Store original direction value
         };
       }));
 

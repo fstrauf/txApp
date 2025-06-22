@@ -3,6 +3,8 @@
  * Can be used from both web and mobile applications
  */
 
+import { validateClassifyRequest, handleClassifyError } from './classify-validation';
+
 // Configuration values
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -162,4 +164,148 @@ export const api = {
 
     return response.json();
   },
-}; 
+};
+
+export interface ClassifyApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  details?: any;
+  status?: number;
+}
+
+/**
+ * Makes a request to a classify API endpoint with proper validation and error handling
+ */
+export async function callClassifyApi<T = any>(
+  endpoint: string,
+  transactions: any[],
+  options: {
+    userCategories?: any[];
+    timeout?: number;
+    headers?: Record<string, string>;
+  } = {}
+): Promise<ClassifyApiResponse<T>> {
+  try {
+    // Validate the request data before sending
+    const validatedRequest = validateClassifyRequest({
+      transactions,
+      user_categories: options.userCategories,
+    });
+
+    // Set up timeout
+    const controller = new AbortController();
+    const timeoutId = options.timeout ? setTimeout(() => controller.abort(), options.timeout) : null;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        body: JSON.stringify(validatedRequest),
+        signal: controller.signal,
+      });
+
+      if (timeoutId) clearTimeout(timeoutId);
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: responseData.error || `HTTP ${response.status}`,
+          details: responseData.details || responseData,
+          status: response.status,
+        };
+      }
+
+      return {
+        success: true,
+        data: responseData,
+        status: response.status,
+      };
+    } catch (fetchError) {
+      if (timeoutId) clearTimeout(timeoutId);
+      
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Request timed out',
+          status: 408,
+        };
+      }
+      
+      throw fetchError;
+    }
+  } catch (error) {
+    const errorInfo = handleClassifyError(error);
+    return {
+      success: false,
+      error: errorInfo.message,
+      details: errorInfo.details,
+      status: errorInfo.status,
+    };
+  }
+}
+
+/**
+ * Enhanced classify API call with retry logic
+ */
+export async function classifyWithRetry<T = any>(
+  endpoint: string,
+  transactions: any[],
+  options: {
+    userCategories?: any[];
+    maxRetries?: number;
+    retryDelay?: number;
+    timeout?: number;
+    headers?: Record<string, string>;
+  } = {}
+): Promise<ClassifyApiResponse<T>> {
+  const { maxRetries = 2, retryDelay = 1000, ...apiOptions } = options;
+  
+  let lastError: ClassifyApiResponse<T> | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await callClassifyApi<T>(endpoint, transactions, apiOptions);
+      
+      if (result.success) {
+        return result;
+      }
+      
+      // Don't retry on validation errors (4xx status codes)
+      if (result.status && result.status >= 400 && result.status < 500) {
+        return result;
+      }
+      
+      lastError = result;
+      
+      // Wait before retrying (except on last attempt)
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, retryDelay * (attempt + 1)));
+      }
+    } catch (error) {
+      const errorInfo = handleClassifyError(error);
+      lastError = {
+        success: false,
+        error: errorInfo.message,
+        details: errorInfo.details,
+        status: errorInfo.status,
+      };
+      
+      // Don't retry on validation errors
+      if (errorInfo.status >= 400 && errorInfo.status < 500) {
+        break;
+      }
+    }
+  }
+  
+  return lastError || {
+    success: false,
+    error: 'All retry attempts failed',
+    status: 500,
+  };
+} 

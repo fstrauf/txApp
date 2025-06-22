@@ -28,6 +28,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid transactions data' }, { status: 400 });
     }
 
+    if (transactions.length === 0) {
+      return NextResponse.json({ error: 'At least one transaction is required' }, { status: 400 });
+    }
+
+    // Validate transaction structure
+    for (let i = 0; i < transactions.length; i++) {
+      const tx = transactions[i];
+      if (!tx.description || typeof tx.description !== 'string') {
+        return NextResponse.json({ 
+          error: `Transaction ${i + 1}: Invalid or missing description` 
+        }, { status: 400 });
+      }
+    }
+
     let categorizedTransactions;
 
     if (useCustomTraining && spreadsheetId) {
@@ -165,7 +179,9 @@ async function categorizeWithCustomModel(transactions: Transaction[]): Promise<a
       },
       body: JSON.stringify({
         transactions: transactions
-      })
+      }),
+      // Add timeout for better reliability
+      signal: AbortSignal.timeout(30000) // 30 second timeout
     });
 
     if (!response.ok) {
@@ -178,6 +194,12 @@ async function categorizeWithCustomModel(transactions: Transaction[]): Promise<a
 
   } catch (error: any) {
     console.error('Custom categorization error:', error);
+    
+    // Better error handling for timeouts
+    if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+      throw new Error('Classification request timed out. Please try again with fewer transactions.');
+    }
+    
     throw new Error(`Custom categorization failed: ${error.message}`);
   }
 }
