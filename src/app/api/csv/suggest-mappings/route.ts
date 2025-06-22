@@ -82,6 +82,9 @@ For DIRECTION:
 - Transaction types count as direction (e.g., "Visa Purchase" = outgoing)
 - Don't require explicit IN/OUT values
 
+For Amount:
+- look for amount columns, but exclude fees and interest labeled columns
+
 ANALYZE THE SAMPLE DATA:
 Looking at your samples, which field contains the actual merchant names?
 - Type: "Visa Purchase" → This is transaction type
