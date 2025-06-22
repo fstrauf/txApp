@@ -9,7 +9,6 @@ import {
   ExclamationTriangleIcon,
   LightBulbIcon,
   EyeIcon,
-  SparklesIcon,
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
@@ -21,7 +20,7 @@ export interface AnalysisResult {
 }
 
 export interface ImportConfig {
-  mappings: Record<string, 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'none'>;
+  mappings: Record<string, 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'direction' | 'none'>;
   dateFormat: string;
   amountFormat: 'standard' | 'negate' | 'sign_column';
   signColumn?: string;
@@ -39,7 +38,7 @@ interface UploadCSVTabProps {
   isProcessing: boolean;
   lastTransaction: any;
   onFileSelect: (file: File) => void;
-  onMappingChange: (csvHeader: string, fieldType: 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'none') => void;
+  onMappingChange: (csvHeader: string, fieldType: 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'direction' | 'none') => void;
   onProcessTransactions: () => void;
 }
 
@@ -65,61 +64,7 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
   onMappingChange,
   onProcessTransactions
 }) => {
-  const [isGettingSuggestions, setIsGettingSuggestions] = useState(false);
-  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
-  const [hasGottenSuggestions, setHasGottenSuggestions] = useState(false);
-
-  const getMappingSuggestions = async () => {
-    if (!analysisResult?.headers || hasGottenSuggestions) return;
-
-    setIsGettingSuggestions(true);
-    setSuggestionsError(null);
-
-    try {
-      const response = await fetch('/api/csv/suggest-mappings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          headers: analysisResult.headers,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get suggestions');
-      }
-
-      const { suggestions } = await response.json();
-
-      // Apply suggestions to mappings
-      Object.entries(suggestions).forEach(([header, mapping]) => {
-        onMappingChange(header, mapping as any);
-      });
-      
-      setHasGottenSuggestions(true);
-    } catch (error) {
-      console.error('Error getting mapping suggestions:', error);
-      setSuggestionsError('Failed to get AI suggestions. Please map columns manually.');
-    } finally {
-      setIsGettingSuggestions(false);
-    }
-  };
-
-  // Reset suggestions state when new file is uploaded
-  useEffect(() => {
-    if (csvStep === 'upload') {
-      setHasGottenSuggestions(false);
-      setSuggestionsError(null);
-    }
-  }, [csvStep]);
-
-  // Automatically get AI suggestions when analysis result is available
-  useEffect(() => {
-    if (analysisResult?.headers && csvStep === 'configure' && !hasGottenSuggestions) {
-      getMappingSuggestions();
-    }
-  }, [analysisResult, csvStep, hasGottenSuggestions]);
+  // AI suggestions are now handled in the parent component during file analysis
 
   // Get mapping status for visual indicators
   const getMappingStatus = (): {
@@ -251,10 +196,38 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
 
       {/* CSV Upload and Configuration */}
       {csvStep === 'upload' && (
-        <CSVUploadArea onFileSelect={onFileSelect} />
+        <CSVUploadArea 
+          onFileSelect={onFileSelect} 
+          isProcessing={isProcessing}
+          processingMessage={feedback?.message || "Processing your file..."}
+        />
       )}
 
-      {uploadedFile && csvStep === 'upload' && (
+      {/* Processing Feedback */}
+      {feedback && csvStep === 'upload' && (
+        <div className={`p-4 rounded-lg border-l-4 ${
+          feedback.type === 'success' ? 'bg-green-50 border-green-400' :
+          feedback.type === 'error' ? 'bg-red-50 border-red-400' :
+          feedback.type === 'info' ? 'bg-blue-50 border-blue-400' :
+          'bg-gray-50 border-gray-400'
+        }`}>
+          <div className="flex items-center">
+            {feedback.type === 'info' && (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+            )}
+            <div className={`font-medium ${
+              feedback.type === 'success' ? 'text-green-800' :
+              feedback.type === 'error' ? 'text-red-800' :
+              feedback.type === 'info' ? 'text-blue-800' :
+              'text-gray-800'
+            }`}>
+              {feedback.message}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {uploadedFile && csvStep === 'upload' && !isProcessing && (
         <div className="p-4 bg-green-50 rounded-lg border border-green-200">
           <div className="flex items-center">
             <span className="text-lg mr-2">✅</span>
@@ -273,42 +246,7 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h4 className="text-lg font-semibold text-gray-800">Configure Your Data Import</h4>
-            
-            {/* AI Processing Status */}
-            {isGettingSuggestions && (
-              <div className="flex items-center px-3 py-2 bg-purple-100 text-purple-700 text-sm rounded-lg">
-                <SparklesIcon className="h-4 w-4 mr-2 animate-spin" />
-                Getting AI suggestions...
-              </div>
-            )}
-            
-            {hasGottenSuggestions && !isGettingSuggestions && (
-              <div className="flex items-center px-3 py-2 bg-green-100 text-green-700 text-sm rounded-lg">
-                <SparklesIcon className="h-4 w-4 mr-2" />
-                AI suggestions applied
-              </div>
-            )}
           </div>
-
-          {/* AI Info Banner */}
-          {!isGettingSuggestions && !hasGottenSuggestions && !suggestionsError && (
-            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-              <div className="flex items-start">
-                <SparklesIcon className="h-4 w-4 text-purple-600 mr-2 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-purple-800">
-                  <p className="font-medium mb-1">AI-Powered Column Mapping</p>
-                  <p>We'll automatically analyze your CSV headers and suggest the best field mappings to get you started quickly.</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Suggestions Error */}
-          {suggestionsError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <div className="text-sm text-red-800">{suggestionsError}</div>
-            </div>
-          )}
 
           {/* Mapping Status Summary */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -398,7 +336,7 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
                     <select
                       value={currentMapping}
                       onChange={(e) => onMappingChange(header, e.target.value as any)}
-                      className={`ml-4 w-36 px-2 py-1 text-sm border rounded focus:ring-2 focus:border-purple-500 transition-colors ${
+                      className={`ml-4 w-40 px-2 py-1 text-sm border rounded focus:ring-2 focus:border-purple-500 transition-colors ${
                         isRequired ? 'border-green-300 focus:ring-green-500' :
                         isMapped ? 'border-blue-300 focus:ring-blue-500' :
                         'border-gray-300 focus:ring-purple-500'
@@ -410,6 +348,7 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
                       <option value="description">Description</option>
                       <option value="description2">Description 2</option>
                       <option value="currency">Currency</option>
+                      <option value="direction">Direction</option>
                     </select>
                   </div>
                 );
@@ -426,6 +365,25 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Direction Field Tip */}
+            {(() => {
+              const hasDirectionField = config.mappings && Object.values(config.mappings).includes('direction');
+              if (hasDirectionField) {
+                return (
+                  <div className="mt-4 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                    <div className="flex items-start">
+                      <LightBulbIcon className="h-4 w-4 text-indigo-600 mr-2 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-indigo-700">
+                        <p className="font-medium mb-1">Direction Field Detected</p>
+                        <p>This field indicates transaction direction (IN/OUT, DEBIT/CREDIT, etc.). It will be used to automatically determine if amounts should be positive or negative.</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             {/* Combined Description Preview */}
             {(() => {
