@@ -59,26 +59,26 @@ export const DEMO_DASHBOARD_CTA_TEST: ABTestConfig = {
   variants: [
     {
       key: 'control',
-      name: 'Control',
-      description: 'Make This Dashboard Yours'
+      name: 'Control - Urgency V2',
+      description: 'Stop Wasting Money Today'
     },
     {
       key: 'test',
-      name: 'Test - Security Focused',
-      description: 'Upload My Expenses (100% Secure)'
+      name: 'Test - Urgency V3',
+      description: 'Catch My Overspending Now'
     },
     {
       key: 'test_group_2',
-      name: 'Test Group 2 - Benefit Focused',
-      description: 'Start My Free Analysis'
+      name: 'Test Group 2 - Urgency V4',
+      description: 'Show Me Where I\'m Bleeding Money'
     },
     {
       key: 'test_group_3',
-      name: 'Test Group 3 - Urgency Focused',
+      name: 'Test Group 3 - Urgency Focused (Winner)',
       description: 'Find My Money Leaks Now'
     }
   ],
-  defaultVariant: 'control'
+  defaultVariant: 'test_group_3'
 };
 
 // All A/B Tests Configuration
@@ -110,13 +110,13 @@ export const POSTHOG_SETUP_INSTRUCTIONS = `
 #### Demo Dashboard CTA Button Test  
 - **Feature Flag Key**: demo-dashboard-cta-button
 - **Name**: Demo Dashboard CTA Button Test
-- **Description**: Test different CTA button text variations
+- **Description**: Test urgency-focused CTA button variations (test_group_3 showing best performance)
 - **Variants**:
-  - control: "Make This Dashboard Yours"
-  - test-a: "Upload My Expenses (100% Secure)"
-  - test-b: "Start My Free Analysis"
-  - test-c: "Find My Money Leaks Now"
-- **Traffic Allocation**: 25% each variant
+  - control: "Stop Wasting Money Today"
+  - test: "Catch My Overspending Now"
+  - test_group_2: "Show Me Where I'm Bleeding Money"
+  - test_group_3: "Find My Money Leaks Now" (WINNER - Current Default)
+- **Traffic Allocation**: 25% each variant (all urgency-focused themes)
 - **Release Conditions**: 
   - Property: is_first_time_user = true
   - OR Property: user_authenticated = false
