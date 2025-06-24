@@ -12,6 +12,7 @@ interface EmailSignupFormProps {
   className?: string;
   buttonText?: string;
   placeholder?: string;
+  isSuccess?: boolean; // Allow external success state to override internal state
 }
 
 export default function EmailSignupForm({
@@ -23,7 +24,8 @@ export default function EmailSignupForm({
   onSuccess,
   className = "",
   buttonText = "Subscribe",
-  placeholder = "your.email@example.com"
+  placeholder = "your.email@example.com",
+  isSuccess = false
 }: EmailSignupFormProps) {
   const { state, actions, userEmail } = useEmailSignup({
     source,
@@ -36,7 +38,7 @@ export default function EmailSignupForm({
     await actions.submitEmail();
   };
 
-  if (state.success) {
+  if (state.success || isSuccess) {
     return (
       <div className={`text-center py-4 ${className}`}>
         <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">

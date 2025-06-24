@@ -33,9 +33,9 @@ export default function CoursePage() {
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
             {/* Left Column */}
             <div className="w-full lg:w-1/2 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 mb-6">
-                <span className="w-2 h-2 bg-secondary rounded-full animate-pulse"></span>
-                <span className="text-sm font-medium text-secondary">New Course: Coming Soon</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 mb-6">
+                <span className="w-2 h-2 bg-gradient-to-r from-primary to-secondary rounded-full animate-pulse"></span>
+                <span className="text-sm font-medium bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">New Course: Coming Soon</span>
               </div>
               
               <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
@@ -51,7 +51,7 @@ export default function CoursePage() {
 
               <div className="max-w-md mx-auto lg:mx-0 mb-6">
                 <EmailSignupForm
-                  source="course-landing-hero"
+                  source="COURSE_LANDING"
                   tags={["course-interest", "module-1-request"]}
                   title=""
                   description=""
@@ -60,6 +60,7 @@ export default function CoursePage() {
                   placeholder="Enter your email"
                   className="text-left"
                   onSuccess={() => setIsEmailCaptured(true)}
+                  isSuccess={isEmailCaptured}
                 />
               </div>
 
@@ -121,9 +122,9 @@ export default function CoursePage() {
         {/* Course Structure */}
         <section className="mb-20">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              The 4-Week Program
-            </h2>
+                          <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                The 4-Week Program
+              </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Build your personal finance system in 30 days - automate everything in just 15 minutes per month
             </p>
@@ -133,8 +134,8 @@ export default function CoursePage() {
             {/* Week 1 */}
             <Box variant="lifted" padding="lg">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-700 font-bold">1</span>
+                <div className="w-8 h-8 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg flex items-center justify-center">
+                  <span className="text-primary font-bold">1</span>
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">Week 1: Foundation & Quick Wins</h3>
@@ -144,9 +145,9 @@ export default function CoursePage() {
               <div className="space-y-3">
                 <div className="text-sm text-gray-700">• The 15-Minute Setup</div>
                 <div className="text-sm text-gray-700">• The Three Key Numbers</div>
-                <div className="bg-gray-50 rounded-lg p-3 mt-4">
+                <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/10 rounded-lg p-3 mt-4">
                   <p className="text-sm font-medium text-gray-700">
-                    Deliverable: Your personal finance dashboard
+                    <span className="text-primary">Deliverable:</span> Your personal finance dashboard
                   </p>
                 </div>
               </div>
@@ -155,8 +156,8 @@ export default function CoursePage() {
             {/* Week 2 */}
             <Box variant="lifted" padding="lg">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-700 font-bold">2</span>
+                <div className="w-8 h-8 bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-lg flex items-center justify-center">
+                  <span className="text-secondary font-bold">2</span>
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">Week 2: Optimization</h3>
@@ -166,9 +167,9 @@ export default function CoursePage() {
               <div className="space-y-3">
                 <div className="text-sm text-gray-700">• Housing & Transportation Audit</div>
                 <div className="text-sm text-gray-700">• The Subscription Purge</div>
-                <div className="bg-gray-50 rounded-lg p-3 mt-4">
+                <div className="bg-gradient-to-r from-secondary/5 to-secondary/10 border border-secondary/10 rounded-lg p-3 mt-4">
                   <p className="text-sm font-medium text-gray-700">
-                    Deliverable: $200-500 monthly savings identified
+                    <span className="text-secondary">Deliverable:</span> $200-500 monthly savings identified
                   </p>
                 </div>
               </div>
@@ -177,8 +178,8 @@ export default function CoursePage() {
             {/* Week 3 */}
             <Box variant="lifted" padding="lg">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-700 font-bold">3</span>
+                <div className="w-8 h-8 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg flex items-center justify-center">
+                  <span className="text-primary font-bold">3</span>
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">Week 3: Automation & Investment</h3>
@@ -188,9 +189,9 @@ export default function CoursePage() {
               <div className="space-y-3">
                 <div className="text-sm text-gray-700">• Simple Investment Setup</div>
                 <div className="text-sm text-gray-700">• Complete Financial Automation</div>
-                <div className="bg-gray-50 rounded-lg p-3 mt-4">
+                <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/10 rounded-lg p-3 mt-4">
                   <p className="text-sm font-medium text-gray-700">
-                    Deliverable: Full automation system running
+                    <span className="text-primary">Deliverable:</span> Full automation system running
                   </p>
                 </div>
               </div>
@@ -199,8 +200,8 @@ export default function CoursePage() {
             {/* Week 4 */}
             <Box variant="lifted" padding="lg">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-700 font-bold">4</span>
+                <div className="w-8 h-8 bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-lg flex items-center justify-center">
+                  <span className="text-secondary font-bold">4</span>
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">Week 4: Long-term Systems</h3>
@@ -210,9 +211,9 @@ export default function CoursePage() {
               <div className="space-y-3">
                 <div className="text-sm text-gray-700">• Goal Tracking & Projections</div>
                 <div className="text-sm text-gray-700">• Your Custom System</div>
-                <div className="bg-gray-50 rounded-lg p-3 mt-4">
+                <div className="bg-gradient-to-r from-secondary/5 to-secondary/10 border border-secondary/10 rounded-lg p-3 mt-4">
                   <p className="text-sm font-medium text-gray-700">
-                    Deliverable: Your complete 15-minute system
+                    <span className="text-secondary">Deliverable:</span> Your complete 15-minute system
                   </p>
                 </div>
               </div>
@@ -287,15 +288,15 @@ export default function CoursePage() {
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-primary" />
                   <span className="text-gray-700">Complete 4-week course</span>
                 </li>
                 <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-primary" />
                   <span className="text-gray-700">All templates & worksheets</span>
                 </li>
                 <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-primary" />
                   <span className="text-gray-700">Automation tools</span>
                 </li>
               </ul>
@@ -320,15 +321,15 @@ export default function CoursePage() {
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-primary" />
                   <span className="text-gray-700">Everything in Early Bird</span>
                 </li>
                 <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-primary" />
                   <span className="text-gray-700">Priority email support</span>
                 </li>
                 <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-primary" />
                   <span className="text-gray-700">Bonus: Investment calculator</span>
                 </li>
               </ul>
@@ -348,15 +349,15 @@ export default function CoursePage() {
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-primary" />
                   <span className="text-gray-700">Everything in Regular</span>
                 </li>
                 <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-primary" />
                   <span className="text-gray-700">1-hour setup call with me</span>
                 </li>
                 <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-primary" />
                   <span className="text-gray-700">Custom automation setup</span>
                 </li>
               </ul>
@@ -401,7 +402,7 @@ export default function CoursePage() {
               showEmailHighlight ? 'scale-105' : ''
             }`}>
               <EmailSignupForm
-                source="course-landing-cta"
+                source="COURSE_LANDING"
                 tags={["course-interest", "module-1-request"]}
                 title=""
                 description=""
@@ -409,6 +410,8 @@ export default function CoursePage() {
                 buttonText="Get Module 1 Free"
                 placeholder="Enter your email"
                 className="text-center"
+                onSuccess={() => setIsEmailCaptured(true)}
+                isSuccess={isEmailCaptured}
               />
             </div>
 
