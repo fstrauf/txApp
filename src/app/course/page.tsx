@@ -1,18 +1,27 @@
 "use client";
-import Image from "next/image";
-import Link from "next/link";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box } from "@/components/ui/Box";
-import { Clock, DollarSign, TrendingUp, CheckCircle, PlayCircle, Users, Star, ArrowRight } from 'lucide-react';
+import { PlayCircle, CheckCircle, ArrowDown } from 'lucide-react';
+import EmailSignupForm from "@/components/shared/EmailSignupForm";
 
 export default function CoursePage() {
   const [isEmailCaptured, setIsEmailCaptured] = useState(false);
-  const [email, setEmail] = useState('');
+  const [showEmailHighlight, setShowEmailHighlight] = useState(false);
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement email capture logic
-    setIsEmailCaptured(true);
+  const scrollToSignup = () => {
+    const signupSection = document.getElementById('email-signup');
+    if (signupSection) {
+      signupSection.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'center'
+      });
+      // Show highlight animation
+      setShowEmailHighlight(true);
+      // Hide after animation
+      setTimeout(() => {
+        setShowEmailHighlight(false);
+      }, 3000);
+    }
   };
 
   return (
@@ -30,10 +39,8 @@ export default function CoursePage() {
               </div>
               
               <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                I Went From{" "}
-                <span className="bg-gradient-to-r from-red-500 to-red-600 bg-clip-text text-transparent">Financial Chaos</span>
-                {" "}to{" "}
-                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">6-Month Runway</span>
+                I Went From Financial Chaos to{" "}
+                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">6-Month Emergency Fund</span>
                 {" "}in 18 Months
               </h1>
               
@@ -41,50 +48,20 @@ export default function CoursePage() {
                 Copy my exact 15-minute monthly system that runs on autopilot
               </p>
               
-              <div className="flex items-center justify-center lg:justify-start gap-8 mb-8">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary">15 min</div>
-                  <div className="text-sm text-gray-600">Monthly review</div>
-                </div>
-                <div className="border-l border-gray-300 h-12"></div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-secondary">30 days</div>
-                  <div className="text-sm text-gray-600">To complete</div>
-                </div>
-                <div className="border-l border-gray-300 h-12"></div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600">$3000+</div>
-                  <div className="text-sm text-gray-600">Saved per year</div>
-                </div>
-              </div>
 
-              {!isEmailCaptured ? (
-                <form onSubmit={handleEmailSubmit} className="mb-6">
-                  <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto lg:mx-0">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
-                      required
-                    />
-                    <button
-                      type="submit"
-                      className="px-8 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition-all duration-200 shadow-lg hover:shadow-xl"
-                    >
-                      Get Module 1 Free
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 max-w-md mx-auto lg:mx-0">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-green-800 font-medium">Thanks! Check your email for Module 1</span>
-                  </div>
-                </div>
-              )}
+              <div className="max-w-md mx-auto lg:mx-0 mb-6">
+                <EmailSignupForm
+                  source="course-landing-hero"
+                  tags={["course-interest", "module-1-request"]}
+                  title=""
+                  description=""
+                  successMessage="Thanks! Check your email for Module 1"
+                  buttonText="Get Module 1 Free"
+                  placeholder="Enter your email"
+                  className="text-left"
+                  onSuccess={() => setIsEmailCaptured(true)}
+                />
+              </div>
 
               <p className="text-sm text-gray-500">
                 Join 50+ early access members • No spam, just value
@@ -319,10 +296,13 @@ export default function CoursePage() {
                 </li>
                 <li className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="text-gray-700">MCP automation tools</span>
+                  <span className="text-gray-700">Automation tools</span>
                 </li>
               </ul>
-              <button className="w-full py-3 bg-gray-200 text-gray-600 font-semibold rounded-xl cursor-not-allowed">
+              <button 
+                onClick={scrollToSignup}
+                className="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition-colors"
+              >
                 Join Waitlist
               </button>
             </Box>
@@ -352,7 +332,10 @@ export default function CoursePage() {
                   <span className="text-gray-700">Bonus: Investment calculator</span>
                 </li>
               </ul>
-              <button className="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition-colors">
+              <button 
+                onClick={scrollToSignup}
+                className="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition-colors"
+              >
                 Join Waitlist
               </button>
             </Box>
@@ -377,7 +360,10 @@ export default function CoursePage() {
                   <span className="text-gray-700">Custom automation setup</span>
                 </li>
               </ul>
-              <button className="w-full py-3 bg-gray-200 text-gray-600 font-semibold rounded-xl cursor-not-allowed">
+              <button 
+                onClick={scrollToSignup}
+                className="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition-colors"
+              >
                 Join Waitlist
               </button>
             </Box>
@@ -385,8 +371,24 @@ export default function CoursePage() {
         </section>
 
         {/* Final CTA */}
-        <section className="text-center">
-          <Box variant="lifted" padding="xl" className="max-w-4xl mx-auto">
+        <section className="text-center" id="email-signup">
+          <Box 
+            variant="lifted" 
+            padding="xl" 
+            className={`max-w-4xl mx-auto transition-all duration-1000 ${
+              showEmailHighlight 
+                ? 'ring-4 ring-primary/30 ring-offset-4 ring-offset-white shadow-2xl bg-gradient-to-br from-primary/5 to-secondary/5' 
+                : ''
+            }`}
+          >
+            {showEmailHighlight && (
+              <div className="mb-4 flex items-center justify-center gap-2 text-primary animate-bounce">
+                <ArrowDown className="w-5 h-5" />
+                <span className="text-sm font-medium">Enter your email below to join the waitlist</span>
+                <ArrowDown className="w-5 h-5" />
+              </div>
+            )}
+            
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
               Ready to Get Your Finances Sorted?
             </h2>
@@ -395,33 +397,20 @@ export default function CoursePage() {
               Plus, get Module 1 free right now.
             </p>
             
-            {!isEmailCaptured ? (
-              <form onSubmit={handleEmailSubmit} className="mb-6">
-                <div className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    className="px-6 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition-all duration-200 shadow-lg hover:shadow-xl whitespace-nowrap"
-                  >
-                    Get Module 1 Free
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="bg-white rounded-xl p-6 mb-6 max-w-md mx-auto border border-green-200">
-                <div className="flex items-center gap-3 justify-center">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                  <span className="text-green-800 font-medium">Thanks! Check your email for Module 1</span>
-                </div>
-              </div>
-            )}
+            <div className={`max-w-lg mx-auto mb-6 transition-all duration-500 ${
+              showEmailHighlight ? 'scale-105' : ''
+            }`}>
+              <EmailSignupForm
+                source="course-landing-cta"
+                tags={["course-interest", "module-1-request"]}
+                title=""
+                description=""
+                successMessage="Thanks! Check your email for Module 1"
+                buttonText="Get Module 1 Free"
+                placeholder="Enter your email"
+                className="text-center"
+              />
+            </div>
 
             <p className="text-sm text-gray-600">
               <span className="font-medium">Limited time:</span> First 50 students get 50% off • No spam, just value
