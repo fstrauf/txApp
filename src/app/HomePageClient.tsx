@@ -83,6 +83,37 @@ export default function HomePageClient() {
           </div>
         </div>
 
+        {/* Course CTA Banner */}
+        <Box variant="gradient" padding="lg" className="mb-16">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/20 mb-6">
+              <span className="w-2 h-2 bg-secondary rounded-full animate-pulse"></span>
+              <span className="text-sm font-medium text-secondary">New Course: Coming Soon</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              The 15-Minute Monthly Money System
+            </h2>
+            <p className="text-lg text-gray-700 mb-6 max-w-2xl mx-auto">
+              Learn the exact system that took me from financial chaos to a 6-month runway in 18 months. 
+              Join the waitlist and get <span className="font-semibold text-primary">Module 1 free</span>.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                href="/course"
+                className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-secondary text-white font-semibold hover:bg-secondary-dark transition-all duration-200 shadow-lg hover:shadow-xl text-lg"
+              >
+                Get Module 1 Free
+                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </Link>
+              <div className="text-sm text-gray-600">
+                Join 50+ early access members • No spam, just value
+              </div>
+            </div>
+          </div>
+        </Box>
+
         {/* Enhanced Value Proposition Section */}
         <Box 
           variant="bordered" 

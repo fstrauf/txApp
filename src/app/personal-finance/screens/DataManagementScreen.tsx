@@ -39,24 +39,24 @@ const DataManagementScreen: React.FC = () => {
       {/* Info Section */}
       <Box variant="gradient" className="mb-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          <LockClosedIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Privacy & Storage
+          <LockClosedIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Privacy & Data Security
         </h2>
         <div className="space-y-3 text-gray-700">
           <p className="flex items-start">
             <span className="text-green-600 mr-2 mt-1">✓</span>
-            All your data is stored locally in your browser - nothing is sent to any servers
+            <strong>Your data stays in your Google Sheets</strong> - we only read it temporarily for analysis
           </p>
           <p className="flex items-start">
             <span className="text-green-600 mr-2 mt-1">✓</span>
-            Data persists between browser sessions and page refreshes
+            <strong>Zero server storage</strong> - data is processed in-memory and immediately discarded
           </p>
           <p className="flex items-start">
             <span className="text-green-600 mr-2 mt-1">✓</span>
-            You can export your data anytime to backup or transfer to another device
+            <strong>You maintain full control</strong> - revoke access anytime through Google account settings
           </p>
           <p className="flex items-start">
-            <span className="text-blue-600 mr-2 mt-1">ℹ</span>
-            Data is only accessible on this device/browser - clearing browser data will remove it
+            <span className="text-blue-600 mr-2 mt-1">💡</span>
+            We use minimal Google Sheets permissions - only read access to your chosen spreadsheet
           </p>
         </div>
       </Box>

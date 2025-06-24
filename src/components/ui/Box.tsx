@@ -3,7 +3,7 @@ import React from 'react';
 
 export interface BoxProps {
   children: React.ReactNode;
-  variant?: 'default' | 'gradient' | 'glass' | 'elevated' | 'bordered' | 'error' | 'warning' | 'success';
+  variant?: 'default' | 'gradient' | 'glass' | 'elevated' | 'bordered' | 'lifted' | 'error' | 'warning' | 'success';
   padding?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   onClick?: () => void;
@@ -53,6 +53,14 @@ export const Box: React.FC<BoxProps> = ({
       bg-white 
       shadow-md
       border-2 border-primary/20
+    `,
+    lifted: `
+      bg-white/95
+      shadow-[0_1px_3px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.24)]
+      hover:shadow-[0_14px_28px_rgba(0,0,0,0.25),0_10px_10px_rgba(0,0,0,0.22)]
+      border border-gray-100/80
+      backdrop-blur-sm
+      ring-1 ring-white/20
     `,
     error: `
       bg-red-50

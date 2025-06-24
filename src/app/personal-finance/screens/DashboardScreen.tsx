@@ -701,7 +701,7 @@ const DashboardScreen: React.FC = () => {
                 </button>
               </div>
               <div className="mt-4 text-sm text-blue-200">
-                🔒 Your data stays private • ⚡ Takes 2 minutes to connect • 📊 Works with Google Sheets & CSV
+                🔒 Your data stays in your spreadsheet - we only analyze, never store • ⚡ Takes 2 minutes • 📊 Works with Google Sheets & CSV
               </div>
             </div>
           </div>
@@ -1215,6 +1215,27 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
 
   return (
     <div className="space-y-8">
+      {/* Privacy Notice for First-Time Users */}
+      {isFirstTimeUser && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-blue-800">
+                Your data stays secure in your Google Sheets
+              </h3>
+              <p className="mt-1 text-sm text-blue-700">
+                We only temporarily read your spreadsheet for analysis - nothing is stored on our servers. You maintain full control and can revoke access anytime.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Show warning banner when using cached data */}
       {showCachedDataWarning && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">

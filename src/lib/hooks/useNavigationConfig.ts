@@ -18,7 +18,8 @@ import {
   ChartPieIcon,
   FlagIcon,
   SparklesIcon,
-  TrophyIcon
+  TrophyIcon,
+  AcademicCapIcon
 } from '@heroicons/react/24/outline';
 
 export interface NavigationItem {
@@ -33,6 +34,11 @@ const standardNavItems: NavigationItem[] = [
     href: "/personal-finance",
     label: "Financial Check",
     icon: CreditCardIcon,
+  },
+  {
+    href: "/course",
+    label: "Finance Course",
+    icon: AcademicCapIcon,
   },
   {
     href: "/integrations",
