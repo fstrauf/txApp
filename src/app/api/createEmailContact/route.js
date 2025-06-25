@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { subscribers } from '@/db/schema';
 import { createId } from '@/db/utils';
 import { eq } from 'drizzle-orm'; // Import eq for querying
+import { sendModule1Access, shouldSendModule1Access } from '@/lib/email-service';
 
 export async function POST(req) {
   try {
@@ -72,6 +73,16 @@ export async function POST(req) {
       // If the contact already exists in Resend, we can just continue
       // Other errors should be logged but shouldn't necessarily fail the request
       console.error("Resend API error:", resendError);
+    }
+
+    // Check if we should send Module 1 access email
+    if (shouldSendModule1Access(newTags)) {
+      console.log(`[createEmailContact] Sending Module 1 access email to: ${email}`);
+      
+      // Send Module 1 access email (don't await to avoid blocking the response)
+      sendModule1Access({ email }).catch(error => {
+        console.error('Failed to send Module 1 access email:', error);
+      });
     }
 
     return NextResponse.json({

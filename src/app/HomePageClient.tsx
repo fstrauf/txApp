@@ -83,6 +83,77 @@ export default function HomePageClient() {
           </div>
         </div>
 
+        {/* Course CTA Banner */}
+        <div className="relative mb-20">
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-primary/5 rounded-3xl"></div>
+          <Box variant="gradient" padding="xl" className="relative overflow-hidden border border-primary/10 rounded-3xl shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"></div>
+            <div className="relative z-10">
+              <div className="text-center max-w-4xl mx-auto">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 mb-8">
+                  <span className="w-2 h-2 bg-gradient-to-r from-primary to-secondary rounded-full animate-pulse"></span>
+                  <span className="text-sm font-medium bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">New Course: Coming Soon</span>
+                </div>
+                
+                <h2 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+                  I Went From Financial Chaos to{" "}
+                  <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">6-Month Emergency Fund</span>
+                  {" "}in 18 Months
+                </h2>
+                
+                <p className="text-xl lg:text-2xl text-gray-700 mb-4 font-medium">
+                  Copy my exact 15-minute monthly system that runs on autopilot
+                </p>
+                
+                <p className="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
+                  Join the waitlist and get <span className="font-bold text-primary bg-primary/10 px-2 py-1 rounded">Module 1 absolutely free</span> — 
+                  the foundation that changed everything.
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-8">
+                  <Link
+                    href="/course"
+                    className="group relative inline-flex items-center justify-center px-10 py-5 rounded-2xl bg-gradient-to-r from-primary to-secondary text-white font-bold text-xl hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 shadow-2xl hover:shadow-3xl transform hover:scale-105 min-w-[280px]"
+                  >
+                    <span className="absolute inset-0 rounded-2xl bg-gradient-to-r from-white/20 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
+                    <span className="relative flex items-center">
+                      Get Module 1 Free
+                      <svg className="ml-3 w-6 h-6 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </span>
+                  </Link>
+                  
+                  <div className="text-center sm:text-left">
+                    <div className="text-sm font-semibold text-gray-800 mb-1">
+                      Join 50+ early access members
+                    </div>
+                    <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-gray-600">
+                      <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      No spam, just value
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Social Proof Pills */}
+                <div className="flex flex-wrap justify-center gap-4 text-sm">
+                  <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-4 py-2 shadow-sm">
+                    <span className="text-gray-700">💰 Average savings: $400/month</span>
+                  </div>
+                  <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-4 py-2 shadow-sm">
+                    <span className="text-gray-700">⏱️ Setup time: 15 minutes</span>
+                  </div>
+                  <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-4 py-2 shadow-sm">
+                    <span className="text-gray-700">🎯 Success rate: 94%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Box>
+        </div>
+
         {/* Enhanced Value Proposition Section */}
         <Box 
           variant="bordered" 

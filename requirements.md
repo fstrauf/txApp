@@ -1,112 +1,268 @@
-# Personal Finance Dashboard - Requirements (Updated)
+Reference Course: https://www.buildyourownapps.com/
 
-**Core Architecture**: Spreadsheet-centric approach where user transaction data lives in their Google Sheets, accessed via OAuth. No transaction data stored in our database.
+# Personal Finance Course: Development Summary & Action Plan
 
-## Main Dashboard Flow (/personal-finance)
+## Course Concept: "The 15-Minute Monthly Money System"
 
-### 1. User Dashboard Experience
-**Route**: `/personal-finance` (reuse existing analytics from `?screen=initialInsights` and `?screen=spendingAnalysisResults`)
+### Core Promise
 
-#### First-Time Users:
-1. Show mock data dashboard preview asking "Would you want this with your data?"
-2. **Spreadsheet Setup Options**:
-   - **Option A**: Create new spreadsheet from our template
-   - **Option B**: Link existing spreadsheet (with structure validation)
-3. OAuth authorization for Google Sheets access (read/write permissions)
-4. Generate initial dashboard from their spreadsheet data
+"Build your personal finance system in 30 days - automate everything in just 15 minutes per month"
 
-#### Returning Users:
-- **Stored**: `spreadsheetUrl`, `spreadsheetId`, OAuth `refreshToken` in user table
-- **Live Data**: All analytics computed from spreadsheet in real-time
-- **Dashboard Actions**:
-  - **Refresh Data**: Re-read spreadsheet and recompute analytics
-  - **Open Sheet**: Direct link to user's Google Spreadsheet  
-  - **Explain This**: Help system for understanding their data
+### Unique Value Proposition
 
-### 2. Add New Transaction Data Flow
-**Upload Button** → Enhanced upload screen (based on `?screen=spendingAnalysisUpload`)
+- **Developer-built automation tools** (MCP integration)
+- **Practical, tool-first approach** (not theory-heavy)
+- **Real transparency** with demo accounts
+- **Minimalist philosophy** from your blog
+- **Immediate implementation** (not just education)
 
-#### Processing Pipeline:
-1. **Upload CSV**: User uploads new bank statement
-2. **ML Categorization**:
-   - **First Upload**: Use generic auto-classify endpoint (`/auto-classify`)
-   - **Subsequent Uploads**: 
-     - Read existing categorized transactions from spreadsheet
-     - Train custom model via `/api/classify/train` 
-     - Categorize new transactions via `/api/classify/classify`
-3. **Validation Screen**: Lunchmoney-style interface for validating ML suggestions
-4. **Write to Spreadsheet**: Append validated transactions to user's sheet via OAuth
-5. **Auto-refresh**: Dashboard updates automatically after write
+---
 
-### 3. Dashboard Analytics (Spreadsheet-Sourced)
-**Data Source**: Read directly from user's spreadsheet via OAuth
+## Course Structure: 4-Week Program
 
-#### Key Statistics:
-- Monthly average income (category=income)
-- Monthly average savings (income - expenses)  
-- Monthly average expenses (past 12 months)
-- Last month expenses
-- Annual expense projection (monthly average × 12)
+### **Week 1: Foundation & Quick Wins**
 
-#### Visualizations:
-- **Date Filters**: Last month vs. all time
-- **Pie Chart**: Expenses by category
-- **Transaction List**: All transactions grouped by category, sorted by amount
-- **Stacked Bar Chart**: Monthly expenses by category over time
+**Module 1: The 15-Minute Setup**
 
-### 4. Data Management
-#### Spreadsheet Operations (via OAuth):
-- **Read**: Fetch all transaction data for analytics
-- **Write**: Append new categorized transactions
-- **Validate**: Ensure proper column structure
-- **Cache**: Temporarily cache computed analytics for performance
+- Download bank statements (multiple banks demo)
+- MCP automation demo - instant categorization
+- Your first monthly review
+- **Deliverable**: Your numbers calculated
 
-#### User Controls:
-- Link/unlink spreadsheet
-- Force refresh from spreadsheet
-- View spreadsheet directly
-- Data validation and error handling
+**Module 2: The Three Key Numbers**
 
-### 5. Email Reminders (Opt-in)
-- Monthly maintenance reminders
-- Data upload notifications
-- Stored in user preferences: `emailRemindersEnabled`
+- Calculate total income, expenses, savings rate
+- Category breakdown (8 simple categories)
+- First insights & reality check
+- **Deliverable**: Personal finance dashboard
 
-## Technical Implementation
+### **Week 2: Optimization**
 
-### Database Changes:
-**User Table Additions**:
-```sql
-- spreadsheetUrl: text
-- spreadsheetId: text  
-- lastDataRefresh: timestamp
-- emailRemindersEnabled: boolean
-- oauthRefreshToken: encrypted text
+**Module 3: Housing & Transportation Audit**
+
+- True cost calculations
+- Optimization strategies
+- Minimalism connection
+- **Deliverable**: $200-500 monthly savings identified
+
+**Module 4: The Subscription Purge**
+
+- Automated detection with MCP
+- Decision framework
+- Runway calculator introduction
+- **Deliverable**: Subscriptions optimized
+
+### **Week 3: Automation & Investment**
+
+**Module 5: Simple Investment Setup**
+
+- Index fund strategy (boring but effective)
+- Account setup walkthrough
+- Dollar-cost averaging automation
+- **Deliverable**: Investment automation running
+
+**Module 6: Complete Financial Automation**
+
+- Bill pay setup
+- Savings transfers
+- Monthly review workflow
+- **Deliverable**: Full automation system
+
+### **Week 4: Long-term Systems**
+
+**Module 7: Goal Tracking & Projections**
+
+- Runway calculations
+- Goal visualization
+- Progress tracking setup
+- **Deliverable**: 6-month financial plan
+
+**Module 8: Your Custom System**
+
+- Personalization for your situation
+- Advanced MCP workflows
+- Maintenance mode
+- **Deliverable**: Your complete system
+
+---
+
+## Validation Strategy (Before Full Course Creation)
+
+### Phase 1: Module 1 as Free Lead Magnet
+
+1. **Create only Module 1** (2-3 hours work)
+2. **Landing page**: "Free: My 15-Minute Monthly Money System"
+3. **Email sequence**: 5 emails over 10 days
+4. **Success metric**: 50+ signups = proceed
+
+### Phase 2: Soft Launch
+
+1. **Beta cohort**: 10-20 people at $97 (50% off)
+2. **Weekly live Q&A** during beta
+3. **Gather testimonials** and case studies
+4. **Refine based on feedback**
+
+---
+
+## Landing Page Structure
+
+### Hero Section
+
+```
+Headline: "I Went From Financial Chaos to 6-Month Runway in 18 Months"
+Subhead: "Copy my exact 15-minute monthly system that runs on autopilot"
+
+[VIDEO: 2-min demo of your system in action]
+
+CTA: "Get Module 1 Free →"
 ```
 
-### API Endpoints:
+### Problem/Solution
+
 ```
-POST /api/dashboard/link-spreadsheet    # Store spreadsheet + OAuth setup
-GET /api/dashboard/read-data           # Read from spreadsheet via OAuth  
-POST /api/dashboard/append-transactions # Write to spreadsheet
-POST /api/dashboard/refresh            # Force refresh from spreadsheet
-POST /api/dashboard/email-preferences  # Manage notification settings
+The Problem:
+- No idea where money goes
+- Hours wasted on spreadsheets  
+- Constant money stress
+
+The Solution:
+- 15-minute monthly reviews
+- Automated categorization
+- Clear runway visibility
 ```
 
-### Spreadsheet Structure:
-```
-| Date | Description | Amount | Category | Type | Account | Confidence |
-```
+### Course Modules Preview
 
-### OAuth Integration:
-- Extend existing Google Sheets OAuth flow
-- Request `spreadsheets` scope for read/write access
-- Handle token refresh automatically
-- Secure refresh token storage
+- Week-by-week breakdown
+- Specific deliverables
+- Time commitment (15-30 min/day)
 
-## Key Benefits:
-- **Data Ownership**: Users control their data in their spreadsheets
-- **Privacy**: No transaction data in our database
-- **Transparency**: Users see exactly where data lives  
-- **Flexibility**: Users can edit spreadsheets directly
-- **Natural Backup**: Data lives in Google Drive
+### Proof Section
+
+- Demo account transformations
+- Beta tester testimonials
+- Your story (with percentages)
+
+### Pricing
+
+- **Early Bird**: $147 (first 50 students)
+- **Regular**: $197
+- **Premium**: $297 (includes 1-on-1 setup call)
+
+---
+
+## Website Integration Plan
+
+### Homepage Updates
+
+1. **Hero banner**: "New: Personal Finance Course Coming Soon"
+2. **Blog sidebar**: Module 1 free download
+3. **About page**: Add finance transformation story
+4. **Footer**: Email capture for course waitlist
+
+### Blog Integration
+
+1. Update relevant posts with course CTAs
+2. Create 3-part series from course content
+3. Add "Related Course Module" boxes
+
+### Technical Setup
+
+1. Email automation platform (ConvertKit/similar)
+2. Course hosting (Teachable/Gumroad/self-hosted)
+3. Payment processing
+4. Student community (optional Discord/Circle)
+
+---
+
+## Content Creation Checklist
+
+### Immediate Actions (Week 1)
+
+- [ ]  Create demo bank accounts
+- [ ]  Record Module 1 video (15-30 min)
+- [ ]  Design simple landing page
+- [ ]  Write 5-email nurture sequence
+- [ ]  Set up email automation
+
+### Validation Phase (Weeks 2-3)
+
+- [ ]  Launch Module 1 free offer
+- [ ]  Track signups and engagement
+- [ ]  Send survey to engaged users
+- [ ]  Recruit beta testers
+
+### Full Course Development (Month 2)
+
+- [ ]  Record all video modules
+- [ ]  Create templates and worksheets
+- [ ]  Build course platform
+- [ ]  Write sales page copy
+- [ ]  Design email launch sequence
+
+---
+
+## Marketing Angles
+
+### Content Marketing
+
+1. **"My Monthly Money Review"** - YouTube series
+2. **"Find $500 in 30 Minutes"** - Challenge post
+3. **Tool comparisons** - Why I built my own
+4. **Case studies** - Beta tester transformations
+
+### Cross-Promotion
+
+1. Link from minimalism content
+2. Guest posts on finance blogs
+3. Reddit contributions (r/personalfinance)
+4. Developer communities (unique angle)
+
+---
+
+## Success Metrics
+
+### Validation Metrics
+
+- 50+ Module 1 downloads = proceed
+- 10+ beta signups at $97 = strong interest
+- 5+ completion testimonials = product-market fit
+
+### Launch Goals
+
+- 100 students in first 3 months
+- $15-20K revenue
+- 80%+ completion rate
+- 4.5+ star average rating
+
+---
+
+## Privacy Approach (Demo Accounts)
+
+### What to Show
+
+- Transaction categorization process
+- Percentage-based spending
+- Savings rate improvements
+- Category breakdowns
+- Monthly trends
+
+### What to Keep Private
+
+- Actual income levels
+- Real account numbers
+- Specific location details
+- Employer information
+- Total net worth
+
+---
+
+## Next Steps Priority Order
+
+1. **This Week**: Create Module 1 + landing page
+2. **Next Week**: Launch free module, start email list
+3. **Week 3**: Analyze results, recruit beta testers
+4. **Week 4**: Start beta cohort
+5. **Month 2**: Build full course based on feedback
+
+This approach minimizes risk while maximizing learning. You'll know within 3-4 weeks if there's real demand before investing significant time in full course creation.

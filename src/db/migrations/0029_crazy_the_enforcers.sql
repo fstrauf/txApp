@@ -1,0 +1,1 @@
+ALTER TYPE "public"."subscriberSource" ADD VALUE 'COURSE_LANDING' BEFORE 'OTHER';
