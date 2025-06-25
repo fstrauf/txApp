@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Box } from "@/components/ui/Box";
 import { Lock, CheckCircle, Clock, ArrowRight, PlayCircle } from 'lucide-react';
+import PricingSection from "@/components/shared/PricingSection";
 
 export default function Module1Page() {
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -213,10 +214,10 @@ export default function Module1Page() {
 
               <a href="#" className="block p-4 bg-gradient-to-r from-secondary/5 to-secondary/10 border border-secondary/10 rounded-lg hover:shadow-md transition-all duration-200">
                 <h3 className="font-semibold text-gray-900 mb-1">
-                  📱 MCP Tool Demo
+                  🔄 Bank Import Guide
                 </h3>
                 <p className="text-sm text-gray-600">
-                  How to use the automation tool
+                  How to download and organize statements
                 </p>
               </a>
 
@@ -241,8 +242,8 @@ export default function Module1Page() {
           </Box>
         </section>
 
-        {/* Next Steps */}
-        <section>
+        {/* Upgrade CTA */}
+        <section className="mb-12">
           <Box variant="lifted" padding="xl" className="bg-gradient-to-br from-primary/5 to-secondary/5">
             <div className="text-center">
               <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -258,13 +259,13 @@ export default function Module1Page() {
                   href="/course"
                   className="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-lg hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200"
                 >
-                  Join the Full Course
+                  View Full Course Details
                 </a>
                 <a
-                  href="/course#email-signup"
+                  href="#pricing"
                   className="px-8 py-3 bg-white text-primary font-semibold rounded-lg border-2 border-primary hover:bg-primary/5 transition-colors"
                 >
-                  Join Waitlist
+                  See Pricing Below
                 </a>
               </div>
 
@@ -274,6 +275,14 @@ export default function Module1Page() {
             </div>
           </Box>
         </section>
+
+        {/* Pricing */}
+        <div id="pricing">
+          <PricingSection 
+            showTitle={true}
+            onJoinWaitlist={() => window.location.href = '/course#email-signup'}
+          />
+        </div>
 
       </main>
     </div>
