@@ -4,6 +4,8 @@ import { Box } from "@/components/ui/Box";
 import { Lock, CheckCircle, Clock, ArrowRight, PlayCircle } from 'lucide-react';
 import PricingSection from "@/components/shared/PricingSection";
 import StayUpToDate from "@/app/fuck-you-money-sheet/stayUpToDate";
+import Image from 'next/image';
+import Link from 'next/link';
 
 export default function Module1Page() {
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -118,129 +120,156 @@ export default function Module1Page() {
         <section className="mb-12">
           <Box variant="elevated" padding="sm">
             <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl flex items-center justify-center relative overflow-hidden">
-              {/* Placeholder until you add your YouTube video */}
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <div className="text-center text-white">
-                  <PlayCircle className="w-16 h-16 mx-auto mb-4 opacity-90" />
-                  <p className="text-lg font-medium">Module 1: The 15-Minute System</p>
-                  <p className="text-sm opacity-75">Replace this with your YouTube embed</p>
-                </div>
-              </div>
-              {/* 
-              Uncomment and replace YOUR_VIDEO_ID when ready:
               <iframe
                 width="100%"
                 height="100%"
-                src="https://www.youtube.com/embed/YOUR_VIDEO_ID?rel=0&modestbranding=1"
+                src="https://www.youtube.com/embed/4JFXvKa1IFw?rel=0&modestbranding=1"
                 title="Module 1: The 15-Minute Monthly Money Review"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
                 className="rounded-xl"
               ></iframe>
-              */}
             </div>
           </Box>
         </section>
 
-        {/* Action Steps */}
+        {/* Action Steps with Images */}
         <section className="mb-12">
-          <Box variant="lifted" padding="lg">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Your Action Steps
-            </h2>
-            
-            <div className="space-y-6">
-              <div className="flex gap-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-primary font-bold">1</span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">
-                    Download your bank statements
-                  </h3>
-                  <p className="text-gray-600">
-                    Get last month's statements from all your accounts (checking, savings, credit cards)
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-secondary font-bold">2</span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">
-                    Calculate your three numbers
-                  </h3>
-                  <p className="text-gray-600">
-                    Total income, total expenses, and savings rate (I'll show you how in the video)
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-primary font-bold">3</span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">
-                    Reply to my email
-                  </h3>
-                  <p className="text-gray-600">
-                    Share your savings rate - I read every response and will help if you're stuck
-                  </p>
-                </div>
-              </div>
+          <div className="space-y-8 md:space-y-12">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                Your Step-by-Step Workflow
+              </h2>
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                Follow these exact steps to transform your financial chaos into a clear, automated system
+              </p>
             </div>
-          </Box>
-        </section>
-
-        {/* Resources */}
-        <section className="mb-12">
-          <Box variant="bordered" padding="lg">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Module Resources
-            </h2>
             
-            <div className="grid md:grid-cols-2 gap-6">
-              <a href="#" className="block p-4 bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/10 rounded-lg hover:shadow-md transition-all duration-200">
-                <h3 className="font-semibold text-gray-900 mb-1">
-                  📊 Monthly Review Template
+            {/* Step 1 - Access Dashboard */}
+            <Box variant="lifted" padding="lg">
+              <div className="flex items-center mb-4">
+                <div className="bg-gradient-to-br from-primary to-secondary text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">
+                  1
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Access Your Dashboard
                 </h3>
-                <p className="text-sm text-gray-600">
-                  The exact spreadsheet I use for tracking
-                </p>
-              </a>
+              </div>
+              <p className="text-gray-700 mb-6">
+                Head over to{' '}
+                <Link 
+                  href="/personal-finance" 
+                  className="text-primary hover:text-primary-dark underline font-medium"
+                >
+                  the dashboard
+                </Link>{' '}
+                and click "Manage Data" to get started with your financial analysis.
+              </p>
+              <div className="max-w-4xl mx-auto">
+                <Image
+                  width={1433}
+                  height={1207}
+                  src="/es_financial_overview_dashboard.png"
+                  className="rounded-lg shadow-lg w-full h-auto"
+                  alt="Financial overview dashboard"
+                  quality={100}
+                />
+              </div>
+            </Box>
 
-              <a href="#" className="block p-4 bg-gradient-to-r from-secondary/5 to-secondary/10 border border-secondary/10 rounded-lg hover:shadow-md transition-all duration-200">
-                <h3 className="font-semibold text-gray-900 mb-1">
-                  🔄 Bank Import Guide
+            {/* Step 2 - Upload Bank Data */}
+            <Box variant="lifted" padding="lg">
+              <div className="flex items-center mb-4">
+                <div className="bg-gradient-to-br from-secondary to-primary text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">
+                  2
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Upload Your Bank Statements
                 </h3>
-                <p className="text-sm text-gray-600">
-                  How to download and organize statements
-                </p>
-              </a>
+              </div>
+              <p className="text-gray-700 mb-6">
+                Download CSV files from your bank and upload them through the web app. The system will automatically map your columns and prepare your data for categorization.
+              </p>
+              <div className="max-w-4xl mx-auto">
+                <Image
+                  width={1433}
+                  height={1207}
+                  src="/es_bank_import_mapping.png"
+                  className="rounded-lg shadow-lg w-full h-auto"
+                  alt="Bank import mapping interface showing CSV upload and column mapping"
+                  quality={100}
+                />
+              </div>
+            </Box>
 
-              <a href="#" className="block p-4 bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/10 rounded-lg hover:shadow-md transition-all duration-200">
-                <h3 className="font-semibold text-gray-900 mb-1">
-                  🎯 Category Cheatsheet
+            {/* Step 3 - AI Categorization */}
+            <Box variant="lifted" padding="lg">
+              <div className="flex items-center mb-4">
+                <div className="bg-gradient-to-br from-primary to-secondary text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">
+                  3
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Review AI Categorization
                 </h3>
-                <p className="text-sm text-gray-600">
-                  My 8-category system explained
-                </p>
-              </a>
+              </div>
+              <p className="text-gray-700 mb-6">
+                Our AI automatically categorizes your transactions based on merchant names and descriptions. Review and adjust any suggestions to match your preferences - this trains the system for better future accuracy.
+              </p>
+              <div className="max-w-4xl mx-auto">
+                <Image
+                  width={1433}
+                  height={1207}
+                  src="/es_ex_suggestion_adjustment.png"
+                  className="rounded-lg shadow-lg w-full h-auto"
+                  alt="AI categorization interface showing expense suggestions and adjustments"
+                  quality={100}
+                />
+              </div>
+            </Box>
 
-              <a href="#" className="block p-4 bg-gradient-to-r from-secondary/5 to-secondary/10 border border-secondary/10 rounded-lg hover:shadow-md transition-all duration-200">
-                <h3 className="font-semibold text-gray-900 mb-1">
-                  ❓ Common Questions
+            {/* Step 4 - Analysis */}
+            <Box variant="lifted" padding="lg">
+              <div className="flex items-center mb-4">
+                <div className="bg-gradient-to-br from-secondary to-primary text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">
+                  4
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Analyze Your Financial Picture
                 </h3>
-                <p className="text-sm text-gray-600">
-                  FAQ from other students
+              </div>
+              <p className="text-gray-700 mb-6">
+                Review your categorized transactions and analyze your financial runway, income, expenses by category, and savings rate. This becomes your baseline for improvement.
+              </p>
+              <div className="max-w-4xl mx-auto">
+                <Image
+                  width={1433}
+                  height={1207}
+                  src="/es_category_selection.png"
+                  className="rounded-lg shadow-lg w-full h-auto"
+                  alt="Category selection and financial analysis interface"
+                  quality={100}
+                />
+              </div>
+            </Box>
+
+            {/* Result */}
+            <Box variant="gradient" padding="lg">
+              <div className="text-center">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  🎯 Your Financial Baseline
+                </h3>
+                <p className="text-gray-700 mb-6 max-w-2xl mx-auto">
+                  Now you have a clear picture of where your money goes each month. This is your starting point for optimization and building your emergency fund.
                 </p>
-              </a>
-            </div>
-          </Box>
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 max-w-lg mx-auto">
+                  <p className="text-sm font-medium text-gray-700">
+                    <span className="text-primary">Next:</span> Reply to my email with your savings rate and biggest expense category!
+                  </p>
+                </div>
+              </div>
+            </Box>
+          </div>
         </section>
 
         {/* Upgrade CTA */}
