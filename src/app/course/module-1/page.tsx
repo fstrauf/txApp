@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Box } from "@/components/ui/Box";
 import { Lock, CheckCircle, Clock, ArrowRight, PlayCircle } from 'lucide-react';
 import PricingSection from "@/components/shared/PricingSection";
+import StayUpToDate from "@/app/fuck-you-money-sheet/stayUpToDate";
 
 export default function Module1Page() {
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -283,6 +284,9 @@ export default function Module1Page() {
             onJoinWaitlist={() => window.location.href = '/course#email-signup'}
           />
         </div>
+
+        {/* Community Link */}
+        <StayUpToDate />
 
       </main>
     </div>
