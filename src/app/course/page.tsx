@@ -74,54 +74,20 @@ export default function CoursePage() {
             <div className="w-full lg:w-1/2">
               <Box variant="elevated" padding="sm" className="relative">
                 <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl relative overflow-hidden">
-                  <video
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    className="w-full h-full object-cover rounded-xl"
-                    poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23f3f4f6'/%3E%3Ctext x='400' y='225' font-family='Arial, sans-serif' font-size='20' fill='%236b7280' text-anchor='middle' dominant-baseline='middle'%3EDemo Video Loading...%3C/text%3E%3C/svg%3E"
-                  >
-                    {/* Placeholder for actual video source */}
-                    <source src="/demo-video.mp4" type="video/mp4" />
-                    <source src="/demo-video.webm" type="video/webm" />
-                    
-                    {/* Fallback for browsers that don't support video */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center">
-                      <div className="text-center text-white">
-                        <PlayCircle className="w-16 h-16 mx-auto mb-4 opacity-90" />
-                        <p className="text-sm">Your browser doesn't support video</p>
-                      </div>
-                    </div>
-                  </video>
-                  
-                  <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-lg text-sm">
-                    2:30 Demo
-                  </div>
-                  
-                  {/* Optional: Video controls overlay */}
-                  <div className="absolute top-4 right-4 flex gap-2">
-                    <button 
-                      onClick={(e) => {
-                        const video = e.currentTarget.closest('.aspect-video')?.querySelector('video');
-                        if (video) {
-                          if (video.paused) {
-                            video.play();
-                          } else {
-                            video.pause();
-                          }
-                        }
-                      }}
-                      className="bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg transition-colors"
-                      aria-label="Play/Pause"
-                    >
-                      <PlayCircle className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src="https://www.youtube.com/embed/aGQ1dUYMEog?rel=0&modestbranding=1"
+                    title="The 15-Minute Monthly Money System - Course Introduction"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="rounded-xl"
+                  ></iframe>
                 </div>
                 <div className="mt-4 text-center">
                   <p className="text-sm text-gray-600 font-medium">
-                    Watch: My 15-minute monthly system in action
+                    Watch: My 15-minute monthly system explained
                   </p>
                 </div>
               </Box>
