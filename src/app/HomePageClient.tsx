@@ -657,16 +657,16 @@ export default function HomePageClient() {
 
         {/* F*** You Money Calculator CTA - Enhanced */}
         <Box variant="gradient" padding="xl" className="mb-16 overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-orange-500/5 to-yellow-500/5"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-secondary/5 to-primary/5"></div>
           <div className="relative z-10 max-w-5xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-red-100 to-orange-100 border border-red-500/20 mb-6">
-              <span className="w-2 h-2 bg-gradient-to-r from-red-500 to-orange-500 rounded-full animate-pulse"></span>
-              <span className="text-sm font-medium bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">Most Popular Tool</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 mb-6">
+              <span className="w-2 h-2 bg-gradient-to-r from-primary to-secondary rounded-full animate-pulse"></span>
+              <span className="text-sm font-medium bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Most Popular Tool</span>
             </div>
             
                          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
                Calculate Your Complete{" "}
-               <span className="bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">"F*** You Money"</span>{" "}
+               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">"F*** You Money"</span>{" "}
                Number
              </h2>
              
@@ -704,7 +704,7 @@ export default function HomePageClient() {
                 <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-100">
                   <div className="text-center mb-4">
                     <div className="text-sm text-gray-600 mb-1">Your F*** You Money</div>
-                    <div className="text-3xl font-bold text-red-600">$?</div>
+                    <div className="text-3xl font-bold text-primary">$?</div>
                   </div>
                   <div className="space-y-2 text-sm text-gray-600">
                     <div className="flex justify-between">
@@ -723,7 +723,7 @@ export default function HomePageClient() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6 sm:mb-8">
               <Link
                 href="/fuck-you-money-sheet"
-                className="group relative inline-flex items-center justify-center px-6 sm:px-10 py-4 sm:py-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold text-lg sm:text-xl hover:from-red-700 hover:to-orange-700 transition-all duration-200 shadow-2xl hover:shadow-3xl transform hover:scale-105 w-full sm:w-auto sm:min-w-[280px]"
+                className="group relative inline-flex items-center justify-center px-6 sm:px-10 py-4 sm:py-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg sm:text-xl hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 shadow-2xl hover:shadow-3xl transform hover:scale-105 w-full sm:w-auto sm:min-w-[280px]"
               >
                 <span className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-r from-white/20 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
                 <span className="relative flex items-center">
