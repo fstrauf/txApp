@@ -487,22 +487,7 @@ const DashboardScreen: React.FC = () => {
                 That's {Math.round(mockSavingsData.runwayMonths / 12 * 10) / 10} years of complete independence. 
                 <span className="font-bold text-white"> What if this was YOUR actual runway?</span>
               </p>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 mb-4 sm:mb-6 border border-white/20">
-                <div className="flex flex-col sm:flex-row gap-4 text-sm">
-                  <div className="text-center sm:text-left">
-                    <div className="text-white/80 text-xs">Your Freedom Fund</div>
-                    <div className="text-white font-bold text-lg">${mockSavingsData.latestNetAssetValue.toLocaleString()}</div>
-                  </div>
-                  <div className="text-center sm:text-left">
-                    <div className="text-white/80 text-xs">Time You Can Buy</div>
-                    <div className="text-white font-bold text-lg">{mockSavingsData.runwayMonths} months</div>
-                  </div>
-                  <div className="text-center sm:text-left">
-                    <div className="text-white/80 text-xs">Monthly Burn Rate</div>
-                    <div className="text-white font-bold text-lg">${mockSavingsData.monthlyBurnRate.toLocaleString()}</div>
-                  </div>
-                </div>
-              </div>
+
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <button
                   onClick={() => {
@@ -538,9 +523,6 @@ const DashboardScreen: React.FC = () => {
                   <QuestionMarkCircleIcon className="h-5 w-5" />
                   See How It Works
                 </button>
-              </div>
-              <div className="mt-4 sm:mt-5 text-xs sm:text-sm text-blue-200/90">
-                💪 <strong>Take control:</strong> Your data stays in YOUR spreadsheet • ⚡ <strong>2-minute setup</strong> • 🚀 <strong>Instant insights</strong> • 🎯 <strong>Real results</strong>
               </div>
             </div>
           </div>
