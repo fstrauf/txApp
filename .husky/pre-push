@@ -1,7 +1,16 @@
 echo "🚀 Running comprehensive Mobile UX tests before push..."
 
-# Ensure pnpm is available
-export PATH="$PATH:$(npm config get prefix)/bin"
+# Add common Node.js paths to ensure tools are available
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:$PATH"
 
-# Run full mobile UX tests on all devices
-npx pnpm test:mobile-all 
+# Try to find pnpm in common locations
+if command -v pnpm >/dev/null 2>&1; then
+    pnpm test:mobile-all
+elif [ -f "/opt/homebrew/bin/pnpm" ]; then
+    /opt/homebrew/bin/pnpm test:mobile-all
+elif [ -f "/usr/local/bin/pnpm" ]; then
+    /usr/local/bin/pnpm test:mobile-all
+else
+    echo "❌ pnpm not found. Please ensure pnpm is installed."
+    exit 1
+fi 
