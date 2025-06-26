@@ -24,7 +24,7 @@ export const NavBarButtons = () => {
               : "text-gray-700 hover:text-primary"
           }`}
         >
-          My Finance Overview
+          Calculate Your Freedom
         </Link>
 
       </div>

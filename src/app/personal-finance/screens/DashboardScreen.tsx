@@ -465,28 +465,44 @@ const DashboardScreen: React.FC = () => {
         variant="gradient"
         size="xl"
       >
-        Your Financial Overview
+        Your Financial Freedom Dashboard
       </Header>
 
       {/* Demo Data Banner for First-Time Users */}
       {isFirstTimeUser && (
-        <div className="bg-gradient-to-r from-primary to-secondary-dark rounded-xl p-4 sm:p-8 border border-primary-light mb-6 sm:mb-8 shadow-lg">
-          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+        <div className="bg-gradient-to-r from-primary to-secondary-dark rounded-xl p-4 sm:p-8 border border-primary-light mb-6 sm:mb-8 shadow-lg overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5"></div>
+          <div className="relative z-10 flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
             <div className="flex-shrink-0 mb-4 sm:mb-0">
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                 </svg>
               </div>
             </div>
             <div className="flex-1">
               <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">{getHeadlineText()}</h3>
               <p className="text-blue-100 mb-4 sm:mb-6 text-base sm:text-lg leading-relaxed">
-                You're exploring a complete financial dashboard with <strong>30 realistic transactions</strong>, 
-                <strong> interactive charts</strong>, <strong>expense categorization</strong>, 
-                and <strong>{mockSavingsData.runwayMonths} months runway</strong> calculation. 
-                This could be your actual financial picture!
+                You're looking at <strong>real financial freedom</strong> — this demo shows <strong>{mockSavingsData.runwayMonths} months of "F*** You Money"</strong>.
+                That's {Math.round(mockSavingsData.runwayMonths / 12 * 10) / 10} years of complete independence. 
+                <span className="font-bold text-white"> What if this was YOUR actual runway?</span>
               </p>
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 mb-4 sm:mb-6 border border-white/20">
+                <div className="flex flex-col sm:flex-row gap-4 text-sm">
+                  <div className="text-center sm:text-left">
+                    <div className="text-white/80 text-xs">Your Freedom Fund</div>
+                    <div className="text-white font-bold text-lg">${mockSavingsData.latestNetAssetValue.toLocaleString()}</div>
+                  </div>
+                  <div className="text-center sm:text-left">
+                    <div className="text-white/80 text-xs">Time You Can Buy</div>
+                    <div className="text-white font-bold text-lg">{mockSavingsData.runwayMonths} months</div>
+                  </div>
+                  <div className="text-center sm:text-left">
+                    <div className="text-white/80 text-xs">Monthly Burn Rate</div>
+                    <div className="text-white font-bold text-lg">${mockSavingsData.monthlyBurnRate.toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <button
                   onClick={() => {
@@ -500,10 +516,13 @@ const DashboardScreen: React.FC = () => {
                     handleLinkSpreadsheet();
                   }}
                   disabled={status === 'loading'}
-                  className="inline-flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 bg-white text-primary-dark rounded-lg hover:bg-blue-50 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none w-full sm:w-auto text-sm sm:text-base"
+                  className="group inline-flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-4 bg-white text-primary-dark rounded-xl hover:bg-blue-50 transition-all duration-200 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none w-full sm:w-auto text-base sm:text-lg"
                 >
                   <DocumentPlusIcon className="h-5 w-5" />
-                  {getCtaButtonText()}
+                  <span className="relative">
+                    {getCtaButtonText()}
+                    <span className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
+                  </span>
                 </button>
                 <button
                   onClick={() => {
@@ -517,11 +536,11 @@ const DashboardScreen: React.FC = () => {
                   className="inline-flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-all duration-200 font-medium backdrop-blur-sm border border-white/30 w-full sm:w-auto text-sm sm:text-base"
                 >
                   <QuestionMarkCircleIcon className="h-5 w-5" />
-                  How It Works
+                  See How It Works
                 </button>
               </div>
-              <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-blue-200">
-                🔒 Your data stays in your spreadsheet - we only analyze, never store • ⚡ Takes 2 minutes • 📊 Works with Google Sheets & CSV
+              <div className="mt-4 sm:mt-5 text-xs sm:text-sm text-blue-200/90">
+                💪 <strong>Take control:</strong> Your data stays in YOUR spreadsheet • ⚡ <strong>2-minute setup</strong> • 🚀 <strong>Instant insights</strong> • 🎯 <strong>Real results</strong>
               </div>
             </div>
           </div>
@@ -662,16 +681,16 @@ const DashboardScreen: React.FC = () => {
                     handleLinkSpreadsheet();
                   }}
                   disabled={status === 'loading'}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
                 >
                   <DocumentPlusIcon className="h-4 w-4" />
                   {status === 'loading' 
                     ? 'Loading...'
                     : status === 'unauthenticated'
-                      ? 'Claim This Dashboard'
+                      ? '🚀 Claim Your Freedom Dashboard'
                       : isFirstTimeUser 
-                        ? 'Connect Your Data' 
-                        : 'Manage Data'
+                        ? '💪 Take Control of Your Data' 
+                        : '⚡ Power Up Your Data'
                   }
                 </button>
 
@@ -685,10 +704,10 @@ const DashboardScreen: React.FC = () => {
                     });
                     setIsHowItWorksOpen(true);
                   }}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200 w-full sm:w-auto"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 w-full sm:w-auto font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
                 >
                   <QuestionMarkCircleIcon className="h-4 w-4" />
-                  How This Works
+                  🧠 See The Magic Behind It
                 </button>
               </div>
 
@@ -787,81 +806,104 @@ const DashboardScreen: React.FC = () => {
 
           {activeTab === 'ai-insights' && (
             <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">AI-Powered Financial Insights</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">🤖 AI-Powered Freedom Insights</h3>
               {displayStats ? (
-                <div className="space-y-6">
-                  {/* Spending Patterns */}
-                  <div className="border-l-4 border-blue-500 pl-4">
-                    <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">Spending Pattern Analysis</h4>
-                    <p className="text-gray-600 mb-2">
-                      Based on your transaction history, here are some key insights:
-                    </p>
-                    <ul className="space-y-1 text-sm text-gray-600">
-                      <li>• Your monthly expenses average ${displayStats.monthlyAverageExpenses.toLocaleString()}</li>
-                      <li>• Last month you spent ${displayStats.lastMonthExpenses.toLocaleString()}, which is {
-                        displayStats.lastMonthExpenses < displayStats.monthlyAverageExpenses ? 'below' : 'above'
-                      } your average</li>
-                      <li>• Your projected annual expenses: ${displayStats.annualExpenseProjection.toLocaleString()}</li>
-                    </ul>
-                  </div>
+                                  <div className="space-y-6">
+                    {/* Freedom Analysis */}
+                    <div className="border-l-4 border-blue-500 pl-4">
+                      <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">💰 Your Freedom Burn Rate</h4>
+                      <p className="text-gray-600 mb-2">
+                        Here's how much freedom your money is buying you:
+                      </p>
+                      <ul className="space-y-1 text-sm text-gray-600">
+                        <li>• <strong>Monthly freedom cost:</strong> ${displayStats.monthlyAverageExpenses.toLocaleString()} (what it costs to maintain your lifestyle)</li>
+                        <li>• <strong>Last month's burn:</strong> ${displayStats.lastMonthExpenses.toLocaleString()} — you {
+                          displayStats.lastMonthExpenses < displayStats.monthlyAverageExpenses 
+                            ? '🎉 spent LESS than average (extending your runway!)' 
+                            : '⚠️ spent MORE than average (shortening your runway)'
+                        }</li>
+                        <li>• <strong>Annual freedom cost:</strong> ${displayStats.annualExpenseProjection.toLocaleString()} to maintain your current lifestyle</li>
+                      </ul>
+                    </div>
 
-                  {/* Savings Opportunities */}
-                  <div className="border-l-4 border-green-500 pl-4">
-                    <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">Savings Opportunities</h4>
-                    <p className="text-gray-600 mb-2">
-                      Potential areas to optimize your spending:
-                    </p>
-                    <ul className="space-y-1 text-sm text-gray-600">
-                      <li>• You're saving ${displayStats.monthlyAverageSavings.toLocaleString()} per month on average</li>
-                      <li>• Consider automating transfers to boost your savings rate</li>
-                      <li>• Review recurring subscriptions for potential savings</li>
-                    </ul>
-                  </div>
+                    {/* Freedom Building */}
+                    <div className="border-l-4 border-green-500 pl-4">
+                      <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">🚀 Building Your Freedom Fund</h4>
+                      <p className="text-gray-600 mb-2">
+                        Ways to buy yourself more time:
+                      </p>
+                      <ul className="space-y-1 text-sm text-gray-600">
+                        <li>• <strong>Current freedom rate:</strong> You're adding ${displayStats.monthlyAverageSavings.toLocaleString()} to your runway each month</li>
+                        <li>• <strong>Quick win:</strong> Automate transfers to build your "F*** You Money" faster</li>
+                        <li>• <strong>Subscription audit:</strong> Cancel unused subscriptions to extend your runway immediately</li>
+                      </ul>
+                    </div>
 
-                  {/* Financial Health Score */}
-                  <div className="border-l-4 border-purple-500 pl-4">
-                    <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">Financial Health Score</h4>
-                    <p className="text-gray-600 mb-2">
-                      Your financial health indicators:
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-                      <div className="text-center p-3 bg-gray-50 rounded-lg">
-                        <p className="text-lg font-semibold text-green-600">
-                          {Math.round((displayStats.monthlyAverageSavings / displayStats.monthlyAverageIncome) * 100)}%
-                        </p>
-                        <p className="text-xs text-gray-600">Savings Rate</p>
-                      </div>
-                      <div className="text-center p-3 bg-gray-50 rounded-lg">
-                        <p className="text-lg font-semibold text-blue-600">
-                          {Math.round((displayStats.monthlyAverageExpenses / displayStats.monthlyAverageIncome) * 100)}%
-                        </p>
-                        <p className="text-xs text-gray-600">Expense Ratio</p>
-                      </div>
-                      <div className="text-center p-3 bg-gray-50 rounded-lg">
-                        <p className="text-lg font-semibold text-purple-600">
-                          {Math.round(displayStats.monthlyAverageSavings > 0 ? (displayStats.monthlyAverageExpenses / displayStats.monthlyAverageSavings) : 0)}
-                        </p>
-                        <p className="text-xs text-gray-600">Months to Zero</p>
+                                      {/* Freedom Score */}
+                    <div className="border-l-4 border-purple-500 pl-4">
+                      <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">🎯 Your Freedom Score</h4>
+                      <p className="text-gray-600 mb-2">
+                        How close are you to financial independence?
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                        <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+                          <p className="text-lg font-semibold text-green-600">
+                            {Math.round((displayStats.monthlyAverageSavings / displayStats.monthlyAverageIncome) * 100)}%
+                          </p>
+                          <p className="text-xs text-gray-600">Freedom Rate</p>
+                          <p className="text-xs text-green-600 mt-1">
+                            {Math.round((displayStats.monthlyAverageSavings / displayStats.monthlyAverageIncome) * 100) >= 20 ? '🚀 Excellent!' : 
+                             Math.round((displayStats.monthlyAverageSavings / displayStats.monthlyAverageIncome) * 100) >= 10 ? '👍 Good' : '💪 Keep going!'}
+                          </p>
+                        </div>
+                        <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <p className="text-lg font-semibold text-blue-600">
+                            {Math.round((displayStats.monthlyAverageExpenses / displayStats.monthlyAverageIncome) * 100)}%
+                          </p>
+                          <p className="text-xs text-gray-600">Lifestyle Cost</p>
+                          <p className="text-xs text-blue-600 mt-1">
+                            {Math.round((displayStats.monthlyAverageExpenses / displayStats.monthlyAverageIncome) * 100) <= 50 ? '🎉 Lean living!' : 
+                             Math.round((displayStats.monthlyAverageExpenses / displayStats.monthlyAverageIncome) * 100) <= 80 ? '👌 Reasonable' : '⚠️ High burn'}
+                          </p>
+                        </div>
+                        <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-200">
+                          <p className="text-lg font-semibold text-purple-600">
+                            {displayStats.runwayMonths ? displayStats.runwayMonths : Math.round(displayStats.monthlyAverageSavings > 0 ? (displayStats.monthlyAverageExpenses / displayStats.monthlyAverageSavings) : 0)}
+                          </p>
+                          <p className="text-xs text-gray-600">Months of Freedom</p>
+                          <p className="text-xs text-purple-600 mt-1">
+                            {(displayStats.runwayMonths || 0) >= 12 ? '🔥 F*** You Money!' : 
+                             (displayStats.runwayMonths || 0) >= 6 ? '💪 Getting there!' : '🚀 Keep building!'}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Trends and Predictions */}
-                  <div className="border-l-4 border-orange-500 pl-4">
-                    <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">Trends & Predictions</h4>
-                    <p className="text-gray-600 mb-2">
-                      Based on current patterns:
-                    </p>
-                    <ul className="space-y-1 text-sm text-gray-600">
-                      <li>• At your current savings rate, you could build a 6-month emergency fund in {
-                        Math.ceil((displayStats.monthlyAverageExpenses * 6) / displayStats.monthlyAverageSavings)
-                      } months</li>
-                      <li>• Your spending trend suggests {
-                        displayStats.lastMonthExpenses < displayStats.monthlyAverageExpenses ? 'improved control' : 'increased spending'
-                      }</li>
-                      <li>• Consider setting up automated investments to grow wealth</li>
-                    </ul>
-                  </div>
+                                      {/* Freedom Timeline */}
+                    <div className="border-l-4 border-orange-500 pl-4">
+                      <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">🗓️ Your Freedom Timeline</h4>
+                      <p className="text-gray-600 mb-2">
+                        Here's when you could achieve different levels of freedom:
+                      </p>
+                      <ul className="space-y-1 text-sm text-gray-600">
+                        <li>• <strong>Emergency buffer (6 months):</strong> {
+                          displayStats.monthlyAverageSavings > 0 
+                            ? `${Math.ceil((displayStats.monthlyAverageExpenses * 6) / displayStats.monthlyAverageSavings)} months away` 
+                            : 'Start saving to calculate'
+                        } 🛡️</li>
+                        <li>• <strong>Mini-retirement (12 months):</strong> {
+                          displayStats.monthlyAverageSavings > 0 
+                            ? `${Math.ceil((displayStats.monthlyAverageExpenses * 12) / displayStats.monthlyAverageSavings)} months away` 
+                            : 'Start saving to calculate'
+                        } 🏖️</li>
+                        <li>• <strong>Your momentum:</strong> {
+                          displayStats.lastMonthExpenses < displayStats.monthlyAverageExpenses 
+                            ? '🚀 You\'re accelerating towards freedom!' 
+                            : '⚠️ Consider optimizing spending to reach freedom faster'
+                        }</li>
+                        <li>• <strong>Pro tip:</strong> Automate investments to compound your way to complete financial independence 💰</li>
+                      </ul>
+                    </div>
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -892,41 +934,67 @@ const DashboardScreen: React.FC = () => {
 
       {/* No Data State - only show when not loading and no data */}
       {!showLoadingState && !displayStats && !isLoading && (
-        <div className="text-center py-12">
-          <ChartBarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">No Data Available</h3>
-          <p className="text-gray-500 mb-6">
+        <div className="text-center py-12 max-w-2xl mx-auto">
+          <div className="w-20 h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+            </svg>
+          </div>
+          <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Ready to Discover Your Financial Freedom?</h3>
+          <p className="text-lg text-gray-700 mb-8">
             {spreadsheetLinked 
-              ? "Refresh your data from your linked spreadsheet to see your financial overview."
-              : "Link a Google Spreadsheet or upload transaction data to see your financial overview."
+              ? "Your spreadsheet is connected! Refresh to unlock your personal runway calculation and see exactly how much time your money can buy."
+              : "Upload your bank statements or connect your Google Sheets to discover how many months of freedom you already have saved up."
             }
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
             {spreadsheetLinked ? (
               <button
                 onClick={handleManualRefresh}
                 disabled={isRefreshing}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-xl hover:from-primary-dark hover:to-secondary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
               >
-                <ArrowPathIcon className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                <ArrowPathIcon className={`h-6 w-6 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Calculating Your Freedom...' : 'Calculate My Runway'}
               </button>
             ) : (
-              <button
-                onClick={() => setIsHelpDrawerOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
-              >
-                <DocumentPlusIcon className="h-5 w-5" />
-                Link Google Sheet
-              </button>
+              <>
+                <button
+                  onClick={() => setIsHelpDrawerOpen(true)}
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <DocumentPlusIcon className="h-6 w-6" />
+                  Connect Google Sheets
+                </button>
+                <button
+                  onClick={() => setIsHelpDrawerOpen(true)}
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <PlusCircleIcon className="h-6 w-6" />
+                  Upload Bank Data
+                </button>
+              </>
             )}
-            <button
-              onClick={() => setIsHelpDrawerOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
-            >
-              <PlusCircleIcon className="h-5 w-5" />
-              Upload CSV Data
-            </button>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span><strong>2 minutes</strong> to setup</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span><strong>Instant</strong> runway calculation</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span><strong>Your data</strong> stays yours</span>
+            </div>
           </div>
         </div>
       )}
@@ -1036,21 +1104,22 @@ const DashboardStatistics: React.FC<{ stats: DashboardStats; filteredTransaction
 
   return (
     <div className="space-y-8">
-      {/* Privacy Notice for First-Time Users */}
+      {/* Empowerment Notice for First-Time Users */}
       {isFirstTimeUser && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-xs sm:text-sm font-medium text-blue-800">
-                Your data stays secure in your Google Sheets
+              <h3 className="text-xs sm:text-sm font-medium text-green-800">
+                <strong>You're in complete control</strong> — this is YOUR financial freedom dashboard
               </h3>
-              <p className="mt-1 text-xs sm:text-sm text-blue-700">
-                We only temporarily read your spreadsheet for analysis - nothing is stored on our servers. You maintain full control and can revoke access anytime.
+              <p className="mt-1 text-xs sm:text-sm text-green-700">
+                Your data lives in YOUR Google Sheets. We just analyze it to show you how much time your money can buy. 
+                <span className="font-semibold"> No storage, no tricks, just pure financial empowerment.</span>
               </p>
             </div>
           </div>

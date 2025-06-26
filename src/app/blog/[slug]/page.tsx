@@ -1,7 +1,10 @@
 import { getAllPostSlugs, getPostData, PostData } from '@/lib/posts';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import IntegrationsToast from '@/components/shared/IntegrationsToast';
+import SmartBlogToast from '@/components/shared/SmartBlogToast';
+import BlogCTASection from '@/components/shared/BlogCTASection';
+import AuthorBio from '@/components/shared/AuthorBio';
+import ExitIntentModal from '@/components/shared/ExitIntentModal';
 import { Metadata } from 'next';
 
 // This function is needed for Next.js to know which slugs are available at build time
@@ -180,6 +183,15 @@ export default async function PostPage({ params }: { params: { slug: string } })
             `
           }} />
 
+          {/* Contextual CTA Section - appears after content */}
+          <BlogCTASection 
+            postTitle={postData.title} 
+            postContent={postData.contentHtml || ''} 
+          />
+
+          {/* Author Bio */}
+          {/* <AuthorBio author={postData.author} /> */}
+
           <hr className="my-8" />
 
           <div className="mt-8">
@@ -188,7 +200,8 @@ export default async function PostPage({ params }: { params: { slug: string } })
             </Link>
           </div>
         </article>
-        <IntegrationsToast />
+        <SmartBlogToast postTitle={postData.title} />
+        <ExitIntentModal postTitle={postData.title} />
       </div>
     </div>
   );
