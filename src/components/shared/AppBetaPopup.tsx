@@ -163,14 +163,14 @@ export default function AppBetaPopup() {
               <button
                 onClick={() => handleUpdateStatus('DISMISSED')}
                 disabled={isLoading}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
+                className="px-6 py-3 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 min-h-[44px] min-w-[44px]"
               >
                 {isLoading ? '...' : 'No, Thanks'} 
               </button>
               <button
                 onClick={() => handleUpdateStatus('OPTED_IN')}
                 disabled={isLoading}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-secondary hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
+                className="px-6 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-secondary hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 min-h-[44px] min-w-[44px]"
               >
                 {isLoading ? '...' : 'Yes, Notify Me!'}
               </button>
@@ -200,7 +200,7 @@ export default function AppBetaPopup() {
                 <button
                   type="submit"
                   disabled={isSubmittingEmail}
-                  className="w-full px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
+                  className="w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 min-h-[44px]"
                 >
                   {isSubmittingEmail ? 'Submitting...' : 'Submit Email'}
                 </button>

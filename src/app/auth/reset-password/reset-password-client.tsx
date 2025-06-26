@@ -197,7 +197,7 @@ export function ResetPasswordForm() {
                   <p className="text-xs text-gray-700 mb-2">Development testing options:</p>
                   <Button
                     onClick={() => window.open("/test", "_blank")}
-                    className="w-full mb-2 text-xs flex justify-center py-1 px-2 border border-gray-300 rounded-md shadow-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="w-full mb-2 text-xs flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 min-h-[44px]"
                   >
                     Go to Test Login Page
                   </Button>

@@ -18,7 +18,7 @@ export const NavBarButtons = () => {
       <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-6">
         <Link
           href="/personal-finance"
-          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-gray-50 ${
+          className={`px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-gray-50 min-h-[44px] flex items-center ${
             pathname === "/personal-finance" 
               ? "text-primary bg-primary/5 border border-primary/20" 
               : "text-gray-700 hover:text-primary"

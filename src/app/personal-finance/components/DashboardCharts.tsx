@@ -131,18 +131,18 @@ const SimpleStackedBarChart: React.FC<SimpleStackedBarChartProps> = ({
 
   return (
     <>
-      <div className="w-full h-full p-4 relative overflow-hidden">
+      <div className="w-full h-full p-2 sm:p-4 relative overflow-hidden">
         {/* Chart Container with proper boundaries */}
         <div className="relative w-full h-full flex">
           {/* Y-Axis Labels Container */}
-          <div className="flex flex-col justify-end relative" style={{ width: '60px', height: '340px' }}>
+          <div className="flex flex-col justify-end relative" style={{ width: '50px', height: '300px' }}>
             {/* Horizontal Grid Lines and Labels */}
             {gridLines.map((line, index) => (
               <div
                 key={index}
                 className="absolute right-2 text-xs text-gray-500 flex items-center"
                 style={{
-                  bottom: `${(line.percentage / 90) * 300}px`, // Adjust for 300px chart height
+                  bottom: `${(line.percentage / 90) * 250}px`, // Adjust for 250px chart height
                   transform: 'translateY(50%)'
                 }}
               >
@@ -159,7 +159,7 @@ const SimpleStackedBarChart: React.FC<SimpleStackedBarChartProps> = ({
           <div className="flex-1 relative">
             {/* Horizontal Grid Lines */}
             <div className="absolute inset-0 pointer-events-none">
-              <div className="relative w-full" style={{ height: '300px' }}>
+              <div className="relative w-full" style={{ height: '250px' }}>
                 {gridLines.map((line, index) => (
                   <div
                     key={index}
@@ -176,7 +176,7 @@ const SimpleStackedBarChart: React.FC<SimpleStackedBarChartProps> = ({
             </div>
 
             {/* Chart Content */}
-            <div className="relative flex items-end justify-center h-full px-4">
+            <div className="relative flex items-end justify-center h-full px-2 sm:px-4">
               {data.map((month, index) => {
                 const heightPercentage = maxTotal > 0 ? (month.total / maxTotal) * 90 : 0;
                 
@@ -191,7 +191,7 @@ const SimpleStackedBarChart: React.FC<SimpleStackedBarChartProps> = ({
                     }}
                   >
                     {/* Bar Container */}
-                    <div className="relative w-full flex flex-col justify-end" style={{ height: '300px' }}>
+                    <div className="relative w-full flex flex-col justify-end" style={{ height: '250px' }}>
                       {/* The actual stacked bar */}
                       <div
                         className="w-full relative bg-gray-200 rounded-t-sm border border-gray-300"
@@ -233,13 +233,13 @@ const SimpleStackedBarChart: React.FC<SimpleStackedBarChartProps> = ({
                       </div>
                       
                       {/* Value label on top */}
-                      <div className="text-xs text-gray-600 text-center mt-1">
+                      <div className="text-xs text-gray-600 text-center mt-1 hidden sm:block">
                         ${(month.total / 1000).toFixed(1)}k
                       </div>
                     </div>
                     
                     {/* Month Label */}
-                    <div className="text-xs text-gray-600 mt-2 text-center">
+                    <div className="text-xs text-gray-600 mt-1 sm:mt-2 text-center">
                       {month.displayMonth?.split(' ')[0] || month.month}
                     </div>
                   </div>
@@ -460,10 +460,10 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
 
   if (!hasData) {
     return (
-      <div className="bg-gray-50 rounded-lg p-8 text-center">
+      <div className="bg-gray-50 rounded-lg p-4 sm:p-8 text-center">
         <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No Transaction Data</h3>
-        <p className="text-gray-500">
+        <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">No Transaction Data</h3>
+        <p className="text-sm sm:text-base text-gray-500">
           Upload transaction data or link a spreadsheet to see charts and analysis.
         </p>
       </div>
@@ -471,14 +471,14 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       {/* Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
         {/* Time Filter */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Time Period:</span>
+            <span className="text-xs sm:text-sm font-medium text-gray-700">Time Period:</span>
             <select
               value={timeFilter}
               onChange={(e) => {
@@ -486,7 +486,7 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
                 setTimeFilter(newFilter);
                 onTimeFilterChange?.(newFilter);
               }}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Time</option>
               {monthOptions.map((month) => (
@@ -502,7 +502,7 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
         </div>
 
         {/* Data Summary */}
-        <div className="flex items-center gap-4 flex-wrap text-sm text-gray-600">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap text-xs sm:text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <InformationCircleIcon className="h-4 w-4" />
             <span>{filteredTransactions.length} transactions</span>
@@ -521,13 +521,13 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
       </div>
 
       {/* Top Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8 mb-4 sm:mb-8">
         {/* Doughnut Chart */}
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+        <div className="bg-white rounded-lg p-3 sm:p-6 shadow-sm border border-gray-200">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4 text-center">
             Expenses by Category
           </h3>
-          <div className="flex justify-center items-center h-64 sm:h-80">
+          <div className="flex justify-center items-center h-48 sm:h-64 lg:h-80">
             <DonutChart 
               data={categorySpending.map(cat => ({
                 name: cat.category,
@@ -538,18 +538,18 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
               category="category"
               colors={chartColors}
               valueFormatter={(value: number) => formatCurrency(value)}
-              className="w-64 h-64 sm:w-80 sm:h-80"
+              className="w-40 h-40 sm:w-64 sm:h-64 lg:w-80 lg:h-80"
               showTooltip={true}
               selectedCategory={selectedCategory}
               onValueChange={handleChartValueChange}
             />
           </div>
           {selectedCategory && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg text-center">
+            <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-gray-50 rounded-lg text-center">
               <div className="font-medium text-gray-800">
                 {formatCategoryName(selectedCategory)}
               </div>
-              <div className="text-sm text-gray-600 mt-1">
+              <div className="text-xs sm:text-sm text-gray-600 mt-1">
                 Click chart segments to filter
               </div>
             </div>
@@ -557,12 +557,12 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
         </div>
 
         {/* Stacked Bar Chart */}
-        <div className="lg:col-span-2 bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+        <div className="lg:col-span-2 bg-white rounded-lg p-3 sm:p-6 shadow-sm border border-gray-200">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4 text-center">
             Monthly Spending Trends
           </h3>
           {dataEngine && monthlySpendingData.length > 1 ? (
-            <div className="h-64 sm:h-80">
+            <div className="h-48 sm:h-64 lg:h-80">
               <SimpleStackedBarChart 
                 data={monthlySpendingData}
                 categoryColors={categoryColors}
@@ -571,11 +571,11 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
               />
             </div>
           ) : (
-            <div className="flex items-center justify-center h-64 sm:h-80 text-gray-500">
+            <div className="flex items-center justify-center h-48 sm:h-64 lg:h-80 text-gray-500">
               <div className="text-center">
                 <ChartBarIcon className="h-12 w-12 mx-auto mb-2 text-gray-400" />
                 <p>Need more monthly data for trends</p>
-                <p className="text-sm">Add transactions from multiple months</p>
+                <p className="text-xs sm:text-sm">Add transactions from multiple months</p>
               </div>
             </div>
           )}
@@ -607,9 +607,9 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
 
       {/* Category Breakdown with Collapsible Transactions */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800">Category Breakdown</h3>
-          <p className="text-sm text-gray-600 mt-1">
+        <div className="p-3 sm:p-6 border-b border-gray-200">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Category Breakdown</h3>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
             Click categories to expand and view individual transactions
           </p>
         </div>
@@ -623,7 +623,7 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
               <div key={index}>
                 {/* Category Header */}
                 <div
-                  className={`p-4 cursor-pointer transition-all hover:bg-gray-50 ${
+                  className={`p-3 sm:p-4 cursor-pointer transition-all hover:bg-gray-50 ${
                     isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : ''
                   }`}
                   onClick={() => {
@@ -646,16 +646,16 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
                          />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-800">
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-800">
                           {formatCategoryName(category.category)}
                         </h4>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-xs sm:text-sm text-gray-600">
                           {category.percentage.toFixed(1)}% • {category.transactionCount} transactions
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold text-gray-800">
+                      <div className="text-base sm:text-lg font-bold text-gray-800">
                         {formatCurrency(category.amount)}
                       </div>
                     </div>
@@ -665,22 +665,22 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
                 {/* Expanded Transactions */}
                 {isExpanded && (
                   <div className="bg-gray-50 border-t border-gray-100">
-                    <div className="px-4 py-2">
+                    <div className="px-3 sm:px-4 py-2">
                       <div className="text-xs font-medium text-gray-500 mb-2">
                         TRANSACTIONS ({category.transactions.length})
                       </div>
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                      <div className="space-y-2 max-h-48 sm:max-h-64 overflow-y-auto">
                         {category.transactions.map((transaction, txIndex) => (
-                          <div 
+                                                      <div 
                             key={txIndex}
-                            className="flex items-center justify-between py-2 px-3 bg-white rounded border border-gray-200"
+                            className="flex items-center justify-between py-2 px-2 sm:px-3 bg-white rounded border border-gray-200"
                           >
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
-                                <p className="text-sm font-medium text-gray-900 truncate">
+                                <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
                                   {transaction.description}
                                 </p>
-                                <span className="text-sm font-bold text-red-600 ml-3">
+                                <span className="text-xs sm:text-sm font-bold text-red-600 ml-2 sm:ml-3">
                                   {formatCurrency(transaction.amount)}
                                 </span>
                               </div>
