@@ -12,7 +12,7 @@ export function GoogleSignInButton() {
   return (
     <button
       onClick={() => signIn("google", { callbackUrl: finalCallbackUrl })}
-      className="flex w-full justify-center rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-500 shadow-sm hover:bg-gray-50"
+      className="flex w-full justify-center rounded-md border border-gray-300 bg-white py-3 px-4 text-base font-medium text-gray-500 shadow-sm hover:bg-gray-50 min-h-[48px] items-center"
     >
       <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
         <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
