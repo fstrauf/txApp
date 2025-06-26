@@ -36,7 +36,7 @@ export default function Header() {
           {/* Mobile hamburger menu - always show on mobile */}
           {navigationConfig.showMobileHamburger && (
             <button 
-              className="sm:hidden block text-gray-600 hover:text-primary transition-colors" 
+              className="sm:hidden flex items-center justify-center p-3 text-gray-600 hover:text-primary transition-colors min-h-[44px] min-w-[44px] rounded-md hover:bg-gray-100" 
               onClick={handleMobileMenuToggle}
             >
               <svg className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">

@@ -1,0 +1,7 @@
+echo "🔍 Running Mobile UX checks before commit..."
+
+# Ensure pnpm is available
+export PATH="$PATH:$(npm config get prefix)/bin"
+
+# Run quick mobile UX tests
+npx pnpm test:mobile-quick

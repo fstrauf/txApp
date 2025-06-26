@@ -60,7 +60,7 @@ export function MobileMenu({ isOpen, onClose, menuItems }: MobileMenuProps) {
                       </Dialog.Title>
                       <button
                         type="button"
-                        className="relative rounded-md p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors"
+                        className="relative rounded-md p-3 text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                         onClick={onClose}
                       >
                         <span className="absolute -inset-2.5" />

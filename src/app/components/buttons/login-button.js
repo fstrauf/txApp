@@ -5,7 +5,7 @@ export const LoginButton = () => {
 
   return (
     <a
-      className="px-4 py-2 rounded-lg bg-white text-primary border border-primary/10 text-sm font-medium hover:bg-gray-50 transition-all duration-200"
+      className="px-6 py-3 rounded-lg bg-white text-primary border border-primary/10 text-sm font-medium hover:bg-gray-50 transition-all duration-200 min-h-[44px] flex items-center justify-center"
       href={`/auth/signin?callbackUrl=${pathname}`}
     >
       Log In

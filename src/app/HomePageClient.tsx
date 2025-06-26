@@ -1,7 +1,6 @@
 "use client";
 import Image from "next/image";
 import References from "./components/References.js";
-import FAQ from "./components/FAQ.js";
 import Link from "next/link";
 import AppBetaPopup from "@/components/shared/AppBetaPopup";
 import PremiumWaitlistDialog from "@/components/shared/PremiumWaitlistDialog";
@@ -19,65 +18,42 @@ export default function HomePageClient() {
 
       <main className="w-full px-4 py-8 md:py-16 md:container md:mx-auto md:max-w-7xl">
         {/* New Hero Section - Financial Freedom Focus */}
-        <div className="flex flex-col md:flex-row items-start gap-8 md:gap-12 mb-16 md:mb-24">
-          {/* Left Column: Financial Freedom Value Prop */}
-          <div className="w-full md:w-2/5 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 mb-6">
-              <span className="w-2 h-2 bg-gradient-to-r from-primary to-secondary rounded-full animate-pulse"></span>
-              <span className="text-sm font-medium bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Financial Freedom Calculator</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-              How Much{" "}
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Time</span>{" "}
-              Can Your Money Buy?
-            </h1>
-            <p className="text-lg md:text-xl text-gray-700 mb-8">
-              Financial freedom isn't about being rich. It's about having enough saved to buy yourself <span className="font-semibold">time</span> — 
-              time to quit a bad job, start a business, travel, or just breathe.
-            </p>
-            
-            {/* Personal Runway Preview */}
-            <Box variant="bordered" padding="sm" className="mb-8 bg-white/80 backdrop-blur-sm">
-              <div className="text-center">
-                <div className="text-sm text-gray-600 mb-2">Your Personal Runway</div>
-                <div className="text-3xl font-bold text-primary mb-1">? months</div>
-                <div className="text-sm text-gray-500">Calculate how much freedom you already have</div>
-              </div>
-            </Box>
-
-            <div className="flex items-center justify-center md:justify-start gap-4 sm:gap-6 mb-8">
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900">15 min</div>
-                <div className="text-xs sm:text-sm text-gray-600">Setup time</div>
-              </div>
-              <div className="border-l border-gray-300 h-8 sm:h-12"></div>
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900">Free</div>
-                <div className="text-xs sm:text-sm text-gray-600">Based on your Google Sheet</div>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-              <Link
-                href="/personal-finance"
-                className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-lg text-lg"
-              >
-                Calculate Your Freedom
-              </Link>
-            </div>
-            <p className="text-sm text-gray-500 mt-4 text-center md:text-left">
-              Discover your personal runway and create a plan to buy more time
-            </p>
+        {/* Hero Section */}
+        <div className="text-center mb-16 md:mb-20">
+          <h1 className="text-6xl sm:text-7xl md:text-8xl font-bold text-gray-900 mb-8 leading-tight opacity-0 translate-y-8 animate-fade-in-up">
+            How Much{" "}
+            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Time</span>{" "}
+            Can Your Money Buy?
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-700 mb-12 max-w-4xl mx-auto leading-relaxed opacity-0 translate-y-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            Financial freedom isn't about being rich. It's about having enough saved to buy yourself <span className="font-semibold">time</span> — 
+            time to quit a bad job, start a business, travel, or just breathe.
+          </p>
+          
+          <div className="mb-16 opacity-0 translate-y-8 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+            <Link
+              href="/personal-finance"
+              className="inline-flex items-center justify-center px-10 py-5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-lg text-xl hover:scale-105 transform"
+            >
+              Calculate Your Freedom
+            </Link>
           </div>
+        </div>
 
-          <div className="w-full md:w-3/5">
-            <div className="mb-4">
+        {/* Dashboard Preview Section */}
+        <div className="relative mt-24 mb-16">
+          {/* Background gradient fade */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-50/50 to-gray-100/80 rounded-3xl"></div>
+          
+          <div className="relative z-10 max-w-5xl mx-auto">
+            <div className="mb-12 opacity-0 translate-y-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <Image
                 src="/es_dashboard_close.webp"
                 alt="Financial Freedom Dashboard showing your personal runway and time you can buy with your savings"
                 width={415}
                 height={409}
-                className="w-full h-auto rounded-xl shadow-lg"
-                sizes="(max-width: 768px) 100vw, 60vw"
+                className="w-full h-auto rounded-2xl shadow-2xl border border-gray-200 transition-transform duration-700 hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 80vw"
                 quality={100}
                 priority
                 unoptimized={true}
@@ -87,8 +63,8 @@ export default function HomePageClient() {
                 }}
               />
             </div>
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-md border border-gray-100">
-              <p className="text-sm text-gray-700 font-medium text-center">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-gray-200 max-w-2xl mx-auto opacity-0 translate-y-8 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+              <p className="text-lg text-gray-700 font-medium text-center">
                 "I discovered I had 8 months of runway — enough to quit my job and start freelancing!" — Sarah M.
               </p>
             </div>
@@ -96,7 +72,7 @@ export default function HomePageClient() {
         </div>
 
         {/* The Money Buys Time Concept */}
-        <Box variant="gradient" padding="xl" className="mb-16 overflow-hidden relative">
+        <Box variant="gradient" padding="xl" className="mt-24 mb-16 overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"></div>
           <div className="relative z-10 max-w-5xl mx-auto text-center">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-6">

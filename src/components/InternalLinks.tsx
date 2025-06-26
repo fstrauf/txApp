@@ -97,7 +97,7 @@ export function InternalLinks({ currentPage, variant = 'footer' }: InternalLinks
             <li key={link.href}>
               <Link
                 href={link.href}
-                className="text-gray-600 hover:text-primary transition-colors"
+                className="text-gray-600 hover:text-primary transition-colors inline-block py-2 min-h-[44px] flex items-center"
               >
                 {link.label}
               </Link>
@@ -113,7 +113,7 @@ export function InternalLinks({ currentPage, variant = 'footer' }: InternalLinks
             <li key={link.href}>
               <Link
                 href={link.href}
-                className="text-gray-600 hover:text-primary transition-colors"
+                className="text-gray-600 hover:text-primary transition-colors inline-block py-2 min-h-[44px] flex items-center"
               >
                 {link.label}
               </Link>
@@ -129,7 +129,7 @@ export function InternalLinks({ currentPage, variant = 'footer' }: InternalLinks
             <li key={link.href}>
               <Link
                 href={link.href}
-                className="text-gray-600 hover:text-primary transition-colors"
+                className="text-gray-600 hover:text-primary transition-colors inline-block py-2 min-h-[44px] flex items-center"
               >
                 {link.label}
               </Link>

@@ -60,9 +60,9 @@ export default async function RootLayout({
           <QueryProvider>
             <MobileNavigationProvider>
               <Header />
-              <div className="flex flex-1">
+              <div className="flex flex-1 overflow-x-hidden">
                 <ClientSidebarWrapper />
-                <main className="grow">{children}</main>
+                <main className="grow min-w-0 overflow-x-hidden">{children}</main>
               </div>
               <Footer />
             </MobileNavigationProvider>

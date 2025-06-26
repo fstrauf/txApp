@@ -1,0 +1,7 @@
+echo "🚀 Running comprehensive Mobile UX tests before push..."
+
+# Ensure pnpm is available
+export PATH="$PATH:$(npm config get prefix)/bin"
+
+# Run full mobile UX tests on all devices
+npx pnpm test:mobile-all 
