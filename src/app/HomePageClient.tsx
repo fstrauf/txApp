@@ -26,12 +26,12 @@ export default function HomePageClient() {
               <span className="w-2 h-2 bg-gradient-to-r from-primary to-secondary rounded-full animate-pulse"></span>
               <span className="text-sm font-medium bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Financial Freedom Calculator</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
               How Much{" "}
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Time</span>{" "}
               Can Your Money Buy?
             </h1>
-            <p className="text-xl text-gray-700 mb-8">
+            <p className="text-lg md:text-xl text-gray-700 mb-8">
               Financial freedom isn't about being rich. It's about having enough saved to buy yourself <span className="font-semibold">time</span> — 
               time to quit a bad job, start a business, travel, or just breathe.
             </p>
@@ -45,15 +45,15 @@ export default function HomePageClient() {
               </div>
             </Box>
 
-            <div className="flex items-center justify-center md:justify-start gap-6 mb-8">
+            <div className="flex items-center justify-center md:justify-start gap-4 sm:gap-6 mb-8">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">15 min</div>
-                <div className="text-sm text-gray-600">Setup time</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900">15 min</div>
+                <div className="text-xs sm:text-sm text-gray-600">Setup time</div>
               </div>
-              <div className="border-l border-gray-300 h-12"></div>
+              <div className="border-l border-gray-300 h-8 sm:h-12"></div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">Free</div>
-                <div className="text-sm text-gray-600">Based on your Google Sheet</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900">Free</div>
+                <div className="text-xs sm:text-sm text-gray-600">Based on your Google Sheet</div>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
@@ -99,65 +99,83 @@ export default function HomePageClient() {
         <Box variant="gradient" padding="xl" className="mb-16 overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"></div>
           <div className="relative z-10 max-w-5xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-6">
               Money Doesn't Just Buy Things...
             </h2>
-            <p className="text-xl text-gray-700 mb-12 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-700 mb-8 sm:mb-12 max-w-3xl mx-auto">
               It buys you <span className="font-bold text-primary">time</span>. Time to say "fuck you" to your boss. 
               Time to travel. Time to start that business. Time to live on your terms.
             </p>
             
-            <div className="grid md:grid-cols-3 gap-8 mb-12">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="w-8 h-8 text-green-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Mini-Retirement</h3>
-                <p className="text-gray-600 text-sm">
-                  Take 6-12 months off to recharge, learn new skills, or figure out your next move
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Target className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Career Pivot</h3>
-                <p className="text-gray-600 text-sm">
-                  Leave your corporate job and pursue what you're actually passionate about
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-8 h-8 text-purple-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Emergency Buffer</h3>
-                <p className="text-gray-600 text-sm">
-                  Sleep better knowing you can handle any financial crisis without panic
-                </p>
-              </div>
-            </div>
+                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
+               <div className="text-center">
+                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                   <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
+                 </div>
+                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Mini-Retirement</h3>
+                 <p className="text-gray-600 text-xs sm:text-sm">
+                   Take 6-12 months off to recharge, learn new skills, or figure out your next move
+                 </p>
+               </div>
+               
+               <div className="text-center">
+                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                   <Target className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+                 </div>
+                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Career Pivot</h3>
+                 <p className="text-gray-600 text-xs sm:text-sm">
+                   Leave your corporate job and pursue what you're actually passionate about
+                 </p>
+               </div>
+               
+               <div className="text-center">
+                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                   <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
+                 </div>
+                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Emergency Buffer</h3>
+                 <p className="text-gray-600 text-xs sm:text-sm">
+                   Sleep better knowing you can handle any financial crisis without panic
+                 </p>
+               </div>
+             </div>
             
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50 shadow-lg">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Your Personal Runway Formula</h3>
-              <div className="flex items-center justify-center gap-4 text-lg font-semibold">
-                <div className="bg-primary/10 px-4 py-2 rounded-lg">
-                  <span className="text-primary">Savings</span>
-                </div>
-                <span className="text-gray-600">÷</span>
-                <div className="bg-secondary/10 px-4 py-2 rounded-lg">
-                  <span className="text-secondary">Monthly Expenses</span>
-                </div>
-                <span className="text-gray-600">=</span>
-                <div className="bg-green-500/10 px-4 py-2 rounded-lg">
-                  <span className="text-green-600">Months of Freedom</span>
-                </div>
-              </div>
-              <p className="text-gray-600 mt-4 text-sm">
-                Example: $30,000 saved ÷ $3,000/month = 10 months of complete freedom
-              </p>
-            </div>
+                         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-8 border border-gray-200/50 shadow-lg">
+               <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Your Personal Runway Formula</h3>
+               
+               {/* Mobile-friendly stacked formula */}
+               <div className="block sm:hidden space-y-3 mb-4">
+                 <div className="bg-primary/10 px-3 py-2 rounded-lg text-center">
+                   <span className="text-primary font-semibold text-sm">Savings</span>
+                 </div>
+                 <div className="text-center text-gray-600 font-bold">÷</div>
+                 <div className="bg-secondary/10 px-3 py-2 rounded-lg text-center">
+                   <span className="text-secondary font-semibold text-sm">Monthly Expenses</span>
+                 </div>
+                 <div className="text-center text-gray-600 font-bold">=</div>
+                 <div className="bg-green-500/10 px-3 py-2 rounded-lg text-center">
+                   <span className="text-green-600 font-semibold text-sm">Months of Freedom</span>
+                 </div>
+               </div>
+               
+               {/* Desktop horizontal formula */}
+               <div className="hidden sm:flex items-center justify-center gap-4 text-lg font-semibold mb-4">
+                 <div className="bg-primary/10 px-4 py-2 rounded-lg">
+                   <span className="text-primary">Savings</span>
+                 </div>
+                 <span className="text-gray-600">÷</span>
+                 <div className="bg-secondary/10 px-4 py-2 rounded-lg">
+                   <span className="text-secondary">Monthly Expenses</span>
+                 </div>
+                 <span className="text-gray-600">=</span>
+                 <div className="bg-green-500/10 px-4 py-2 rounded-lg">
+                   <span className="text-green-600">Months of Freedom</span>
+                 </div>
+               </div>
+               
+               <p className="text-gray-600 text-xs sm:text-sm text-center">
+                 Example: $30,000 saved ÷ $3,000/month = 10 months of complete freedom
+               </p>
+             </div>
           </div>
         </Box>
 
@@ -173,40 +191,40 @@ export default function HomePageClient() {
                   <span className="text-sm font-medium bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">New Course: Coming Soon</span>
                 </div>
                 
-                <h2 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                   From Financial Chaos to{" "}
                   <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">18 Months of Runway</span>
                   {" "}in 12 Months
                 </h2>
                 
-                <p className="text-xl lg:text-2xl text-gray-700 mb-4 font-medium">
+                <p className="text-lg sm:text-xl lg:text-2xl text-gray-700 mb-4 font-medium">
                   The exact 15-minute monthly system that bought me time freedom
                 </p>
                 
-                <p className="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
+                <p className="text-base sm:text-lg text-gray-600 mb-8 sm:mb-10 max-w-2xl mx-auto">
                   Join the waitlist and get <span className="font-bold text-primary bg-primary/10 px-2 py-1 rounded">Module 1 absolutely free</span> — 
                   learn to calculate and extend your personal runway.
                 </p>
                 
-                <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-8">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mb-6 sm:mb-8">
                   <Link
                     href="/course"
-                    className="group relative inline-flex items-center justify-center px-10 py-5 rounded-2xl bg-gradient-to-r from-primary to-secondary text-white font-bold text-xl hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 shadow-2xl hover:shadow-3xl transform hover:scale-105 min-w-[280px]"
+                    className="group relative inline-flex items-center justify-center px-6 sm:px-10 py-4 sm:py-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg sm:text-xl hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 shadow-2xl hover:shadow-3xl transform hover:scale-105 w-full sm:w-auto sm:min-w-[280px]"
                   >
-                    <span className="absolute inset-0 rounded-2xl bg-gradient-to-r from-white/20 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
+                    <span className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-r from-white/20 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
                     <span className="relative flex items-center">
                       Get Module 1 Free
-                      <svg className="ml-3 w-6 h-6 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="ml-2 sm:ml-3 w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
                       </svg>
                     </span>
                   </Link>
                   
                   <div className="text-center sm:text-left">
-                    <div className="text-sm font-semibold text-gray-800 mb-1">
+                    <div className="text-xs sm:text-sm font-semibold text-gray-800 mb-1">
                       Join 200+ freedom seekers
                     </div>
-                    <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-gray-600">
+                    <div className="flex items-center justify-center sm:justify-start gap-2 text-xs sm:text-sm text-gray-600">
                       <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                       </svg>
@@ -216,14 +234,14 @@ export default function HomePageClient() {
                 </div>
                 
                 {/* Social Proof Pills - Updated */}
-                <div className="flex flex-wrap justify-center gap-4 text-sm">
-                  <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-4 py-2 shadow-sm">
+                <div className="flex flex-wrap justify-center gap-2 sm:gap-4 text-xs sm:text-sm">
+                  <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-3 sm:px-4 py-2 shadow-sm">
                     <span className="text-gray-700">🚀 Average runway: 8 months</span>
                   </div>
-                  <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-4 py-2 shadow-sm">
+                  <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-3 sm:px-4 py-2 shadow-sm">
                     <span className="text-gray-700">⏱️ Setup time: 15 minutes</span>
                   </div>
-                  <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-4 py-2 shadow-sm">
+                  <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-3 sm:px-4 py-2 shadow-sm">
                     <span className="text-gray-700">💪 Success rate: 94%</span>
                   </div>
                 </div>
@@ -670,42 +688,42 @@ export default function HomePageClient() {
               <span className="text-sm font-medium bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">Most Popular Tool</span>
             </div>
             
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-              Calculate Your Complete{" "}
-              <span className="bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">"F*** You Money"</span>{" "}
-              Number
-            </h2>
-            
-            <p className="text-xl text-gray-700 mb-8 max-w-3xl mx-auto">
-              Not just months of runway — but the exact amount you need for <span className="font-bold">complete financial independence</span>. 
-              Never worry about money again.
-            </p>
-            
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-gray-200/50 shadow-lg">
-              <div className="grid md:grid-cols-2 gap-8 items-center">
-                <div className="text-left">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Two Types of Freedom:</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-start">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-1">
-                        <span className="text-blue-600 font-bold text-sm">1</span>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-900">Personal Runway</div>
-                        <div className="text-sm text-gray-600">Time you can buy right now</div>
-                      </div>
-                    </div>
-                    <div className="flex items-start">
-                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3 mt-1">
-                        <span className="text-red-600 font-bold text-sm">2</span>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-900">F*** You Money</div>
-                        <div className="text-sm text-gray-600">Total financial independence forever</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                         <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+               Calculate Your Complete{" "}
+               <span className="bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">"F*** You Money"</span>{" "}
+               Number
+             </h2>
+             
+             <p className="text-lg sm:text-xl text-gray-700 mb-6 sm:mb-8 max-w-3xl mx-auto">
+               Not just months of runway — but the exact amount you need for <span className="font-bold">complete financial independence</span>. 
+               Never worry about money again.
+             </p>
+             
+             <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-4 sm:p-8 mb-6 sm:mb-8 border border-gray-200/50 shadow-lg">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-center">
+                                 <div className="text-left">
+                   <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Two Types of Freedom:</h3>
+                   <div className="space-y-3">
+                     <div className="flex items-start">
+                       <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                         <span className="text-blue-600 font-bold text-xs sm:text-sm">1</span>
+                       </div>
+                       <div>
+                         <div className="font-semibold text-gray-900 text-sm sm:text-base">Personal Runway</div>
+                         <div className="text-xs sm:text-sm text-gray-600">Time you can buy right now</div>
+                       </div>
+                     </div>
+                     <div className="flex items-start">
+                       <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                         <span className="text-red-600 font-bold text-xs sm:text-sm">2</span>
+                       </div>
+                       <div>
+                         <div className="font-semibold text-gray-900 text-sm sm:text-base">F*** You Money</div>
+                         <div className="text-xs sm:text-sm text-gray-600">Total financial independence forever</div>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
                 
                 <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-100">
                   <div className="text-center mb-4">
@@ -726,25 +744,25 @@ export default function HomePageClient() {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6 sm:mb-8">
               <Link
                 href="/fuck-you-money-sheet"
-                className="group relative inline-flex items-center justify-center px-10 py-5 rounded-2xl bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold text-xl hover:from-red-700 hover:to-orange-700 transition-all duration-200 shadow-2xl hover:shadow-3xl transform hover:scale-105 min-w-[280px]"
+                className="group relative inline-flex items-center justify-center px-6 sm:px-10 py-4 sm:py-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold text-lg sm:text-xl hover:from-red-700 hover:to-orange-700 transition-all duration-200 shadow-2xl hover:shadow-3xl transform hover:scale-105 w-full sm:w-auto sm:min-w-[280px]"
               >
-                <span className="absolute inset-0 rounded-2xl bg-gradient-to-r from-white/20 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
+                <span className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-r from-white/20 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
                 <span className="relative flex items-center">
                   Calculate My Number
-                  <svg className="ml-3 w-6 h-6 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="ml-2 sm:ml-3 w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
                   </svg>
                 </span>
               </Link>
               
               <div className="text-center sm:text-left">
-                <div className="text-sm font-semibold text-gray-800 mb-1">
+                <div className="text-xs sm:text-sm font-semibold text-gray-800 mb-1">
                   Used by 5,000+ freedom seekers
                 </div>
-                <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center sm:justify-start gap-2 text-xs sm:text-sm text-gray-600">
                   <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
@@ -753,14 +771,14 @@ export default function HomePageClient() {
               </div>
             </div>
             
-            <div className="flex flex-wrap justify-center gap-4 text-sm">
-              <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-4 py-2 shadow-sm">
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-4 text-xs sm:text-sm">
+              <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-3 sm:px-4 py-2 shadow-sm">
                 <span className="text-gray-700">💡 Instant calculation</span>
               </div>
-              <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-4 py-2 shadow-sm">
+              <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-3 sm:px-4 py-2 shadow-sm">
                 <span className="text-gray-700">📊 Visual timeline</span>
               </div>
-              <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-4 py-2 shadow-sm">
+              <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-full px-3 sm:px-4 py-2 shadow-sm">
                 <span className="text-gray-700">🎯 Personalized plan</span>
               </div>
             </div>
