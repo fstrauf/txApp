@@ -38,11 +38,11 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
           Sign in to your account
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Or{" "}
+        <p className="mt-2 text-center text-base text-gray-600">
+          Or{' '}
           <Link
-            href={signupUrl}
-            className="font-medium text-blue-600 hover:text-blue-500"
+            href="/auth/signup"
+            className="font-medium text-blue-600 hover:text-blue-500 py-2 px-4 rounded-md hover:bg-blue-50 transition-colors inline-block min-h-[44px] text-base"
           >
             create a new account
           </Link>
@@ -58,7 +58,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
               </div>
-              <div className="relative flex justify-center text-sm">
+              <div className="relative flex justify-center text-base">
                 <span className="bg-white px-2 text-gray-500">
                   Or continue with
                 </span>
@@ -70,10 +70,10 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             </div>
           </div>
           
-          <div className="mt-6 text-center text-sm">
+          <div className="mt-6 text-center">
             <Link
               href="/auth/forgot-password"
-              className="font-medium text-blue-600 hover:text-blue-500"
+              className="font-medium text-blue-600 hover:text-blue-500 text-base py-2 px-4 rounded-md hover:bg-blue-50 transition-colors inline-block min-h-[44px] flex items-center justify-center"
             >
               Forgot your password?
             </Link>

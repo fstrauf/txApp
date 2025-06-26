@@ -16,13 +16,7 @@
     "auth:fix": "pnpm update next-auth@4.24.5 && pnpm update @auth/core @auth/drizzle-adapter",
     "test:db": "tsx src/db/test-connection.ts",
     "create-test-user": "node src/db/create-test-user.ts",
-    "test:mobile": "playwright test mobile-ux.spec.ts --project='Mobile Chrome'",
-    "test:mobile-all": "playwright test mobile-ux.spec.ts",
-    "test:mobile-quick": "playwright test quick-mobile-check.spec.ts --project='Mobile Chrome'",
-    "test:mobile-ui": "playwright test --ui",
-    "precommit:mobile": "pnpm test:mobile-quick",
-    "mobile-issues": "node scripts/extract-mobile-issues.js",
-    "prepare": "husky"
+    "mobile-issues": "node scripts/extract-mobile-issues.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",
@@ -110,7 +104,6 @@
     "drizzle-kit": "^0.30.6",
     "eslint": "^9",
     "eslint-config-next": "15.2.3",
-    "husky": "^9.1.7",
     "playwright": "^1.53.1",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.7",

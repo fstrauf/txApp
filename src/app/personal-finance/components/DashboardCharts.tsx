@@ -217,7 +217,8 @@ const SimpleStackedBarChart: React.FC<SimpleStackedBarChartProps> = ({
                                 isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''
                               }`}
                               style={{
-                                height: `${segmentHeight}%`,
+                                height: `${Math.max(segmentHeight, 8)}%`, // Minimum 8% height for touch targets
+                                minHeight: '44px', // Ensure minimum touch target size
                                 backgroundColor: getColorHex(categoryColors.get(category) || 'indigo'),
                                 opacity: isOtherSelected ? 0.3 : 1,
                                 transform: isSelected ? 'scale(1.05)' : 'scale(1)',

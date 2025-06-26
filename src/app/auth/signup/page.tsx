@@ -37,11 +37,11 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
         <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
           Create your account
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        <p className="mt-2 text-center text-base text-gray-600">
           Or{" "}
           <Link
             href={signinUrl}
-            className="font-medium text-blue-600 hover:text-blue-500"
+            className="font-medium text-blue-600 hover:text-blue-500 py-2 px-4 rounded-md hover:bg-blue-50 transition-colors inline-block min-h-[44px] text-base"
           >
             sign in to your existing account
           </Link>
@@ -58,7 +58,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
               </div>
-              <div className="relative flex justify-center text-sm">
+              <div className="relative flex justify-center text-base">
                 <span className="bg-white px-2 text-gray-500">
                   Or sign up with
                 </span>

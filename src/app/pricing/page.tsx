@@ -210,19 +210,19 @@ export default function PricingPage() {
           )}
 
           <div className="flex items-center justify-center mt-8">
-            <span className={`mr-3 text-sm ${!isAnnual ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+            <span className={`mr-3 text-base ${!isAnnual ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
               Monthly
             </span>
             <button 
               onClick={() => setIsAnnual(!isAnnual)}
-              className="relative inline-flex h-6 w-12 items-center rounded-full"
+              className="relative inline-flex h-8 w-14 items-center rounded-full min-h-[44px] min-w-[44px] p-2"
             >
               <span className={`${isAnnual ? 'bg-primary' : 'bg-gray-300'} flex h-6 w-12 items-center rounded-full p-1 transition-colors duration-300`}>
-                <span className={`${isAnnual ? 'translate-x-6' : 'translate-x-0'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300`}></span>
+                <span className={`${isAnnual ? 'translate-x-5' : 'translate-x-0'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300`}></span>
               </span>
             </button>
-            <span className={`ml-3 text-sm ${isAnnual ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
-              Annual <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full ml-1">Save 20%</span>
+            <span className={`ml-3 text-base ${isAnnual ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+              Annual <span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded-full ml-1">Save 20%</span>
             </span>
           </div>
         </div>
@@ -412,7 +412,7 @@ export default function PricingPage() {
         
         <div className="mt-16 text-center">
           <p className="text-gray-600">
-            Need help choosing a plan? <Link href="/support" className="text-primary hover:underline">Contact our team</Link>
+            Need help choosing a plan? <Link href="/support" className="text-primary hover:underline py-2 px-4 rounded-md hover:bg-blue-50 transition-colors inline-block min-h-[44px] text-base">Contact our team</Link>
           </p>
         </div>
       </div>

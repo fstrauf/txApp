@@ -67,7 +67,7 @@ export function SignInForm({}: SignInFormProps) {
       <div className="space-y-2">
         <label
           htmlFor="email"
-          className="text-sm font-medium leading-none text-gray-900"
+          className="text-base font-medium leading-none text-gray-900"
         >
           Email
         </label>
@@ -77,14 +77,14 @@ export function SignInForm({}: SignInFormProps) {
           type="email"
           autoComplete="email"
           required
-          className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-12 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-base file:font-medium placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           placeholder="name@example.com"
         />
       </div>
       <div className="space-y-2">
         <label
           htmlFor="password"
-          className="text-sm font-medium leading-none text-gray-900"
+          className="text-base font-medium leading-none text-gray-900"
         >
           Password
         </label>
@@ -94,19 +94,19 @@ export function SignInForm({}: SignInFormProps) {
           type="password"
           autoComplete="current-password"
           required
-          className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-12 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-base file:font-medium placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           placeholder="Enter your password"
         />
       </div>
       {error && (
-        <div className="text-sm text-red-500">
+        <div className="text-base text-red-500">
           {error}
         </div>
       )}
       <Button 
         type="submit" 
         disabled={isLoading}
-        className="w-full bg-blue-600 text-white hover:bg-blue-700 py-2 px-4 rounded-md"
+        className="w-full bg-blue-600 text-white hover:bg-blue-700 py-3 px-4 rounded-md text-base font-medium min-h-[48px]"
       >
         {isLoading ? "Signing in..." : "Sign in"}
       </Button>
