@@ -77,9 +77,7 @@ const DashboardScreen: React.FC = () => {
     setIsHelpDrawerOpen,
     setIsHowItWorksOpen,
     setShowExitSurvey,
-    handleRefreshData: async () => {
-      await handleRefreshData();
-    },
+    handleRefreshData: () => handleRefreshData(),
     clearError,
     refetchStatus,
     spreadsheetLinked,
@@ -195,7 +193,7 @@ const DashboardScreen: React.FC = () => {
         {/* Error Display */}
         <ErrorDisplayBox 
           error={error}
-          onRelink={() => spreadsheetUrl && handlers.handleRelinkSpreadsheet(spreadsheetUrl)}
+          onRelink={handlers.handleRelinkSpreadsheet}
           onCreateNew={() => {
             setDataManagementDefaultTab('upload');
             handlers.handleLinkSpreadsheet();
@@ -310,7 +308,7 @@ const DashboardScreen: React.FC = () => {
         >
           <DataManagementDrawer
             spreadsheetLinked={spreadsheetLinked}
-            spreadsheetUrl={spreadsheetUrl || null}
+            spreadsheetUrl={spreadsheetUrl ?? null}
             onSpreadsheetLinked={handlers.handleSpreadsheetLinked}
             onTransactionsFromGoogleSheets={handlers.handleTransactionsFromGoogleSheets}
             onRefreshData={handleRefreshData}
