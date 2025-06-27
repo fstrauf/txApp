@@ -2,7 +2,7 @@
 import Image from "next/image";
 import References from "./components/References.js";
 import Link from "next/link";
-import AppBetaPopup from "@/components/shared/AppBetaPopup";
+
 import PremiumWaitlistDialog from "@/components/shared/PremiumWaitlistDialog";
 import { useState } from 'react';
 import { Box } from "@/components/ui/Box";
@@ -14,8 +14,6 @@ export default function HomePageClient() {
 
   return (
     <div className="min-h-screen bg-background-default">
-      <AppBetaPopup />
-
       <main className="w-full px-4 py-8 md:py-16 md:container md:mx-auto md:max-w-7xl">
         {/* New Hero Section - Financial Freedom Focus */}
         {/* Hero Section */}
