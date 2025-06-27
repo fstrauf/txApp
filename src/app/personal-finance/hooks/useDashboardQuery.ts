@@ -21,6 +21,13 @@ interface DashboardStatusData {
   stats: any;
 }
 
+interface AssetAllocation {
+  type: string;
+  value: number;
+  percentage: number;
+  count: number;
+}
+
 interface SpreadsheetData {
   transactions: any[];
   transactionCount: number;
@@ -36,6 +43,14 @@ interface SpreadsheetData {
     latestQuarter: string;
     formattedValue: string;
     totalEntries: number;
+  };
+  assets?: {
+    totalValue: number;
+    totalAssets: number;
+    latestQuarter: string;
+    allocation: AssetAllocation[];
+    assets: any[];
+    quarters: string[];
   };
   availableSheets: string[];
   spreadsheetName?: string;
@@ -109,6 +124,7 @@ const fetchSpreadsheetData = async (
     dateRange,
     config: data.config,
     savings: data.savings,
+    assets: data.assets,
     availableSheets: data.availableSheets || [],
     spreadsheetName: data.spreadsheetName
   };
@@ -293,6 +309,7 @@ export const useDashboardQuery = () => {
     dashboardStats,
     filteredTransactions,
     spreadsheetData,
+    assetsData: spreadsheetData?.assets || null,
     
     // State
     isFirstTimeUser,

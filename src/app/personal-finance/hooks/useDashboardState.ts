@@ -6,7 +6,7 @@ export const useDashboardState = () => {
   
   const [isHelpDrawerOpen, setIsHelpDrawerOpen] = useState(false);
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'ai-insights'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'portfolio' | 'ai-insights'>('overview');
   const [dataManagementDefaultTab, setDataManagementDefaultTab] = useState<'manage' | 'upload' | 'validate' | 'settings'>('manage');
   const [userToastStatus, setUserToastStatus] = useState<string | null>(null);
   const [showExitSurvey, setShowExitSurvey] = useState(false);
