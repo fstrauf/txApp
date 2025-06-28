@@ -8,26 +8,7 @@ import {
   filterRecentTransactions,
   sortTransactionsByDate
 } from '@/lib/sheets/expense-detail-schema';
-
-interface AssetAllocation {
-  type: string;
-  value: number;
-  percentage: number;
-  count: number;
-}
-
-interface Asset {
-  quarter: string;
-  assetType: string;
-  ticker: string;
-  holdings: string;
-  currency: string;
-  value: number;
-  baseCurrencyValue: number;
-  formattedValue: string;
-  date: string;
-  rowIndex: number;
-}
+import { calculateCompletePortfolioData, type Asset, type AssetAllocation } from '@/app/personal-finance/utils/portfolioCalculations';
 
 interface AllSheetsData {
   transactions?: ExpenseDetailTransaction[];
@@ -397,53 +378,12 @@ export async function POST(request: NextRequest) {
           console.log(`🔍 Processed ${assets.length} assets total`);
 
           if (assets.length > 0) {
-            // Get latest quarter for performance tracking
-            const quarters = [...new Set(assets.map(a => a.quarter).filter(q => q))].sort();
-            const latestQuarter = quarters[quarters.length - 1];
+            // Use centralized calculation for consistency
+            const portfolioData = calculateCompletePortfolioData(assets);
             
-            // Filter assets to only include the latest quarter (to match Savings sheet calculation)
-            const latestQuarterAssets = assets.filter(asset => asset.quarter === latestQuarter);
+            result.assets = portfolioData;
             
-            // Calculate portfolio statistics for latest quarter only
-            const totalValue = latestQuarterAssets.reduce((sum, asset) => sum + asset.baseCurrencyValue, 0);
-            
-            console.log('🔍 Portfolio calculation debug:', {
-              totalAssets: assets.length,
-              latestQuarter,
-              latestQuarterAssets: latestQuarterAssets.length,
-              totalValue,
-              latestQuarterAssetValues: latestQuarterAssets.map(a => ({ ticker: a.ticker, value: a.baseCurrencyValue }))
-            });
-            
-            // Group by asset type for allocation analysis (latest quarter only)
-            const assetTypeAllocation = latestQuarterAssets.reduce((acc, asset) => {
-              const type = asset.assetType || 'Other';
-              if (!acc[type]) {
-                acc[type] = { value: 0, count: 0 };
-              }
-              acc[type].value += asset.baseCurrencyValue;
-              acc[type].count += 1;
-              return acc;
-            }, {} as Record<string, { value: number; count: number }>);
-
-            // Calculate percentages based on latest quarter
-            const allocation: AssetAllocation[] = Object.entries(assetTypeAllocation).map(([type, data]) => ({
-              type,
-              value: data.value,
-              percentage: (data.value / totalValue) * 100,
-              count: data.count
-            }));
-
-            result.assets = {
-              totalValue,
-              totalAssets: latestQuarterAssets.length,
-              latestQuarter,
-              allocation,
-              assets,
-              quarters
-            };
-            
-            console.log('✅ Assets result:', result.assets);
+            console.log('✅ Assets result (centralized calculation):', result.assets);
           }
         }
       }

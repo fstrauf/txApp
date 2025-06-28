@@ -3,22 +3,13 @@ import { ChartPieIcon, ArrowTrendingUpIcon, BuildingLibraryIcon, CalendarIcon, C
 import { DonutChart } from '@/components/ui/DonutChart';
 import { LineChart } from '@/components/ui/LineChart';
 import Select from '@/components/ui/Select';
-
-interface AssetAllocation {
-  type: string;
-  value: number;
-  percentage: number;
-  count: number;
-}
-
-interface AssetsData {
-  totalValue: number;
-  totalAssets: number;
-  latestQuarter: string;
-  allocation: AssetAllocation[];
-  assets: any[];
-  quarters: string[];
-}
+import { 
+  calculatePortfolioForQuarter, 
+  formatCurrency as utilFormatCurrency, 
+  AssetAllocation, 
+  PortfolioData as AssetsData, // Use PortfolioData and alias it
+  Asset
+} from '@/app/personal-finance/utils/portfolioCalculations';
 
 interface PortfolioTabProps {
   assetsData: AssetsData | null;
@@ -38,68 +29,134 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
   error,
   onConnectDataClick 
 }) => {
-  // Debug logging to see what's happening
-  console.log('🔍 PortfolioTab props:', {
-    assetsData: assetsData ? 'Data available' : 'No data',
-    assetsDataDetail: assetsData,
-    isFirstTimeUser,
-    isLoading,
-    error,
-    hasAssetsData: !!assetsData
-  });
-  
   const rawData = assetsData;
+  const quarters = rawData?.quarters;
+  const latestQuarter = rawData?.latestQuarter;
+
+  // State for selected quarter, initialized with the latest quarter from props
+  const [selectedQuarter, setSelectedQuarter] = useState<string>(latestQuarter || '');
   
-  // State for selected quarter
-  const [selectedQuarter, setSelectedQuarter] = useState<string>('');
-  
-  // Initialize selected quarter to latest when data is available
+  // When the data updates, if the current selection is invalid or empty, reset to the latest quarter
   React.useEffect(() => {
-    if (rawData && rawData.latestQuarter && !selectedQuarter) {
-      setSelectedQuarter(rawData.latestQuarter);
-    }
-  }, [rawData?.latestQuarter, selectedQuarter]);
-  
-  // Filter and calculate data for selected quarter
-  const displayData = useMemo(() => {
-    if (!rawData || !selectedQuarter) return rawData;
-    
-    // Filter assets for the selected quarter
-    const quarterAssets = rawData.assets.filter(asset => asset.quarter === selectedQuarter);
-    
-    if (quarterAssets.length === 0) return rawData;
-    
-    // Recalculate allocation for this quarter only
-    const totalValue = quarterAssets.reduce((sum, asset) => sum + (asset.value || asset.baseCurrencyValue || 0), 0);
-    
-    // Group by asset type
-    const assetTypeAllocation = quarterAssets.reduce((acc, asset) => {
-      const type = asset.assetType || 'Other';
-      if (!acc[type]) {
-        acc[type] = { value: 0, count: 0 };
+    if (quarters && latestQuarter) {
+      if (!selectedQuarter || !quarters.includes(selectedQuarter)) {
+        setSelectedQuarter(latestQuarter);
       }
-      acc[type].value += (asset.value || asset.baseCurrencyValue || 0);
-      acc[type].count += 1;
-      return acc;
-    }, {} as Record<string, { value: number; count: number }>);
+    }
+  }, [quarters, latestQuarter, selectedQuarter]);
+  
+  // Filter and calculate data for selected quarter using centralized calculation
+  const displayData = useMemo(() => {
+    if (!rawData || !selectedQuarter) return null; // Return null if no data
     
-    // Calculate percentages for selected quarter
-    const allocation: AssetAllocation[] = Object.entries(assetTypeAllocation).map(([type, allocationData]) => ({
-      type,
-      value: (allocationData as any).value,
-      percentage: ((allocationData as any).value / totalValue) * 100,
-      count: (allocationData as any).count
-    }));
+    // Use centralized calculation for consistency
+    const { totalValue, totalAssets, allocation, quarterAssets } = calculatePortfolioForQuarter(
+      rawData.assets, 
+      selectedQuarter
+    );
     
-    return {
+    if (quarterAssets.length === 0) return null; // Return null if no assets for quarter
+    
+    const result = {
       ...rawData,
       totalValue,
-      totalAssets: quarterAssets.length,
+      totalAssets,
       latestQuarter: selectedQuarter,
       allocation,
       assets: quarterAssets
     };
+    
+    console.log('🔍 PortfolioTab displayData calculation:', {
+      selectedQuarter,
+      quarterAssetsLength: quarterAssets.length,
+      totalValue,
+      calculation: 'using centralized calculatePortfolioForQuarter'
+    });
+    
+    return result;
   }, [rawData, selectedQuarter]);
+
+  // Prepare historical data for line chart
+  const historicalData = useMemo(() => {
+    if (!rawData || !rawData.quarters || rawData.quarters.length <= 1) return [];
+
+    // Get all unique asset types
+    const allAssetTypes = [...new Set(rawData.assets.map((asset: Asset) => asset.assetType))];
+    
+    // Sort quarters chronologically (oldest to newest) so latest data appears on the right
+    const sortedQuarters = [...rawData.quarters].sort((a: string, b: string) => {
+      // Parse quarter strings like "2024 Q1", "2024 Q2", etc.
+      const parseQuarter = (q: string) => {
+        const [year, quarter] = q.split(' ');
+        const quarterNum = parseInt(quarter.replace('Q', ''));
+        return parseInt(year) * 10 + quarterNum;
+      };
+      return parseQuarter(a) - parseQuarter(b);
+    });
+    
+    // Process data for each quarter
+    return sortedQuarters.map(quarter => {
+      const quarterAssets = rawData.assets.filter(asset => asset.quarter === quarter);
+      const totalValue = quarterAssets.reduce((sum, asset) => sum + (asset.value || asset.baseCurrencyValue || 0), 0);
+      
+      // Calculate allocation percentages for this quarter
+      const quarterData: Record<string, any> = { 
+        quarter,
+        'Total Portfolio Value': totalValue // Add total value for secondary y-axis
+      };
+      
+      allAssetTypes.forEach(assetType => {
+        const assetTypeValue = quarterAssets
+          .filter(asset => asset.assetType === assetType)
+          .reduce((sum, asset) => sum + (asset.value || asset.baseCurrencyValue || 0), 0);
+        
+        quarterData[assetType] = totalValue > 0 ? (assetTypeValue / totalValue) * 100 : 0;
+      });
+      
+      return quarterData;
+    });
+  }, [rawData]);
+
+  // Get all asset type categories for the line chart
+  const allAssetTypes = useMemo(() => {
+    if (!rawData) return [];
+    return [...new Set(rawData.assets.map((asset: Asset) => asset.assetType))];
+  }, [rawData]);
+
+  // Asset type color mapping for consistency across chart and legend
+  const getAssetTypeColor = (type: string) => {
+    const colors: Record<string, string> = {
+      'Stocks': 'text-blue-600 bg-blue-50 border-blue-200',
+      'Crypto': 'text-orange-600 bg-orange-50 border-orange-200',
+      'ETF': 'text-emerald-600 bg-emerald-50 border-emerald-200',
+      'Bonds': 'text-cyan-600 bg-cyan-50 border-cyan-200',
+      'Shares': 'text-blue-600 bg-blue-50 border-blue-200', // Legacy support
+      'Retirement': 'text-emerald-600 bg-emerald-50 border-emerald-200', // Legacy support
+      'Cash': 'text-cyan-600 bg-cyan-50 border-cyan-200', // Legacy support
+      'Cars': 'text-amber-600 bg-amber-50 border-amber-200', // Legacy support
+      'Other': 'text-red-600 bg-red-50 border-red-200'
+    };
+    return colors[type] || colors['Other'];
+  };
+
+  // Chart color mapping to match the legend colors
+  const getChartColor = (type: string): 'blue' | 'orange' | 'emerald' | 'cyan' | 'amber' | 'red' => {
+    const chartColors: Record<string, 'blue' | 'orange' | 'emerald' | 'cyan' | 'amber' | 'red'> = {
+      'Stocks': 'blue',
+      'Crypto': 'orange',
+      'ETF': 'emerald',
+      'Bonds': 'cyan',
+      'Shares': 'blue', // Legacy support
+      'Retirement': 'emerald', // Legacy support
+      'Cash': 'cyan', // Legacy support
+      'Cars': 'amber', // Legacy support
+      'Other': 'red'
+    };
+    return chartColors[type] || chartColors['Other'];
+  };
+
+  // Use centralized currency formatting
+  const formatCurrency = utilFormatCurrency;
 
   if (isLoading) {
     return (
@@ -158,92 +215,7 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
       </div>
     );
   }
-
-  // Asset type color mapping for consistency across chart and legend
-  const getAssetTypeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      'Stocks': 'text-blue-600 bg-blue-50 border-blue-200',
-      'Crypto': 'text-orange-600 bg-orange-50 border-orange-200',
-      'ETF': 'text-emerald-600 bg-emerald-50 border-emerald-200',
-      'Bonds': 'text-cyan-600 bg-cyan-50 border-cyan-200',
-      'Shares': 'text-blue-600 bg-blue-50 border-blue-200', // Legacy support
-      'Retirement': 'text-emerald-600 bg-emerald-50 border-emerald-200', // Legacy support
-      'Cash': 'text-cyan-600 bg-cyan-50 border-cyan-200', // Legacy support
-      'Cars': 'text-amber-600 bg-amber-50 border-amber-200', // Legacy support
-      'Other': 'text-red-600 bg-red-50 border-red-200'
-    };
-    return colors[type] || colors['Other'];
-  };
-
-  // Chart color mapping to match the legend colors
-  const getChartColor = (type: string): 'blue' | 'orange' | 'emerald' | 'cyan' | 'amber' | 'red' => {
-    const chartColors: Record<string, 'blue' | 'orange' | 'emerald' | 'cyan' | 'amber' | 'red'> = {
-      'Stocks': 'blue',
-      'Crypto': 'orange',
-      'ETF': 'emerald',
-      'Bonds': 'cyan',
-      'Shares': 'blue', // Legacy support
-      'Retirement': 'emerald', // Legacy support
-      'Cash': 'cyan', // Legacy support
-      'Cars': 'amber', // Legacy support
-      'Other': 'red'
-    };
-    return chartColors[type] || chartColors['Other'];
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  // Prepare historical data for line chart
-  const historicalData = useMemo(() => {
-    if (!rawData || !rawData.quarters || rawData.quarters.length <= 1) return [];
-
-    // Get all unique asset types
-    const allAssetTypes = [...new Set(rawData.assets.map(asset => asset.assetType))];
-    
-    // Sort quarters chronologically (oldest to newest) so latest data appears on the right
-    const sortedQuarters = [...rawData.quarters].sort((a, b) => {
-      // Parse quarter strings like "Q1 2024", "Q2 2024", etc.
-      const parseQuarter = (q: string) => {
-        const [quarter, year] = q.split(' ');
-        const quarterNum = parseInt(quarter.replace('Q', ''));
-        return parseInt(year) * 10 + quarterNum;
-      };
-      return parseQuarter(a) - parseQuarter(b);
-    });
-    
-    // Process data for each quarter
-    return sortedQuarters.map(quarter => {
-      const quarterAssets = rawData.assets.filter(asset => asset.quarter === quarter);
-      const totalValue = quarterAssets.reduce((sum, asset) => sum + (asset.value || asset.baseCurrencyValue || 0), 0);
-      
-      // Calculate allocation percentages for this quarter
-      const quarterData: Record<string, any> = { quarter };
-      
-      allAssetTypes.forEach(assetType => {
-        const assetTypeValue = quarterAssets
-          .filter(asset => asset.assetType === assetType)
-          .reduce((sum, asset) => sum + (asset.value || asset.baseCurrencyValue || 0), 0);
-        
-        quarterData[assetType] = totalValue > 0 ? (assetTypeValue / totalValue) * 100 : 0;
-      });
-      
-      return quarterData;
-    });
-  }, [rawData]);
-
-  // Get all asset type categories for the line chart
-  const allAssetTypes = useMemo(() => {
-    if (!rawData) return [];
-    return [...new Set(rawData.assets.map(asset => asset.assetType))];
-  }, [rawData]);
-
+  
   return (
     <div className="space-y-6">
       {/* Error Banner - show if there's an error but data is still available */}
@@ -288,16 +260,16 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                   value={selectedQuarter}
                   onChange={setSelectedQuarter}
                   options={[...rawData.quarters]
-                    .sort((a, b) => {
-                      // Parse quarter strings like "Q1 2024", "Q2 2024", etc.
+                    .sort((a: string, b: string) => {
+                      // Parse quarter strings like "2024 Q1", "2024 Q2", etc.
                       const parseQuarter = (q: string) => {
-                        const [quarter, year] = q.split(' ');
+                        const [year, quarter] = q.split(' ');
                         const quarterNum = parseInt(quarter.replace('Q', ''));
                         return parseInt(year) * 10 + quarterNum;
                       };
                       return parseQuarter(b) - parseQuarter(a); // Sort descending (latest first)
                     })
-                    .map((quarter) => ({
+                    .map((quarter: string) => ({
                       value: quarter,
                       label: quarter
                     }))}
@@ -351,14 +323,14 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
             <div className="flex items-center justify-center">
               <div className="w-80 h-80">
                 <DonutChart
-                  data={displayData.allocation.map(allocation => ({
+                  data={displayData.allocation.map((allocation: AssetAllocation) => ({
                     category: allocation.type,
                     value: allocation.value,
                     percentage: allocation.percentage
                   }))}
                   category="category"
                   value="value"
-                  colors={displayData.allocation.map(allocation => getChartColor(allocation.type)) as ('blue' | 'orange' | 'emerald' | 'cyan' | 'amber' | 'red')[]}
+                  colors={displayData.allocation.map((allocation: AssetAllocation) => getChartColor(allocation.type)) as ('blue' | 'orange' | 'emerald' | 'cyan' | 'amber' | 'red')[]}
                   variant="donut"
                   valueFormatter={(value) => formatCurrency(value)}
                   showTooltip={true}
@@ -370,22 +342,22 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
             {/* Asset Type Details */}
             <div className="space-y-3">
               {displayData.allocation
-                .sort((a, b) => b.percentage - a.percentage)
-                .map((allocation, index) => (
+                .sort((a: AssetAllocation, b: AssetAllocation) => b.percentage - a.percentage)
+                .map((allocation: AssetAllocation) => (
                   <div key={allocation.type} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-3">
-                                             <div
-                         className={`w-4 h-4 rounded-full ${
-                           allocation.type === 'Stocks' ? 'bg-blue-500' :
-                           allocation.type === 'Crypto' ? 'bg-orange-500' :
-                           allocation.type === 'ETF' ? 'bg-emerald-500' :
-                           allocation.type === 'Bonds' ? 'bg-cyan-500' :
-                           allocation.type === 'Shares' ? 'bg-blue-500' :
-                           allocation.type === 'Retirement' ? 'bg-emerald-500' :
-                           allocation.type === 'Cash' ? 'bg-cyan-500' :
-                           allocation.type === 'Cars' ? 'bg-amber-500' : 'bg-red-500'
-                         }`}
-                       />
+                      <div
+                        className={`w-4 h-4 rounded-full ${
+                          allocation.type === 'Stocks' ? 'bg-blue-500' :
+                          allocation.type === 'Crypto' ? 'bg-orange-500' :
+                          allocation.type === 'ETF' ? 'bg-emerald-500' :
+                          allocation.type === 'Bonds' ? 'bg-cyan-500' :
+                          allocation.type === 'Shares' ? 'bg-blue-500' :
+                          allocation.type === 'Retirement' ? 'bg-emerald-500' :
+                          allocation.type === 'Cash' ? 'bg-cyan-500' :
+                          allocation.type === 'Cars' ? 'bg-amber-500' : 'bg-red-500'
+                        }`}
+                      />
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getAssetTypeColor(allocation.type)}`}>
                         {allocation.type}
                       </span>
@@ -418,8 +390,12 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                   data={historicalData}
                   index="quarter"
                   categories={allAssetTypes}
-                  colors={allAssetTypes.map(type => getChartColor(type)) as any}
+                  colors={allAssetTypes.map((type: string) => getChartColor(type)) as any}
                   valueFormatter={(value) => `${value.toFixed(1)}%`}
+                  secondaryCategories={['Total Portfolio Value']}
+                  secondaryColors={['gray' as any]}
+                  secondaryValueFormatter={(value) => formatCurrency(value)}
+                  showSecondaryYAxis={true}
                   showLegend={true}
                   showTooltip={true}
                   showGrid={true}
@@ -429,7 +405,7 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2 text-center">
-                Showing allocation percentages over time • Hover over data points for details
+                Left axis: allocation percentages (%) • Right axis: total portfolio value ($) • Dashed line shows portfolio growth
               </p>
             </div>
           </div>
@@ -450,7 +426,7 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <span>
                 <strong>Growth Focus:</strong> 
-                {displayData.allocation.find(a => a.type === 'Shares')?.percentage || 0 > 60 
+                {displayData.allocation.find((a: AssetAllocation) => a.type === 'Shares')?.percentage || 0 > 60 
                   ? ' Strong equity allocation for long-term growth' 
                   : ' Conservative allocation with balanced risk'}
               </span>

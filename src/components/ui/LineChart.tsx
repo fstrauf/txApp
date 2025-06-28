@@ -31,6 +31,8 @@ type PayloadItem = {
   category: string
   value: number
   color: AvailableChartColorsKeys
+  formatter?: (value: number) => string
+  isPrimary?: boolean
 }
 
 interface ChartTooltipProps {
@@ -62,7 +64,7 @@ const ChartTooltip = ({
           <div className="mb-2">
             <p className="text-sm font-medium text-gray-900">{label}</p>
           </div>
-          {payload.map(({ value, category, color }, index) => (
+          {payload.map(({ value, category, color, formatter, isPrimary }, index) => (
             <div
               key={`id-${index}`}
               className="flex items-center justify-between space-x-8"
@@ -83,7 +85,7 @@ const ChartTooltip = ({
                     "text-gray-700",
                   )}
                 >
-                  {category}
+                  {category} {!isPrimary && "(Total)"}
                 </p>
               </div>
               <p
@@ -94,7 +96,7 @@ const ChartTooltip = ({
                   "text-gray-900",
                 )}
               >
-                {valueFormatter(value)}
+                {formatter ? formatter(value) : valueFormatter(value)}
               </p>
             </div>
           ))}
@@ -129,6 +131,11 @@ interface LineChartProps extends React.HTMLAttributes<HTMLDivElement> {
   customTooltip?: React.ComponentType<TooltipProps>
   connectNulls?: boolean
   type?: "linear" | "step" | "stepBefore" | "stepAfter"
+  // Dual y-axis support
+  secondaryCategories?: string[]
+  secondaryColors?: AvailableChartColorsKeys[]
+  secondaryValueFormatter?: (value: number) => string
+  showSecondaryYAxis?: boolean
 }
 
 const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
@@ -150,12 +157,17 @@ const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
       connectNulls = false,
       type = "linear",
       className,
+      secondaryCategories = [],
+      secondaryColors = AvailableChartColors,
+      secondaryValueFormatter = (value: number) => value.toString(),
+      showSecondaryYAxis = false,
       ...other
     },
     forwardedRef,
   ) => {
     const CustomTooltip = customTooltip
     const categoryColors = constructCategoryColors(categories, colors)
+    const secondaryCategoryColors = constructCategoryColors(secondaryCategories, secondaryColors)
 
     const prevActiveRef = React.useRef<boolean | undefined>(undefined)
     const prevLabelRef = React.useRef<string | undefined>(undefined)
@@ -200,11 +212,23 @@ const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
             )}
             {showYAxis && (
               <YAxis
+                yAxisId="left"
                 className="text-xs fill-gray-500"
                 tick={{ fontSize: 12 }}
                 tickLine={{ stroke: '#e5e7eb' }}
                 axisLine={{ stroke: '#e5e7eb' }}
                 tickFormatter={valueFormatter}
+              />
+            )}
+            {showSecondaryYAxis && (
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                className="text-xs fill-gray-500"
+                tick={{ fontSize: 12 }}
+                tickLine={{ stroke: '#e5e7eb' }}
+                axisLine={{ stroke: '#e5e7eb' }}
+                tickFormatter={secondaryValueFormatter}
               />
             )}
             {showTooltip && (
@@ -213,11 +237,20 @@ const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
                 isAnimationActive={false}
                 content={({ active, payload, label }) => {
                   const cleanPayload = payload
-                    ? payload.map((item: any) => ({
-                        category: item.dataKey,
-                        value: item.value,
-                        color: categoryColors.get(item.dataKey) as AvailableChartColorsKeys,
-                      }))
+                    ? payload.map((item: any) => {
+                        const isPrimaryCategory = categories.includes(item.dataKey);
+                        const isSecondaryCategory = secondaryCategories.includes(item.dataKey);
+                        const colorMap = isPrimaryCategory ? categoryColors : secondaryCategoryColors;
+                        const formatter = isPrimaryCategory ? valueFormatter : secondaryValueFormatter;
+                        
+                        return {
+                          category: item.dataKey,
+                          value: item.value,
+                          color: colorMap.get(item.dataKey) as AvailableChartColorsKeys,
+                          formatter: formatter,
+                          isPrimary: isPrimaryCategory
+                        };
+                      })
                     : []
 
                   const payloadLabel: string = label || ""
@@ -267,6 +300,7 @@ const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
                 key={category}
                 type={type}
                 dataKey={category}
+                yAxisId="left"
                 stroke={`var(--color-${categoryColors.get(category) || AvailableChartColors[0]})`}
                 strokeWidth={2}
                 dot={{
@@ -289,6 +323,38 @@ const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
                 )}
                 style={{
                   [`--color-${categoryColors.get(category) || AvailableChartColors[0]}`]: `rgb(var(--color-${categoryColors.get(category) || AvailableChartColors[0]}) / 1)`,
+                } as React.CSSProperties}
+              />
+            ))}
+            {secondaryCategories.map((category) => (
+              <Line
+                key={`secondary-${category}`}
+                type={type}
+                dataKey={category}
+                yAxisId="right"
+                stroke={`var(--color-${secondaryCategoryColors.get(category) || AvailableChartColors[0]})`}
+                strokeWidth={3}
+                strokeDasharray="5 5"
+                dot={{
+                  fill: `var(--color-${secondaryCategoryColors.get(category) || AvailableChartColors[0]})`,
+                  strokeWidth: 2,
+                  r: 5,
+                }}
+                activeDot={{
+                  r: 7,
+                  strokeWidth: 2,
+                }}
+                connectNulls={connectNulls}
+                onClick={handleLineClick}
+                className={cn(
+                  getColorClassName(
+                    secondaryCategoryColors.get(category) || AvailableChartColors[0],
+                    "stroke",
+                  ),
+                  onValueChange ? "cursor-pointer" : "cursor-default",
+                )}
+                style={{
+                  [`--color-${secondaryCategoryColors.get(category) || AvailableChartColors[0]}`]: `rgb(var(--color-${secondaryCategoryColors.get(category) || AvailableChartColors[0]}) / 1)`,
                 } as React.CSSProperties}
               />
             ))}
