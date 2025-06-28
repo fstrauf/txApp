@@ -12,7 +12,7 @@ import HowItWorksDrawer from '../components/HowItWorksDrawer';
 import MonthlyReminderToast from '../components/MonthlyReminderToast';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsheetData';
-import { mockTransactions, mockSavingsData } from '../utils/mockData';
+import { mockTransactions, mockSavingsData, mockAssetsData } from '../utils/mockData';
 import posthog from 'posthog-js';
 import { ErrorDisplayBox } from '../components/ErrorDisplayBox';
 import PostHogApiSurvey from '@/components/shared/PostHogApiSurvey';
@@ -106,6 +106,7 @@ const DashboardScreen: React.FC = () => {
   // Use mock data for first-time users, real data otherwise
   const displayStats = isFirstTimeUser ? mockStats : dashboardStats;
   const displayTransactions = isFirstTimeUser ? mockTransactions : filteredTransactions;
+  const displayAssetsData = isFirstTimeUser ? mockAssetsData : assetsData;
 
   // Track dashboard screen view
   useEffect(() => {
@@ -263,7 +264,7 @@ const DashboardScreen: React.FC = () => {
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               transactionCount={displayTransactions.length}
-              hasPortfolioData={!!assetsData}
+              hasPortfolioData={!!displayAssetsData}
               isFirstTimeUser={isFirstTimeUser}
             />
 
@@ -285,7 +286,7 @@ const DashboardScreen: React.FC = () => {
 
             {activeTab === 'portfolio' && (
               <PortfolioTab 
-                assetsData={assetsData}
+                assetsData={displayAssetsData}
                 isFirstTimeUser={isFirstTimeUser}
                 isLoading={isLoading}
                 error={error}

@@ -397,11 +397,26 @@ export async function POST(request: NextRequest) {
           console.log(`🔍 Processed ${assets.length} assets total`);
 
           if (assets.length > 0) {
-            // Calculate portfolio statistics
-            const totalValue = assets.reduce((sum, asset) => sum + asset.baseCurrencyValue, 0);
+            // Get latest quarter for performance tracking
+            const quarters = [...new Set(assets.map(a => a.quarter).filter(q => q))].sort();
+            const latestQuarter = quarters[quarters.length - 1];
             
-            // Group by asset type for allocation analysis
-            const assetTypeAllocation = assets.reduce((acc, asset) => {
+            // Filter assets to only include the latest quarter (to match Savings sheet calculation)
+            const latestQuarterAssets = assets.filter(asset => asset.quarter === latestQuarter);
+            
+            // Calculate portfolio statistics for latest quarter only
+            const totalValue = latestQuarterAssets.reduce((sum, asset) => sum + asset.baseCurrencyValue, 0);
+            
+            console.log('🔍 Portfolio calculation debug:', {
+              totalAssets: assets.length,
+              latestQuarter,
+              latestQuarterAssets: latestQuarterAssets.length,
+              totalValue,
+              latestQuarterAssetValues: latestQuarterAssets.map(a => ({ ticker: a.ticker, value: a.baseCurrencyValue }))
+            });
+            
+            // Group by asset type for allocation analysis (latest quarter only)
+            const assetTypeAllocation = latestQuarterAssets.reduce((acc, asset) => {
               const type = asset.assetType || 'Other';
               if (!acc[type]) {
                 acc[type] = { value: 0, count: 0 };
@@ -411,7 +426,7 @@ export async function POST(request: NextRequest) {
               return acc;
             }, {} as Record<string, { value: number; count: number }>);
 
-            // Calculate percentages
+            // Calculate percentages based on latest quarter
             const allocation: AssetAllocation[] = Object.entries(assetTypeAllocation).map(([type, data]) => ({
               type,
               value: data.value,
@@ -419,13 +434,9 @@ export async function POST(request: NextRequest) {
               count: data.count
             }));
 
-            // Get latest quarter for performance tracking
-            const quarters = [...new Set(assets.map(a => a.quarter).filter(q => q))].sort();
-            const latestQuarter = quarters[quarters.length - 1];
-
             result.assets = {
               totalValue,
-              totalAssets: assets.length,
+              totalAssets: latestQuarterAssets.length,
               latestQuarter,
               allocation,
               assets,

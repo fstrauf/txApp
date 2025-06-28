@@ -116,6 +116,18 @@ img {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  
+  /* Chart color variables for LineChart component */
+  --color-blue: 59 130 246;
+  --color-emerald: 16 185 129;
+  --color-violet: 139 92 246;
+  --color-amber: 245 158 11;
+  --color-red: 239 68 68;
+  --color-pink: 236 72 153;
+  --color-teal: 20 184 166;
+  --color-orange: 249 115 22;
+  --color-indigo: 99 102 241;
+  --color-cyan: 6 182 212;
 }
 
 @media (prefers-color-scheme: dark) {

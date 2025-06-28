@@ -19,6 +19,29 @@ export interface MockSavingsData {
   monthlyBurnRate: number;
 }
 
+// Mock assets data for portfolio tracking
+export interface MockAssetsData {
+  totalValue: number;
+  totalAssets: number;
+  latestQuarter: string;
+  allocation: Array<{
+    type: string;
+    value: number;
+    percentage: number;
+    count: number;
+  }>;
+  assets: Array<{
+    quarter: string;
+    assetType: string;
+    ticker: string;
+    holdings: number;
+    currency: string;
+    value: number;
+    currentPrice?: number;
+  }>;
+  quarters: string[];
+}
+
 // Seed for consistent random numbers
 const mockSeed = 12345;
 let seedValue = mockSeed;
@@ -234,6 +257,109 @@ export const generateMockSavingsData = (): MockSavingsData => {
     totalEntries: 8, // Mock number of quarterly entries
     runwayMonths: Math.round(targetNetAssets / expectedMonthlyExpenses), // Use expected expenses for runway
     monthlyBurnRate: Math.round(expectedMonthlyExpenses) // Use expected monthly expenses
+  };
+};
+
+// Generate mock assets data aligned with savings data
+export const generateMockAssetsData = (): MockAssetsData => {
+  // Reset seed for consistency
+  seedValue = mockSeed;
+  
+  // Get savings data to align portfolio value - portfolio should match total savings
+  const savingsData = generateMockSavingsData();
+  const totalPortfolioValue = savingsData.latestNetAssetValue; // This should be around $22k, not $285k
+  
+  const currentDate = new Date();
+  const currentQuarter = `Q${Math.ceil((currentDate.getMonth() + 1) / 3)} ${currentDate.getFullYear()}`;
+  
+  // Previous quarters for historical data (last 4 quarters = 1 year)
+  const quarters = [];
+  for (let i = 3; i >= 0; i--) {
+    const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - (i * 3), 1);
+    const quarter = `Q${Math.ceil((targetDate.getMonth() + 1) / 3)} ${targetDate.getFullYear()}`;
+    quarters.push(quarter);
+  }
+  
+  // Asset allocation percentages that add up to 100%
+  const stocksPercentage = 45 + seededRandom() * 15; // 45-60%
+  const cryptoPercentage = 20 + seededRandom() * 15; // 20-35%
+  const etfPercentage = 15 + seededRandom() * 10; // 15-25%
+  const bondsPercentage = Math.max(5, 100 - stocksPercentage - cryptoPercentage - etfPercentage);
+  
+  // Calculate values
+  const stocksValue = totalPortfolioValue * (stocksPercentage / 100);
+  const cryptoValue = totalPortfolioValue * (cryptoPercentage / 100);
+  const etfValue = totalPortfolioValue * (etfPercentage / 100);
+  const bondsValue = totalPortfolioValue * (bondsPercentage / 100);
+  
+  // Generate assets for all quarters to show historical trends
+  const assets: Array<{
+    quarter: string;
+    assetType: string;
+    ticker: string;
+    holdings: number;
+    currency: string;
+    value: number;
+    currentPrice?: number;
+  }> = [];
+  
+  quarters.forEach((quarter, index) => {
+    // Simulate portfolio growth over time - showing realistic savings growth
+    // Start at 70% of current value and grow to 100% (30% growth over the year)
+    const growthFactor = 0.70 + (index * 0.10); // 70%, 80%, 90%, 100% growth progression
+    const quarterTotalValue = totalPortfolioValue * growthFactor;
+    
+    // Add some realistic allocation changes over time (showing portfolio rebalancing)
+    const allocationVariation = index * 2; // Small changes over time
+    const quarterStocksPercentage = Math.max(40, Math.min(65, stocksPercentage + (seededRandom() - 0.5) * allocationVariation));
+    const quarterCryptoPercentage = Math.max(15, Math.min(40, cryptoPercentage + (seededRandom() - 0.5) * allocationVariation));
+    const quarterEtfPercentage = Math.max(10, Math.min(30, etfPercentage + (seededRandom() - 0.5) * allocationVariation));
+    const quarterBondsPercentage = Math.max(5, 100 - quarterStocksPercentage - quarterCryptoPercentage - quarterEtfPercentage);
+    
+    // Calculate values for this quarter
+    const quarterStocksValue = quarterTotalValue * (quarterStocksPercentage / 100);
+    const quarterCryptoValue = quarterTotalValue * (quarterCryptoPercentage / 100);
+    const quarterEtfValue = quarterTotalValue * (quarterEtfPercentage / 100);
+    const quarterBondsValue = quarterTotalValue * (quarterBondsPercentage / 100);
+    
+    // Add assets for this quarter
+    assets.push(
+      // Stocks
+      { quarter, assetType: 'Stocks', ticker: 'AAPL', holdings: 15, currency: 'USD', value: quarterStocksValue * 0.35, currentPrice: (quarterStocksValue * 0.35) / 15 },
+      { quarter, assetType: 'Stocks', ticker: 'MSFT', holdings: 8, currency: 'USD', value: quarterStocksValue * 0.25, currentPrice: (quarterStocksValue * 0.25) / 8 },
+      { quarter, assetType: 'Stocks', ticker: 'GOOGL', holdings: 5, currency: 'USD', value: quarterStocksValue * 0.20, currentPrice: (quarterStocksValue * 0.20) / 5 },
+      { quarter, assetType: 'Stocks', ticker: 'TSLA', holdings: 6, currency: 'USD', value: quarterStocksValue * 0.20, currentPrice: (quarterStocksValue * 0.20) / 6 },
+      
+      // Crypto
+      { quarter, assetType: 'Crypto', ticker: 'BTC', holdings: 0.25, currency: 'USD', value: quarterCryptoValue * 0.70, currentPrice: (quarterCryptoValue * 0.70) / 0.25 },
+      { quarter, assetType: 'Crypto', ticker: 'ETH', holdings: 2.5, currency: 'USD', value: quarterCryptoValue * 0.30, currentPrice: (quarterCryptoValue * 0.30) / 2.5 },
+      
+      // ETFs
+      { quarter, assetType: 'ETF', ticker: 'SPY', holdings: 12, currency: 'USD', value: quarterEtfValue * 0.50, currentPrice: (quarterEtfValue * 0.50) / 12 },
+      { quarter, assetType: 'ETF', ticker: 'VTI', holdings: 8, currency: 'USD', value: quarterEtfValue * 0.30, currentPrice: (quarterEtfValue * 0.30) / 8 },
+      { quarter, assetType: 'ETF', ticker: 'QQQ', holdings: 5, currency: 'USD', value: quarterEtfValue * 0.20, currentPrice: (quarterEtfValue * 0.20) / 5 },
+      
+      // Bonds
+      { quarter, assetType: 'Bonds', ticker: 'TLT', holdings: 10, currency: 'USD', value: quarterBondsValue * 0.60, currentPrice: (quarterBondsValue * 0.60) / 10 },
+      { quarter, assetType: 'Bonds', ticker: 'VGIT', holdings: 15, currency: 'USD', value: quarterBondsValue * 0.40, currentPrice: (quarterBondsValue * 0.40) / 15 }
+    );
+  });
+  
+  // Create allocation summary
+  const allocation = [
+    { type: 'Stocks', value: stocksValue, percentage: stocksPercentage, count: 4 },
+    { type: 'Crypto', value: cryptoValue, percentage: cryptoPercentage, count: 2 },
+    { type: 'ETF', value: etfValue, percentage: etfPercentage, count: 3 },
+    { type: 'Bonds', value: bondsValue, percentage: bondsPercentage, count: 2 }
+  ];
+  
+  return {
+    totalValue: totalPortfolioValue,
+    totalAssets: assets.length,
+    latestQuarter: currentQuarter,
+    allocation,
+    assets,
+    quarters
   };
 };
 
@@ -505,4 +631,5 @@ export const generateMockFinancialAnalytics = (): MockFinancialAnalyticsResult =
 // Static mock data that gets generated once
 export const mockTransactions = generateMockTransactions();
 export const mockSavingsData = generateMockSavingsData();
+export const mockAssetsData = generateMockAssetsData();
 export const mockFinancialAnalytics = generateMockFinancialAnalytics(); 
