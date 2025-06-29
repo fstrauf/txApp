@@ -22,9 +22,9 @@ const BlogCTASection: React.FC<BlogCTASectionProps> = ({ postTitle, postContent 
         title: 'Calculate Your Financial Freedom',
         description: 'How much money do you need to never worry about work again?',
         cta: 'Calculate My F*** You Money',
-        href: '/fuck-you-money-sheet',
+        href: '/personal-finance',
         icon: Target,
-        color: 'from-purple-600 to-pink-600'
+        color: 'from-primary to-secondary'
       };
     }
     
@@ -37,7 +37,7 @@ const BlogCTASection: React.FC<BlogCTASectionProps> = ({ postTitle, postContent 
         cta: 'Try Free AI Categorization',
         href: '/personal-finance',
         icon: Calculator,
-        color: 'from-blue-600 to-indigo-600'
+        color: 'from-primary to-secondary'
       };
     }
     
@@ -50,7 +50,7 @@ const BlogCTASection: React.FC<BlogCTASectionProps> = ({ postTitle, postContent 
         cta: 'Calculate My Runway',
         href: '/personal-finance',
         icon: TrendingUp,
-        color: 'from-green-600 to-emerald-600'
+        color: 'from-primary to-secondary'
       };
     }
     
@@ -107,34 +107,34 @@ const BlogCTASection: React.FC<BlogCTASectionProps> = ({ postTitle, postContent 
       {/* Alternative Tools Grid */}
       <div className="grid md:grid-cols-3 gap-4">
         <Box variant="bordered" padding="sm" hoverable className="text-center">
-          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-            <Calculator className="w-6 h-6 text-blue-600" />
+          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+            <Calculator className="w-6 h-6 text-primary" />
           </div>
           <h4 className="font-semibold text-gray-900 mb-2">Financial Dashboard</h4>
           <p className="text-sm text-gray-600 mb-3">Upload bank statements, get AI insights</p>
-          <Link href="/personal-finance" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+          <Link href="/personal-finance" className="text-primary hover:text-primary/80 text-sm font-medium">
             Try Free →
           </Link>
         </Box>
 
         <Box variant="bordered" padding="sm" hoverable className="text-center">
-          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-            <Target className="w-6 h-6 text-purple-600" />
+          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+            <Target className="w-6 h-6 text-primary" />
           </div>
           <h4 className="font-semibold text-gray-900 mb-2">F*** You Money</h4>
           <p className="text-sm text-gray-600 mb-3">Calculate financial independence number</p>
-          <Link href="/fuck-you-money-sheet" className="text-purple-600 hover:text-purple-800 text-sm font-medium">
+          <Link href="/personal-finance" className="text-primary hover:text-primary/80 text-sm font-medium">
             Calculate →
           </Link>
         </Box>
 
         <Box variant="bordered" padding="sm" hoverable className="text-center">
-          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-            <TrendingUp className="w-6 h-6 text-green-600" />
+          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
+            <TrendingUp className="w-6 h-6 text-primary" />
           </div>
           <h4 className="font-semibold text-gray-900 mb-2">Google Sheets Add-on</h4>
           <p className="text-sm text-gray-600 mb-3">AI categorization in your spreadsheet</p>
-          <Link href="/integrations" className="text-green-600 hover:text-green-800 text-sm font-medium">
+          <Link href="/integrations" className="text-primary hover:text-primary/80 text-sm font-medium">
             Get Add-on →
           </Link>
         </Box>

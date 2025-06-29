@@ -12,7 +12,7 @@ import HowItWorksDrawer from '../components/HowItWorksDrawer';
 import MonthlyReminderToast from '../components/MonthlyReminderToast';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsheetData';
-import { mockTransactions, mockSavingsData, mockAssetsData } from '../utils/mockData';
+import { mockTransactions, mockSavingsData } from '../utils/mockData';
 import posthog from 'posthog-js';
 import { ErrorDisplayBox } from '../components/ErrorDisplayBox';
 import PostHogApiSurvey from '@/components/shared/PostHogApiSurvey';
@@ -24,8 +24,7 @@ import { DashboardControls } from '../components/dashboard/DashboardControls';
 import { LoadingState } from '../components/dashboard/LoadingState';
 import { NoDataState } from '../components/dashboard/NoDataState';
 import { DashboardStatistics } from '../components/dashboard/DashboardStatistics';
-import { TransactionTab, AIInsightsTab, PortfolioTab } from '../components/dashboard/TabContent';
-import { TabNavigation } from '../components/dashboard/TabNavigation';
+import { TransactionTab, AIInsightsTab } from '../components/dashboard/TabContent';
 
 const DashboardScreen: React.FC = () => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
@@ -66,8 +65,7 @@ const DashboardScreen: React.FC = () => {
     setHideTransfer,
     handleRefreshData,
     refetchStatus,
-    clearError,
-    assetsData
+    clearError
   } = useDashboardQuery();
 
   // Use modular handlers
@@ -79,9 +77,7 @@ const DashboardScreen: React.FC = () => {
     setIsHelpDrawerOpen,
     setIsHowItWorksOpen,
     setShowExitSurvey,
-    handleRefreshData: async () => {
-      await handleRefreshData();
-    },
+    handleRefreshData: () => handleRefreshData(),
     clearError,
     refetchStatus,
     spreadsheetLinked,
@@ -95,9 +91,10 @@ const DashboardScreen: React.FC = () => {
     monthlyAverageExpenses: mockSavingsData.monthlyBurnRate,
     lastMonthExpenses: 2850,
     lastMonthIncome: 4400,
-    lastMonthSavings: 1550,
+    lastMonthSavings: 1550, // lastMonthIncome - lastMonthExpenses = 4400 - 2850
     annualExpenseProjection: mockSavingsData.monthlyBurnRate * 12,
     lastDataRefresh: new Date(),
+    // Add runway calculation for first-time users
     runwayMonths: mockSavingsData.runwayMonths,
     totalSavings: mockSavingsData.latestNetAssetValue,
     savingsQuarter: mockSavingsData.latestQuarter,
@@ -106,7 +103,6 @@ const DashboardScreen: React.FC = () => {
   // Use mock data for first-time users, real data otherwise
   const displayStats = isFirstTimeUser ? mockStats : dashboardStats;
   const displayTransactions = isFirstTimeUser ? mockTransactions : filteredTransactions;
-  const displayAssetsData = isFirstTimeUser ? mockAssetsData : assetsData;
 
   // Track dashboard screen view
   useEffect(() => {
@@ -132,6 +128,7 @@ const DashboardScreen: React.FC = () => {
         user_authenticated: !!session?.user?.id
       });
 
+      // Also send experiment exposure events for PostHog experiments
       if (headlineVariant) {
         posthog.capture('$experiment_started', {
           $feature_flag: 'demo-dashboard-headline',
@@ -148,7 +145,7 @@ const DashboardScreen: React.FC = () => {
     }
   }, [isFirstTimeUser, headlineVariant, ctaButtonVariant, session?.user?.id]);
 
-  // Temporarily populate store with mock data for first-time users
+  // Temporarily populate store with mock data for first-time users to enable charts/overview
   useEffect(() => {
     if (isFirstTimeUser && (!userData.transactions || userData.transactions.length === 0)) {
       processTransactionData(mockTransactions);
@@ -160,45 +157,118 @@ const DashboardScreen: React.FC = () => {
     }
   }, [isFirstTimeUser, userData.transactions, processTransactionData]);
 
-  const showLoadingState = (isLoading && !dashboardStats && spreadsheetLinked && !isFirstTimeUser) || (isRefreshing && !error);
+  // Comprehensive loading state - show loading if we're fetching initial data
+  const isInitialLoading = isLoading && !dashboardStats && spreadsheetLinked && !isFirstTimeUser;
+  const showLoadingState = isInitialLoading || (isRefreshing && !error);
+
+  // Handle demo banner CTA click with tracking
+  const handleDemoBannerCtaClick = () => {
+    posthog.capture('demo_dashboard_cta_button_clicked', {
+      headline_variant: headlineVariant || 'control',
+      cta_variant: ctaButtonVariant || 'control',
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: !!session?.user?.id
+    });
+    handlers.handleLinkSpreadsheet();
+  };
+
+  // Handle demo banner how it works click with tracking
+  const handleDemoBannerHowItWorksClick = () => {
+    posthog.capture('dashboard_how_it_works_drawer_opened', {
+      source: 'demo_banner_button',
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: !!session?.user?.id
+    });
+    setIsHowItWorksOpen(true);
+  };
+
+  // Handle dashboard controls connect data click
+  const handleControlsConnectDataClick = () => {
+    if (status === 'loading') return;
+    
+    if (status === 'unauthenticated') {
+      posthog.capture('dashboard_connect_data_unauthenticated', {
+        source: 'connect_your_data_button',
+        is_first_time_user: isFirstTimeUser
+      });
+      return handlers.handleLinkSpreadsheet();
+    }
+    
+    posthog.capture('dashboard_connect_data_button_clicked', {
+      source: 'connect_your_data_button',
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: true
+    });
+    
+    setDataManagementDefaultTab('manage');
+    handlers.handleLinkSpreadsheet();
+  };
+
+  // Handle dashboard controls how it works click
+  const handleControlsHowItWorksClick = () => {
+    posthog.capture('dashboard_how_it_works_drawer_opened', {
+      source: 'controls_button',
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: !!session?.user?.id
+    });
+    setIsHowItWorksOpen(true);
+  };
+
+  // Handle hide transfer change with tracking
+  const handleHideTransferChange = (checked: boolean) => {
+    posthog.capture('dashboard_hide_transfer_toggled', {
+      new_value: checked,
+      is_first_time_user: isFirstTimeUser,
+      transaction_count: displayTransactions.length
+    });
+    setHideTransfer(checked);
+  };
+
+  // Handle how it works drawer close
+  const handleHowItWorksDrawerClose = () => {
+    posthog.capture('dashboard_how_it_works_drawer_closed', {
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: !!session?.user?.id
+    });
+    setIsHowItWorksOpen(false);
+  };
+
+  // Handle manual refresh with updated tracking values
+  const handleManualRefreshWithTracking = async () => {
+    posthog.capture('dashboard_manual_refresh_clicked', {
+      has_existing_data: !!dashboardStats,
+      has_spreadsheet_url: !!spreadsheetUrl,
+      is_first_time_user: isFirstTimeUser,
+      transaction_count: displayTransactions.length
+    });
+    await handlers.handleManualRefresh();
+  };
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8 w-full">
-        <Header variant="gradient" size="xl">
+        <Header 
+          variant="gradient"
+          size="xl"
+        >
           Your Financial Freedom Dashboard
         </Header>
 
-        {/* Demo Banner for First-Time Users */}
+        {/* Demo Data Banner for First-Time Users */}
         {isFirstTimeUser && (
           <DemoBanner
             headlineText={getHeadlineText()}
             ctaButtonText={getCtaButtonText()}
-            onCtaClick={() => {
-              posthog.capture('demo_dashboard_cta_button_clicked', {
-                headline_variant: headlineVariant || 'control',
-                cta_variant: ctaButtonVariant || 'control',
-                is_first_time_user: isFirstTimeUser,
-                user_authenticated: !!session?.user?.id
-              });
-              handlers.handleLinkSpreadsheet();
-            }}
-            onHowItWorksClick={() => {
-              posthog.capture('dashboard_how_it_works_drawer_opened', {
-                source: 'demo_banner_button',
-                is_first_time_user: isFirstTimeUser,
-                user_authenticated: !!session?.user?.id
-              });
-              setIsHowItWorksOpen(true);
-            }}
+            onCtaClick={handleDemoBannerCtaClick}
+            onHowItWorksClick={handleDemoBannerHowItWorksClick}
             isLoading={status === 'loading'}
           />
         )}
 
-        {/* Error Display */}
+        {/* Enhanced Error Display */}
         <ErrorDisplayBox 
           error={error}
-          onRelink={() => spreadsheetUrl && handlers.handleRelinkSpreadsheet()}
+          onRelink={handlers.handleRelinkSpreadsheet}
           onCreateNew={() => {
             setDataManagementDefaultTab('upload');
             handlers.handleLinkSpreadsheet();
@@ -209,63 +279,25 @@ const DashboardScreen: React.FC = () => {
         />
 
         {/* Loading State */}
-        {showLoadingState && <LoadingState isRefreshing={isRefreshing} />}
+        {showLoadingState && (
+          <LoadingState isRefreshing={isRefreshing} />
+        )}
 
-        {/* Dashboard Content */}
+        {/* Dashboard Statistics - only show when not loading */}
         {!showLoadingState && displayStats && (
           <>
+            {/* Top Level Controls */}
             <DashboardControls
               lastDataRefresh={displayStats?.lastDataRefresh}
-              baseCurrency={baseCurrency || 'USD'}
+              baseCurrency={baseCurrency}
               hideTransfer={hideTransfer}
-              onHideTransferChange={(checked) => {
-                posthog.capture('dashboard_hide_transfer_toggled', {
-                  new_value: checked,
-                  is_first_time_user: isFirstTimeUser,
-                  transaction_count: displayTransactions.length
-                });
-                setHideTransfer(checked);
-              }}
-              onConnectDataClick={() => {
-                if (status === 'loading') return;
-                
-                if (status === 'unauthenticated') {
-                  posthog.capture('dashboard_connect_data_unauthenticated', {
-                    source: 'connect_your_data_button',
-                    is_first_time_user: isFirstTimeUser
-                  });
-                } else {
-                  posthog.capture('dashboard_connect_data_button_clicked', {
-                    source: 'connect_your_data_button',
-                    is_first_time_user: isFirstTimeUser,
-                    user_authenticated: true
-                  });
-                }
-                
-                setDataManagementDefaultTab('manage');
-                handlers.handleLinkSpreadsheet();
-              }}
-              onHowItWorksClick={() => {
-                posthog.capture('dashboard_how_it_works_drawer_opened', {
-                  source: 'controls_button',
-                  is_first_time_user: isFirstTimeUser,
-                  user_authenticated: !!session?.user?.id
-                });
-                setIsHowItWorksOpen(true);
-              }}
+              onHideTransferChange={handleHideTransferChange}
+              onConnectDataClick={handleControlsConnectDataClick}
+              onHowItWorksClick={handleControlsHowItWorksClick}
               isFirstTimeUser={isFirstTimeUser}
               isLoading={status === 'loading'}
               transactionCount={displayTransactions.length}
               status={status}
-            />
-
-            {/* Tab Navigation */}
-            <TabNavigation
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              transactionCount={displayTransactions.length}
-              hasPortfolioData={!!displayAssetsData}
-              isFirstTimeUser={isFirstTimeUser}
             />
 
             {/* Tab Content */}
@@ -284,16 +316,6 @@ const DashboardScreen: React.FC = () => {
               />
             )}
 
-            {activeTab === 'portfolio' && (
-              <PortfolioTab 
-                assetsData={displayAssetsData}
-                isFirstTimeUser={isFirstTimeUser}
-                isLoading={isLoading}
-                error={error}
-                onConnectDataClick={handlers.handleLinkSpreadsheet}
-              />
-            )}
-
             {activeTab === 'ai-insights' && (
               <AIInsightsTab 
                 stats={displayStats}
@@ -304,26 +326,18 @@ const DashboardScreen: React.FC = () => {
           </>
         )}
 
-        {/* No Data State */}
+        {/* No Data State - only show when not loading and no data */}
         {!showLoadingState && !displayStats && !isLoading && (
           <NoDataState
             spreadsheetLinked={spreadsheetLinked}
             isRefreshing={isRefreshing}
-            onRefreshClick={async () => {
-              posthog.capture('dashboard_manual_refresh_clicked', {
-                has_existing_data: !!dashboardStats,
-                has_spreadsheet_url: !!spreadsheetUrl,
-                is_first_time_user: isFirstTimeUser,
-                transaction_count: displayTransactions.length
-              });
-              await handlers.handleManualRefresh();
-            }}
+            onRefreshClick={handleManualRefreshWithTracking}
             onConnectGoogleSheetsClick={() => setIsHelpDrawerOpen(true)}
             onUploadBankDataClick={() => setIsHelpDrawerOpen(true)}
           />
         )}
 
-        {/* Data Management Drawer */}
+        {/* Data Management Help Drawer */}
         <HelpDrawer
           isOpen={isHelpDrawerOpen}
           onClose={handlers.handleDataManagementDrawerClose}
@@ -332,7 +346,7 @@ const DashboardScreen: React.FC = () => {
         >
           <DataManagementDrawer
             spreadsheetLinked={spreadsheetLinked}
-            spreadsheetUrl={spreadsheetUrl || null}
+            spreadsheetUrl={spreadsheetUrl ?? null}
             onSpreadsheetLinked={handlers.handleSpreadsheetLinked}
             onTransactionsFromGoogleSheets={handlers.handleTransactionsFromGoogleSheets}
             onRefreshData={handleRefreshData}
@@ -348,30 +362,26 @@ const DashboardScreen: React.FC = () => {
         {/* How This Works Drawer */}
         <HelpDrawer
           isOpen={isHowItWorksOpen}
-          onClose={() => {
-            posthog.capture('dashboard_how_it_works_drawer_closed', {
-              is_first_time_user: isFirstTimeUser,
-              user_authenticated: !!session?.user?.id
-            });
-            setIsHowItWorksOpen(false);
-          }}
+          onClose={handleHowItWorksDrawerClose}
           title="How This Works"
           size="large"
         >
-          <HowItWorksDrawer onClose={() => setIsHowItWorksOpen(false)} />
+          <HowItWorksDrawer
+            onClose={() => setIsHowItWorksOpen(false)}
+          />
         </HelpDrawer>
 
-        {/* Monthly Reminder Toast */}
+        {/* Monthly Reminder Toast - only show for users with data */}
         {!isFirstTimeUser && displayStats && (
           <MonthlyReminderToast 
             delay={10000} 
             onSetReminder={handlers.handleSetMonthlyReminder}
             userToastStatus={userToastStatus}
-            onStatusUpdate={setUserToastStatus}
+            onStatusUpdate={(status) => setUserToastStatus(status)}
           />
         )}
 
-        {/* Exit Survey */}
+        {/* Exit Intent Survey */}
         <PostHogApiSurvey
           surveyId="01978a09-ff78-0000-52ee-30eb2fe209ab"
           isVisible={showExitSurvey}

@@ -12,7 +12,7 @@ import HowItWorksDrawer from '../components/HowItWorksDrawer';
 import MonthlyReminderToast from '../components/MonthlyReminderToast';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsheetData';
-import { mockTransactions, mockSavingsData, mockAssetsData } from '../utils/mockData';
+import { mockTransactions, mockSavingsData } from '../utils/mockData';
 import posthog from 'posthog-js';
 import { ErrorDisplayBox } from '../components/ErrorDisplayBox';
 import PostHogApiSurvey from '@/components/shared/PostHogApiSurvey';
@@ -24,8 +24,7 @@ import { DashboardControls } from '../components/dashboard/DashboardControls';
 import { LoadingState } from '../components/dashboard/LoadingState';
 import { NoDataState } from '../components/dashboard/NoDataState';
 import { DashboardStatistics } from '../components/dashboard/DashboardStatistics';
-import { TransactionTab, AIInsightsTab, PortfolioTab } from '../components/dashboard/TabContent';
-import { TabNavigation } from '../components/dashboard/TabNavigation';
+import { TransactionTab, AIInsightsTab } from '../components/dashboard/TabContent';
 
 const DashboardScreen: React.FC = () => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
@@ -66,8 +65,7 @@ const DashboardScreen: React.FC = () => {
     setHideTransfer,
     handleRefreshData,
     refetchStatus,
-    clearError,
-    assetsData
+    clearError
   } = useDashboardQuery();
 
   // Use modular handlers
@@ -79,9 +77,7 @@ const DashboardScreen: React.FC = () => {
     setIsHelpDrawerOpen,
     setIsHowItWorksOpen,
     setShowExitSurvey,
-    handleRefreshData: async () => {
-      await handleRefreshData();
-    },
+    handleRefreshData: () => handleRefreshData(),
     clearError,
     refetchStatus,
     spreadsheetLinked,
@@ -106,7 +102,6 @@ const DashboardScreen: React.FC = () => {
   // Use mock data for first-time users, real data otherwise
   const displayStats = isFirstTimeUser ? mockStats : dashboardStats;
   const displayTransactions = isFirstTimeUser ? mockTransactions : filteredTransactions;
-  const displayAssetsData = isFirstTimeUser ? mockAssetsData : assetsData;
 
   // Track dashboard screen view
   useEffect(() => {
@@ -198,7 +193,7 @@ const DashboardScreen: React.FC = () => {
         {/* Error Display */}
         <ErrorDisplayBox 
           error={error}
-          onRelink={() => spreadsheetUrl && handlers.handleRelinkSpreadsheet()}
+          onRelink={handlers.handleRelinkSpreadsheet}
           onCreateNew={() => {
             setDataManagementDefaultTab('upload');
             handlers.handleLinkSpreadsheet();
@@ -216,7 +211,7 @@ const DashboardScreen: React.FC = () => {
           <>
             <DashboardControls
               lastDataRefresh={displayStats?.lastDataRefresh}
-              baseCurrency={baseCurrency || 'USD'}
+              baseCurrency={baseCurrency}
               hideTransfer={hideTransfer}
               onHideTransferChange={(checked) => {
                 posthog.capture('dashboard_hide_transfer_toggled', {
@@ -259,15 +254,6 @@ const DashboardScreen: React.FC = () => {
               status={status}
             />
 
-            {/* Tab Navigation */}
-            <TabNavigation
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              transactionCount={displayTransactions.length}
-              hasPortfolioData={!!displayAssetsData}
-              isFirstTimeUser={isFirstTimeUser}
-            />
-
             {/* Tab Content */}
             {activeTab === 'overview' && (
               <DashboardStatistics 
@@ -281,16 +267,6 @@ const DashboardScreen: React.FC = () => {
               <TransactionTab 
                 transactions={displayTransactions}
                 isFirstTimeUser={isFirstTimeUser}
-              />
-            )}
-
-            {activeTab === 'portfolio' && (
-              <PortfolioTab 
-                assetsData={displayAssetsData}
-                isFirstTimeUser={isFirstTimeUser}
-                isLoading={isLoading}
-                error={error}
-                onConnectDataClick={handlers.handleLinkSpreadsheet}
               />
             )}
 
@@ -332,7 +308,7 @@ const DashboardScreen: React.FC = () => {
         >
           <DataManagementDrawer
             spreadsheetLinked={spreadsheetLinked}
-            spreadsheetUrl={spreadsheetUrl || null}
+            spreadsheetUrl={spreadsheetUrl ?? null}
             onSpreadsheetLinked={handlers.handleSpreadsheetLinked}
             onTransactionsFromGoogleSheets={handlers.handleTransactionsFromGoogleSheets}
             onRefreshData={handleRefreshData}

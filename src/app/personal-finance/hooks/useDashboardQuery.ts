@@ -21,6 +21,13 @@ interface DashboardStatusData {
   stats: any;
 }
 
+interface AssetAllocation {
+  type: string;
+  value: number;
+  percentage: number;
+  count: number;
+}
+
 interface SpreadsheetData {
   transactions: any[];
   transactionCount: number;
@@ -36,6 +43,14 @@ interface SpreadsheetData {
     latestQuarter: string;
     formattedValue: string;
     totalEntries: number;
+  };
+  assets?: {
+    totalValue: number;
+    totalAssets: number;
+    latestQuarter: string;
+    allocation: AssetAllocation[];
+    assets: any[];
+    quarters: string[];
   };
   availableSheets: string[];
   spreadsheetName?: string;
@@ -109,6 +124,7 @@ const fetchSpreadsheetData = async (
     dateRange,
     config: data.config,
     savings: data.savings,
+    assets: data.assets,
     availableSheets: data.availableSheets || [],
     spreadsheetName: data.spreadsheetName
   };
@@ -267,9 +283,14 @@ export const useDashboardQuery = () => {
 
   // Combined error state with fallback handling
   const error = useMemo(() => {
-    // Prioritize refresh errors as they're more actionable
-    if (refreshMutation.error) {
-      return refreshMutation.error.message;
+    // Don't show refresh errors if we have successful data and the user isn't actively refreshing
+    if (refreshMutation.error && !refreshMutation.isPending) {
+      // Only show refresh errors if we don't have any data at all
+      if (!dashboardStats && !userData.transactions?.length && !spreadsheetData) {
+        return refreshMutation.error.message;
+      }
+      // Don't show refresh errors when we have working data
+      return null;
     }
     
     // Show spreadsheet errors but mention fallback if we have local data
@@ -286,13 +307,14 @@ export const useDashboardQuery = () => {
     }
     
     return null;
-  }, [refreshMutation.error, spreadsheetError, statusError, userData.transactions]);
+  }, [refreshMutation.error, refreshMutation.isPending, spreadsheetError, statusError, userData.transactions, dashboardStats, spreadsheetData]);
 
   return {
     // Data
     dashboardStats,
     filteredTransactions,
     spreadsheetData,
+    assetsData: spreadsheetData?.assets || null,
     
     // State
     isFirstTimeUser,

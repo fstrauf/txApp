@@ -15,6 +15,7 @@ import {
 import {
   AvailableChartColors,
   constructCategoryColors,
+  defaultColors,
   getColorClassName,
   type AvailableChartColorsKeys,
 } from "@/lib/chartUtils"
@@ -176,7 +177,7 @@ const DonutChart = React.forwardRef<HTMLDivElement, DonutChartProps>(
       data = [],
       value,
       category,
-      colors = AvailableChartColors,
+      colors = defaultColors,
       variant = "donut",
       valueFormatter = (value: number) => value.toString(),
       label,

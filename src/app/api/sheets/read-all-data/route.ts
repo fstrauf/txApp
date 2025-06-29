@@ -8,6 +8,7 @@ import {
   filterRecentTransactions,
   sortTransactionsByDate
 } from '@/lib/sheets/expense-detail-schema';
+import { calculateCompletePortfolioData, type Asset, type AssetAllocation } from '@/app/personal-finance/utils/portfolioCalculations';
 
 interface AllSheetsData {
   transactions?: ExpenseDetailTransaction[];
@@ -21,6 +22,14 @@ interface AllSheetsData {
     latestQuarter: string;
     formattedValue: string;
     totalEntries: number;
+  };
+  assets?: {
+    totalValue: number;
+    totalAssets: number;
+    latestQuarter: string;
+    allocation: AssetAllocation[];
+    assets: Asset[];
+    quarters: string[];
   };
   availableSheets: string[];
   spreadsheetId: string;
@@ -175,6 +184,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 4. Read Assets sheet if available
+    if (availableSheets.includes('Assets')) {
+      readPromises.push(
+        sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: 'Assets!A:Z',
+          valueRenderOption: 'UNFORMATTED_VALUE'
+        }).then(response => ({ type: 'assets', data: response.data.values }))
+      );
+    }
+
     // Execute all reads in parallel
     const results = await Promise.allSettled(readPromises);
 
@@ -261,6 +281,109 @@ export async function POST(request: NextRequest) {
                 totalEntries: netAssetValues.length
               };
             }
+          }
+        }
+
+        if (type === 'assets' && data && data.length > 0) {
+          // Process Assets data
+          console.log('🔍 Processing Assets data:', {
+            totalRows: data.length,
+            row0: data[0],
+            row1: data[1]
+          });
+          
+          // Find the header row by looking for the "Quarter" column
+          let headerRowIndex = 0;
+          let headerRow = data[0];
+          
+          // Check if the first row has headers, if not check the second row
+          const hasQuarterHeader = headerRow && headerRow.some((header: any) => 
+            header && String(header).toLowerCase().includes('quarter')
+          );
+          
+          if (!hasQuarterHeader && data.length > 1) {
+            headerRowIndex = 1;
+            headerRow = data[1];
+            console.log('🔍 Headers found in row 1 instead of row 0');
+          }
+          
+          console.log('🔍 Using header row:', { headerRowIndex, headerRow });
+          
+          const getColumnIndex = (columnName: string) => {
+            const index = headerRow.findIndex((header: any) => 
+              header && String(header).toLowerCase().includes(columnName.toLowerCase())
+            );
+            console.log(`Column "${columnName}" found at index:`, index);
+            return index;
+          };
+
+          const quarterIndex = getColumnIndex('quarter');
+          const assetTypeIndex = getColumnIndex('asset type');
+          const tickerIndex = getColumnIndex('ticker');
+          const holdingsIndex = getColumnIndex('holdings');
+          const currencyIndex = getColumnIndex('currency');
+          const valueIndex = getColumnIndex('value');
+          const baseCurrencyIndex = getColumnIndex('value base currency');
+          const dateIndex = getColumnIndex('date');
+
+          // Extract and process asset data
+          const assets: Asset[] = [];
+          console.log('🔍 Starting to process asset rows...');
+          
+          for (let i = headerRowIndex + 1; i < data.length; i++) {
+            const row = data[i];
+            if (row && row.length > 0) {
+              // Check if we have at least the essential data
+              const value = row[valueIndex];
+              const baseCurrencyValue = row[baseCurrencyIndex];
+              
+              console.log(`Row ${i}:`, {
+                value: value,
+                baseCurrencyValue: baseCurrencyValue,
+                assetType: row[assetTypeIndex],
+                ticker: row[tickerIndex]
+              });
+              
+              if (value !== undefined && value !== null && value !== '') {
+                const numericValue = parseFloat(String(value).replace(/[$,]/g, ''));
+                const numericBaseCurrencyValue = baseCurrencyValue ? 
+                  parseFloat(String(baseCurrencyValue).replace(/[$,]/g, '')) : numericValue;
+                
+                console.log(`Parsed values:`, { numericValue, numericBaseCurrencyValue });
+                
+                if (!isNaN(numericValue) && numericValue > 0) {
+                  const asset = {
+                    quarter: row[quarterIndex] || '',
+                    assetType: row[assetTypeIndex] || '',
+                    ticker: row[tickerIndex] || '',
+                    holdings: row[holdingsIndex] || '',
+                    currency: row[currencyIndex] || '',
+                    value: numericValue,
+                    baseCurrencyValue: numericBaseCurrencyValue,
+                    formattedValue: String(value),
+                    date: row[dateIndex] || '',
+                    rowIndex: i
+                  };
+                  assets.push(asset);
+                  console.log('✅ Added asset:', asset);
+                } else {
+                  console.log('❌ Skipped row - invalid numeric value');
+                }
+              } else {
+                console.log('❌ Skipped row - no value');
+              }
+            }
+          }
+          
+          console.log(`🔍 Processed ${assets.length} assets total`);
+
+          if (assets.length > 0) {
+            // Use centralized calculation for consistency
+            const portfolioData = calculateCompletePortfolioData(assets);
+            
+            result.assets = portfolioData;
+            
+            console.log('✅ Assets result (centralized calculation):', result.assets);
           }
         }
       }
