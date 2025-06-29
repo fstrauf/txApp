@@ -232,7 +232,7 @@ Use categorized historical data to predict future cash flow patterns.
 
 ## The Time Freedom Connection
 
-Effective transaction categorization isn't about perfect bookkeeping—it's about buying back your time. Every hour you don't spend on financial admin is an hour you can invest in income-generating activities, family time, or personal projects.
+Effective transaction categorization isn't about perfect bookkeeping—it's about buying back your time. Every hour you don't spend on financial admin is an hour you can invest in income-generating activities, family time, or personal projects. Once your transactions are in order, you can use that reclaimed time to focus on the big picture, like tracking your financial runway with our [free Google Sheet template](/fuck-you-money-sheet).
 
 The sentence transformer approach delivers this time freedom without sacrificing accuracy or privacy. It's technology working for you, not against you.
 

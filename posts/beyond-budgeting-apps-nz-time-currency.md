@@ -43,7 +43,7 @@ This shift in perspective changes everything.
 
 Instead of asking "Can I afford this?", you start asking "Is this worth X hours of my life?"
 
-Instead of obsessing over expense categories, you focus on **systems that give you time back**.
+Instead of obsessing over expense categories, you focus on **systems that give you time back**. Our [free Google Sheet template](/fuck-you-money-sheet) is designed around this philosophy.
 
 ## How to Evaluate NZ Budgeting Apps the Right Way
 
@@ -110,7 +110,7 @@ With just these four inputs, you can calculate:
 - Your **savings velocity** (how quickly you're building freedom)
 - Your **opportunity cost** for any major purchase
 
-To see these calculations in action and track them effortlessly, check out the [Financial Freedom Spreadsheet](/fuck-you-money-sheet) – it's designed around this exact principle.
+To see these calculations in action and track them effortlessly, check out our [Financial Freedom Spreadsheet](/fuck-you-money-sheet) – it's designed around this exact principle.
 
 ### Why This Works Better Than Traditional Budgeting
 
@@ -202,13 +202,3 @@ The question is "How do I build a financial system that gives me more time and l
 **Your time is finite. Your money is infinite (with the right system).**
 
 Choose tools and strategies that honor this truth.
-
----
-
-**Ready to build a financial system that actually saves you time?** Download my free "4-Input Financial Freedom Calculator" - get your survival timeline and savings velocity in under 30 seconds, no bank upload required.
-
-[Financial Freedom Spreadsheet](/personal-finance)
-
----
-
-*Looking for even more advanced financial tracking? Check out our [automated expense categorization app](/integrations) that works alongside your Google Sheets for the best of both worlds—privacy and automation.*

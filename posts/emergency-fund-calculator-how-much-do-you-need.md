@@ -9,7 +9,7 @@ keywords: "emergency fund calculator, 6 month emergency fund calculator, 3 month
 
 The standard advice is simple: save 3-6 months of expenses for emergencies. But this one-size-fits-all approach ignores crucial factors that determine how much *you* actually need. Your emergency fund requirements depend on your job security, family situation, health factors, and income stability—not some generic formula.
 
-I've built an advanced emergency fund calculator that considers these personal factors to give you a realistic target. More importantly, I'll show you how to think about emergency funds as "financial runway"—a concept that changes how you approach financial security.
+I've built an advanced emergency fund calculator that considers these personal factors to give you a realistic target. More importantly, I'll show you how to think about emergency funds as "financial runway"—a concept that changes how you approach financial security. Our [free Financial Freedom Spreadsheet goes beyond a simple calculator to track your runway in real-time](/fuck-you-money-sheet).
 
 ## Why Most Emergency Fund Advice Falls Short
 
@@ -129,7 +129,7 @@ A home equity line of credit or unused credit cards can serve as emergency backu
 
 Instead of thinking about your emergency fund as "X months of expenses," think about it as your **financial runway**—how long you can maintain your lifestyle without any income.
 
-If you want a practical tool to track your financial runway and see exactly how long your savings will last, check out our [Financial Freedom Spreadsheet](/fuck-you-money-sheet) for a hands-on approach.
+Our [Financial Freedom Spreadsheet is the perfect tool for tracking your runway](/fuck-you-money-sheet) and seeing exactly how different scenarios impact your financial security.
 
 This mental shift is powerful because:
 
@@ -236,6 +236,8 @@ Credit can disappear exactly when you need it most—during job loss or financia
 3. **Set up automatic transfers** to build the fund systematically
 4. **Choose appropriate accounts** that balance growth and accessibility
 5. **Review and adjust** annually or after major life changes
+
+A powerful spreadsheet can help you manage all of this. [Download our free template to get started](/fuck-you-money-sheet).
 
 Remember: Your emergency fund isn't just about preparing for disasters—it's about creating the financial foundation that enables everything else. When you know you can handle unexpected setbacks, you make bolder career moves, take calculated risks, and live with less financial anxiety.
 

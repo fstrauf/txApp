@@ -11,9 +11,7 @@ In the startup world, "runway" means how long a company can operate before runni
 
 Your **financial runway** is how long you could maintain your current lifestyle without any income. It's more nuanced than an emergency fund and more actionable than net worth. Understanding your runway changes how you think about career decisions, risk-taking, and what financial freedom actually means.
 
-Let me show you how to calculate your financial runway and why it might be the most important number in your financial life.
-
-Want to track your runway automatically and visualize how long your money will last? Try our [Financial Freedom Spreadsheet](/fuck-you-money-sheet) for a practical, hands-on solution.
+Let me show you how to calculate your financial runway and why it might be the most important number in your financial life. [Download our free spreadsheet to calculate your runway now](/fuck-you-money-sheet).
 
 ## Why Financial Runway Matters More Than Emergency Funds
 
@@ -35,6 +33,8 @@ Your runway directly correlates with your life choices. More runway equals more 
 
 ![Financial Overview Dashboard](/es_financial_overview_dashboard.png)
 *Complete financial overview showing your runway calculation, savings rate, and spending patterns in one clear dashboard*
+
+Want the answer without the manual math? [Our free Google Sheet calculates your financial runway for you](/fuck-you-money-sheet).
 
 ### Step 1: Calculate Your True Monthly Expenses
 
@@ -154,6 +154,8 @@ Excludes emergency fund money—how much runway you have for planned opportuniti
 - **Priority:** Optimize for long-term wealth building while maintaining adequate runway
 
 ## Building Your Financial Runway
+
+Our [free Google Sheet template](/fuck-you-money-sheet) is the perfect tool to help you track your expenses and build your runway systematically.
 
 ### The Systematic Approach
 

@@ -16,7 +16,7 @@ The loan company knew all this because they'd purchased data from the "free" bud
 
 This is the hidden cost of convenience. While you think you're getting a free tool to manage your money, you're actually paying with something far more valuable: **your financial privacy and independence**.
 
-Here's how to build a completely private expense tracking system that protects your data while giving you better insights than any app ever could.
+Here's how to build a completely private expense tracking system that protects your data while giving you better insights than any app ever could. We've even built a [free Google Sheet template](/fuck-you-money-sheet) to get you started.
 
 ## The Real Cost of "Free" Budgeting Apps
 
@@ -74,6 +74,8 @@ The good news? You can build a more powerful, completely private expense trackin
 - No surprise subscription fees
 - No feature limitations or paywall restrictions
 - Works as long as Google exists (which is effectively forever)
+
+Our [free spreadsheet](/fuck-you-money-sheet) is a perfect example of this in action.
 
 ## The Complete Private Expense Tracking System
 
@@ -142,6 +144,8 @@ Never record specific locations or businesses unless necessary for tax deduction
 If you need to share financial information (with a partner, accountant, or financial adviser), create summary views that don't include detailed transaction data.
 
 ## Setting Up Your Private System (Step-by-Step)
+
+Want to skip the setup? [Grab our pre-built, privacy-focused Google Sheet template here](/fuck-you-money-sheet).
 
 ### **Step 1: Create Your Tracking Sheet (30 minutes)**
 

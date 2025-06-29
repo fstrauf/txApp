@@ -82,7 +82,7 @@ Impulse: $31 (book, plant, snacks)
 Investment: $0
 ```
 
-For a more robust solution than a simple notebook, you can use a dedicated spreadsheet like the [Financial Freedom Spreadsheet](/fuck-you-money-sheet) to track these categories and calculate your financial runway automatically.
+For a more robust solution than a simple notebook, our [free Financial Freedom Spreadsheet is designed to track these categories and calculate your financial runway automatically](/fuck-you-money-sheet).
 
 ### Method 2: The Bank Statement Review
 
@@ -111,7 +111,7 @@ Adobe: $22.99/month - Used twice this year ✗
 Domain hosting: $15/month - Forgot I had this ✗
 ```
 
-If you prefer a ready-made, comprehensive spreadsheet to manage this and other financial tracking, the [Financial Freedom Spreadsheet](/fuck-you-money-sheet) offers features beyond a simple three-column list.
+If you prefer a ready-made, comprehensive spreadsheet to manage subscription audits and all your other financial tracking in one private place, the [Financial Freedom Spreadsheet is the perfect tool](/fuck-you-money-sheet).
 
 ### Method 3: The Envelope System (Digital Version)
 
@@ -248,11 +248,9 @@ Reality: Perfect tracking isn't the goal. Good enough tracking that you actually
 
 ## The Bottom Line on Financial Privacy
 
-Your spending patterns reveal more about your life than your social media posts, your search history, and your location data combined.
+Your financial data is your most valuable digital asset. The best way to protect it isn't with a better password—it's by choosing systems that put you in complete control. A well-designed spreadsheet is the most powerful tool for achieving both financial clarity and data privacy.
 
-Every financial decision you make is a vote for the kind of life you want to live. When you hand that voting record over to companies whose business model depends on influencing your future votes, you're giving up more than privacy—you're giving up autonomy.
-
-**The choice isn't between convenience and privacy. It's between short-term convenience and long-term control.**
+If you're ready to take control, [download our free Financial Freedom Spreadsheet](/fuck-you-money-sheet). It's built on these privacy-first principles and gives you a complete financial picture without compromising your data.
 
 ## Why This Matters for Your Financial Future
 

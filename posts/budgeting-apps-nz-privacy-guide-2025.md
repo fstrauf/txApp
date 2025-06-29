@@ -78,7 +78,7 @@ This is the difference between being a customer and being capable.
 
 ## The Google Sheets Alternative: Your Data, Your Rules
 
-Here's the approach I recommend to most people: build your own system using Google Sheets.
+Here's the approach I recommend to most people: build your own system using Google Sheets. Our [free Financial Freedom Spreadsheet is a perfect example of a powerful, private system](/fuck-you-money-sheet) you can own completely.
 
 Before you roll your eyes thinking "that sounds complicated," consider this: **you already understand money better than any app does**. You know whether that $47 charge was groceries or eating out. You know whether that insurance payment happens monthly or annually.
 
@@ -154,7 +154,7 @@ Let's calculate the true 10-year cost of the most popular approaches:
 - Plus: Unlimited customization
 - Plus: Transferable skills
 
-The math is clear. Even if you value your time at $50/hour, the Google Sheets approach pays for itself within the first year.
+The math is clear. Even if you value your time at $50/hour, the Google Sheets approach, especially with a [powerful pre-built template](/fuck-you-money-sheet), pays for itself within the first year.
 
 ## When Apps Actually Make Sense
 
@@ -244,7 +244,7 @@ For most people, building your own system is the clear winner.
 *Reality*: Apps are easier to start, harder to customize. Once you set up your own system, it's actually easier to use because it works exactly how you think.
 
 **"I don't know enough about spreadsheets!"**
-*Reality*: You need to learn about 5 formulas. If you can balance a checkbook, you can build a budget spreadsheet.
+*Reality*: You need to learn about 5 formulas. If you can balance a checkbook, you can build a budget spreadsheet. And if you don't want to learn any formulas, you can [use our pre-built template that does all the work for you](/fuck-you-money-sheet).
 
 **"What if I mess something up?"**
 *Reality*: Google Sheets has version history. You can always go back. Plus, your mistakes teach you more about your money than any app ever could.

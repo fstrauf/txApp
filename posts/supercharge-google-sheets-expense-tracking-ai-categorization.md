@@ -10,6 +10,8 @@ Are you tired of spending hours maintaining your expense tracking spreadsheet in
 
 In this guide, I'll show you how to transform your basic expense tracking spreadsheet into an intelligent system that automatically categorizes your transactions, saving you hours of manual work while providing more accurate financial insights.
 
+As a first step, you can grab our [free, powerful Google Sheets expense tracker template](/fuck-you-money-sheet) which provides a great foundation.
+
 ## Why Google Sheets Is Popular for Expense Tracking
 
 Before diving into the AI-powered upgrade, let's understand why Google Sheets remains a favorite tool for expense tracking:
@@ -104,11 +106,11 @@ If you're technically inclined and want to build your own solution:
 
 This approach requires programming knowledge and will involve setting up API connections, but gives you complete control over the implementation.
 
-## Template: Enhanced Expense Tracking Spreadsheet
+## Get Started with a Powerful Template
 
-To help you get started, I've created a template that's already set up for AI-powered expense tracking:
+To help you get started, I've created a template that's already set up for AI-powered expense tracking and provides a comprehensive financial dashboard out of the box.
 
-[Access the Template Here](/fuck-you-money-sheet)
+[Access our free Financial Freedom Spreadsheet here](/fuck-you-money-sheet).
 
 This template includes:
 
@@ -151,6 +153,10 @@ Here's how real users have benefited from upgrading their Google Sheets expense 
 > "The best part isn't just the time savings, but the consistency. The AI categorizes things more consistently than I did manually, which makes my spending reports much more accurate." - Mike T.
 
 > "I've tried Mint, YNAB, and other apps, but I always come back to my Google Sheet because of the flexibility. Adding AI categorization gave me the best of both worlds - the automation of an app with the customization of a spreadsheet." - Jamie L.
+
+## A Complete Financial Picture
+
+While AI categorization saves you time on data entry, the ultimate goal is financial clarity. Our [Financial Freedom Spreadsheet](/fuck-you-money-sheet) goes beyond just tracking expenses. It automatically calculates your savings rate, net worth, and most importantly, your **financial runway**—how long you could live without income. This high-level view is what truly empowers you to make life-changing decisions.
 
 ## Common Questions
 

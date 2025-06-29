@@ -121,6 +121,8 @@ If you're tired of maintaining endless rules and want to experience the future o
 
 The shift from rules-based to meaning-based transaction categorization represents a fundamental improvement in how we manage financial data. By understanding the semantic meaning of transactions rather than just matching patterns, sentence transformers deliver more accurate, more adaptable, and lower-maintenance categorization.
 
+Once you have categorization solved, you can focus on the big picture, like tracking your overall financial health and runway with our [free Financial Freedom Spreadsheet](/fuck-you-money-sheet).
+
 As financial data continues to grow in volume and complexity, these intelligent approaches will become essential for anyone seeking to maintain control over their financial information without spending hours maintaining fragile rule systems.
 
 Ready to move beyond rules? [Try Expense Sorted today](https://expensesorted.com) and experience the difference sentence transformers can make.

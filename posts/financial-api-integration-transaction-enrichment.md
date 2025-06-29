@@ -297,7 +297,7 @@ The financial tools we build reflect our values. When we prioritize clean, enric
 
 True financial freedom isn't just about money—it's about time. By integrating APIs that automate the tedious aspects of financial management, we give users back hours of their lives each month.
 
-And ultimately, isn't that the point? Not to have the cleverest feature set, but to have features that effectively buy back our users' time?
+And ultimately, isn't that the point? Not to have the cleverest feature set, but to have features that effectively buy back our users' time? For individuals looking to take control themselves, our [Financial Freedom Spreadsheet provides this high-level view directly](/fuck-you-money-sheet).
 
 Your financial app shouldn't demand hours of user attention for basic functionality. It should run intelligently in the background while users focus on living.
 
