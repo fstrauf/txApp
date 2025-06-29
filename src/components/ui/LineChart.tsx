@@ -18,6 +18,7 @@ import {
 import {
   AvailableChartColors,
   constructCategoryColors,
+  defaultColors,
   getColorClassName,
   type AvailableChartColorsKeys,
 } from "@/lib/chartUtils"
@@ -144,7 +145,7 @@ const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
       data = [],
       index,
       categories = [],
-      colors = AvailableChartColors,
+      colors = defaultColors,
       valueFormatter = (value: number) => value.toString(),
       showLegend = true,
       showTooltip = true,
@@ -158,7 +159,7 @@ const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
       type = "linear",
       className,
       secondaryCategories = [],
-      secondaryColors = AvailableChartColors,
+      secondaryColors = defaultColors,
       secondaryValueFormatter = (value: number) => value.toString(),
       showSecondaryYAxis = false,
       ...other

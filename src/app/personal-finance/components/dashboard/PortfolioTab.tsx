@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ChartPieIcon, ArrowTrendingUpIcon, BuildingLibraryIcon, CalendarIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { DonutChart } from '@/components/ui/DonutChart';
-import { LineChart } from '@/components/ui/LineChart';
+import { StackedAreaChart } from '@/components/ui/StackedAreaChart';
 import Select from '@/components/ui/Select';
 import { 
   calculatePortfolioForQuarter, 
@@ -80,12 +80,9 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
   const historicalData = useMemo(() => {
     if (!rawData || !rawData.quarters || rawData.quarters.length <= 1) return [];
 
-    // Get all unique asset types
     const allAssetTypes = [...new Set(rawData.assets.map((asset: Asset) => asset.assetType))];
     
-    // Sort quarters chronologically (oldest to newest) so latest data appears on the right
     const sortedQuarters = [...rawData.quarters].sort((a: string, b: string) => {
-      // Parse quarter strings like "2024 Q1", "2024 Q2", etc.
       const parseQuarter = (q: string) => {
         const [year, quarter] = q.split(' ');
         const quarterNum = parseInt(quarter.replace('Q', ''));
@@ -94,23 +91,15 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
       return parseQuarter(a) - parseQuarter(b);
     });
     
-    // Process data for each quarter
+    // Process data for each quarter to get percentage allocations
     return sortedQuarters.map(quarter => {
-      const quarterAssets = rawData.assets.filter(asset => asset.quarter === quarter);
-      const totalValue = quarterAssets.reduce((sum, asset) => sum + (asset.value || asset.baseCurrencyValue || 0), 0);
+      const { allocation } = calculatePortfolioForQuarter(rawData.assets, quarter);
       
-      // Calculate allocation percentages for this quarter
-      const quarterData: Record<string, any> = { 
-        quarter,
-        'Total Portfolio Value': totalValue // Add total value for secondary y-axis
-      };
+      const quarterData: Record<string, any> = { quarter };
       
       allAssetTypes.forEach(assetType => {
-        const assetTypeValue = quarterAssets
-          .filter(asset => asset.assetType === assetType)
-          .reduce((sum, asset) => sum + (asset.value || asset.baseCurrencyValue || 0), 0);
-        
-        quarterData[assetType] = totalValue > 0 ? (assetTypeValue / totalValue) * 100 : 0;
+        const assetAllocation = allocation.find((a: AssetAllocation) => a.type === assetType);
+        quarterData[assetType] = assetAllocation ? parseFloat(assetAllocation.percentage.toFixed(1)) : 0;
       });
       
       return quarterData;
@@ -386,16 +375,12 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
             
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="h-80">
-                <LineChart
+                <StackedAreaChart
                   data={historicalData}
                   index="quarter"
                   categories={allAssetTypes}
                   colors={allAssetTypes.map((type: string) => getChartColor(type)) as any}
-                  valueFormatter={(value) => `${value.toFixed(1)}%`}
-                  secondaryCategories={['Total Portfolio Value']}
-                  secondaryColors={['gray' as any]}
-                  secondaryValueFormatter={(value) => formatCurrency(value)}
-                  showSecondaryYAxis={true}
+                  valueFormatter={(value: number) => `${value.toFixed(1)}%`}
                   showLegend={true}
                   showTooltip={true}
                   showGrid={true}
@@ -405,7 +390,7 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2 text-center">
-                Left axis: allocation percentages (%) • Right axis: total portfolio value ($) • Dashed line shows portfolio growth
+                Your portfolio allocation percentage over time.
               </p>
             </div>
           </div>
