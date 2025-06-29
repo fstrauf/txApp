@@ -191,4 +191,7 @@ export const AIInsightsTab: React.FC<AIInsightsTabProps> = ({
       )}
     </div>
   );
-}; 
+};
+
+// Export PortfolioTab from its own file for cleaner organization
+export { PortfolioTab } from './PortfolioTab'; 
