@@ -55,6 +55,8 @@ Here's how to build a automation system that actually works for individuals:
 - Your data stays in your Google account
 - Works with any bank, any country
 
+If you want a ready-to-use foundation, [you can download our free Google Sheet template here](/fuck-you-money-sheet).
+
 **Time Investment:** 30 minutes setup  
 **Time Saved:** 2-3 hours monthly
 
@@ -95,6 +97,8 @@ Use Google Sheets formulas to automatically categorize based on merchant pattern
 - Takes too much time to be done regularly
 - Easy to miss important spending trends
 - Hard to track progress toward financial goals
+
+Our [free expense tracker spreadsheet](/fuck-you-money-sheet) already includes a dashboard with all these components.
 
 **Time Investment:** 45 minutes setup  
 **Time Saved:** 2-3 hours monthly
@@ -200,6 +204,8 @@ Let's be honest about the time investment:
 **What's 18 hours worth to you?** At a modest $25/hour valuation of your time, that's $450 in value annually. Even premium automation tools pay for themselves.
 
 ## Getting Started: Your 30-Day Implementation Plan
+
+Want to skip the setup? [Our free Google Sheet template](/fuck-you-money-sheet) has all of this built-in and ready to go.
 
 ### Week 1: Foundation Setup
 - **Days 1-2:** Download last 3 months of bank statements

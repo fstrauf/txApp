@@ -11,7 +11,7 @@ Your savings rate is the single most important number in your financial life. No
 
 Yet most people don't even know what their savings rate is, let alone how to optimize it. After reaching a net worth of $1.6 million by age 36, I can tell you that understanding and maximizing my savings rate was the key driver of that success.
 
-Let me show you how to calculate your true savings rate, interpret what it means for your financial future, and most importantly, how to increase it systematically.
+Let me show you how to calculate your true savings rate, interpret what it means for your financial future, and most importantly, how to increase it systematically. [Use our free spreadsheet to calculate your savings rate in minutes](/fuck-you-money-sheet).
 
 ## What Is a Savings Rate (And Why Most People Calculate It Wrong)
 
@@ -57,6 +57,8 @@ Many people would only count the $4,000 in "savings" and report a 5% savings rat
 
 ![Financial Overview Dashboard](/es_financial_overview_dashboard.png)
 *Complete financial overview showing your savings rate, spending patterns, and path to financial independence*
+
+Want to do this automatically? [Our free Google Sheet template calculates your true savings rate for you](/fuck-you-money-sheet).
 
 ### Step 1: Calculate Your Monthly Income
 
@@ -185,6 +187,8 @@ Let me share my actual progression to illustrate how savings rates can grow over
 
 ![AI-Powered Insights](/es_ex_suggestion_adjustment.png)
 *Smart suggestions help optimize your spending and identify opportunities to increase your savings rate*
+
+Our [free spreadsheet](/fuck-you-money-sheet) can help you find these opportunities in your own spending.
 
 ## Strategies to Increase Your Savings Rate
 

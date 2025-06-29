@@ -19,7 +19,7 @@ Before diving into the template, let's address the obvious question: why use Goo
 
 **Customization:** Unlike rigid apps, you can modify every aspect of this tracker to match your specific needs and spending categories.
 
-**No Subscription Fees:** Many expense tracking apps charge monthly fees. This solution costs nothing beyond your existing Google account.
+**No Subscription Fees:** Many expense tracking apps charge monthly fees. This solution costs nothing beyond your existing Google account. For a powerful, free option, you can [download our Ultimate Google Sheets Expense Tracker](/fuck-you-money-sheet).
 
 **Universal Access:** Works on any device with internet access. No app downloads or updates required.
 
@@ -48,7 +48,7 @@ Understand how long your current savings would last at your current spending rat
 Want a more advanced, ready-to-use solution? Check out our [Financial Freedom Spreadsheet](/fuck-you-money-sheet) to track your runway, savings rate, and more automatically.
 
 ### Savings Rate Tracking
-Automatically calculates your monthly and yearly savings rate, the single most important metric for building wealth.
+Automatically calculates your monthly and yearly savings rate, the single most important metric for building wealth. Ready to get started? [Download our free spreadsheet to start tracking this crucial metric](/fuck-you-money-sheet).
 
 ### Budget vs. Actual Analysis
 Set budgets for each category and see real-time comparisons with actual spending, complete with visual indicators.
@@ -56,7 +56,7 @@ Set budgets for each category and see real-time comparisons with actual spending
 ## How to Use the Template
 
 ### Step 1: Make Your Copy
-**[Download the Ultimate Expense Tracker Template](/fuck-you-money-sheet)**
+**[Click here to get your free copy of the Ultimate Expense Tracker Template](/fuck-you-money-sheet)**
 
 1. Click the link above
 2. Go to File → Make a Copy

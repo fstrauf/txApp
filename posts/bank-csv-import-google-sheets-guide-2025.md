@@ -14,6 +14,8 @@ Bank CSV files are uniquely frustrating. They come with inconsistent date format
 
 But here's the thing: **getting this right once saves hours every month**. And more importantly, it gives you the foundation for automating your entire financial workflow without surrendering your data to another fintech app.
 
+If you'd rather skip the manual setup, [our free Google Sheet template handles all major bank CSV formats automatically](/fuck-you-money-sheet).
+
 ## Why Bank CSV Imports Fail (And How to Fix Them)
 
 ### Problem 1: Banks Use Non-Standard CSV Formats
@@ -66,6 +68,8 @@ IF(SEARCH("(",A2,1),-1,1)
 This removes currency symbols, commas, and converts parenthetical negatives to proper negative numbers.
 
 ## The Universal Bank CSV Import Process
+
+Want to skip all this and use a template that does it for you? [Download our free, pre-built Google Sheet here](/fuck-you-money-sheet).
 
 Here's a step-by-step system that works with any bank:
 
@@ -212,6 +216,8 @@ Banks often include both pending and posted versions of the same transaction.
 ```
 
 ## Automating the Import Process
+
+The easiest way to automate this entire process is to [use our free Google Sheet template](/fuck-you-money-sheet), which has this automation pre-built. For those who want to build it themselves, here are the methods:
 
 ### Method 1: Apps Script Automation
 

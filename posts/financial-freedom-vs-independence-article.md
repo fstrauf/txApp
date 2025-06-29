@@ -31,7 +31,7 @@ This distinction isn't just semantics - it fundamentally changes how you approac
 
 Financial independence is relatively straightforward to define and calculate. You're financially independent when your passive income covers your living expenses without requiring active work.
 
-The most common formula is the 25x rule: multiply your annual expenses by 25, and that's your FI number. If you spend $50,000 per year, you'd need $1.25 million invested to be financially independent (assuming a 4% withdrawal rate).
+The most common formula is the 25x rule: multiply your annual expenses by 25, and that's your FI number. If you spend $50,000 per year, you'd need $1.25 million invested to be financially independent (assuming a 4% withdrawal rate). Our [free spreadsheet is the perfect tool to track this number](/fuck-you-money-sheet).
 
 ### What Financial Independence Actually Looks Like
 
@@ -90,7 +90,7 @@ If I could restart my financial journey with this understanding, here's what I'd
 - Start with small, consistent financial habits
 - Focus on understanding money psychology before complex strategies
 - Build basic emergency fund for peace of mind
-- Track spending to understand current patterns
+- Track spending to understand current patterns using a tool like our [Financial Freedom Spreadsheet](/fuck-you-money-sheet)
 
 ### Phase 2: Develop Financial Freedom Mindset (Year 2)
 - Learn to make value-based spending decisions
@@ -146,7 +146,7 @@ I've learned that "good enough" financial decisions made consistently beat "perf
 
 ### If You're Just Starting:
 1. **Write down what "enough" means to you** - Not what others say, but what would actually make you feel secure
-2. **Track your spending for one month** - Understanding current patterns without judgment
+2. **Track your spending for one month** - Understanding current patterns without judgment is easy with our [free Google Sheet tracker](/fuck-you-money-sheet).
 3. **Identify your money triggers** - What situations make you anxious about money?
 4. **Start a small emergency fund** - Even $500 can reduce daily financial stress
 

@@ -214,7 +214,7 @@ The tools we choose reflect our values. When I prioritize transaction enrichment
 
 Open banking provides the access. Transaction enrichment APIs provide the intelligence. Together, they deliver the outcome that actually matters: more time for what's important.
 
-Your financial life shouldn't demand hours of your attention. It should run smoothly in the background while you focus on living.
+Your financial life shouldn't demand hours of your attention. It should run smoothly in the background while you focus on living. Our [Financial Freedom Spreadsheet](/fuck-you-money-sheet) is the perfect tool to manage this high-level view.
 
 ---
 

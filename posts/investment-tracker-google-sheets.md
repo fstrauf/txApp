@@ -27,7 +27,7 @@ Before diving into the template features, let's address why Google Sheets beats 
 
 **Universal Access:** Monitor your investments from any device with internet access. Make rebalancing decisions from your phone during lunch break or review performance metrics on your laptop at home.
 
-Want an even more comprehensive financial tracking solution? Check out our [complete financial freedom spreadsheet](/fuck-you-money-sheet) that integrates investment tracking with expense monitoring and runway calculations.
+Our [Financial Freedom Spreadsheet includes a comprehensive investment tracker](/fuck-you-money-sheet) that provides all these benefits and more, integrating them with your overall financial picture.
 
 ## Template Features Overview
 
@@ -47,7 +47,13 @@ This investment tracker goes far beyond basic portfolio monitoring:
 
 **Asset Allocation Monitoring:** Visual dashboard shows your current allocation versus target percentages. Automatic alerts when any asset class drifts beyond your rebalancing threshold.
 
+![Portfolio Overview Dashboard](/es_portfolio%20distribution.png)
+*A clear, visual dashboard showing your complete portfolio overview, asset allocation, and key metrics.*
+
 **Rebalancing Optimization:** The template calculates the exact trades needed to return to your target allocation while minimizing transaction costs and tax implications.
+
+![Asset Allocation Trends Over Time](/es_portfolio_over_time.png)
+*Track how your asset allocation changes over time to ensure you stay aligned with your long-term strategy.*
 
 **Benchmark Comparison:** Track your performance against major indices (S&P 500, Total Stock Market, International Developed Markets). Understand whether you're actually beating the market after accounting for fees and taxes.
 
@@ -63,17 +69,19 @@ This investment tracker goes far beyond basic portfolio monitoring:
 
 ### FIRE Integration
 
+The ultimate goal of investing is financial freedom. Our [Financial Freedom Spreadsheet is built from the ground up to track your progress toward FIRE](/fuck-you-money-sheet), connecting your portfolio directly to your financial independence timeline.
+
 **Retirement Timeline Impact:** See how current portfolio value and growth rate affect your financial independence timeline. Small changes in savings rate or investment returns can dramatically alter your retirement date.
 
 **Withdrawal Rate Analysis:** Model different withdrawal rates to understand portfolio sustainability in retirement. The template shows how long your portfolio would last at various spending levels.
 
 **Geographic Arbitrage Calculator:** For those planning to retire abroad, calculate how exchange rates and cost of living differences impact your required portfolio size.
 
-## How to Use the Template
+## Get Your Free, All-in-One Financial Tracker
 
 ### Step 1: Get Your Copy
 
-**[Download the Investment Tracker Template](/fuck-you-money-sheet)**
+**[Download the Ultimate Financial Freedom Spreadsheet Here](/fuck-you-money-sheet)**
 
 1. Click the link above to access the template
 2. Go to File → Make a Copy in Google Sheets
@@ -193,7 +201,7 @@ Adapt the template for REITs and direct property:
 
 ### Connecting to Expense Tracking
 
-Link this investment tracker with your [expense tracking spreadsheet](/integrations) for complete financial visibility:
+Link this investment tracker with your [complete financial dashboard](/fuck-you-money-sheet) for complete financial visibility:
 
 - See how investment gains affect your savings rate
 - Track the percentage of expenses covered by dividend income

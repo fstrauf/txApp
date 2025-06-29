@@ -10,7 +10,7 @@ Most financial advice treats emergency funds like insurance policies — somethi
 
 Here's the truth: Your emergency fund isn't just protection against disaster. **It's your personal runway. It's the months of complete freedom your money can buy you right now.**
 
-Let me show you how to calculate not just your emergency fund, but your actual freedom number.
+Let me show you how to calculate not just your emergency fund, but your actual freedom number. [Download our free spreadsheet to calculate your freedom number now](/fuck-you-money-sheet).
 
 ## The Problem with Traditional Emergency Fund Thinking
 
@@ -30,7 +30,7 @@ That's not emergency planning. That's freedom planning.
 
 ## The Real Emergency Fund Calculator: Monthly Runway Formula
 
-Forget the traditional calculators that just multiply your expenses by 3, 6, or 12 months. Here's the formula that actually matters:
+Forget the traditional calculators that just multiply your expenses by 3, 6, or 12 months. Here's the formula that actually matters. Or, even better, [use our pre-built spreadsheet to do the work for you](/fuck-you-money-sheet).
 
 **Personal Runway = Current Savings ÷ True Monthly Burn Rate**
 
@@ -205,7 +205,7 @@ Here's what happens when you reframe emergency funds as freedom funds:
 - Progress tracking apps to gamify the process
 
 ### Runway Calculators
-[Link to your actual calculator tool]
+[Our free Google Sheet includes a runway calculator that you can use right now.](/fuck-you-money-sheet)
 
 ## Advanced Freedom Fund Strategies
 

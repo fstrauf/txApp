@@ -53,7 +53,7 @@ For most businesses:
 - Implementation Time: 1 hour/month
 - Accuracy Rate: 95%
 
-That's 7.1 hours of pure time freedom each month. What would you do with an extra day of time?
+That's 7.1 hours of pure time freedom each month. What would you do with an extra day of time? This reclaimed time allows you to focus on the bigger picture, like tracking your overall financial runway using our [free Google Sheet template](/fuck-you-money-sheet).
 
 ## Real Results: My Transaction Categorization Journey
 

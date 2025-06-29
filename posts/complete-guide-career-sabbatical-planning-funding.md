@@ -10,7 +10,7 @@ Taking a career sabbatical isn't a luxury reserved for academics or the wealthy.
 
 But here's what most sabbatical advice gets wrong: They treat it like an extended vacation instead of what it really is — **a strategic investment in your future that requires serious runway planning.**
 
-Let me show you how to plan, fund, and execute a sabbatical that actually advances your life instead of derailing it.
+Let me show you how to plan, fund, and execute a sabbatical that actually advances your life instead of derailing it. [Our free Google Sheet is the perfect tool for this kind of planning](/fuck-you-money-sheet).
 
 ## Redefining the Sabbatical: Beyond the Gap Year Fantasy
 
@@ -72,7 +72,7 @@ The difference? Traditional sabbaticals often end in financial stress and career
 
 ### Step 1: Calculate Your True Sabbatical Cost
 
-Most people underestimate sabbatical costs by 30-50%. Here's the real calculation:
+Most people underestimate sabbatical costs by 30-50%. Here's the real calculation. You can use our [free Google Sheet template](/fuck-you-money-sheet) to help you map this out.
 
 **Base Monthly Expenses:**
 - Housing (rent/mortgage, utilities, insurance)
@@ -108,6 +108,8 @@ Most people underestimate sabbatical costs by 30-50%. Here's the real calculatio
 **Realistic 12-month sabbatical total: $52,000-55,000**
 
 ### Step 2: Build Your Sabbatical Runway
+
+Our [free spreadsheet](/fuck-you-money-sheet) is a great way to manage this 3-account strategy.
 
 **The 3-Account Strategy:**
 

@@ -13,6 +13,8 @@ I've built expense trackers for thousands of users, and I'll show you how to cre
 
 By the end of this guide, you'll have a professional-grade expense tracker that automatically categorizes transactions, calculates your savings rate, and provides visual insights into your spending patterns.
 
+Want to skip the build and get straight to tracking? [Download our free, pre-built Google Sheets expense tracker here](/fuck-you-money-sheet).
+
 ## Why Build Your Own Expense Tracker?
 
 **Complete Privacy:** Your financial data stays in your Google account, never shared with third-party companies.
@@ -208,7 +210,7 @@ Copy these formulas down for each category, changing "Housing" to the appropriat
 =IF(F4=0,0,(SUMIFS(Transactions!C:C,Transactions!C:C,"<0")*-1)/F4)
 ```
 
-Want a spreadsheet that does all this for you—runway, savings rate, and more—out of the box? Try our [Financial Freedom Spreadsheet](/fuck-you-money-sheet) for a complete, automated solution.
+Want a spreadsheet that does all this for you—runway, savings rate, and more—out of the box? Our [Financial Freedom Spreadsheet is a complete, automated solution that's ready to go](/fuck-you-money-sheet).
 
 ### Step 9: Create Visual Charts
 
@@ -346,6 +348,12 @@ Create a **Bank Import** sheet for CSV uploads:
 Building your own expense tracker in Google Sheets isn't just about saving money on apps—it's about understanding your finances deeply and creating a system that works exactly how you need it to. The time you invest in building and customizing your tracker pays dividends in financial insights and control.
 
 Your financial data belongs to you. Own it completely.
+
+## Congratulations! You've Built a Powerful Financial Tool
+
+You now have a flexible, private, and powerful expense tracker that you own completely. You can customize it further, add new features, and adapt it to your changing financial life.
+
+If you'd rather use a professionally designed template with even more advanced features like AI categorization and multi-year analysis, [check out our complete Financial Freedom Spreadsheet here](/fuck-you-money-sheet).
 
 ---
 

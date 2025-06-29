@@ -138,7 +138,7 @@ This isn't just about organizing transactions. It's about:
 - Removing the mental weight of "I should be organizing my finances"
 - Creating runway for the projects that truly matter
 
-When I reclaimed 80+ hours annually through automation, I didn't just save time—I bought back freedom to actually live.
+When I reclaimed 80+ hours annually through automation, I didn't just save time—I bought back freedom to actually live. Once you have this freedom from low-level tasks, you can focus on the big picture with our [free Financial Freedom Spreadsheet](/fuck-you-money-sheet).
 
 Are you ready to stop trading irreplaceable hours of your life for a task a machine can do in seconds?
 

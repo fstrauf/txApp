@@ -25,7 +25,7 @@ Let's be honest about what happens when a finance app miscategorizes your transa
 | Misleading spending insights | 1+ hour analyzing incorrect data | Potential financial mistakes |
 | **TOTAL IMPACT** | **4-6 hours monthly wasted** | **Abandoned app within 60 days** |
 
-Your users don't measure the cost in dollars—they measure it in time. And time is the one resource they can never get back.
+Your users don't measure the cost in dollars—they measure it in time. And time is the one resource they can never get back. For those who prefer to step off the app treadmill entirely, a powerful, [privacy-focused spreadsheet](/fuck-you-money-sheet) can be the answer.
 
 ## The Personal Finance App Retention Formula
 
@@ -243,7 +243,7 @@ The tools we build reflect our values. When we incorporate AI categorization int
 
 True financial freedom isn't just about money—it's about time. By automating the tedious aspects of financial management, we give users back hours of their lives each month.
 
-And ultimately, isn't that the point? Not to have the cleverest financial technology, but to have technology that effectively buys back our time?
+And ultimately, isn't that the point? Not to have the cleverest financial technology, but to have technology that effectively buys back our time? Our [Financial Freedom Spreadsheet](/fuck-you-money-sheet) is built on this exact principle, giving you full control and clarity without the overhead of an app.
 
 Your financial life shouldn't demand hours of your attention. It should run intelligently in the background while you focus on living.
 

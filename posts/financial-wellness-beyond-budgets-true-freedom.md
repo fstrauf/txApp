@@ -16,7 +16,7 @@ She was still working 50-hour weeks at a job she barely tolerated. Still anxious
 
 That conversation made me realize something important: **traditional financial wellness misses the point entirely**.
 
-Real financial wellness isn't about optimizing your participation in the current system. It's about building the freedom to choose a different system entirely.
+Real financial wellness isn't about optimizing your participation in the current system. It's about building the freedom to choose a different system entirely. [Our free spreadsheet is designed to help you do just that](/fuck-you-money-sheet).
 
 ## Why Traditional Financial Wellness Programs Fail
 
@@ -37,6 +37,8 @@ It's like becoming an expert at navigating traffic jams instead of learning to w
 
 ![Financial Overview Dashboard](/es_financial_overview_dashboard.png)
 *True financial wellness: See your complete financial picture focused on time freedom, not just account balances*
+
+Our [free Google Sheet template](/fuck-you-money-sheet) is built around this time freedom framework.
 
 Real financial wellness starts with a fundamental shift in perspective: **time is your most valuable currency, and money is just a tool for purchasing time**.
 
@@ -148,7 +150,7 @@ Traditional financial planning optimizes for predictable scenarios. Time freedom
 
 ## Measuring True Financial Wellness
 
-Traditional financial wellness uses metrics like debt-to-income ratios and savings rates. Time freedom financial wellness uses different metrics:
+Traditional financial wellness uses metrics like debt-to-income ratios and savings rates. Time freedom financial wellness uses different metrics. Our [free spreadsheet helps you track all of these automatically](/fuck-you-money-sheet).
 
 ### **Primary Metrics**
 - **Financial Runway**: How long can you maintain your lifestyle without income?

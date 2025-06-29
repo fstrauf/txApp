@@ -114,7 +114,7 @@ When machine learning handles your transaction categorization:
 - Will you spend more time with family and friends?
 - Will you finally work on that side project you've been putting off?
 
-Remember: Time is the one resource you can never earn more of. Every hour spent on manual financial tasks is an hour permanently lost from your life.
+Remember: Time is the one resource you can never earn more of. Every hour spent on manual financial tasks is an hour permanently lost from your life. Once these tasks are automated, you can focus on what truly matters—like your overall financial health, which is easy to track with our [free Financial Freedom Spreadsheet](/fuck-you-money-sheet).
 
 ## A Decision Framework for Your Financial Time
 

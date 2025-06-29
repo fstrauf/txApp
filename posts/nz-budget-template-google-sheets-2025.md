@@ -12,7 +12,7 @@ After helping hundreds of Kiwis track their expenses over the past few years, I'
 
 That's exactly what this Google Sheets expense tracker does. It's designed specifically for the monthly workflow that works best for most New Zealanders: **download your bank transactions, categorize them, and understand your financial position.**
 
-Best of all? **It's completely free, and your financial data stays 100% private**.
+Best of all? **It's completely free, and your financial data stays 100% private**. [Click here to download your free NZ-friendly expense tracker](/fuck-you-money-sheet).
 
 ## What This Template Actually Does
 
@@ -137,7 +137,7 @@ Ready-to-use categories that match how Kiwis actually spend:
 ## Setting Up Your Template (Step-by-Step)
 
 ### **Step 1: Get Your Copy**
-1. [Download the template here](/fuck-you-money-sheet)
+1. [Click here to get your free copy of the template](/fuck-you-money-sheet)
 2. Click "File → Make a Copy" to create your personal version
 3. Rename it to something like "My Expense Tracker 2025"
 
@@ -176,6 +176,9 @@ The tool gets smarter as you use it. Initially, you might need to manually categ
 
 ### **"What if I mess something up?"**
 Google Sheets automatically saves version history. You can always revert to an earlier version if needed. Plus, you're working with copies of your data, not the originals.
+
+### **"Is this the same as the Financial Freedom spreadsheet?"**
+Yes, this is a version of our popular Financial Freedom spreadsheet, specifically tailored with examples and categories that are relevant for New Zealanders. You get all the powerful features with a local touch.
 
 ## Your First Month Setup Plan
 
