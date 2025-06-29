@@ -8,7 +8,7 @@ summary: "An exploration of advanced bank transaction categorization methods bey
 
 Everyone's talking about using ChatGPT to categorize their bank transactions. But here's the thing: **Large Language Models are overkill for transaction categorization, and they're not even the best tool for the job.**
 
-If you're serious about automating your financial admin without sacrificing privacy or accuracy, it's time to look beyond the LLM hype and understand what actually works.
+If you're serious about automating your financial admin without sacrificing privacy or accuracy, it's time to look beyond the LLM hype and understand what actually works. If you'd rather just use a powerful, free tool that does this for you, [download our advanced Google Sheet here](/fuck-you-money-sheet).
 
 Let me show you the advanced methods that financial institutions use — and how you can implement them for your personal finance automation.
 
@@ -137,7 +137,7 @@ Here's something the AI hype articles won't tell you: **Your transaction data is
 
 ### Option 1: The Spreadsheet Power-User Approach
 
-If you're comfortable with Google Sheets or Excel, you can implement a surprisingly effective system:
+If you're comfortable with Google Sheets or Excel, you can implement a surprisingly effective system. We've already built this for you in our [Ultimate Google Sheets Expense Tracker](/fuck-you-money-sheet).
 
 **Setup:**
 1. **Rules Sheet:** Merchant patterns → Categories

@@ -14,6 +14,8 @@ But here's what they don't tell you: Your financial data gets stored on their se
 
 A fully automated budget tracker that runs entirely in Google Sheets, processes your data locally, costs nothing beyond setup time, and gives you complete control over your financial information.
 
+Want to skip the build and use a tracker that's already automated? [Download our free Google Sheet template here](/fuck-you-money-sheet).
+
 ## The Complete System Overview
 
 This system handles:
@@ -26,6 +28,8 @@ This system handles:
 All while keeping your data exactly where it belongs: under your control.
 
 ## Phase 1: Foundation Setup (Week 1)
+
+Want to skip the setup? Our [free Google Sheet template](/fuck-you-money-sheet) has all of this pre-configured for you.
 
 ### Sheet Structure
 
@@ -130,6 +134,8 @@ Create these sheets in your Google Sheets workbook:
 ```
 
 ## Phase 5: Automation with Apps Script
+
+Our [free Google Sheet template](/fuck-you-money-sheet) comes with all of these automation scripts pre-installed and ready to run.
 
 ### Core Automation Function
 

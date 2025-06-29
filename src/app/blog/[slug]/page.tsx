@@ -5,6 +5,7 @@ import BlogCTASection from '@/components/shared/BlogCTASection';
 import AuthorBio from '@/components/shared/AuthorBio';
 import { Metadata } from 'next';
 import { Calculator, Target, TrendingUp } from 'lucide-react';
+import BlogLinkInterceptor from '../BlogLinkInterceptor';
 
 // This function is needed for Next.js to know which slugs are available at build time
 export async function generateStaticParams() {
@@ -245,6 +246,9 @@ export default async function PostPage({ params }: { params: { slug: string } })
 
   return (
     <div className="min-h-screen bg-background-default overflow-x-hidden w-full">
+      <BlogLinkInterceptor
+        templateSpreadsheetId={process.env.TEMPLATE_SPREADSHEET_ID}
+      />
       {/* Fixed Sidebar */}
       
       

@@ -16,6 +16,8 @@ Two hours later, you're 60% done and questioning every life choice that led to t
 
 The right auto-categorization system handles 95% of transactions automatically, learns from your patterns, and gives you time back for things that actually matter. Best of all, it runs entirely in Google Sheets—no bank uploads, no subscription fees, no wondering who has access to your spending data.
 
+Want to skip the setup and use a system that already does this? [Download our free Google Sheet template with built-in auto-categorization](/fuck-you-money-sheet).
+
 ## Why Manual Categorization Fails
 
 ### The Hidden Time Cost
@@ -63,6 +65,8 @@ For complex transactions requiring multiple data points.
 
 ### Level 4: Learning System (95% Accuracy)
 For continuously improving accuracy based on your corrections.
+
+Our [free Google Sheet template](/fuck-you-money-sheet) implements all four of these levels for you automatically.
 
 Let's build each level.
 
@@ -146,7 +150,7 @@ Some transactions need multiple data points for accurate categorization:
 
 ## Level 4: Learning System with Apps Script
 
-The most powerful approach uses Google Apps Script to create a learning system:
+The most powerful approach uses Google Apps Script to create a learning system. Our [free Google Sheet template](/fuck-you-money-sheet) comes with a pre-built learning system that gets smarter as you use it.
 
 ```javascript
 function categorizeTransactions() {
