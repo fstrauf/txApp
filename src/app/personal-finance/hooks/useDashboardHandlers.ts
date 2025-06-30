@@ -138,6 +138,10 @@ export const useDashboardHandlers = ({
   };
 
   const handleManualRefresh = async () => {
+    if (status !== 'authenticated') {
+      console.warn('Manual refresh triggered but user is not authenticated.');
+      return;
+    }
     trackAction('refresh_data_clicked', {
       has_existing_data: true,
       has_spreadsheet_url: !!spreadsheetUrl

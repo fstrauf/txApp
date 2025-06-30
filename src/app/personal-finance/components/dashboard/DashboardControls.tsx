@@ -1,8 +1,6 @@
 import React from 'react';
 import { DocumentPlusIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 
 interface DashboardControlsProps {
   lastDataRefresh?: Date;
@@ -83,16 +81,13 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
             See The Magic Behind It
           </button>
 
-          <Tooltip content="Refresh your latest transaction data from your spreadsheet.">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onManualRefresh}
-              className="flex items-center gap-2"
-            >
-              Refresh
-            </Button>
-          </Tooltip>
+          <Button
+            onClick={onManualRefresh}
+            disabled={status !== 'authenticated'}
+            className="flex items-center gap-2 bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-100 px-3 py-1.5 text-sm"
+          >
+            Refresh
+          </Button>
         </div>
 
         <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2'>
@@ -126,8 +121,7 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
         {showConnectDataButton && (
           <Button
             onClick={onConnectDataClick}
-            size="sm"
-            className="bg-primary hover:bg-primary-dark"
+            className="bg-primary hover:bg-primary-dark px-3 py-1.5 text-sm"
           >
             <DocumentPlusIcon className="h-5 w-5 mr-2" />
             Connect Your Data
@@ -136,8 +130,7 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
 
         <Button
           onClick={onHowItWorksClick}
-          variant="outline"
-          size="sm"
+          className="bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-100 px-3 py-1.5 text-sm"
         >
           <QuestionMarkCircleIcon className="h-5 w-5 mr-2" />
           How It Works
@@ -146,8 +139,7 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
         {showMonthlyReminder && (
            <Button
             onClick={onSetMonthlyReminder}
-            variant="outline"
-            size="sm"
+            className="bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-100 px-3 py-1.5 text-sm"
           >
             Set Monthly Reminder
           </Button>
