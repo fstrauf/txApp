@@ -67,7 +67,8 @@ export async function POST(req) {
         email,
         firstName: data.firstName || '',
         lastName: data.lastName || '',
-        unsubscribed: false
+        unsubscribed: false,
+        audienceId: process.env.RESEND_AUDIENCE_ID,
       });
     } catch (resendError) {
       // If the contact already exists in Resend, we can just continue
