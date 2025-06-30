@@ -1,5 +1,8 @@
 import React from 'react';
 import { DocumentPlusIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface DashboardControlsProps {
   lastDataRefresh?: Date;
@@ -8,6 +11,11 @@ interface DashboardControlsProps {
   onHideTransferChange: (checked: boolean) => void;
   onConnectDataClick: () => void;
   onHowItWorksClick: () => void;
+  onManualRefresh: () => void;
+  spreadsheetName: string | null;
+  showConnectDataButton: boolean;
+  showMonthlyReminder: boolean;
+  onSetMonthlyReminder: () => void;
   isFirstTimeUser: boolean;
   isLoading: boolean;
   transactionCount: number;
@@ -21,13 +29,18 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
   onHideTransferChange,
   onConnectDataClick,
   onHowItWorksClick,
+  onManualRefresh,
+  spreadsheetName,
+  showConnectDataButton,
+  showMonthlyReminder,
+  onSetMonthlyReminder,
   isFirstTimeUser,
   isLoading,
   transactionCount,
   status,
 }) => {
   return (
-    <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+    <div className="mb-6 p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className='text-xs sm:text-sm text-gray-600'>
@@ -69,6 +82,17 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
             <QuestionMarkCircleIcon className="h-4 w-4" />
             See The Magic Behind It
           </button>
+
+          <Tooltip content="Refresh your latest transaction data from your spreadsheet.">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onManualRefresh}
+              className="flex items-center gap-2"
+            >
+              Refresh
+            </Button>
+          </Tooltip>
         </div>
 
         <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2'>
@@ -95,6 +119,39 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
             }
           </div>
         </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center space-x-4">
+        {showConnectDataButton && (
+          <Button
+            onClick={onConnectDataClick}
+            size="sm"
+            className="bg-primary hover:bg-primary-dark"
+          >
+            <DocumentPlusIcon className="h-5 w-5 mr-2" />
+            Connect Your Data
+          </Button>
+        )}
+
+        <Button
+          onClick={onHowItWorksClick}
+          variant="outline"
+          size="sm"
+        >
+          <QuestionMarkCircleIcon className="h-5 w-5 mr-2" />
+          How It Works
+        </Button>
+
+        {showMonthlyReminder && (
+           <Button
+            onClick={onSetMonthlyReminder}
+            variant="outline"
+            size="sm"
+          >
+            Set Monthly Reminder
+          </Button>
+        )}
       </div>
     </div>
   );

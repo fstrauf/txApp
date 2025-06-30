@@ -20,6 +20,7 @@ import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import { convertCurrency, extractCurrencyCode } from '@/lib/currency';
 import { ensureApiAccessForTraining } from '@/lib/apiKeyUtils';
 import { useRouter } from 'next/navigation';
+import posthog from 'posthog-js';
 
 // Import modular components
 import ManageDataTab from './data-management/ManageDataTab';
@@ -1002,6 +1003,13 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         setFeedback(null);
       }, 2000);
 
+      posthog.capture('pf_transactions_processed', {
+        file_name: uploadedFile?.name,
+        file_size: uploadedFile?.size,
+        file_type: uploadedFile?.type,
+        is_first_time_user: !spreadsheetLinked,
+      });
+
     } catch (error: any) {
       console.error('Transaction processing error:', error);
       setFeedback({ type: 'error', message: `Processing error: ${error.message}` });
@@ -1073,167 +1081,22 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   };
 
   const handleCompleteValidation = async () => {
-    const validatedTransactions = validationTransactions.filter(t => t.isValidated);
-    
-    console.log('🔄 Starting validation completion...', {
-      validatedCount: validatedTransactions.length,
-      totalCount: validationTransactions.length,
-      createNewSpreadsheetMode,
-      spreadsheetId: userData.spreadsheetId,
-      spreadsheetUrl: userData.spreadsheetUrl,
-      hasSpreadsheetId: !!userData.spreadsheetId,
-      hasSpreadsheetUrl: !!userData.spreadsheetUrl,
-      currentBaseCurrency: baseCurrency,
-      newSpreadsheetCurrency: newSpreadsheetCurrency
-    });
-    
-    if (validatedTransactions.length === 0) {
-      setFeedback({ type: 'error', message: 'Please validate at least one transaction before completing.' });
-      return;
-    }
-
-    // Check if in create new spreadsheet mode and need to collect currency
-    if (createNewSpreadsheetMode) {
-      // Always show currency selection for new spreadsheets if not already selected
-      if (!newSpreadsheetCurrency) {
-        setShowCurrencySelection(true);
-        return;
-      }
-      
-      // Use the selected currency for new spreadsheet
-      const currencyToUse = newSpreadsheetCurrency;
-      
-      setIsProcessing(true);
-      setFeedback({ type: 'info', message: 'Creating new spreadsheet with your data...' });
-
-      try {
-        console.log('🔑 Getting fresh OAuth access token for new spreadsheet...');
-        setFeedback({ type: 'info', message: 'Requesting Google Sheets access permissions...' });
-        
-        // Use requestSpreadsheetAccess instead of getValidAccessToken to handle expired tokens
-        const accessToken = await requestSpreadsheetAccess();
-        if (!accessToken) {
-          throw new Error('Unable to get valid Google access token. Please grant access to Google Sheets and try again.');
-        }
-        console.log('✅ Got fresh access token for new spreadsheet creation');
-        
-        setFeedback({ type: 'info', message: 'Creating new spreadsheet with your data...' });
-
-        console.log('📊 Creating new spreadsheet from template with data...');
-        // Create new spreadsheet from template with data
-        const response = await fetch('/api/sheets/create-from-template-copy', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            transactions: validatedTransactions,
-            title: `ExpenseSorted Finance Tracker - ${new Date().toLocaleDateString()}`,
-            baseCurrency: currencyToUse
-          })
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || 'Failed to create spreadsheet');
-        }
-
-        console.log('✅ New spreadsheet created:', result);
-
-        // Update user record with new spreadsheet info  
-        console.log('🔗 Linking new spreadsheet to user account...');
-        const linkResponse = await fetch('/api/dashboard/link-spreadsheet', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            spreadsheetUrl: result.spreadsheetUrl,
-            accessToken 
-          }),
-        });
-
-        if (linkResponse.ok) {
-          const linkData = await linkResponse.json();
-          
-          // Update store with validated transactions
-          processTransactionData(validatedTransactions);
-          
-          // Success feedback
-          setFeedback({ 
-            type: 'success', 
-            message: `🎉 Created new spreadsheet with ${validatedTransactions.length} transactions!` 
-          });
-          
-          // Open the new spreadsheet
-          window.open(result.spreadsheetUrl, '_blank');
-          
-          // Reset state and notify parent
-          setValidationTransactions([]);
-          setSelectedTransactions(new Set());
-          setCreateNewSpreadsheetMode(false);
-          setNewSpreadsheetCurrency('');
-          setShowCurrencySelection(false);
-          
-          setTimeout(() => {
-            onSpreadsheetLinked(linkData);
-            setActiveTab('manage');
-            onClose();
-          }, 2000);
-          
-          return;
-        } else {
-          throw new Error('Failed to link new spreadsheet to account');
-        }
-
-      } catch (error: any) {
-        console.error('❌ Error creating new spreadsheet:', error);
-        
-        let errorMessage = `Failed to create spreadsheet: ${error.message}`;
-        
-        // Handle specific OAuth/authorization errors
-        if (error.message.includes('access token') || error.message.includes('grant access')) {
-          errorMessage = 'Google Sheets access required. Please grant permissions and try again.';
-        } else if (error.message.includes('Permission denied')) {
-          errorMessage = 'Permission denied. Please ensure you have Google Sheets access and try again.';
-        }
-        
-        setFeedback({ 
-          type: 'error', 
-          message: errorMessage
-        });
-        setIsProcessing(false);
-        return;
-      }
-    }
-
-    // Original logic for existing spreadsheets
-    if (!userData.spreadsheetId) {
-      setFeedback({ type: 'error', message: 'No spreadsheet linked. Please link a Google Sheet first.' });
-      return;
-    }
-
     setIsProcessing(true);
-    setFeedback({ type: 'info', message: 'Writing transactions to Google Sheet...' });
+    setFeedback({ type: 'processing', message: 'Writing validated transactions to your sheet...' });
+    
+    const validated = validationTransactions.filter(t => t.isValidated);
+
+    posthog.capture('pf_validation_completed', {
+      validated_count: validated.length,
+      unvalidated_count: validationTransactions.length - validated.length,
+      is_first_time_user: !spreadsheetLinked,
+    });
 
     try {
-      console.log('📊 Updating store with validated transactions...');
-      // Update the store with validated transactions
-      processTransactionData(validatedTransactions);
-
-      console.log('🔑 Getting fresh OAuth access token for spreadsheet access...');
-      setFeedback({ type: 'info', message: 'Requesting Google Sheets access permissions...' });
-      
-      // Use requestSpreadsheetAccess instead of getValidAccessToken to handle expired tokens
       const accessToken = await requestSpreadsheetAccess();
       if (!accessToken) {
-        throw new Error('Unable to get valid Google access token. Please grant access to Google Sheets and try again.');
+        throw new Error('Could not obtain Google Sheets access token.');
       }
-      console.log('✅ Got valid access token, calling API...');
-
-      console.log('📝 Calling API to append transactions to spreadsheet...');
-      setFeedback({ type: 'info', message: 'Writing transactions to your Google Sheet...' });
-      
       const response = await fetch('/api/sheets/append-validated-transactions', {
         method: 'POST',
         headers: {
@@ -1241,7 +1104,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          transactions: validatedTransactions,
+          transactions: validated,
           spreadsheetId: userData.spreadsheetId
         })
       });
@@ -1256,7 +1119,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       
       setFeedback({ 
         type: 'success', 
-        message: `Successfully wrote ${result.appendedCount || validatedTransactions.length} transactions to Google Sheet!` 
+        message: `Successfully wrote ${result.appendedCount || validated.length} transactions to Google Sheet!` 
       });
       
       // Clear validation state
