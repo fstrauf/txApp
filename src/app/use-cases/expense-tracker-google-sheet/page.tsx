@@ -15,9 +15,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph-image.png",
-        width: 951,
-        height: 635,
+        url: "/es_og.png",
         alt: "Advanced Expense Tracker for Google Sheets - AI-Powered Categorization",
       },
     ],
@@ -27,7 +25,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Advanced Expense Tracker for Google Sheets - AI-Powered Categorization",
     description: "Transform your Google Sheets into a powerful expense tracker with AI-powered categorization.",
-    images: ["/opengraph-image.png"],
+    images: ["/es_og.png"],
   },
 };
 

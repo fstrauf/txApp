@@ -17,9 +17,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph-image.png",
-        width: 951,
-        height: 635,
+        url: "/es_og.png",
         alt: "Bank Transaction Classification - AI-Powered Financial Organization",
       },
     ],
@@ -29,7 +27,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Bank Transaction Classification - AI-Powered Financial Organization",
     description: "Master bank transaction classification with AI-powered tools for better financial management.",
-    images: ["/opengraph-image.png"],
+    images: ["/es_og.png"],
   },
 };
 

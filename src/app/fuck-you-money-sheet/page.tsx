@@ -19,9 +19,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph-image.png",
-        width: 951,
-        height: 635,
+        url: "/es_og.png",
         alt: "Financial Freedom Calculator - Smart Sheet + App System",
       },
     ],
@@ -31,7 +29,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Financial Freedom Calculator - Smart Sheet + App System",
     description: "Transform your financial tracking with our smart Google Sheet + web app system. Keep control of your data while getting AI-powered insights.",
-    images: ["/opengraph-image.png"],
+    images: ["/es_og.png"],
   },
 };
 

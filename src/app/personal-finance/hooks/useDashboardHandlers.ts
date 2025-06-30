@@ -75,28 +75,12 @@ export const useDashboardHandlers = ({
   };
 
   const handleLinkSpreadsheet = () => {
-    trackAction('link_spreadsheet_clicked', {
-      is_first_time: isFirstTimeUser,
-      is_authenticated: status === 'authenticated'
-    });
-
-    posthog.capture('dashboard_data_management_drawer_opened', {
-      source: 'link_spreadsheet_button',
-      is_first_time_user: isFirstTimeUser,
-      user_authenticated: status === 'authenticated',
-      default_tab: 'manage'
-    });
-
-    // Check authentication status
+    // This is now just for opening the drawer, tracking is in DashboardScreen
     if (status === 'loading') {
       return;
     }
 
     if (status === 'unauthenticated') {
-      trackAction('redirect_to_login_from_dashboard', {
-        source: 'make_this_my_dashboard_button'
-      });
-      
       const callbackUrl = encodeURIComponent('/personal-finance');
       router.push(`/auth/signin?callbackUrl=${callbackUrl}`);
       return;
@@ -111,13 +95,6 @@ export const useDashboardHandlers = ({
       user_has_data: !isFirstTimeUser
     });
 
-    posthog.capture('dashboard_data_management_drawer_opened', {
-      source: 'monthly_reminder_button',
-      is_first_time_user: isFirstTimeUser,
-      user_authenticated: status === 'authenticated',
-      default_tab: 'settings'
-    });
-
     setDataManagementDefaultTab('settings');
     setIsHelpDrawerOpen(true);
   };
@@ -125,7 +102,7 @@ export const useDashboardHandlers = ({
   const handleSpreadsheetLinked = (data: { spreadsheetId: string; spreadsheetUrl: string }) => {
     console.log('🔗 Spreadsheet linked, updating store and refreshing status:', data);
     
-    posthog.capture('dashboard_spreadsheet_linked_successfully', {
+    posthog.capture('pf_spreadsheet_linked', {
       spreadsheet_id: data.spreadsheetId,
       is_first_time_user: isFirstTimeUser,
       user_authenticated: status === 'authenticated'
@@ -139,59 +116,32 @@ export const useDashboardHandlers = ({
   const handleTransactionsFromGoogleSheets = async (transactions: any[]) => {
     const hasCategoryPredictions = transactions.some(t => t.predicted_category || t.confidence !== undefined);
     
+    // The logic to differentiate between categorized and uncategorized uploads seems important.
+    // Let's use a single event with a property to distinguish them.
+    posthog.capture('pf_csv_uploaded', {
+      transaction_count: transactions.length,
+      expense_count: transactions.filter(t => t.isDebit).length,
+      income_count: transactions.filter(t => !t.isDebit).length,
+      is_first_time_user: isFirstTimeUser,
+      needs_validation: hasCategoryPredictions,
+      source: 'google_sheets' // to be clear where it came from
+    });
+
     if (hasCategoryPredictions) {
       setIsHelpDrawerOpen(false);
-      
-      trackAction('csv_transactions_categorized', {
-        transaction_count: transactions.length,
-        expense_count: transactions.filter(t => t.isDebit).length,
-        income_count: transactions.filter(t => !t.isDebit).length
-      });
-
-      posthog.capture('dashboard_csv_transactions_uploaded', {
-        transaction_count: transactions.length,
-        expense_count: transactions.filter(t => t.isDebit).length,
-        income_count: transactions.filter(t => !t.isDebit).length,
-        is_first_time_user: isFirstTimeUser,
-        needs_validation: true
-      });
-      
       processTransactionData(transactions);
       goToScreen('transactionValidation');
-      
     } else {
       processTransactionData(transactions);
       setIsHelpDrawerOpen(false);
-      
-      trackAction('google_sheets_imported_to_dashboard', {
-        transaction_count: transactions.length,
-        expense_count: transactions.filter(t => t.isDebit).length,
-        income_count: transactions.filter(t => !t.isDebit).length
-      });
-
-      posthog.capture('dashboard_google_sheets_imported', {
-        transaction_count: transactions.length,
-        expense_count: transactions.filter(t => t.isDebit).length,
-        income_count: transactions.filter(t => !t.isDebit).length,
-        is_first_time_user: isFirstTimeUser,
-        needs_validation: false
-      });
     }
   };
 
   const handleManualRefresh = async () => {
     trackAction('refresh_data_clicked', {
-      has_existing_data: true, // Will be passed from parent
+      has_existing_data: true,
       has_spreadsheet_url: !!spreadsheetUrl
     });
-
-    posthog.capture('dashboard_manual_refresh_clicked', {
-      has_existing_data: true, // Will be passed from parent
-      has_spreadsheet_url: !!spreadsheetUrl,
-      is_first_time_user: isFirstTimeUser,
-      transaction_count: 0 // Will be passed from parent
-    });
-
     await handleRefreshData();
   };
 
@@ -204,12 +154,6 @@ export const useDashboardHandlers = ({
     try {
       trackAction('relink_expired_spreadsheet_clicked', {
         has_spreadsheet_url: !!spreadsheetUrl
-      });
-
-      posthog.capture('dashboard_relink_spreadsheet_attempted', {
-        has_spreadsheet_url: !!spreadsheetUrl,
-        is_first_time_user: isFirstTimeUser,
-        error_type: 'expired_access'
       });
 
       const accessToken = await requestSpreadsheetAccess();
@@ -233,11 +177,6 @@ export const useDashboardHandlers = ({
         trackAction('spreadsheet_relinked_successfully', {
           spreadsheet_id: data.spreadsheetId
         });
-
-        posthog.capture('dashboard_relink_spreadsheet_successful', {
-          spreadsheet_id: data.spreadsheetId,
-          is_first_time_user: isFirstTimeUser
-        });
       } else {
         throw new Error(data.error || 'Failed to re-link spreadsheet');
       }
@@ -245,12 +184,6 @@ export const useDashboardHandlers = ({
       console.error('❌ Error re-linking spreadsheet:', error);
       trackAction('spreadsheet_relink_failed', {
         error: error.message
-      });
-
-      posthog.capture('dashboard_relink_spreadsheet_failed', {
-        error_message: error.message,
-        is_first_time_user: isFirstTimeUser,
-        has_spreadsheet_url: !!spreadsheetUrl
       });
     }
   };

@@ -15,9 +15,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph-image.png",
-        width: 951,
-        height: 635,
+        url: "/es_og.png",
         alt: "API Documentation - Expense Categorization API",
       },
     ],
@@ -27,6 +25,6 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "API Documentation - Expense Categorization API | Expense Sorted",
     description: "Complete API documentation for Expense Sorted's transaction categorization API.",
-    images: ["/opengraph-image.png"],
+    images: ["/es_og.png"],
   },
 };

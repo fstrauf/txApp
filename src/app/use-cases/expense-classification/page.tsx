@@ -15,9 +15,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph-image.png",
-        width: 951,
-        height: 635,
+        url: "/es_og.png",
         alt: "Expense Classification - AI-Powered Financial Categorization",
       },
     ],
@@ -27,7 +25,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Expense Classification - AI-Powered Financial Categorization",
     description: "Master expense classification for better financial planning with AI-powered tools.",
-    images: ["/opengraph-image.png"],
+    images: ["/es_og.png"],
   },
 };
 

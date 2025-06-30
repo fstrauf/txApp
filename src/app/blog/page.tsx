@@ -17,9 +17,7 @@ export const metadata: Metadata = {
     siteName: 'Expense Sorted',
     images: [
       {
-        url: "/opengraph-image.png",
-        width: 951,
-        height: 635,
+        url: "/es_og.png",
         alt: "Personal Finance Blog - Expert Tips & AI Expense Insights",
       },
     ],
@@ -29,7 +27,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Personal Finance Blog - Expert Tips & AI Expense Insights',
     description: 'Discover expert personal finance tips, AI-powered expense categorization insights, and budgeting strategies.',
-    images: ["/opengraph-image.png"],
+    images: ["/es_og.png"],
   },
 };
 

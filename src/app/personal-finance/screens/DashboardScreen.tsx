@@ -110,17 +110,26 @@ const DashboardScreen: React.FC = () => {
 
   // Track dashboard screen view
   useEffect(() => {
-    posthog.capture('dashboard_screen_viewed', {
+    posthog.capture('pf_screen_viewed', {
+      screen: 'dashboard',
       is_first_time_user: isFirstTimeUser,
       spreadsheet_linked: spreadsheetLinked,
       has_transactions: (displayTransactions?.length || 0) > 0,
       user_authenticated: !!session?.user?.id,
       transaction_count: displayTransactions?.length || 0,
-      has_error: !!error,
-      is_loading: isLoading,
-      has_stats: !!displayStats
     });
-  }, [isFirstTimeUser, spreadsheetLinked, displayTransactions?.length, session?.user?.id, error, isLoading, displayStats]);
+  }, [isFirstTimeUser, spreadsheetLinked, displayTransactions?.length, session?.user?.id]);
+
+  // Track tab navigation
+  useEffect(() => {
+    if (activeTab) {
+      posthog.capture('pf_navigation', {
+        active_tab: activeTab,
+        is_first_time_user: isFirstTimeUser,
+        user_authenticated: !!session?.user?.id
+      });
+    }
+  }, [activeTab, isFirstTimeUser, session?.user?.id]);
 
   // Track A/B test exposure when demo banner is shown
   useEffect(() => {
@@ -162,6 +171,16 @@ const DashboardScreen: React.FC = () => {
 
   const showLoadingState = (isLoading && !dashboardStats && spreadsheetLinked && !isFirstTimeUser) || (isRefreshing && !error);
 
+  const openDataDrawer = (source: string) => {
+    posthog.capture('pf_drawer_opened', {
+      source: source,
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: !!session?.user?.id
+    });
+    setDataManagementDefaultTab('manage');
+    handlers.handleLinkSpreadsheet();
+  };
+
   return (
     <div className="min-h-screen w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8 w-full">
@@ -174,23 +193,8 @@ const DashboardScreen: React.FC = () => {
           <DemoBanner
             headlineText={getHeadlineText()}
             ctaButtonText={getCtaButtonText()}
-            onCtaClick={() => {
-              posthog.capture('demo_dashboard_cta_button_clicked', {
-                headline_variant: headlineVariant || 'control',
-                cta_variant: ctaButtonVariant || 'control',
-                is_first_time_user: isFirstTimeUser,
-                user_authenticated: !!session?.user?.id
-              });
-              handlers.handleLinkSpreadsheet();
-            }}
-            onHowItWorksClick={() => {
-              posthog.capture('dashboard_how_it_works_drawer_opened', {
-                source: 'demo_banner_button',
-                is_first_time_user: isFirstTimeUser,
-                user_authenticated: !!session?.user?.id
-              });
-              setIsHowItWorksOpen(true);
-            }}
+            onCtaClick={() => openDataDrawer('demo_banner_cta')}
+            onHowItWorksClick={() => setIsHowItWorksOpen(true)}
             isLoading={status === 'loading'}
           />
         )}
@@ -201,7 +205,7 @@ const DashboardScreen: React.FC = () => {
           onRelink={() => spreadsheetUrl && handlers.handleRelinkSpreadsheet()}
           onCreateNew={() => {
             setDataManagementDefaultTab('upload');
-            handlers.handleLinkSpreadsheet();
+            openDataDrawer('error_box_create_new');
           }}
           onRetry={handleRefreshData}
           onClear={clearError}
@@ -218,41 +222,14 @@ const DashboardScreen: React.FC = () => {
               lastDataRefresh={displayStats?.lastDataRefresh}
               baseCurrency={baseCurrency || 'USD'}
               hideTransfer={hideTransfer}
-              onHideTransferChange={(checked) => {
-                posthog.capture('dashboard_hide_transfer_toggled', {
-                  new_value: checked,
-                  is_first_time_user: isFirstTimeUser,
-                  transaction_count: displayTransactions.length
-                });
-                setHideTransfer(checked);
-              }}
-              onConnectDataClick={() => {
-                if (status === 'loading') return;
-                
-                if (status === 'unauthenticated') {
-                  posthog.capture('dashboard_connect_data_unauthenticated', {
-                    source: 'connect_your_data_button',
-                    is_first_time_user: isFirstTimeUser
-                  });
-                } else {
-                  posthog.capture('dashboard_connect_data_button_clicked', {
-                    source: 'connect_your_data_button',
-                    is_first_time_user: isFirstTimeUser,
-                    user_authenticated: true
-                  });
-                }
-                
-                setDataManagementDefaultTab('manage');
-                handlers.handleLinkSpreadsheet();
-              }}
-              onHowItWorksClick={() => {
-                posthog.capture('dashboard_how_it_works_drawer_opened', {
-                  source: 'controls_button',
-                  is_first_time_user: isFirstTimeUser,
-                  user_authenticated: !!session?.user?.id
-                });
-                setIsHowItWorksOpen(true);
-              }}
+              onHideTransferChange={setHideTransfer}
+              onConnectDataClick={() => openDataDrawer('controls_connect_data')}
+              onHowItWorksClick={() => setIsHowItWorksOpen(true)}
+              onManualRefresh={handlers.handleManualRefresh}
+              spreadsheetName={spreadsheetName || null}
+              showConnectDataButton={!isFirstTimeUser}
+              showMonthlyReminder={!isFirstTimeUser && userToastStatus !== 'dismissed'}
+              onSetMonthlyReminder={handlers.handleSetMonthlyReminder}
               isFirstTimeUser={isFirstTimeUser}
               isLoading={status === 'loading'}
               transactionCount={displayTransactions.length}
@@ -290,7 +267,7 @@ const DashboardScreen: React.FC = () => {
                 isFirstTimeUser={isFirstTimeUser}
                 isLoading={isLoading}
                 error={error}
-                onConnectDataClick={handlers.handleLinkSpreadsheet}
+                onConnectDataClick={() => openDataDrawer('portfolio_tab_connect_data')}
               />
             )}
 
@@ -298,7 +275,7 @@ const DashboardScreen: React.FC = () => {
               <AIInsightsTab 
                 stats={displayStats}
                 isFirstTimeUser={isFirstTimeUser}
-                onConnectDataClick={handlers.handleLinkSpreadsheet}
+                onConnectDataClick={() => openDataDrawer('ai_insights_tab_connect_data')}
               />
             )}
           </>
@@ -310,12 +287,6 @@ const DashboardScreen: React.FC = () => {
             spreadsheetLinked={spreadsheetLinked}
             isRefreshing={isRefreshing}
             onRefreshClick={async () => {
-              posthog.capture('dashboard_manual_refresh_clicked', {
-                has_existing_data: !!dashboardStats,
-                has_spreadsheet_url: !!spreadsheetUrl,
-                is_first_time_user: isFirstTimeUser,
-                transaction_count: displayTransactions.length
-              });
               await handlers.handleManualRefresh();
             }}
             onConnectGoogleSheetsClick={() => setIsHelpDrawerOpen(true)}
@@ -327,7 +298,7 @@ const DashboardScreen: React.FC = () => {
         <HelpDrawer
           isOpen={isHelpDrawerOpen}
           onClose={handlers.handleDataManagementDrawerClose}
-          title="Data Management"
+          title="Connect Your Financial Data"
           size="large"
         >
           <DataManagementDrawer
@@ -349,10 +320,6 @@ const DashboardScreen: React.FC = () => {
         <HelpDrawer
           isOpen={isHowItWorksOpen}
           onClose={() => {
-            posthog.capture('dashboard_how_it_works_drawer_closed', {
-              is_first_time_user: isFirstTimeUser,
-              user_authenticated: !!session?.user?.id
-            });
             setIsHowItWorksOpen(false);
           }}
           title="How This Works"
