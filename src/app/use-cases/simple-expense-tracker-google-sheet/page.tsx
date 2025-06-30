@@ -15,9 +15,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph-image.png",
-        width: 951,
-        height: 635,
+        url: "/es_og.png",
         alt: "Simple Expense Tracker for Google Sheets - Free Template",
       },
     ],
@@ -27,7 +25,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Simple Expense Tracker for Google Sheets - Free Template",
     description: "Download our free simple expense tracker template for Google Sheets.",
-    images: ["/opengraph-image.png"],
+    images: ["/es_og.png"],
   },
 };
 

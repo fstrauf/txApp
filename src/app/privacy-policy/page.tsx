@@ -16,9 +16,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph-image.png",
-        width: 951,
-        height: 635,
+        url: "/es_og.png",
         alt: "Privacy Policy - Expense Sorted",
       },
     ],
@@ -28,7 +26,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Privacy Policy - Expense Sorted",
     description: "Read Expense Sorted's privacy policy to understand how we protect your information.",
-    images: ["/opengraph-image.png"],
+    images: ["/es_og.png"],
   },
 };
 

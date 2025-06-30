@@ -17,9 +17,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph-image.png",
-        width: 951,
-        height: 635,
+        url: "/es_og.png",
         alt: "Expense Sorted - Personal Finance Made Simple",
       },
     ],
@@ -30,7 +28,7 @@ export const metadata: Metadata = {
     title: "About Expense Sorted - Personal Finance Made Simple",
     description:
       "Learn about Expense Sorted's mission to simplify personal finance through AI-powered expense categorization.",
-    images: ["/opengraph-image.png"],
+    images: ["/es_og.png"],
   },
 };
 

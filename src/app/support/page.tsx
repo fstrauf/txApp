@@ -14,9 +14,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph-image.png",
-        width: 951,
-        height: 635,
+        url: "/es_og.png",
         alt: "Support & Help - Expense Sorted Customer Service",
       },
     ],
@@ -26,7 +24,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Support & Help - Expense Sorted Customer Service",
     description: "Get help with Expense Sorted's AI-powered expense categorization tools.",
-    images: ["/opengraph-image.png"],
+    images: ["/es_og.png"],
   },
 };
 

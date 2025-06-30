@@ -16,9 +16,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/opengraph-image.png",
-        width: 951,
-        height: 635,
+        url: "/es_og.png",
         alt: "Terms of Service - Expense Sorted",
       },
     ],
@@ -28,7 +26,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Terms of Service - Expense Sorted",
     description: "Read Expense Sorted's terms of service and conditions of use.",
-    images: ["/opengraph-image.png"],
+    images: ["/es_og.png"],
   },
 };
 
