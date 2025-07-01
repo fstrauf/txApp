@@ -62,85 +62,110 @@ export const WhatYouGetSection: React.FC<WhatYouGetSectionProps> = ({
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-8 mt-8 max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">What You'll Get</h3>
-          <p className="text-gray-600">Everything you need to understand your financial runway</p>
-        </div>
+      {/* What You'll Get Section - Redesigned */}
+      <div className="relative mb-16">
+        <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 via-transparent to-primary/5 rounded-3xl"></div>
+        
+        <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-200/50 p-8 md:p-12 max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-secondary/10 to-primary/10 border border-secondary/20 mb-6">
+              <SparklesIcon className="w-4 h-4 text-secondary" />
+              <span className="text-sm font-medium bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
+                What You'll Get
+              </span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Everything You Need for Financial{" "}
+              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Freedom</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Your complete financial runway analysis system — ready in 3 minutes
+            </p>
+          </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {benefits.map((benefit, index) => {
-            const Icon = benefit?.icon;
-            return (
-              <div key={index} className="flex items-start gap-4 p-4 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex-shrink-0">
-                  <div className={`w-10 h-10 ${benefit?.iconBg} rounded-lg flex items-center justify-center`}>
-                    <Icon className={`h-5 w-5 ${benefit?.iconColor}`} />
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {benefits.map((benefit, index) => {
+              const Icon = benefit?.icon;
+              if (!Icon) return null;
+              
+              return (
+                <div key={index} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <div className={`w-12 h-12 ${benefit?.iconBg} rounded-xl flex items-center justify-center`}>
+                        <Icon className={`h-6 w-6 ${benefit?.iconColor}`} />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-900 mb-2">{benefit?.title}</h4>
+                      <p className="text-sm text-gray-600 leading-relaxed">{benefit?.description}</p>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1">{benefit?.title}</h4>
-                  <p className="text-sm text-gray-600">{benefit?.description}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
 
-        <div className="text-center">
-          <button
-            onClick={onGetStartedClick}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-xl hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
-          >
-            <DocumentTextIcon className="h-5 w-5" />
-            Get Your Free Google Sheet
-          </button>
-          <p className="text-sm text-gray-500 mt-3">Join 500+ people who discovered their runway this week</p>
+          <div className="text-center">
+            <button
+              onClick={onGetStartedClick}
+              className="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 font-bold shadow-2xl hover:shadow-3xl transform hover:scale-105 text-lg"
+            >
+              <DocumentTextIcon className="h-6 w-6" />
+              Get Your Free Google Sheet
+            </button>
+            <p className="text-sm text-gray-500 mt-4">Join 500+ people who discovered their runway this week</p>
+          </div>
         </div>
       </div>
 
-      {/* Animated Call-to-Action for Demo Data */}
-      <div className="max-w-4xl mx-auto mb-8">
-        <div className="bg-gradient-to-r from-primary/5 to-secondary/5 rounded-xl p-6 border border-primary/10">
-          <div className="flex items-center justify-center gap-3">
-            <div className="animate-pulse">
-              <svg 
-                className="w-6 h-6 text-primary animate-bounce" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth="2" 
-                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                />
-              </svg>
-            </div>
-            <p className="text-lg font-medium text-gray-800">
-              <span className="text-primary font-semibold">Check out the dashboard</span> with demo data below
-            </p>
-            <div className="animate-pulse">
-              <svg 
-                className="w-6 h-6 text-secondary animate-bounce" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-                style={{ animationDelay: '0.2s' }}
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth="2" 
-                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                />
-              </svg>
+      {/* Call-to-Action for Demo Data - Redesigned */}
+      <div className="max-w-4xl mx-auto mb-16">
+        <div className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-secondary/5 to-primary/10 rounded-2xl"></div>
+          
+          <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-primary/20 shadow-lg">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="animate-bounce">
+                  <div className="w-3 h-3 bg-primary rounded-full"></div>
+                </div>
+                <div className="animate-bounce" style={{ animationDelay: '0.1s' }}>
+                  <div className="w-3 h-3 bg-secondary rounded-full"></div>
+                </div>
+                <div className="animate-bounce" style={{ animationDelay: '0.2s' }}>
+                  <div className="w-3 h-3 bg-primary rounded-full"></div>
+                </div>
+              </div>
+              
+              <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                  Check out the dashboard
+                </span>{" "}
+                with demo data below
+              </h3>
+              
+              <p className="text-lg text-gray-600 mb-6">
+                See exactly what your financial freedom dashboard will look like
+              </p>
+              
+              <div className="animate-pulse">
+                <svg 
+                  className="w-8 h-8 text-primary mx-auto animate-bounce" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth="2" 
+                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                  />
+                </svg>
+              </div>
             </div>
           </div>
-          <p className="text-center text-sm text-gray-600 mt-2">
-            See exactly what your financial freedom dashboard will look like
-          </p>
         </div>
       </div>
     </>

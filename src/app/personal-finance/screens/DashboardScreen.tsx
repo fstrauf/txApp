@@ -207,11 +207,14 @@ const DashboardScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden">
-      <div className={`max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8 w-full ${isFirstTimeUser ? 'pb-32' : ''}`}>
-        <Header variant="centered" size="xl" className="mb-6 sm:mb-8 lg:mb-32">
-          Your Financial Freedom Dashboard
-        </Header>
+    <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-gray-50 via-white to-primary/5">
+      <div className={`max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-8 sm:py-12 lg:py-16 w-full ${isFirstTimeUser ? 'pb-32' : ''}`}>
+        {/* Only show header for existing users with data */}
+        {!isFirstTimeUser && (
+          <Header variant="centered" size="xl" className="mb-8 sm:mb-12 lg:mb-16">
+            Your Financial Freedom Dashboard
+          </Header>
+        )}
 
         {/* Demo Banner for First-Time Users */}
         {isFirstTimeUser && (
