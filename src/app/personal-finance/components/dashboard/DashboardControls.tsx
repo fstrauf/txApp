@@ -80,14 +80,6 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
             <QuestionMarkCircleIcon className="h-4 w-4" />
             See The Magic Behind It
           </button>
-
-          <Button
-            onClick={onManualRefresh}
-            disabled={status !== 'authenticated'}
-            className="flex items-center gap-2 bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-100 px-3 py-1.5 text-sm"
-          >
-            Refresh
-          </Button>
         </div>
 
         <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2'>
@@ -127,14 +119,6 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
             Connect Your Data
           </Button>
         )}
-
-        <Button
-          onClick={onHowItWorksClick}
-          className="bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-100 px-3 py-1.5 text-sm"
-        >
-          <QuestionMarkCircleIcon className="h-5 w-5 mr-2" />
-          How It Works
-        </Button>
 
         {showMonthlyReminder && (
            <Button
