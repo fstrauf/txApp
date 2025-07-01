@@ -6,7 +6,7 @@ import Link from "next/link";
 import PremiumWaitlistDialog from "@/components/shared/PremiumWaitlistDialog";
 import { useState } from 'react';
 import { Box } from "@/components/ui/Box";
-import { DollarSign, Clock, TrendingUp, Calendar, Target, Zap } from 'lucide-react';
+import { DollarSign, Clock, TrendingUp, Calendar, Target, Zap, Shield, Play, ArrowRight } from 'lucide-react';
 import { Calculator } from 'lucide-react';
 
 export default function HomePageClient() {
@@ -28,15 +28,174 @@ export default function HomePageClient() {
             time to quit a bad job, start a business, travel, or just breathe.
           </p>
           
-          <div className="mb-16 opacity-0 translate-y-8 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-            <Link
-              href="/personal-finance"
-              className="inline-flex items-center justify-center px-10 py-5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-lg text-xl hover:scale-105 transform"
-            >
-              Calculate Your Freedom
-            </Link>
+          {/* Demo Video Section - Embedded directly */}
+          <div className="max-w-5xl mx-auto mb-16 opacity-0 translate-y-8 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 mb-4">
+                <Play className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                  3-Minute Demo
+                </span>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                See How It Works
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Watch exactly how to calculate your financial runway and buy yourself time freedom
+              </p>
+            </div>
+            
+            <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden shadow-2xl border border-gray-200 mb-8">
+              <iframe
+                width="100%"
+                height="100%"
+                src="https://www.youtube.com/embed/uJuzfxJsAwQ?autoplay=1&mute=1&rel=0&vq=hd1080&hd=1&quality=hd1080"
+                title="Calculate Your Financial Runway in 3 Minutes - Expense Sorted Demo"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="rounded-2xl"
+              ></iframe>
+            </div>
+            
+            <div className="text-center">
+              <Link
+                href="/personal-finance"
+                className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 shadow-lg text-lg hover:scale-105 transform"
+              >
+                Try It Yourself - Setup in 3 Minutes
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Link>
+              <p className="text-sm text-gray-500 mt-3">No credit card required • Your data stays in your Google Drive</p>
+            </div>
           </div>
         </div>
+
+        {/* How It Works Section - Early on the page */}
+        <Box variant="default" padding="lg" className="mb-16">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              See Your Runway in 3 Minutes
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Before asking you to click through, here's exactly how simple this is:
+            </p>
+            
+            {/* Trust Section - Compact version next to How It Works */}
+
+          </div>
+
+          <div className="max-w-4xl mx-auto">
+            <div className="space-y-6">
+              {/* Step 1 */}
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                      <span className="text-lg font-semibold text-primary">1</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900">Get Your Free Sheet</h3>
+                      <p className="text-sm text-gray-600">We create a template in your Drive</p>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
+                    <div className="bg-primary/80 h-2 rounded-full w-full"></div>
+                  </div>
+                  <p className="text-xs text-gray-500">Complete setup in 30 seconds</p>
+                </div>
+                <div className="w-full md:w-1/3">
+                  <div className="bg-gray-50/80 rounded-lg p-4 text-center border border-gray-100">
+                    <div className="w-12 h-12 bg-primary/5 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                    </div>
+                    <div className="text-xs font-medium text-gray-700">Google Sheets Template</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center">
+                      <span className="text-lg font-semibold text-secondary">2</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900">Upload Bank CSV</h3>
+                      <p className="text-sm text-gray-600">AI categorizes everything automatically</p>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
+                    <div className="bg-secondary/80 h-2 rounded-full w-full"></div>
+                  </div>
+                  <p className="text-xs text-gray-500">Smart AI learns your spending patterns</p>
+                </div>
+                <div className="w-full md:w-1/3">
+                  <div className="bg-gray-50/80 rounded-lg p-4 text-center border border-gray-100">
+                    <div className="w-12 h-12 bg-secondary/5 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-secondary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                      </svg>
+                    </div>
+                    <div className="text-xs font-medium text-gray-700">AI Processing</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full flex items-center justify-center">
+                      <span className="text-lg font-semibold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">3</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900">See Dashboard</h3>
+                      <p className="text-sm text-gray-600">Your runway appears instantly</p>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
+                    <div className="bg-gradient-to-r from-primary/80 to-secondary/80 h-2 rounded-full w-full"></div>
+                  </div>
+                  <p className="text-xs text-gray-500">Beautiful insights and actionable plans</p>
+                </div>
+                <div className="w-full md:w-1/3">
+                  <div className="bg-gray-50/80 rounded-lg p-4 text-center border border-gray-100">
+                    <div className="w-12 h-12 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                      </svg>
+                    </div>
+                    <div className="text-xs font-medium text-gray-700">Live Dashboard</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-center">
+              <div className="bg-white/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-gray-200/50 inline-flex items-center gap-2">
+                <Shield className="w-4 h-4 text-primary" />
+                <p className="text-sm text-gray-600">
+                  <span className="font-semibold text-primary">YOU own it</span> in Your Google Sheet
+                </p>
+              </div>
+            </div>
+
+            <div className="text-center mt-8">
+              <Link
+                href="/personal-finance"
+                className="inline-flex items-center px-8 py-4 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold hover:shadow-xl transition-all duration-200 text-lg"
+              >
+                Try It Now - It's Free
+                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </Box>
 
         {/* Dashboard Preview Section */}
         <div className="relative mt-24 mb-16">
