@@ -289,11 +289,19 @@ export async function POST(request: NextRequest) {
             return;
           }
           
-          // Try different possible column names for savings/net worth
+          // First priority: Look for "Liquid Net Asset Value" column for runway calculations
           let netAssetValueIndex = headerRow.findIndex((header: any) => 
-            header && String(header).toLowerCase().includes('net asset value')
+            header && String(header).toLowerCase().includes('liquid net asset value')
           );
-          console.log('🎯 Net Asset Value column index:', netAssetValueIndex);
+          console.log('🎯 Liquid Net Asset Value column index:', netAssetValueIndex);
+
+          // Second priority: Look for regular "Net Asset Value" column
+          if (netAssetValueIndex === -1) {
+            netAssetValueIndex = headerRow.findIndex((header: any) => 
+              header && String(header).toLowerCase().includes('net asset value')
+            );
+            console.log('🔄 Net Asset Value column index:', netAssetValueIndex);
+          }
 
           // Fallback to other common column names
           if (netAssetValueIndex === -1) {
@@ -306,7 +314,7 @@ export async function POST(request: NextRequest) {
                 String(header).toLowerCase().includes('amount')
               )
             );
-            console.log('🔄 Fallback Net Asset Value column index:', netAssetValueIndex);
+            console.log('🔄 Fallback column index:', netAssetValueIndex);
           }
 
           if (netAssetValueIndex !== -1) {
@@ -370,7 +378,7 @@ export async function POST(request: NextRequest) {
             if (quarterIndex !== -1) {
               console.log('🔧 Attempting to calculate total from individual asset columns...');
               
-              // Find asset columns (Cash, Crypto, Shares, etc.)
+              // Find asset columns (Cash, Crypto, Shares, etc.) and liquid net asset value
               const assetColumnIndices: number[] = [];
               headerRow.forEach((header: any, index: number) => {
                 if (header && typeof header === 'string') {
@@ -382,7 +390,9 @@ export async function POST(request: NextRequest) {
                        headerLower.includes('cars') ||
                        headerLower.includes('deposit') ||
                        headerLower.includes('stock') ||
-                       headerLower.includes('bond')) && 
+                       headerLower.includes('bond') ||
+                       headerLower.includes('liquid net asset value') ||
+                       headerLower.includes('net asset value')) && 
                       index !== quarterIndex) {
                     assetColumnIndices.push(index);
                   }

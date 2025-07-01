@@ -27,7 +27,7 @@ export const StickyBottomBar: React.FC<StickyBottomBarProps> = ({
             </div>
             <div>
               <p className="font-semibold text-gray-900">Ready to see YOUR real numbers?</p>
-              <p className="text-sm text-gray-600">Calculate your actual financial runway</p>
+              <p className="text-sm text-gray-600">This demo shows 12 months of runway. What's yours?</p>
             </div>
           </div>
           

@@ -21,7 +21,7 @@ const HowItWorksDrawer: React.FC<HowItWorksDrawerProps> = ({ onClose }) => {
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4">
           <SparklesIcon className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">How This Works</h2>
@@ -32,25 +32,25 @@ const HowItWorksDrawer: React.FC<HowItWorksDrawerProps> = ({ onClose }) => {
       </div>
 
       {/* Value Proposition */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
-        <h3 className="text-lg font-semibold text-blue-900 mb-3">Your Data, Enhanced</h3>
+      <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-6 border border-primary/20">
+        <h3 className="text-lg font-semibold text-primary mb-3">Your Data, Enhanced</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <DocumentTextIcon className="w-4 h-4 text-blue-600" />
+            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+              <DocumentTextIcon className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <h4 className="font-medium text-blue-900">Your Spreadsheet</h4>
-              <p className="text-sm text-blue-700">Keep full control and ownership of your financial data</p>
+              <h4 className="font-medium text-primary">Your Spreadsheet</h4>
+              <p className="text-sm text-primary/70">Keep full control and ownership of your financial data</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <SparklesIcon className="w-4 h-4 text-purple-600" />
+            <div className="w-8 h-8 bg-secondary/10 rounded-full flex items-center justify-center flex-shrink-0">
+              <SparklesIcon className="w-4 h-4 text-secondary" />
             </div>
             <div>
-              <h4 className="font-medium text-purple-900">Our Enhancement</h4>
-              <p className="text-sm text-purple-700">Automatic categorization, analytics, and insights</p>
+              <h4 className="font-medium text-secondary">Our Enhancement</h4>
+              <p className="text-sm text-secondary/70">Automatic categorization, analytics, and insights</p>
             </div>
           </div>
         </div>
@@ -61,21 +61,21 @@ const HowItWorksDrawer: React.FC<HowItWorksDrawerProps> = ({ onClose }) => {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">What We Add to Your Spreadsheet</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="flex items-start gap-3">
-            <BanknotesIcon className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <BanknotesIcon className="w-5 h-5 text-secondary flex-shrink-0 mt-0.5" />
             <div>
               <h4 className="font-medium text-gray-900 text-sm">Bank Import Automation</h4>
               <p className="text-xs text-gray-600">Upload CSV files from your bank and we'll add them to your sheet</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <ChartBarIcon className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <ChartBarIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
             <div>
               <h4 className="font-medium text-gray-900 text-sm">AI Categorization</h4>
               <p className="text-xs text-gray-600">Automatically categorize transactions with smart AI</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <CurrencyDollarIcon className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+            <CurrencyDollarIcon className="w-5 h-5 text-secondary flex-shrink-0 mt-0.5" />
             <div>
               <h4 className="font-medium text-gray-900 text-sm">Currency Conversion</h4>
               <p className="text-xs text-gray-600">Handle multi-currency transactions automatically</p>
@@ -91,7 +91,7 @@ const HowItWorksDrawer: React.FC<HowItWorksDrawerProps> = ({ onClose }) => {
         <div className="space-y-6">
           {/* Step 1 */}
           <div className="flex items-start gap-4">
-            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-sm">
+            <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-sm">
               1
             </div>
             <div className="flex-1">
@@ -102,8 +102,8 @@ const HowItWorksDrawer: React.FC<HowItWorksDrawerProps> = ({ onClose }) => {
               <p className="text-sm text-gray-600 mb-3">
                 Come to this page once a month to review and update your finances
               </p>
-              <div className="bg-blue-50 rounded-lg p-3">
-                <p className="text-xs text-blue-800">
+              <div className="bg-primary/10 rounded-lg p-3">
+                <p className="text-xs text-primary">
                   <strong>First time?</strong> We'll help you create a spreadsheet from our template, or you can use your existing one (must match our format)
                 </p>
               </div>
@@ -112,30 +112,30 @@ const HowItWorksDrawer: React.FC<HowItWorksDrawerProps> = ({ onClose }) => {
 
           {/* Step 2 */}
           <div className="flex items-start gap-4">
-            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-sm">
+            <div className="w-8 h-8 bg-secondary text-white rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-sm">
               2
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <h4 className="font-medium text-gray-900">Upload Your Bank CSV</h4>
-                <CloudArrowUpIcon className="w-4 h-4 text-green-600" />
+                <CloudArrowUpIcon className="w-4 h-4 text-secondary" />
               </div>
               <p className="text-sm text-gray-600 mb-3">
                 Go to "Manage Data" and upload your monthly bank transactions CSV file
               </p>
-              <div className="bg-green-50 rounded-lg p-3">
+              <div className="bg-secondary/10 rounded-lg p-3">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircleIcon className="w-4 h-4 text-green-600" />
-                    <span className="text-xs text-green-800">We automatically categorize all transactions using AI</span>
+                    <CheckCircleIcon className="w-4 h-4 text-secondary" />
+                    <span className="text-xs text-secondary">We automatically categorize all transactions using AI</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircleIcon className="w-4 h-4 text-green-600" />
-                    <span className="text-xs text-green-800">Currency conversion happens automatically</span>
+                    <CheckCircleIcon className="w-4 h-4 text-secondary" />
+                    <span className="text-xs text-secondary">Currency conversion happens automatically</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircleIcon className="w-4 h-4 text-green-600" />
-                    <span className="text-xs text-green-800">Data gets added directly to your spreadsheet</span>
+                    <CheckCircleIcon className="w-4 h-4 text-secondary" />
+                    <span className="text-xs text-secondary">Data gets added directly to your spreadsheet</span>
                   </div>
                 </div>
               </div>
@@ -144,19 +144,19 @@ const HowItWorksDrawer: React.FC<HowItWorksDrawerProps> = ({ onClose }) => {
 
           {/* Step 3 */}
           <div className="flex items-start gap-4">
-            <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-sm">
+            <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-sm">
               3
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <h4 className="font-medium text-gray-900">Review & Adjust (Optional)</h4>
-                <ChartBarIcon className="w-4 h-4 text-purple-600" />
+                <ChartBarIcon className="w-4 h-4 text-primary" />
               </div>
               <p className="text-sm text-gray-600 mb-3">
                 Review the AI categorization and adjust any categories if needed
               </p>
-              <div className="bg-purple-50 rounded-lg p-3">
-                <p className="text-xs text-purple-800">
+              <div className="bg-primary/10 rounded-lg p-3">
+                <p className="text-xs text-primary">
                   Most transactions are categorized correctly, but you can fine-tune any that need adjustment
                 </p>
               </div>
@@ -165,19 +165,19 @@ const HowItWorksDrawer: React.FC<HowItWorksDrawerProps> = ({ onClose }) => {
 
           {/* Step 4 */}
           <div className="flex items-start gap-4">
-            <div className="w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-sm">
+            <div className="w-8 h-8 bg-secondary text-white rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-sm">
               4
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <h4 className="font-medium text-gray-900">Analyze Your Finances</h4>
-                <ChartBarIcon className="w-4 h-4 text-orange-600" />
+                <ChartBarIcon className="w-4 h-4 text-secondary" />
               </div>
               <p className="text-sm text-gray-600 mb-3">
                 Use the Financial Overview to analyze your spending patterns, income, and savings
               </p>
-              <div className="bg-orange-50 rounded-lg p-3">
-                <p className="text-xs text-orange-800">
+              <div className="bg-secondary/10 rounded-lg p-3">
+                <p className="text-xs text-secondary">
                   View charts, trends, and insights to make informed financial decisions
                 </p>
               </div>
@@ -186,19 +186,19 @@ const HowItWorksDrawer: React.FC<HowItWorksDrawerProps> = ({ onClose }) => {
 
           {/* Step 5 */}
           <div className="flex items-start gap-4">
-            <div className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-sm">
+            <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-sm">
               5
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <h4 className="font-medium text-gray-900">Update Your Savings</h4>
-                <BanknotesIcon className="w-4 h-4 text-teal-600" />
+                <BanknotesIcon className="w-4 h-4 text-primary" />
               </div>
               <p className="text-sm text-gray-600 mb-3">
                 Update your net asset value in the Savings tab for runway calculations
               </p>
-              <div className="bg-teal-50 rounded-lg p-3">
-                <p className="text-xs text-teal-800">
+              <div className="bg-primary/10 rounded-lg p-3">
+                <p className="text-xs text-primary">
                   Track your total savings and see how long your money will last at current spending levels
                 </p>
               </div>
@@ -208,13 +208,13 @@ const HowItWorksDrawer: React.FC<HowItWorksDrawerProps> = ({ onClose }) => {
       </div>
 
       {/* Summary */}
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6 border border-green-200">
+      <div className="bg-gradient-to-r from-secondary/10 to-primary/10 rounded-lg p-6 border border-secondary/20">
         <div className="text-center">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">That's It!</h3>
           <p className="text-gray-600 mb-4">
             Just 15 minutes once a month to keep your finances organized and analyzed.
           </p>
-          <div className="inline-flex items-center gap-2 text-sm text-green-700 bg-green-100 px-3 py-2 rounded-full">
+          <div className="inline-flex items-center gap-2 text-sm text-secondary bg-secondary/10 px-3 py-2 rounded-full">
             <CheckCircleIcon className="w-4 h-4" />
             Your data stays in your spreadsheet, enhanced with our intelligence
           </div>

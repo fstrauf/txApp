@@ -118,21 +118,21 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       title: 'Get Your Free Sheet',
       description: 'We\'ll open a Google Sheets template in a new tab',
       icon: DocumentTextIcon,
-      color: 'bg-blue-500'
+      color: 'bg-primary'
     },
     {
       id: 'signup',
       title: 'Sign Me Up',
       description: 'Create your account to connect with your sheet',
       icon: UserPlusIcon,
-      color: 'bg-green-500'
+      color: 'bg-secondary'
     },
     {
       id: 'complete',
       title: 'Start Analyzing',
       description: 'Upload your bank data and see your runway',
       icon: ChartBarIcon,
-      color: 'bg-purple-500'
+      color: 'bg-primary'
     }
   ];
 
@@ -209,8 +209,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           {currentStep === 'signup' && (
             <div className="space-y-6">
               <div className="text-center">
-                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <UserPlusIcon className="h-12 w-12 text-green-500" />
+                <div className="w-24 h-24 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <UserPlusIcon className="h-12 w-12 text-secondary" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   Create Your Account
@@ -240,8 +240,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
           {currentStep === 'complete' && (
             <div className="text-center space-y-6">
-              <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto">
-                <ChartBarIcon className="h-12 w-12 text-purple-500" />
+              <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <ChartBarIcon className="h-12 w-12 text-primary" />
               </div>
               
               <div>
@@ -260,7 +260,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
               {createdSheetData && !isCreatingSheet && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-center gap-2 text-green-600">
+                  <div className="flex items-center justify-center gap-2 text-secondary">
                     <CheckIcon className="h-6 w-6" />
                     <span className="font-semibold">Sheet created and linked!</span>
                   </div>
@@ -271,7 +271,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               )}
 
               <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 <span className="ml-3 text-gray-600">
                   {isCreatingSheet ? 'Creating sheet...' : 'Opening data manager...'}
                 </span>
