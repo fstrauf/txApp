@@ -21,9 +21,6 @@ export const DemoBanner: React.FC<DemoBannerProps> = ({
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8 mb-6 sm:mb-8">
       {/* Welcome Header */}
       <div className="text-center mb-6">
-        <h2 className="text-2xl sm:text-3xl font-bold mb-3 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-          Welcome! Let's Calculate Your Real Financial Freedom
-        </h2>
         <p className="text-gray-600 text-lg mb-4">
           This demo shows what <strong>YOUR</strong> dashboard could look like.
         </p>

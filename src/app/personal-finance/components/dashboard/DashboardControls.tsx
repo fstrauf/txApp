@@ -61,14 +61,13 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
             disabled={isLoading}
             className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
           >
-            <DocumentPlusIcon className="h-4 w-4" />
             {status === 'loading' 
               ? 'Loading...'
               : status === 'unauthenticated'
                 ? 'Get Your Free Google Sheet'
                 : isFirstTimeUser 
                   ? 'Get Your Free Google Sheet' 
-                  : 'Power Up Your Data'
+                  : 'Add Your Data'
             }
           </button>
 
@@ -77,7 +76,6 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
             onClick={onHowItWorksClick}
             className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm bg-gray-200 text-gray-800 rounded-lg hover:from-gray-200 hover:to-gray-300 transition-all duration-200 w-full sm:w-auto font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
           >
-            <QuestionMarkCircleIcon className="h-4 w-4" />
             {isFirstTimeUser ? 'Watch 90-Second Setup Video' : 'See The Magic Behind It'}
           </button>
         </div>
@@ -99,35 +97,13 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
             </div>
           )}
 
-          <div className="text-xs sm:text-sm text-gray-600">
+          <div className="text-xs sm:text-sm text-gray-600 w-96">
             {isFirstTimeUser 
-              ? 'Demo mode - showing sample data. This person has 12 months of runway. What\'s yours?'
+              ? 'Showing sample data. This person has 12 months of runway. What\'s yours?'
               : `${transactionCount} transactions shown`
             }
           </div>
         </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center space-x-4">
-        {showConnectDataButton && (
-          <Button
-            onClick={onConnectDataClick}
-            className="bg-primary hover:bg-primary-dark px-3 py-1.5 text-sm"
-          >
-            <DocumentPlusIcon className="h-5 w-5 mr-2" />
-            Connect Your Data
-          </Button>
-        )}
-
-        {showMonthlyReminder && (
-           <Button
-            onClick={onSetMonthlyReminder}
-            className="bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-100 px-3 py-1.5 text-sm"
-          >
-            Set Monthly Reminder
-          </Button>
-        )}
       </div>
     </div>
   );
