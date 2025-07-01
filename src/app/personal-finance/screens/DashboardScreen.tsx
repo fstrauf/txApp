@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useDashboardQuery } from '../hooks/useDashboardQuery';
 import { useDashboardState } from '../hooks/useDashboardState';
@@ -9,7 +9,6 @@ import { DashboardStats } from '../utils/dashboardStats';
 import { Header } from '@/components/ui/Header';
 import DataManagementDrawer from '../components/DataManagementDrawer';
 import HowItWorksDrawer from '../components/HowItWorksDrawer';
-import MonthlyReminderToast from '../components/MonthlyReminderToast';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsheetData';
 import { mockTransactions, mockSavingsData, mockAssetsData } from '../utils/mockData';
@@ -26,6 +25,9 @@ import { NoDataState } from '../components/dashboard/NoDataState';
 import { DashboardStatistics } from '../components/dashboard/DashboardStatistics';
 import { TransactionTab, AIInsightsTab, PortfolioTab } from '../components/dashboard/TabContent';
 import { TabNavigation } from '../components/dashboard/TabNavigation';
+import { WhatYouGetSection } from '../components/dashboard/WhatYouGetSection';
+import { StickyBottomBar } from '../components/dashboard/StickyBottomBar';
+import { OnboardingModal } from '../components/dashboard/OnboardingModal';
 
 const DashboardScreen: React.FC = () => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
@@ -48,6 +50,9 @@ const DashboardScreen: React.FC = () => {
     showExitSurvey,
     setShowExitSurvey,
   } = useDashboardState();
+
+  // Onboarding modal state
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
 
   // A/B Testing
   const { headlineVariant, ctaButtonVariant, getHeadlineText, getCtaButtonText } = useDashboardAbTesting(status);
@@ -177,27 +182,57 @@ const DashboardScreen: React.FC = () => {
       is_first_time_user: isFirstTimeUser,
       user_authenticated: !!session?.user?.id
     });
-    setDataManagementDefaultTab('manage');
-    handlers.handleLinkSpreadsheet();
+    
+    // For first-time users, open the onboarding modal
+    if (isFirstTimeUser) {
+      setIsOnboardingModalOpen(true);
+    } else {
+      // For existing users, open the data drawer directly
+      setDataManagementDefaultTab('manage');
+      handlers.handleLinkSpreadsheet();
+    }
+  };
+
+  const handleOnboardingComplete = (sheetData?: { spreadsheetId: string; spreadsheetUrl: string }) => {
+    // After onboarding is complete, open the data management drawer
+    if (sheetData) {
+      console.log('Sheet automatically created and linked:', sheetData);
+      setDataManagementDefaultTab('upload');
+    } else {
+      setDataManagementDefaultTab('manage');
+    }
+    setIsHelpDrawerOpen(true);
+    // Refetch dashboard status so isFirstTimeUser is updated
+    refetchStatus();
   };
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8 w-full">
-        <Header variant="gradient" size="xl">
-          Your Financial Freedom Dashboard
-        </Header>
+    <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-gray-50 via-white to-primary/5">
+      <div className={`max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-8 sm:py-12 lg:py-16 w-full ${isFirstTimeUser ? 'pb-32' : ''}`}>
+        {/* Only show header for existing users with data */}
+        {!isFirstTimeUser && (
+          <Header variant="centered" size="xl" className="mb-8 sm:mb-12 lg:mb-16">
+            Your Financial Freedom Dashboard
+          </Header>
+        )}
 
         {/* Demo Banner for First-Time Users */}
         {isFirstTimeUser && (
           <DemoBanner
             headlineText={getHeadlineText()}
             ctaButtonText={getCtaButtonText()}
-            onCtaClick={() => openDataDrawer('demo_banner_cta')}
+            onCtaClick={() => setIsOnboardingModalOpen(true)}
             onHowItWorksClick={() => setIsHowItWorksOpen(true)}
             isLoading={status === 'loading'}
           />
         )}
+
+                    {/* What You Get Section - Only for first-time users */}
+                    {isFirstTimeUser && (
+              <WhatYouGetSection 
+                onGetStartedClick={() => setIsOnboardingModalOpen(true)}
+              />
+            )}
 
         {/* Error Display */}
         <ErrorDisplayBox 
@@ -235,6 +270,8 @@ const DashboardScreen: React.FC = () => {
               transactionCount={displayTransactions.length}
               status={status}
             />
+
+
 
             {/* Tab Navigation */}
             <TabNavigation
@@ -297,7 +334,13 @@ const DashboardScreen: React.FC = () => {
         {/* Data Management Drawer */}
         <HelpDrawer
           isOpen={isHelpDrawerOpen}
-          onClose={handlers.handleDataManagementDrawerClose}
+          onClose={() => {
+            posthog.capture('pf_drawer_closed', {
+              drawer_type: 'data_management',
+              is_first_time_user: isFirstTimeUser
+            });
+            handlers.handleDataManagementDrawerClose();
+          }}
           title="Connect Your Financial Data"
           size="large"
         >
@@ -320,6 +363,10 @@ const DashboardScreen: React.FC = () => {
         <HelpDrawer
           isOpen={isHowItWorksOpen}
           onClose={() => {
+            posthog.capture('pf_drawer_closed', {
+              drawer_type: 'how_it_works',
+              is_first_time_user: isFirstTimeUser
+            });
             setIsHowItWorksOpen(false);
           }}
           title="How This Works"
@@ -329,14 +376,14 @@ const DashboardScreen: React.FC = () => {
         </HelpDrawer>
 
         {/* Monthly Reminder Toast */}
-        {!isFirstTimeUser && displayStats && (
+        {/* {!isFirstTimeUser && displayStats && (
           <MonthlyReminderToast 
             delay={10000} 
             onSetReminder={handlers.handleSetMonthlyReminder}
             userToastStatus={userToastStatus}
             onStatusUpdate={setUserToastStatus}
           />
-        )}
+        )} */}
 
         {/* Exit Survey */}
         <PostHogApiSurvey
@@ -348,6 +395,20 @@ const DashboardScreen: React.FC = () => {
           variant="modal"
         />
       </div>
+
+      {/* Sticky Bottom Bar - Only for first-time users */}
+      <StickyBottomBar
+        onGetStartedClick={() => setIsOnboardingModalOpen(true)}
+        onWatchDemoClick={() => setIsHowItWorksOpen(true)}
+        isFirstTimeUser={isFirstTimeUser}
+      />
+
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={isOnboardingModalOpen}
+        onClose={() => setIsOnboardingModalOpen(false)}
+        onSignupComplete={handleOnboardingComplete}
+      />
     </div>
   );
 };

@@ -64,7 +64,6 @@ export const AdvancedFinancialAnalytics: React.FC<AdvancedFinancialAnalyticsProp
       if (tx.category_name) categories.add(tx.category_name);
       if (tx.transactionCategory) categories.add(tx.transactionCategory);
     });
-    console.log('🏷️ Found categories:', Array.from(categories));
     return Array.from(categories).sort();
   }, [transactions]);
 

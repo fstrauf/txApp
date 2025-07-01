@@ -5,6 +5,7 @@ import {
   ChartPieIcon, 
   SparklesIcon 
 } from '@heroicons/react/24/outline';
+import posthog from 'posthog-js';
 
 interface TabNavigationProps {
   activeTab: 'overview' | 'transactions' | 'portfolio' | 'ai-insights';
@@ -46,7 +47,17 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  posthog.capture('pf_tab_clicked', {
+                    component: 'tab_navigation',
+                    tab_id: tab.id,
+                    tab_name: tab.name,
+                    is_first_time_user: isFirstTimeUser,
+                    transaction_count: transactionCount,
+                    has_portfolio_data: hasPortfolioData
+                  });
+                  setActiveTab(tab.id);
+                }}
                 className={`
                   group inline-flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap
                   ${isActive
