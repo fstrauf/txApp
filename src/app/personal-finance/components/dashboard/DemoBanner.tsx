@@ -1,6 +1,6 @@
 import React from 'react';
 import { DocumentPlusIcon, PlayIcon } from '@heroicons/react/24/outline';
-import { mockSavingsData } from '../../utils/mockData';
+
 
 interface DemoBannerProps {
   headlineText: string;

@@ -96,13 +96,6 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
               </label>
             </div>
           )}
-
-          <div className="text-xs sm:text-sm text-gray-600 w-96">
-            {isFirstTimeUser 
-              ? 'Showing sample data. This person has 12 months of runway. What\'s yours?'
-              : `${transactionCount} transactions shown`
-            }
-          </div>
         </div>
       </div>
     </div>

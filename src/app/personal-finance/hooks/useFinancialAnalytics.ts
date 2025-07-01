@@ -131,11 +131,6 @@ const fetchFinancialAnalytics = async (request: FinancialAnalyticsRequest): Prom
   }
 
   const result = await response.json();
-  console.log('📥 Received response from financial-analytics API:', {
-    categories_found: result.categories_found,
-    vendors_count: result.insights?.vendor_intelligence?.vendors?.length || 0,
-    anomalies_count: result.insights?.anomaly_detection?.anomalies?.length || 0
-  });
 
   return result;
 };
@@ -182,8 +177,6 @@ export const useFinancialAnalytics = (options: UseFinancialAnalyticsOptions = {}
     isMockData
   ], [userId, transactionCount, excludedCategoriesString, isMockData]);
 
-  console.log('🔑 Memoized query key:', queryKey, 'Enabled:', shouldAnalyze);
-
   // Query for financial analytics - automatically runs when transactions are available
   const {
     data: result,
@@ -194,11 +187,8 @@ export const useFinancialAnalytics = (options: UseFinancialAnalyticsOptions = {}
   } = useQuery<FinancialAnalyticsResult, Error>({
     queryKey,
     queryFn: async () => {
-      console.log(`🔍 [${Date.now()}] Starting financial analysis for ${transactions.length} transactions`);
-      
       // If we're dealing with mock data (first-time users), return mock analytics
       if (isMockData) {
-        console.log('🎭 Using mock financial analytics for demo user');
         // Add a small delay to simulate processing
         await new Promise(resolve => setTimeout(resolve, 1000));
         return mockFinancialAnalytics as FinancialAnalyticsResult;
@@ -210,7 +200,6 @@ export const useFinancialAnalytics = (options: UseFinancialAnalyticsOptions = {}
         excluded_categories: excludedCategories
       });
 
-      console.log(`✅ [${Date.now()}] Financial analysis completed`);
       return analyticsResult;
     },
     enabled: shouldAnalyze,
@@ -232,8 +221,6 @@ export const useFinancialAnalytics = (options: UseFinancialAnalyticsOptions = {}
         throw new Error('No transactions provided for analysis');
       }
 
-      console.log(`🔍 Manual financial analysis for ${request.transactions.length} transactions`);
-      
       // Track analytics request
       posthog.capture('financial_analytics_requested', {
         user_id: session.user.id,
@@ -269,7 +256,6 @@ export const useFinancialAnalytics = (options: UseFinancialAnalyticsOptions = {}
         transaction_count: transactions.length,
         is_manual: true
       });
-      console.error('❌ Financial analytics error:', error);
     }
   });
 

@@ -9,7 +9,6 @@ import { DashboardStats } from '../utils/dashboardStats';
 import { Header } from '@/components/ui/Header';
 import DataManagementDrawer from '../components/DataManagementDrawer';
 import HowItWorksDrawer from '../components/HowItWorksDrawer';
-import MonthlyReminderToast from '../components/MonthlyReminderToast';
 import HelpDrawer from '@/components/shared/HelpDrawer';
 import { useConsolidatedSpreadsheetData } from '../hooks/useConsolidatedSpreadsheetData';
 import { mockTransactions, mockSavingsData, mockAssetsData } from '../utils/mockData';
@@ -210,7 +209,7 @@ const DashboardScreen: React.FC = () => {
   return (
     <div className="min-h-screen w-full overflow-x-hidden">
       <div className={`max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8 w-full ${isFirstTimeUser ? 'pb-32' : ''}`}>
-        <Header variant="centered" size="xl">
+        <Header variant="centered" size="xl" className="mb-6 sm:mb-8 lg:mb-32">
           Your Financial Freedom Dashboard
         </Header>
 

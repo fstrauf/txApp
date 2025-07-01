@@ -41,21 +41,8 @@ export default function HomePageClient() {
               href="/personal-finance"
               className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-lg text-lg hover:scale-105 transform w-full sm:w-auto"
             >
-              Start Now: 3-Min Setup
+              Setup in 3 minutes
             </Link>
-          </div>
-        </div>
-
-        {/* Trust Section - Right after Hero */}
-        <div className="max-w-4xl mx-auto text-center mb-16">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50">
-            <div className="flex items-center justify-center gap-3 mb-3">
-              <Shield className="w-6 h-6 text-green-600" />
-              <h3 className="text-lg font-semibold text-gray-900">🔒 Your Financial Data Never Leaves Your Google Account</h3>
-            </div>
-            <p className="text-gray-600">
-              We analyze it, but <span className="font-semibold text-primary">YOU own it</span>. Delete anytime.
-            </p>
           </div>
         </div>
 
@@ -68,6 +55,9 @@ export default function HomePageClient() {
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Before asking you to click through, here's exactly how simple this is:
             </p>
+            
+            {/* Trust Section - Compact version next to How It Works */}
+
           </div>
 
           <div className="max-w-4xl mx-auto">
@@ -159,6 +149,14 @@ export default function HomePageClient() {
                 </div>
               </div>
             </div>
+            <div className="mt-6 flex justify-center">
+              <div className="bg-white/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-gray-200/50 inline-flex items-center gap-2">
+                <Shield className="w-4 h-4 text-primary" />
+                <p className="text-sm text-gray-600">
+                  <span className="font-semibold text-primary">YOU own it</span> in Your Google Sheet
+                </p>
+              </div>
+            </div>
 
             <div className="text-center mt-8">
               <Link
@@ -187,7 +185,7 @@ export default function HomePageClient() {
                 </svg>
               </button>
               <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">See ExpenseSync in Action</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">See Expense Sorted in Action</h3>
                 <p className="text-gray-600">Watch how you can calculate your runway in 3 minutes</p>
               </div>
               <div className="aspect-video bg-gray-100 rounded-xl flex items-center justify-center">
