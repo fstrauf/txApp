@@ -6,6 +6,7 @@ import {
   CalendarIcon,
   ShieldCheckIcon 
 } from '@heroicons/react/24/outline';
+import posthog from 'posthog-js';
 
 interface WhatYouGetSectionProps {
   onGetStartedClick: () => void;
@@ -14,6 +15,12 @@ interface WhatYouGetSectionProps {
 export const WhatYouGetSection: React.FC<WhatYouGetSectionProps> = ({
   onGetStartedClick
 }) => {
+  // Track when the "What You Get" section is viewed
+  React.useEffect(() => {
+    posthog.capture('pf_what_you_get_section_viewed', {
+      component: 'what_you_get_section'
+    });
+  }, []);
   const benefits = [
     {
       icon: DocumentTextIcon,
@@ -108,7 +115,14 @@ export const WhatYouGetSection: React.FC<WhatYouGetSectionProps> = ({
 
           <div className="text-center">
             <button
-              onClick={onGetStartedClick}
+              onClick={() => {
+                posthog.capture('pf_cta_clicked', {
+                  component: 'what_you_get_section',
+                  button_text: 'Get Your Free Google Sheet',
+                  location: 'what_you_get_cta'
+                });
+                onGetStartedClick();
+              }}
               className="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 font-bold shadow-2xl hover:shadow-3xl transform hover:scale-105 text-lg"
             >
               <DocumentTextIcon className="h-6 w-6" />

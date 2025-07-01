@@ -6,12 +6,11 @@ import Link from "next/link";
 import PremiumWaitlistDialog from "@/components/shared/PremiumWaitlistDialog";
 import { useState } from 'react';
 import { Box } from "@/components/ui/Box";
-import { DollarSign, Clock, TrendingUp, Calendar, Target, Zap, Shield, Play } from 'lucide-react';
+import { DollarSign, Clock, TrendingUp, Calendar, Target, Zap, Shield, Play, ArrowRight } from 'lucide-react';
 import { Calculator } from 'lucide-react';
 
 export default function HomePageClient() {
   const [isWaitlistDialogOpen, setIsWaitlistDialogOpen] = useState(false);
-  const [showDemoVideo, setShowDemoVideo] = useState(false);
 
   return (
     <div className="min-h-screen bg-background-default">
@@ -29,20 +28,46 @@ export default function HomePageClient() {
             time to quit a bad job, start a business, travel, or just breathe.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16 opacity-0 translate-y-8 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-            <button
-              onClick={() => setShowDemoVideo(true)}
-              className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-white border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white transition-all duration-200 shadow-lg text-lg hover:scale-105 transform w-full sm:w-auto"
-            >
-              <Play className="w-5 h-5 mr-2" />
-              Watch Demo: See the Magic
-            </button>
-            <Link
-              href="/personal-finance"
-              className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200 shadow-lg text-lg hover:scale-105 transform w-full sm:w-auto"
-            >
-              Setup in 3 minutes
-            </Link>
+          {/* Demo Video Section - Embedded directly */}
+          <div className="max-w-5xl mx-auto mb-16 opacity-0 translate-y-8 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 mb-4">
+                <Play className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                  3-Minute Demo
+                </span>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                See How It Works
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Watch exactly how to calculate your financial runway and buy yourself time freedom
+              </p>
+            </div>
+            
+            <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden shadow-2xl border border-gray-200 mb-8">
+              <iframe
+                width="100%"
+                height="100%"
+                src="https://www.youtube.com/embed/uJuzfxJsAwQ?autoplay=1&mute=1&rel=0&vq=hd1080&hd=1&quality=hd1080"
+                title="Calculate Your Financial Runway in 3 Minutes - Expense Sorted Demo"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="rounded-2xl"
+              ></iframe>
+            </div>
+            
+            <div className="text-center">
+              <Link
+                href="/personal-finance"
+                className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 shadow-lg text-lg hover:scale-105 transform"
+              >
+                Try It Yourself - Setup in 3 Minutes
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Link>
+              <p className="text-sm text-gray-500 mt-3">No credit card required • Your data stays in your Google Drive</p>
+            </div>
           </div>
         </div>
 
@@ -171,43 +196,6 @@ export default function HomePageClient() {
             </div>
           </div>
         </Box>
-
-        {/* Demo Video Modal */}
-        {showDemoVideo && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-4xl w-full relative">
-              <button
-                onClick={() => setShowDemoVideo(false)}
-                className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">See Expense Sorted in Action</h3>
-                <p className="text-gray-600">Watch how you can calculate your runway in 3 minutes</p>
-              </div>
-              <div className="aspect-video bg-gray-100 rounded-xl flex items-center justify-center">
-                {/* Placeholder for video - you can replace this with actual video embed */}
-                <div className="text-center">
-                  <Play className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Demo video coming soon</p>
-                  <p className="text-sm text-gray-400 mt-2">For now, try the live demo!</p>
-                </div>
-              </div>
-              <div className="text-center mt-6">
-                <Link
-                  href="/personal-finance"
-                  onClick={() => setShowDemoVideo(false)}
-                  className="inline-flex items-center px-6 py-3 rounded-lg bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
-                >
-                  Try Live Demo Instead
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Dashboard Preview Section */}
         <div className="relative mt-24 mb-16">

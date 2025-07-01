@@ -11,6 +11,7 @@ import { useSession } from 'next-auth/react';
 import { ModalSignupForm } from './ModalSignupForm';
 import { ModalGoogleSignIn } from './ModalGoogleSignIn';
 import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
+import posthog from 'posthog-js';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -34,6 +35,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
+      posthog.capture('pf_onboarding_modal_opened', {
+        component: 'onboarding_modal'
+      });
       setCurrentStep('intro');
       setIsCreatingSheet(false);
       setCreatedSheetData(null);
@@ -42,6 +46,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   // Handle automatic progression for existing users
   const handleExistingUserFlow = async () => {
+    posthog.capture('pf_onboarding_step_started', {
+      step: 'existing_user_flow',
+      has_session: !!session?.user
+    });
+    
     if (session?.user) {
       setCurrentStep('complete');
       createSheetAfterSignup();
@@ -51,6 +60,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   };
 
   const createSheetAfterSignup = async () => {
+    posthog.capture('pf_sheet_creation_started', {
+      component: 'onboarding_modal'
+    });
+    
     setIsCreatingSheet(true);
     try {
       // Request Google OAuth permissions for drive access
@@ -75,6 +88,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       const data = await response.json();
       
       if (data.success) {
+        posthog.capture('pf_sheet_creation_success', {
+          component: 'onboarding_modal',
+          spreadsheet_id: data.spreadsheetId
+        });
+        
         setCreatedSheetData({
           spreadsheetId: data.spreadsheetId,
           spreadsheetUrl: data.spreadsheetUrl
@@ -93,6 +111,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       }
     } catch (error) {
       console.error('Error creating sheet:', error);
+      posthog.capture('pf_sheet_creation_error', {
+        component: 'onboarding_modal',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      
       // Fallback - complete without sheet data
       setTimeout(() => {
         onSignupComplete();
@@ -104,11 +127,19 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   };
 
   const handleSignupComplete = () => {
+    posthog.capture('pf_onboarding_signup_completed', {
+      component: 'onboarding_modal',
+      step: 'signup'
+    });
     setCurrentStep('complete');
     createSheetAfterSignup();
   };
 
   const handleStartSetup = () => {
+    posthog.capture('pf_onboarding_start_setup_clicked', {
+      component: 'onboarding_modal',
+      step: 'intro'
+    });
     handleExistingUserFlow();
   };
 
@@ -143,7 +174,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       {/* Blurred Background */}
       <div 
         className="absolute inset-0 backdrop-blur-md transition-all"
-        onClick={onClose}
+        onClick={() => {
+          posthog.capture('pf_onboarding_modal_closed', {
+            component: 'onboarding_modal',
+            step: currentStep,
+            method: 'backdrop_click'
+          });
+          onClose();
+        }}
       />
       
       {/* Modal Content */}
@@ -156,7 +194,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             {currentStep === 'complete' && 'All Set! 🎉'}
           </h2>
           <button
-            onClick={onClose}
+            onClick={() => {
+              posthog.capture('pf_onboarding_modal_closed', {
+                component: 'onboarding_modal',
+                step: currentStep,
+                method: 'close_button'
+              });
+              onClose();
+            }}
             className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
           >
             <XMarkIcon className="h-6 w-6" />

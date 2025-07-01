@@ -11,12 +11,20 @@ import {
   ArrowRightIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
+import posthog from 'posthog-js';
 
 interface HowItWorksDrawerProps {
   onClose: () => void;
 }
 
 const HowItWorksDrawer: React.FC<HowItWorksDrawerProps> = ({ onClose }) => {
+  // Track when the drawer is viewed
+  React.useEffect(() => {
+    posthog.capture('pf_how_it_works_viewed', {
+      component: 'how_it_works_drawer'
+    });
+  }, []);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -29,6 +37,26 @@ const HowItWorksDrawer: React.FC<HowItWorksDrawerProps> = ({ onClose }) => {
           Keep control of your financial data in your own spreadsheet while we enhance it with powerful analytics, 
           automatic categorization, currency conversion, and bank import automation.
         </p>
+      </div>
+
+      {/* Demo Video Section */}
+      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+        <div className="text-center mb-4">
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Watch It In Action</h3>
+          <p className="text-gray-600">See exactly how to set up your financial dashboard in 3 minutes</p>
+        </div>
+        <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden">
+          <iframe
+            width="100%"
+            height="100%"
+            src="https://www.youtube.com/embed/uJuzfxJsAwQ?vq=hd1080&hd=1&quality=hd1080&rel=0"
+            title="Expense Sorted Demo - Calculate Your Financial Runway in 3 Minutes"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            className="rounded-xl"
+          ></iframe>
+        </div>
       </div>
 
       {/* Value Proposition */}

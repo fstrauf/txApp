@@ -334,7 +334,13 @@ const DashboardScreen: React.FC = () => {
         {/* Data Management Drawer */}
         <HelpDrawer
           isOpen={isHelpDrawerOpen}
-          onClose={handlers.handleDataManagementDrawerClose}
+          onClose={() => {
+            posthog.capture('pf_drawer_closed', {
+              drawer_type: 'data_management',
+              is_first_time_user: isFirstTimeUser
+            });
+            handlers.handleDataManagementDrawerClose();
+          }}
           title="Connect Your Financial Data"
           size="large"
         >
@@ -357,6 +363,10 @@ const DashboardScreen: React.FC = () => {
         <HelpDrawer
           isOpen={isHowItWorksOpen}
           onClose={() => {
+            posthog.capture('pf_drawer_closed', {
+              drawer_type: 'how_it_works',
+              is_first_time_user: isFirstTimeUser
+            });
             setIsHowItWorksOpen(false);
           }}
           title="How This Works"

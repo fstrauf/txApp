@@ -1,5 +1,6 @@
 import React from 'react';
 import { DocumentTextIcon, PlayIcon } from '@heroicons/react/24/outline';
+import posthog from 'posthog-js';
 
 interface StickyBottomBarProps {
   onGetStartedClick: () => void;
@@ -12,6 +13,15 @@ export const StickyBottomBar: React.FC<StickyBottomBarProps> = ({
   onWatchDemoClick,
   isFirstTimeUser
 }) => {
+  // Track when sticky bottom bar is displayed
+  React.useEffect(() => {
+    if (isFirstTimeUser) {
+      posthog.capture('pf_sticky_bottom_bar_displayed', {
+        component: 'sticky_bottom_bar'
+      });
+    }
+  }, [isFirstTimeUser]);
+
   // Only show for first-time users
   if (!isFirstTimeUser) {
     return null;
@@ -33,14 +43,27 @@ export const StickyBottomBar: React.FC<StickyBottomBarProps> = ({
           
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <button
-              onClick={onGetStartedClick}
+              onClick={() => {
+                posthog.capture('pf_cta_clicked', {
+                  component: 'sticky_bottom_bar',
+                  button_text: 'Get Free Sheet & Start',
+                  location: 'bottom_bar_primary'
+                });
+                onGetStartedClick();
+              }}
               className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 w-full sm:w-auto"
             >
               <DocumentTextIcon className="h-4 w-4" />
               Get Free Sheet & Start
             </button>
             <button
-              onClick={onWatchDemoClick}
+              onClick={() => {
+                posthog.capture('pf_video_demo_clicked', {
+                  component: 'sticky_bottom_bar',
+                  location: 'bottom_bar_secondary'
+                });
+                onWatchDemoClick();
+              }}
               className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 font-medium w-full sm:w-auto"
             >
               <PlayIcon className="h-4 w-4" />

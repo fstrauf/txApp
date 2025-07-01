@@ -5,6 +5,7 @@ import { mockSavingsData } from '../../utils/mockData';
 import DashboardCharts from '../DashboardCharts';
 import DataOverview from '../DataOverview';
 import { AdvancedFinancialAnalytics } from '../AdvancedFinancialAnalytics';
+import posthog from 'posthog-js';
 
 interface DashboardStatisticsProps {
   stats: DashboardStats;
@@ -18,6 +19,18 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
   isFirstTimeUser = false 
 }) => {
   const [currentTimeFilter, setCurrentTimeFilter] = React.useState('all');
+  
+  // Track when dashboard statistics are viewed
+  React.useEffect(() => {
+    posthog.capture('pf_dashboard_statistics_viewed', {
+      component: 'dashboard_statistics',
+      is_first_time_user: isFirstTimeUser,
+      transaction_count: filteredTransactions.length,
+      runway_months: stats.runwayMonths,
+      monthly_expenses: stats.monthlyAverageExpenses,
+      total_savings: stats.totalSavings
+    });
+  }, [isFirstTimeUser, filteredTransactions.length, stats.runwayMonths, stats.monthlyAverageExpenses, stats.totalSavings]);
   
   // Use consolidated hook only for base currency and data freshness indicators
   const consolidatedData = useConsolidatedSpreadsheetData();
@@ -265,7 +278,16 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
       {/* Dashboard Visualizations */}
       <DashboardCharts 
         transactions={filteredTransactions}
-        onTimeFilterChange={setCurrentTimeFilter} 
+        onTimeFilterChange={(filter) => {
+          posthog.capture('pf_time_filter_changed', {
+            component: 'dashboard_charts',
+            old_filter: currentTimeFilter,
+            new_filter: filter,
+            is_first_time_user: isFirstTimeUser,
+            transaction_count: filteredTransactions.length
+          });
+          setCurrentTimeFilter(filter);
+        }} 
       />
 
       {/* Advanced Financial Analytics Section */}
