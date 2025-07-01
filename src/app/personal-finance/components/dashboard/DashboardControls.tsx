@@ -65,9 +65,9 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
             {status === 'loading' 
               ? 'Loading...'
               : status === 'unauthenticated'
-                ? 'Claim Your Dashboard'
+                ? 'Get Your Free Google Sheet'
                 : isFirstTimeUser 
-                  ? 'Take Control of Your Data' 
+                  ? 'Get Your Free Google Sheet' 
                   : 'Power Up Your Data'
             }
           </button>
@@ -78,7 +78,7 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
             className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm bg-gray-200 text-gray-800 rounded-lg hover:from-gray-200 hover:to-gray-300 transition-all duration-200 w-full sm:w-auto font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
           >
             <QuestionMarkCircleIcon className="h-4 w-4" />
-            See The Magic Behind It
+            {isFirstTimeUser ? 'Watch 90-Second Setup Video' : 'See The Magic Behind It'}
           </button>
         </div>
 
@@ -101,7 +101,7 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
 
           <div className="text-xs sm:text-sm text-gray-600">
             {isFirstTimeUser 
-              ? 'Demo mode - showing sample data'
+              ? 'Demo mode - showing sample data. This person has 12 months of runway. What\'s yours?'
               : `${transactionCount} transactions shown`
             }
           </div>

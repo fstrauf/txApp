@@ -26,6 +26,8 @@ import { NoDataState } from '../components/dashboard/NoDataState';
 import { DashboardStatistics } from '../components/dashboard/DashboardStatistics';
 import { TransactionTab, AIInsightsTab, PortfolioTab } from '../components/dashboard/TabContent';
 import { TabNavigation } from '../components/dashboard/TabNavigation';
+import { WhatYouGetSection } from '../components/dashboard/WhatYouGetSection';
+import { StickyBottomBar } from '../components/dashboard/StickyBottomBar';
 
 const DashboardScreen: React.FC = () => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
@@ -183,7 +185,7 @@ const DashboardScreen: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8 w-full">
+      <div className={`max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8 w-full ${isFirstTimeUser ? 'pb-32' : ''}`}>
         <Header variant="gradient" size="xl">
           Your Financial Freedom Dashboard
         </Header>
@@ -235,6 +237,13 @@ const DashboardScreen: React.FC = () => {
               transactionCount={displayTransactions.length}
               status={status}
             />
+
+            {/* What You Get Section - Only for first-time users */}
+            {isFirstTimeUser && (
+              <WhatYouGetSection 
+                onGetStartedClick={() => openDataDrawer('what_you_get_section')}
+              />
+            )}
 
             {/* Tab Navigation */}
             <TabNavigation
@@ -348,6 +357,13 @@ const DashboardScreen: React.FC = () => {
           variant="modal"
         />
       </div>
+
+      {/* Sticky Bottom Bar - Only for first-time users */}
+      <StickyBottomBar
+        onGetStartedClick={() => openDataDrawer('sticky_bottom_bar_get_started')}
+        onWatchDemoClick={() => setIsHowItWorksOpen(true)}
+        isFirstTimeUser={isFirstTimeUser}
+      />
     </div>
   );
 };

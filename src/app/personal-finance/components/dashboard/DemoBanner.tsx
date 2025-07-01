@@ -1,5 +1,5 @@
 import React from 'react';
-import { DocumentPlusIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { DocumentPlusIcon, PlayIcon } from '@heroicons/react/24/outline';
 import { mockSavingsData } from '../../utils/mockData';
 
 interface DemoBannerProps {
@@ -18,45 +18,55 @@ export const DemoBanner: React.FC<DemoBannerProps> = ({
   isLoading,
 }) => {
   return (
-    <div className="bg-gradient-to-r from-primary to-secondary-dark rounded-xl p-4 sm:p-8 border border-primary-light mb-6 sm:mb-8 shadow-lg overflow-hidden relative">
-      <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5"></div>
-      <div className="relative z-10 flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
-        <div className="flex-shrink-0 mb-4 sm:mb-0">
-          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-            </svg>
-          </div>
-        </div>
-        <div className="flex-1">
-          <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">{headlineText}</h3>
-          <p className="text-blue-100 mb-4 sm:mb-6 text-base sm:text-lg leading-relaxed">
-            You're looking at <strong>real financial freedom</strong> — this demo shows <strong>{mockSavingsData.runwayMonths} months of "F*** You Money"</strong>.
-            That's {Math.round(mockSavingsData.runwayMonths / 12 * 10) / 10} years of complete independence. 
-            <span className="font-bold text-white"> What if this was YOUR actual runway?</span>
-          </p>
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8 mb-6 sm:mb-8">
+      {/* Welcome Header */}
+      <div className="text-center mb-6">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-3 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+          Welcome! Let's Calculate Your Real Financial Freedom
+        </h2>
+        <p className="text-gray-600 text-lg mb-4">
+          This demo shows what <strong>YOUR</strong> dashboard could look like.
+        </p>
+        <p className="text-gray-800 text-lg font-medium">
+          To see your actual runway:
+        </p>
+      </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <button
-              onClick={onCtaClick}
-              disabled={isLoading}
-              className="group inline-flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-4 bg-white text-primary-dark rounded-xl hover:bg-blue-50 transition-all duration-200 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none w-full sm:w-auto text-base sm:text-lg"
-            >
-              <DocumentPlusIcon className="h-5 w-5" />
-              <span className="relative">
-                {ctaButtonText}
-                <span className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
-              </span>
-            </button>
-            <button
-              onClick={onHowItWorksClick}
-              className="inline-flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-all duration-200 font-medium backdrop-blur-sm border border-white/30 w-full sm:w-auto text-sm sm:text-base"
-            >
-              <QuestionMarkCircleIcon className="h-5 w-5" />
-              See How It Works
-            </button>
-          </div>
+      {/* Step Flow */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-4 py-3 rounded-lg">
+          <span className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+          <span className="font-medium text-gray-800">Get Your Free Sheet</span>
         </div>
+        <span className="hidden sm:block text-gray-400 text-xl">→</span>
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-4 py-3 rounded-lg">
+          <span className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+          <span className="font-medium text-gray-800">Upload Bank CSV</span>
+        </div>
+        <span className="hidden sm:block text-gray-400 text-xl">→</span>
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-4 py-3 rounded-lg">
+          <span className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+          <span className="font-medium text-gray-800">See Real Results</span>
+        </div>
+      </div>
+
+      {/* CTA Buttons */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+        <button
+          onClick={onCtaClick}
+          disabled={isLoading}
+          className="group inline-flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-4 bg-gradient-to-r from-primary to-secondary text-white rounded-xl hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none w-full sm:w-auto text-base sm:text-lg"
+        >
+          <DocumentPlusIcon className="h-5 w-5" />
+          <span>Start Free Setup (3 min)</span>
+        </button>
+        <button
+          onClick={onHowItWorksClick}
+          className="inline-flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition-all duration-200 font-medium w-full sm:w-auto text-sm sm:text-base"
+        >
+          <PlayIcon className="h-5 w-5" />
+          Watch 90-Second Setup Video
+        </button>
       </div>
     </div>
   );
