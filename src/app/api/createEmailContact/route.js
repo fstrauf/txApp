@@ -21,7 +21,9 @@ export async function POST(req) {
     const existingSubscriber = await db.select({
         id: subscribers.id,
         currentTags: subscribers.tags,
-        isActive: subscribers.isActive
+        isActive: subscribers.isActive,
+        currentSources: subscribers.sources,
+        currentPrimarySource: subscribers.source
       })
       .from(subscribers)
       .where(eq(subscribers.email, email))
@@ -31,15 +33,23 @@ export async function POST(req) {
       // Subscriber exists, update tags and potentially reactivate
       const currentUser = existingSubscriber[0];
       const currentTags = currentUser.currentTags || [];
-      const combinedTags = Array.from(new Set([...currentTags, ...newTags])); // Merge and deduplicate
+      const combinedTags = Array.from(new Set([...currentTags, ...newTags]));
+
+      // Sources handling
+      const currentSources = currentUser.currentSources || [];
+      const combinedSources = Array.from(new Set([...currentSources, source]));
+
+      // Preserve original primary source unless it is OTHER
+      const primarySourceToSet = currentUser.currentPrimarySource === 'OTHER' ? source : currentUser.currentPrimarySource;
 
       console.log(`[createEmailContact] Updating existing subscriber: ${email}, New tags: ${JSON.stringify(combinedTags)}`);
 
       await db.update(subscribers)
         .set({
           tags: combinedTags,
-          source: source, // Optionally update source?
-          isActive: true, // Reactivate if they were inactive
+          sources: combinedSources,
+          source: primarySourceToSet,
+          isActive: true,
           updatedAt: new Date(),
         })
         .where(eq(subscribers.id, currentUser.id));
@@ -51,6 +61,7 @@ export async function POST(req) {
         id: createId(),
         email,
         source,
+        sources: [source],
         tags: newTags, // Use the passed tags
         isActive: true,
         createdAt: new Date(), // Set createdAt explicitly

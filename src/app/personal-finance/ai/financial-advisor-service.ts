@@ -125,7 +125,7 @@ Focus area: ${query.context || 'general'}
 `;
 
       // Create prompt for AI advisor
-      let promptText = `You are a financial advisor specializing in New Zealand personal finance. Based on the following financial analysis, provide personalized advice.
+      const promptText = `You are a financial advisor specializing in New Zealand personal finance. Based on the following financial analysis, provide personalized advice.
 
 ${financialContext}
 

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { monthlyReminders, users } from '@/db/schema';
-import { eq, and, lte, or, isNull } from 'drizzle-orm';
+import { monthlyReminders, users, subscribers } from '@/db/schema';
+import { eq, and, lte, or, isNull, gte } from 'drizzle-orm';
 import { Resend } from 'resend';
 import { SubscriptionService } from '@/lib/subscriptionService';
+import { sendSpreadsheetSequenceEmail, shouldReceiveSpreadsheetSequence, VERIFIED_FROM_EMAIL, VERIFIED_FROM_NAME } from '@/lib/email-service';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -42,6 +43,10 @@ export async function GET(request: NextRequest) {
       sent: 0,
       errors: 0,
       skipped: false
+    },
+    spreadsheetSequence: {
+      sent: 0,
+      errors: 0
     }
   };
 
@@ -66,6 +71,11 @@ export async function GET(request: NextRequest) {
       console.log('Skipping monthly reminders - not time to send');
       results.monthlyReminders.skipped = true;
     }
+
+    // Task 3: Send spreadsheet sequence emails (runs daily)
+    console.log('Running spreadsheet sequence task...');
+    const sequenceResults = await processSpreadsheetSequence();
+    results.spreadsheetSequence = sequenceResults;
 
     return NextResponse.json({ 
       success: true, 
@@ -126,7 +136,7 @@ async function sendMonthlyReminders() {
 
       // Send email via Resend
       const result = await resend.emails.send({
-        from: 'TxAI Finance Reminders <reminders@txai.tools>',
+        from: `${VERIFIED_FROM_NAME} <${VERIFIED_FROM_EMAIL}>`,
         to: [reminder.userEmail],
         subject: '💰 Time for your monthly finance review!',
         html: generateReminderEmailHTML({
@@ -170,6 +180,159 @@ async function sendMonthlyReminders() {
     skipped: false,
     errorDetails: errors.length > 0 ? errors : undefined,
     totalFound: remindersToSend.length
+  };
+}
+
+async function processSpreadsheetSequence() {
+  const now = new Date();
+  
+  // Safety check: Only run if enabled in environment
+  const emailSequenceEnabled = process.env.SPREADSHEET_EMAIL_SEQUENCE_ENABLED === 'true';
+  if (!emailSequenceEnabled) {
+    console.log('📧 Spreadsheet email sequence disabled via environment variable');
+    return {
+      sent: 0,
+      errors: 0,
+      skipped: true,
+      reason: 'Disabled via SPREADSHEET_EMAIL_SEQUENCE_ENABLED'
+    };
+  }
+
+  // Safety check: Only process users who signed up after feature was implemented
+  const featureLaunchDate = process.env.SPREADSHEET_SEQUENCE_START_DATE 
+    ? new Date(process.env.SPREADSHEET_SEQUENCE_START_DATE)
+    : new Date('2024-01-20'); // Default safe date
+
+  console.log(`📧 Processing spreadsheet sequence for users who signed up after ${featureLaunchDate.toISOString()}`);
+  
+  // Find subscribers who need to receive the next email in the sequence
+  const subscribersToEmail = await db
+    .select()
+    .from(subscribers)
+    .where(
+      and(
+        eq(subscribers.isActive, true),
+        // Only process users who signed up after the feature launch
+        gte(subscribers.createdAt, featureLaunchDate),
+        or(
+          // Email 1: Send 1 day after signup for new spreadsheet subscribers
+          and(
+            isNull(subscribers.emailSequenceStatus),
+            or(
+              eq(subscribers.source, 'SPREADSHEET'),
+              eq(subscribers.source, 'SPREADSHEET_POPUP')
+            ),
+            lte(subscribers.createdAt, new Date(now.getTime() - 24 * 60 * 60 * 1000)) // 1 day ago
+          ),
+          // Email 2 & 3: Send based on nextEmailDue
+          lte(subscribers.nextEmailDue, now)
+        )
+      )
+    );
+
+  console.log(`Found ${subscribersToEmail.length} subscribers for spreadsheet sequence`);
+
+  let successCount = 0;
+  let errorCount = 0;
+  const errors: string[] = [];
+
+  // Test mode: Only send to specific test emails if in development
+  const testMode = process.env.NODE_ENV === 'development' || process.env.SPREADSHEET_SEQUENCE_TEST_MODE === 'true';
+  const testEmails = process.env.SPREADSHEET_SEQUENCE_TEST_EMAILS?.split(',') || [];
+  
+  if (testMode && testEmails.length > 0) {
+    console.log(`🧪 Running in test mode - only sending to: ${testEmails.join(', ')}`);
+  }
+
+  for (const subscriber of subscribersToEmail) {
+    try {
+      if (!subscriber.email) {
+        console.error(`No email found for subscriber ${subscriber.id}`);
+        continue;
+      }
+
+      // In test mode, only send to specified test emails
+      if (testMode && testEmails.length > 0 && !testEmails.includes(subscriber.email)) {
+        console.log(`⏭️ Skipping ${subscriber.email} - not in test email list`);
+        continue;
+      }
+
+      // Check if this subscriber should receive spreadsheet sequence
+      const subscriberTags = subscriber.tags || [];
+      if (!shouldReceiveSpreadsheetSequence(subscriber.source || 'OTHER', subscriberTags)) {
+        continue;
+      }
+
+      // Determine which email to send
+      let emailNumber: 1 | 2 | 3;
+      let nextStatus: 'EMAIL_1_SENT' | 'EMAIL_2_SENT' | 'EMAIL_3_SENT' | 'COMPLETED';
+      let nextEmailDue: Date | null = null;
+
+      if (!subscriber.emailSequenceStatus) {
+        // Send email 1
+        emailNumber = 1;
+        nextStatus = 'EMAIL_1_SENT';
+        nextEmailDue = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000); // 2 days from now
+      } else if (subscriber.emailSequenceStatus === 'EMAIL_1_SENT') {
+        // Send email 2
+        emailNumber = 2;
+        nextStatus = 'EMAIL_2_SENT';
+        nextEmailDue = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days from now
+      } else if (subscriber.emailSequenceStatus === 'EMAIL_2_SENT') {
+        // Send email 3
+        emailNumber = 3;
+        nextStatus = 'EMAIL_3_SENT';
+        nextEmailDue = null; // No more emails after this
+      } else {
+        // Sequence already completed
+        continue;
+      }
+
+      // Dry run mode: Just log what would be sent
+      const dryRun = process.env.SPREADSHEET_SEQUENCE_DRY_RUN === 'true';
+      if (dryRun) {
+        console.log(`🔍 DRY RUN: Would send email ${emailNumber} to ${subscriber.email}`);
+        continue;
+      }
+
+      // Send the email
+      const emailResult = await sendSpreadsheetSequenceEmail({
+        email: subscriber.email,
+        emailNumber
+      });
+
+      if (!emailResult.success) {
+        throw new Error(`Email sending failed: ${emailResult.error}`);
+      }
+
+      // Update the subscriber record
+      await db
+        .update(subscribers)
+        .set({
+          emailSequenceStatus: nextStatus,
+          lastEmailSent: now,
+          nextEmailDue: nextEmailDue,
+          updatedAt: now,
+        })
+        .where(eq(subscribers.id, subscriber.id));
+
+      successCount++;
+      console.log(`✅ Sent spreadsheet sequence email ${emailNumber} to ${subscriber.email}`);
+    } catch (error: any) {
+      errorCount++;
+      const errorMessage = `Failed to send to ${subscriber.email}: ${error.message}`;
+      errors.push(errorMessage);
+      console.error(`❌ ${errorMessage}`);
+    }
+  }
+
+  return {
+    sent: successCount,
+    errors: errorCount,
+    errorDetails: errors.length > 0 ? errors : undefined,
+    totalFound: subscribersToEmail.length,
+    testMode,
+    dryRun: process.env.SPREADSHEET_SEQUENCE_DRY_RUN === 'true'
   };
 }
 

@@ -211,6 +211,20 @@
       "when": 1750807275307,
       "tag": "0029_crazy_the_enforcers",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1751487447143,
+      "tag": "0030_tan_sebastian_shaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1751497213791,
+      "tag": "0031_red_whiplash",
+      "breakpoints": true
     }
   ]
 }

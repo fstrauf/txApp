@@ -149,12 +149,7 @@ export default function SheetDownloadPopup({
                     >
                       {isLoading ? "Processing..." : "Get the Spreadsheet"}
                     </Button>
-                    <Button
-                        className="w-full bg-transparent text-primary hover:bg-transparent hover:underline"
-                        onClick={handleSkip}
-                    >
-                        No thanks, take me to the sheet
-                    </Button>
+
                 </div>
               </Dialog.Panel>
             </Transition.Child>

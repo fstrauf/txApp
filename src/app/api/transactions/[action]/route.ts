@@ -88,7 +88,7 @@ export async function POST(request: NextRequest, { params }: { params: { action:
       }
       const fileText = await file.text();
       let headers: string[] = [];
-      let previewRows: any[] = [];
+      const previewRows: any[] = [];
       let rowCount = 0;
       const PREVIEW_ROW_COUNT = 5;
       Papa.parse(fileText, {

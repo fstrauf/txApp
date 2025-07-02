@@ -28,6 +28,8 @@ import { TabNavigation } from '../components/dashboard/TabNavigation';
 import { WhatYouGetSection } from '../components/dashboard/WhatYouGetSection';
 import { StickyBottomBar } from '../components/dashboard/StickyBottomBar';
 import { OnboardingModal } from '../components/dashboard/OnboardingModal';
+import { EmergencyFundCalculator } from '@/components/shared/EmergencyFundCalculator';
+import { FreeSheetCTA } from '../components/dashboard/FreeSheetCTA';
 
 const DashboardScreen: React.FC = () => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
@@ -227,12 +229,30 @@ const DashboardScreen: React.FC = () => {
           />
         )}
 
-                    {/* What You Get Section - Only for first-time users */}
-                    {isFirstTimeUser && (
-              <WhatYouGetSection 
-                onGetStartedClick={() => setIsOnboardingModalOpen(true)}
-              />
-            )}
+        {/* Emergency Fund Calculator - Only for first-time users */}
+        {isFirstTimeUser && (
+          <div className="mb-16">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                First, Let's Calculate Your Current Runway
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Before diving into the demo, see exactly how many months of freedom you have right now
+              </p>
+            </div>
+            <EmergencyFundCalculator showClearButton={true} />
+
+            {/* Offer free sheet vs supercharge */}
+            <FreeSheetCTA onSuperchargeClick={() => setIsOnboardingModalOpen(true)} />
+          </div>
+        )}
+
+        {/* What You Get Section - Only for first-time users */}
+        {isFirstTimeUser && (
+          <WhatYouGetSection 
+            onGetStartedClick={() => setIsOnboardingModalOpen(true)}
+          />
+        )}
 
         {/* Error Display */}
         <ErrorDisplayBox 
@@ -270,8 +290,6 @@ const DashboardScreen: React.FC = () => {
               transactionCount={displayTransactions.length}
               status={status}
             />
-
-
 
             {/* Tab Navigation */}
             <TabNavigation

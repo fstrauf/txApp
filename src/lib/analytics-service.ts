@@ -518,7 +518,7 @@ export async function getLatestMonthlyData(userId: string) {
 export async function recalculateMonthlyAggregates(userId: string, startDate: Date, endDate: Date) {
   // Generate array of months between start and end dates
   const months: Date[] = [];
-  let currentMonth = startOfMonth(startDate);
+  const currentMonth = startOfMonth(startDate);
   const endMonth = startOfMonth(endDate);
   
   while (currentMonth <= endMonth) {

@@ -22,7 +22,7 @@ export async function GET() {
       <link>${siteUrl}/blog/${post.slug}</link>
       <description><![CDATA[${post.summary || 'Read the full article on Expense Sorted Blog'}]]></description>
       <pubDate>${new Date(post.date).toUTCString()}</pubDate>
-      ${post.author ? `<author>noreply@expensesorted.com (${post.author})</author>` : ''}
+      ${post.author ? `<author>hi@expensesorted.com (${post.author})</author>` : ''}
     </item>`
       )
       .join('')}
