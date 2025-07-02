@@ -350,7 +350,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       }
       
       // Step 3: Combine AI suggestions with basic auto-detection fallback
-      let initialMappings = result.headers.reduce((acc: Record<string, any>, header: string) => {
+      const initialMappings = result.headers.reduce((acc: Record<string, any>, header: string) => {
         // Start with AI suggestion if available
         if (aiSuggestions[header] && aiSuggestions[header] !== 'none') {
           acc[header] = aiSuggestions[header];

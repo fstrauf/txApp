@@ -65,7 +65,7 @@ export function useCategory() {
     try {
       // Check if transaction has a "Trained" tag that needs to be removed
       const hasTrainedTag = hasTag(transaction, 'Trained');
-      let updatedTx = hasTrainedTag 
+      const updatedTx = hasTrainedTag 
         ? removeTagFromTransaction(transaction, 'Trained')
         : transaction;
       
@@ -174,7 +174,7 @@ export function useCategory() {
       const batchSize = 5;
       let successCount = 0;
       let failCount = 0;
-      let updatedTransactionsList = [...transactions];
+      const updatedTransactionsList = [...transactions];
       
       // Empty callbacks for individual updates
       const noOp = () => {};

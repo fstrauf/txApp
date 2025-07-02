@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
     const rawData = await response.json();
 
     // *** Format the transactions using the helper defined in *this* file ***
-    let formattedData = formatTransactions(rawData.transactions || []);
+    const formattedData = formatTransactions(rawData.transactions || []);
 
 
     console.log(`Returning ${formattedData.length} transactions (filtered by API).`);

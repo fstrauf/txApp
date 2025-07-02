@@ -6,8 +6,9 @@ import Link from "next/link";
 import PremiumWaitlistDialog from "@/components/shared/PremiumWaitlistDialog";
 import { useState } from 'react';
 import { Box } from "@/components/ui/Box";
-import { DollarSign, Clock, TrendingUp, Calendar, Target, Zap, Shield, Play, ArrowRight } from 'lucide-react';
+import { Calendar, Target, Zap, Shield, Play, ArrowRight } from 'lucide-react';
 import { Calculator } from 'lucide-react';
+import { EmergencyFundCalculator } from "@/components/shared/EmergencyFundCalculator";
 
 export default function HomePageClient() {
   const [isWaitlistDialogOpen, setIsWaitlistDialogOpen] = useState(false);
@@ -37,9 +38,7 @@ export default function HomePageClient() {
                   3-Minute Demo
                 </span>
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                See How It Works
-              </h2>
+
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                 Watch exactly how to calculate your financial runway and buy yourself time freedom
               </p>
@@ -96,7 +95,7 @@ export default function HomePageClient() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-gray-900">Get Your Free Sheet</h3>
-                      <p className="text-sm text-gray-600">We create a template in your Drive</p>
+                      <p className="text-sm text-gray-600">We create a template in your Google Drive</p>
                     </div>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
@@ -196,6 +195,19 @@ export default function HomePageClient() {
             </div>
           </div>
         </Box>
+
+        {/* Quick Calculator CTA - Early engagement */}
+        <div className="mt-16 mb-20">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+              But First... How Much Freedom Do You Already Have?
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Before you commit 3 minutes to our tool, spend 30 seconds discovering your current runway
+            </p>
+          </div>
+          <EmergencyFundCalculator />
+        </div>
 
         {/* Dashboard Preview Section */}
         <div className="relative mt-24 mb-16">
@@ -879,7 +891,7 @@ export default function HomePageClient() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6 sm:mb-8">
               <Link
-                href="/fuck-you-money-sheet"
+                href="/personal-finance"
                 className="group relative inline-flex items-center justify-center px-6 sm:px-10 py-4 sm:py-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg sm:text-xl hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 shadow-2xl hover:shadow-3xl transform hover:scale-105 w-full sm:w-auto sm:min-w-[280px]"
               >
                 <span className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-r from-white/20 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>

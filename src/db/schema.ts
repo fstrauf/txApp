@@ -30,7 +30,10 @@ export const subscriptionStatusEnum = pgEnum('subscriptionStatus', ['ACTIVE', 'C
 export const billingCycleEnum = pgEnum('billingCycle', ['MONTHLY', 'ANNUAL']);
 
 // Subscribers source enum
-export const subscriberSourceEnum = pgEnum('subscriberSource', ['SPREADSHEET', 'BETA_ACCESS', 'PREMIUM_WAITLIST', 'EXPORT_FEEDBACK', 'BUSINESS_BETA', 'COURSE_LANDING', 'OTHER']);
+export const subscriberSourceEnum = pgEnum('subscriberSource', ['SPREADSHEET', 'SPREADSHEET_POPUP', 'BETA_ACCESS', 'PREMIUM_WAITLIST', 'EXPORT_FEEDBACK', 'BUSINESS_BETA', 'COURSE_LANDING', 'OTHER']);
+
+// Email sequence status enum for tracking which emails have been sent
+export const emailSequenceStatusEnum = pgEnum('emailSequenceStatus', ['EMAIL_1_SENT', 'EMAIL_2_SENT', 'EMAIL_3_SENT', 'COMPLETED']);
 
 // Auth-related tables
 export const users = pgTable('users', {
@@ -74,9 +77,14 @@ export const subscribers = pgTable(
     email: text('email').notNull().unique(),
     source: subscriberSourceEnum('source').default('OTHER'),
     tags: json('tags').$type<string[]>(),
+    sources: json('sources').$type<string[]>(),
     isActive: boolean('isActive').default(true),
     createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updatedAt', { mode: 'date', withTimezone: true }).$onUpdate(() => new Date()).notNull(),
+    // Email sequence tracking for spreadsheet subscribers
+    emailSequenceStatus: emailSequenceStatusEnum('emailSequenceStatus'),
+    lastEmailSent: timestamp('lastEmailSent', { mode: 'date', withTimezone: true }),
+    nextEmailDue: timestamp('nextEmailDue', { mode: 'date', withTimezone: true }),
   }
 );
 

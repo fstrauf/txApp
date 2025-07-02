@@ -1,15 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import * as jwt from 'jsonwebtoken';
+import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
 import { users } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
-import { Resend } from 'resend';
 import { randomUUID } from "crypto";
 import { getResendClient } from "@/lib/resend";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Should be in .env
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-const EMAIL_FROM = process.env.EMAIL_FROM || 'ExpenseSorted <noreply@expensesorted.com>';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'ExpenseSorted <hi@expensesorted.com>';
 
 export async function POST(request: Request) {
   try {
@@ -70,7 +66,7 @@ export async function POST(request: Request) {
     
     try {
       // First try with the custom domain
-      const formattedFrom = "ExpenseSorted <noreply@expensesorted.com>";
+      const formattedFrom = "ExpenseSorted <hi@expensesorted.com>";
       
       // Fallback to a resend.com address if needed
       const fallbackFrom = "ExpenseSorted <onboarding@resend.dev>";

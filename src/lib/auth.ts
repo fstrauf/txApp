@@ -138,7 +138,7 @@ export const authConfig: NextAuthOptions = {
 
         // 1. Prioritize callbackUrl query parameter if present and valid
         if (callbackUrlParam) {
-            let redirectTarget = callbackUrlParam;
+            const redirectTarget = callbackUrlParam;
             // Ensure it's treated as a relative path if it starts with /
             if (redirectTarget.startsWith('/')) {
                 const finalRedirect = `${baseUrl}${redirectTarget}`;

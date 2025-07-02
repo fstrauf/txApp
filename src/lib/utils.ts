@@ -72,7 +72,7 @@ export function parseTransactionDate(dateString: string): Date {
   }
 
   // Fallback to standard Date parsing for other formats, but try to preserve the date
-  let fallbackDate = new Date(dateString);
+  const fallbackDate = new Date(dateString);
   
   // If the standard parsing creates a time component, reset it to noon to avoid timezone issues
   if (!isNaN(fallbackDate.getTime())) {
