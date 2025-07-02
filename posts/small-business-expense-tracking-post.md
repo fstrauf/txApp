@@ -1,6 +1,6 @@
 ---
 title: "Small Business Expense Tracking: Google Sheets vs $200/Month Software"
-date: "2025-05-20"
+date: "2025-05-18"
 summary: "Why smart small business owners are ditching expensive software for enhanced Google Sheets that provide better insights, cost 90% less, and keep you in control of your data."
 ---
 
