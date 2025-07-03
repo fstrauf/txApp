@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { DonutChart } from '@/components/ui/DonutChart';
+import { StackedBarChart } from '@/components/ui/StackedBarChart';
 import { parseTransactionDate } from '@/lib/utils';
 import { constructCategoryColors, getColorClassName, AvailableChartColorsKeys } from '@/lib/chartUtils';
 import { DataAnalysisEngine } from '../engine/DataAnalysisEngine';
@@ -13,270 +14,6 @@ import {
   ChevronDownIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
-
-// Simple Stacked Bar Chart Component
-interface SimpleStackedBarChartProps {
-  data: any[];
-  categoryColors: Map<string, AvailableChartColorsKeys>;
-  selectedCategory?: string | null;
-  onCategoryClick?: (category: string | null) => void;
-}
-
-const SimpleStackedBarChart: React.FC<SimpleStackedBarChartProps> = ({ 
-  data, 
-  categoryColors, 
-  selectedCategory,
-  onCategoryClick 
-}) => {
-  const [hoveredSegment, setHoveredSegment] = React.useState<{
-    category: string;
-    amount: number;
-    month: string;
-    x: number;
-    y: number;
-  } | null>(null);
-
-  if (!data.length) return null;
-
-  // Get all unique categories from the data
-  const allCategories = new Set<string>();
-  data.forEach(month => {
-    Object.keys(month).forEach(key => {
-      if (key !== 'month' && key !== 'displayMonth' && key !== 'total') {
-        allCategories.add(key);
-      }
-    });
-  });
-
-  const categories = Array.from(allCategories);
-  const maxTotal = Math.max(...data.map(d => d.total));
-
-  // Create grid lines based on maxTotal
-  const getGridLines = () => {
-    const gridCount = 4; // Number of horizontal grid lines
-    const step = maxTotal / gridCount;
-    const lines = [];
-    
-    for (let i = 1; i <= gridCount; i++) {
-      const value = step * i;
-      const percentage = (value / maxTotal) * 90; // 90% matches the max bar height
-      lines.push({
-        value,
-        percentage,
-        label: `$${(value / 1000).toFixed(1)}k`
-      });
-    }
-    
-    return lines;
-  };
-
-  const gridLines = getGridLines();
-
-  const getColorHex = (colorName: AvailableChartColorsKeys): string => {
-    const colorMap: Record<AvailableChartColorsKeys, string> = {
-      indigo: '#6366f1',
-      blue: '#3b82f6',
-      emerald: '#10b981',
-      amber: '#f59e0b',
-      red: '#ef4444',
-      orange: '#f97316',
-      teal: '#14b8a6',
-      violet: '#8b5cf6',
-      pink: '#ec4899',
-      cyan: '#06b6d4'
-    };
-    return colorMap[colorName] || '#6b7280';
-  };
-
-  const handleSegmentClick = (category: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    const newSelection = selectedCategory === category ? null : category;
-    onCategoryClick?.(newSelection);
-  };
-
-  const handleSegmentHover = (
-    category: string, 
-    amount: number, 
-    month: string, 
-    event: React.MouseEvent
-  ) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    setHoveredSegment({
-      category,
-      amount,
-      month,
-      x: event.clientX,
-      y: event.clientY
-    });
-  };
-
-  const formatCategoryName = (category: string): string => {
-    return category
-      .replace(/_/g, ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const barWidth = Math.max(40, Math.min(80, (100 - data.length * 2) / data.length)); // Dynamic width with spacing
-
-  return (
-    <>
-      <div className="w-full h-full p-2 sm:p-4 relative overflow-hidden">
-        {/* Chart Container with proper boundaries */}
-        <div className="relative w-full h-full flex">
-          {/* Y-Axis Labels Container */}
-          <div className="flex flex-col justify-end relative" style={{ width: '50px', height: '300px' }}>
-            {/* Horizontal Grid Lines and Labels */}
-            {gridLines.map((line, index) => (
-              <div
-                key={index}
-                className="absolute right-2 text-xs text-gray-500 flex items-center"
-                style={{
-                  bottom: `${(line.percentage / 90) * 250}px`, // Adjust for 250px chart height
-                  transform: 'translateY(50%)'
-                }}
-              >
-                {line.label}
-              </div>
-            ))}
-            {/* Zero line label */}
-            <div className="absolute right-2 bottom-0 text-xs text-gray-500 flex items-center">
-              $0
-            </div>
-          </div>
-
-          {/* Chart Area */}
-          <div className="flex-1 relative">
-            {/* Horizontal Grid Lines */}
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="relative w-full" style={{ height: '250px' }}>
-                {gridLines.map((line, index) => (
-                  <div
-                    key={index}
-                    className="absolute w-full border-t border-gray-200"
-                    style={{
-                      bottom: `${line.percentage}%`,
-                      transform: 'translateY(50%)'
-                    }}
-                  />
-                ))}
-                {/* Zero line */}
-                <div className="absolute w-full border-t border-gray-300 bottom-0" />
-              </div>
-            </div>
-
-            {/* Chart Content */}
-            <div className="relative flex items-end justify-center h-full px-2 sm:px-4">
-              {data.map((month, index) => {
-                const heightPercentage = maxTotal > 0 ? (month.total / maxTotal) * 90 : 0;
-                
-                return (
-                  <div 
-                    key={index} 
-                    className="flex flex-col items-center" 
-                    style={{ 
-                      width: `${barWidth}px`,
-                      marginLeft: index === 0 ? '0' : '4px',
-                      marginRight: index === data.length - 1 ? '0' : '4px'
-                    }}
-                  >
-                    {/* Bar Container */}
-                    <div className="relative w-full flex flex-col justify-end" style={{ height: '250px' }}>
-                      {/* The actual stacked bar */}
-                      <div
-                        className="w-full relative bg-gray-200 rounded-t-sm border border-gray-300"
-                        style={{ 
-                          height: `${Math.max(heightPercentage, 2)}%`,
-                          minHeight: '10px'
-                        }}
-                      >
-                        {/* Stacked segments */}
-                        {categories.map((category, catIndex) => {
-                          const categoryAmount = month[category] || 0;
-                          const segmentHeight = month.total > 0 ? (categoryAmount / month.total) * 100 : 0;
-                          
-                          if (segmentHeight === 0) return null;
-                          
-                          const isSelected = selectedCategory === category;
-                          const isOtherSelected = selectedCategory && selectedCategory !== category;
-                          
-                          return (
-                            <div
-                              key={catIndex}
-                              className={`w-full border-t border-white cursor-pointer transition-all duration-200 ${
-                                isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''
-                              }`}
-                              style={{
-                                height: `${Math.max(segmentHeight, 8)}%`, // Minimum 8% height for touch targets
-                                minHeight: '44px', // Ensure minimum touch target size
-                                backgroundColor: getColorHex(categoryColors.get(category) || 'indigo'),
-                                opacity: isOtherSelected ? 0.3 : 1,
-                                transform: isSelected ? 'scale(1.05)' : 'scale(1)',
-                                zIndex: isSelected ? 10 : 1
-                              }}
-                              onClick={(e) => handleSegmentClick(category, e)}
-                              onMouseEnter={(e) => handleSegmentHover(category, categoryAmount, month.displayMonth, e)}
-                              onMouseLeave={() => setHoveredSegment(null)}
-                              onMouseMove={(e) => handleSegmentHover(category, categoryAmount, month.displayMonth, e)}
-                            />
-                          );
-                        })}
-                      </div>
-                      
-                      {/* Value label on top */}
-                      <div className="text-xs text-gray-600 text-center mt-1 hidden sm:block">
-                        ${(month.total / 1000).toFixed(1)}k
-                      </div>
-                    </div>
-                    
-                    {/* Month Label */}
-                    <div className="text-xs text-gray-600 mt-1 sm:mt-2 text-center">
-                      {month.displayMonth?.split(' ')[0] || month.month}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tooltip */}
-      {hoveredSegment && (
-        <div
-          className="fixed z-50 bg-white border border-gray-200 shadow-lg rounded-lg px-3 py-2 pointer-events-none"
-          style={{
-            left: hoveredSegment.x + 10,
-            top: hoveredSegment.y - 10,
-            transform: 'translateY(-100%)'
-          }}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <div 
-              className="w-3 h-3 rounded-full"
-              style={{
-                backgroundColor: getColorHex(categoryColors.get(hoveredSegment.category) || 'indigo')
-              }}
-            />
-            <div className="font-semibold text-gray-900">{formatCategoryName(hoveredSegment.category)}</div>
-          </div>
-          <div className="text-sm text-gray-700">{formatCurrency(hoveredSegment.amount)}</div>
-          <div className="text-xs text-gray-500">{hoveredSegment.month}</div>
-        </div>
-      )}
-    </>
-  );
-};
 
 interface DashboardChartsProps {
   transactions?: any[];
@@ -563,12 +300,25 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
             Monthly Spending Trends
           </h3>
           {dataEngine && monthlySpendingData.length > 1 ? (
-            <div className="h-48 sm:h-64 lg:h-80">
-              <SimpleStackedBarChart 
+            <div className="h-64 sm:h-80 lg:h-96">
+              <StackedBarChart 
                 data={monthlySpendingData}
-                categoryColors={categoryColors}
+                categories={categorySpending.map(cat => cat.category)}
+                xAxisKey="displayMonth"
                 selectedCategory={selectedCategory}
-                onCategoryClick={setSelectedCategory}
+                onValueChange={(value) => {
+                  if (value && value.categoryClicked) {
+                    const newCategory = selectedCategory === value.categoryClicked ? null : value.categoryClicked;
+                    setSelectedCategory(newCategory);
+                  } else {
+                    setSelectedCategory(null);
+                  }
+                }}
+                valueFormatter={(value) => `$${(value / 1000).toFixed(1)}k`}
+                showXAxis={true}
+                showYAxis={true}
+                showGrid={false}
+                showLegend={true}
               />
             </div>
           ) : (

@@ -21,6 +21,8 @@ import { convertCurrency, extractCurrencyCode } from '@/lib/currency';
 import { ensureApiAccessForTraining } from '@/lib/apiKeyUtils';
 import { useRouter } from 'next/navigation';
 import posthog from 'posthog-js';
+import { validateClassifyRequest, validateCsvMappingData, handleClassifyError } from '@/lib/classify-validation';
+import { CSVMappingGuide } from './CSVMappingGuide';
 
 // Import modular components
 import ManageDataTab from './data-management/ManageDataTab';
@@ -102,6 +104,9 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   // Currency selection for new spreadsheet
   const [newSpreadsheetCurrency, setNewSpreadsheetCurrency] = useState<string>('');
   const [showCurrencySelection, setShowCurrencySelection] = useState(false);
+  
+  // CSV mapping guide
+  const [showMappingGuide, setShowMappingGuide] = useState(false);
   
   // Get base currency from store with fallback
   const baseCurrency = userData.baseCurrency || 'USD';
@@ -545,7 +550,35 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         const currencyHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'currency');
         const directionHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'direction');
         
-        const originalAmount = parseFloat(String(row[amountHeader!] || '0'));
+        // Enhanced validation for amount field during processing
+        const rawAmount = row[amountHeader!];
+        console.log(`🔍 Processing amount for row ${index}:`, { 
+          amountHeader, 
+          rawAmount: rawAmount, 
+          type: typeof rawAmount 
+        });
+
+        // Validate that amount field contains numeric data
+        if (rawAmount !== undefined && rawAmount !== null && rawAmount !== '') {
+          const amountStr = String(rawAmount).trim();
+          
+          // Check if amount field contains description-like text
+          if (amountStr.toLowerCase().includes('description') ||
+              amountStr.toLowerCase().includes('narrative') ||
+              amountStr.toLowerCase().includes('merchant') ||
+              amountStr.toLowerCase().includes('reference') ||
+              /^[a-zA-Z\s]{3,}$/.test(amountStr)) {
+            throw new Error(`❌ Column mapping error in row ${index + 1}: Amount field contains "${amountStr}" which appears to be text, not a number. Please check your column mapping and ensure the amount column is mapped to a numeric field.`);
+          }
+
+          // Check if the value can be parsed as a number
+          const parsedAmount = parseFloat(amountStr);
+          if (isNaN(parsedAmount)) {
+            throw new Error(`❌ Invalid amount in row ${index + 1}: "${amountStr}" cannot be converted to a number. Please check your column mapping.`);
+          }
+        }
+
+        const originalAmount = parseFloat(String(rawAmount || '0'));
         const rawCurrency = currencyHeader ? String(row[currencyHeader] || baseCurrency) : baseCurrency;
         const originalCurrency = extractCurrencyCode(rawCurrency) || baseCurrency;
         
@@ -685,6 +718,32 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         return;
       }
 
+      // Pre-validate processed transaction data to catch mapping issues early
+      try {
+        const sampleTransactions = uniqueTransactions.slice(0, 3).map(t => ({
+          description: t.description,
+          money_in: t.money_in,
+          amount: t.amount
+        }));
+        
+        const preValidation = validateCsvMappingData(sampleTransactions);
+        if (!preValidation.isValid) {
+          setShowMappingGuide(true);
+          setFeedback({ 
+            type: 'error', 
+            message: `❌ Data mapping validation failed:\n${preValidation.errors.join('\n')}\n\nPlease check your CSV column mapping and try again.` 
+          });
+          return;
+        }
+      } catch (preValidationError) {
+        console.error('Pre-validation failed:', preValidationError);
+        setFeedback({ 
+          type: 'error', 
+          message: `❌ Data validation failed: ${preValidationError instanceof Error ? preValidationError.message : 'Unknown error'}. Please check your CSV column mapping.` 
+        });
+        return;
+      }
+
       if (duplicateCount > 0) {
         setFeedback({ 
           type: 'success', 
@@ -760,17 +819,35 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           return;
         }
         
+        // Prepare training data with validation
+        const trainingTransactions = (userData.transactions || []).map(t => ({
+          description: t.description,
+          Category: t.category, // Fixed field name from predicted_category to Category
+          money_in: !t.isDebit,
+          amount: t.amount
+        }));
+
+        // Validate training data before sending
+        try {
+          validateClassifyRequest({ transactions: trainingTransactions });
+        } catch (validationError) {
+          console.error('Training data validation failed:', validationError);
+          if (validationError instanceof Error && validationError.message.includes('mapping')) {
+            setShowMappingGuide(true);
+          }
+          setFeedback({ 
+            type: 'error', 
+            message: `❌ Training data validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown error'}. Please check your existing transaction data.` 
+          });
+          return;
+        }
+        
         // Step 1: Train the model using existing transactions
         const trainResponse = await fetch('/api/classify/train', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            transactions: (userData.transactions || []).map(t => ({
-              description: t.description,
-              Category: t.category, // Fixed field name from predicted_category to Category
-              money_in: !t.isDebit,
-              amount: t.amount
-            }))
+            transactions: trainingTransactions
           })
         });
 
@@ -810,16 +887,34 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           throw new Error(errorData.message || errorData.error || `Training request failed: ${trainResponse.statusText}`);
         }
 
+        // Prepare classification data with validation
+        const classificationTransactions = uniqueTransactions.map(t => ({
+          description: t.description,
+          money_in: t.money_in,
+          amount: t.amount
+        }));
+
+        // Validate classification data before sending
+        try {
+          validateClassifyRequest({ transactions: classificationTransactions });
+        } catch (validationError) {
+          console.error('Classification data validation failed:', validationError);
+          if (validationError instanceof Error && validationError.message.includes('mapping')) {
+            setShowMappingGuide(true);
+          }
+          setFeedback({ 
+            type: 'error', 
+            message: `❌ Classification data validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown error'}. Please check your CSV column mapping.` 
+          });
+          return;
+        }
+
         // Step 2: Classify new transactions using the trained model
         const classifyResponse = await fetch('/api/classify/classify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            transactions: uniqueTransactions.map(t => ({
-              description: t.description,
-              money_in: t.money_in,
-              amount: t.amount
-            }))
+            transactions: classificationTransactions
           })
         });
 
@@ -902,15 +997,33 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           : 'Using generic auto-classification for first upload...';
         setFeedback({ type: 'success', message });
         
+        // Prepare auto-classification data with validation
+        const autoClassifyTransactions = uniqueTransactions.map(t => ({
+          description: t.description,
+          money_in: t.money_in,
+          amount: t.amount
+        }));
+
+        // Validate auto-classification data before sending
+        try {
+          validateClassifyRequest({ transactions: autoClassifyTransactions });
+        } catch (validationError) {
+          console.error('Auto-classification data validation failed:', validationError);
+          if (validationError instanceof Error && validationError.message.includes('mapping')) {
+            setShowMappingGuide(true);
+          }
+          setFeedback({ 
+            type: 'error', 
+            message: `❌ Auto-classification data validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown error'}. Please check your CSV column mapping.` 
+          });
+          return;
+        }
+        
         const autoClassifyResponse = await fetch('/api/classify/auto-classify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            transactions: uniqueTransactions.map(t => ({
-              description: t.description,
-              money_in: t.money_in,
-              amount: t.amount
-            }))
+            transactions: autoClassifyTransactions
           })
         });
 
@@ -1012,7 +1125,15 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
 
     } catch (error: any) {
       console.error('Transaction processing error:', error);
-      setFeedback({ type: 'error', message: `Processing error: ${error.message}` });
+      
+      // Enhanced error handling for validation and mapping issues
+      const errorHandler = handleClassifyError(error);
+      setFeedback({ 
+        type: 'error', 
+        message: error.message?.includes('mapping') || error.message?.includes('validation') 
+          ? error.message 
+          : errorHandler.message
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -1313,6 +1434,11 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       </div>
       </div>
 
+      {/* CSV Mapping Guide Modal */}
+      <CSVMappingGuide
+        isVisible={showMappingGuide}
+        onClose={() => setShowMappingGuide(false)}
+      />
 
     </>
   );

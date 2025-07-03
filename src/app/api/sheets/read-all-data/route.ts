@@ -44,8 +44,7 @@ interface AllSheetsData {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀🚀🚀 READ-ALL-DATA ENDPOINT CALLED!!! 🚀🚀🚀');
-    console.log('🚀 READ-ALL-DATA: Starting request...');
+    
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -261,9 +260,6 @@ export async function POST(request: NextRequest) {
         }
 
         if (type === 'savings' && data && data.length > 0) {
-          // Process Savings data - find Net Asset Value column
-          console.log('🔍 Processing Savings sheet data...');
-          console.log('📊 Savings data structure:', data);
           
           // Find the actual header row (look for "Quarter" column)
           let headerRowIndex = -1;
@@ -278,14 +274,12 @@ export async function POST(request: NextRequest) {
               if (hasQuarterColumn) {
                 headerRowIndex = i;
                 headerRow = row;
-                console.log(`📋 Found header row at index ${i}:`, headerRow);
                 break;
               }
             }
           }
           
           if (headerRowIndex === -1) {
-            console.log('❌ Could not find header row with "Quarter" column');
             return;
           }
           
@@ -293,14 +287,12 @@ export async function POST(request: NextRequest) {
           let netAssetValueIndex = headerRow.findIndex((header: any) => 
             header && String(header).toLowerCase().includes('liquid net asset value')
           );
-          console.log('🎯 Liquid Net Asset Value column index:', netAssetValueIndex);
 
           // Second priority: Look for regular "Net Asset Value" column
           if (netAssetValueIndex === -1) {
             netAssetValueIndex = headerRow.findIndex((header: any) => 
               header && String(header).toLowerCase().includes('net asset value')
             );
-            console.log('🔄 Net Asset Value column index:', netAssetValueIndex);
           }
 
           // Fallback to other common column names
@@ -314,22 +306,18 @@ export async function POST(request: NextRequest) {
                 String(header).toLowerCase().includes('amount')
               )
             );
-            console.log('🔄 Fallback column index:', netAssetValueIndex);
           }
 
           if (netAssetValueIndex !== -1) {
             const netAssetValues = [];
-            console.log(`📈 Found Net Asset Value column at index ${netAssetValueIndex}, processing rows...`);
             
             // Start from the row after headers and check all rows
             for (let i = headerRowIndex + 1; i < data.length; i++) {
               const row = data[i];
-              console.log(`📊 Processing row ${i}:`, row);
               
               if (row && row[netAssetValueIndex] !== undefined && row[netAssetValueIndex] !== null) {
                 const value = row[netAssetValueIndex];
                 const stringValue = String(value);
-                console.log(`💰 Raw value at row ${i}:`, value, 'String value:', stringValue);
                 
                 // Skip header-like values that contain text, but be more flexible
                 if (stringValue && 
@@ -337,7 +325,6 @@ export async function POST(request: NextRequest) {
                     !stringValue.toLowerCase().includes('value') && 
                     stringValue.trim() !== '') {
                   const numericValue = parseFloat(stringValue.replace(/[$,]/g, ''));
-                  console.log(`🔢 Numeric value at row ${i}:`, numericValue);
                   
                   if (!isNaN(numericValue) && numericValue > 0) {
                     const entry = {
@@ -346,14 +333,12 @@ export async function POST(request: NextRequest) {
                       formattedValue: stringValue,
                       rowIndex: i
                     };
-                    console.log(`✅ Added savings entry:`, entry);
                     netAssetValues.push(entry);
                   }
                 }
               }
             }
 
-            console.log('📊 All Net Asset Values found:', netAssetValues);
 
             if (netAssetValues.length > 0) {
               const latestNetAssetValue = netAssetValues[netAssetValues.length - 1];
@@ -363,12 +348,9 @@ export async function POST(request: NextRequest) {
                 formattedValue: latestNetAssetValue.formattedValue,
                 totalEntries: netAssetValues.length
               };
-              console.log('✅ Savings result:', result.savings);
             } else {
-              console.log('❌ No valid Net Asset Values found');
             }
           } else {
-            console.log('❌ Net Asset Value column not found in headers:', headerRow);
             
             // Let's try to calculate from individual asset columns if Net Asset Value column is missing
             const quarterIndex = headerRow.findIndex((header: any) => 
@@ -376,7 +358,6 @@ export async function POST(request: NextRequest) {
             );
             
             if (quarterIndex !== -1) {
-              console.log('🔧 Attempting to calculate total from individual asset columns...');
               
               // Find asset columns (Cash, Crypto, Shares, etc.) and liquid net asset value
               const assetColumnIndices: number[] = [];
@@ -399,7 +380,6 @@ export async function POST(request: NextRequest) {
                 }
               });
               
-              console.log('🏦 Found asset columns at indices:', assetColumnIndices);
               
               if (assetColumnIndices.length > 0) {
                 const calculatedNetAssetValues = [];
@@ -430,9 +410,7 @@ export async function POST(request: NextRequest) {
                       });
                     }
                   }
-                }
-                
-                console.log('📊 Calculated Net Asset Values:', calculatedNetAssetValues);
+                }                
                 
                 if (calculatedNetAssetValues.length > 0) {
                   const latestCalculatedValue = calculatedNetAssetValues[calculatedNetAssetValues.length - 1];
@@ -442,7 +420,6 @@ export async function POST(request: NextRequest) {
                     formattedValue: latestCalculatedValue.formattedValue,
                     totalEntries: calculatedNetAssetValues.length
                   };
-                  console.log('✅ Calculated savings result:', result.savings);
                 }
               }
             }
@@ -525,7 +502,6 @@ export async function POST(request: NextRequest) {
             // Only use Assets data as fallback if we don't already have Savings data
             // The Savings sheet should take precedence over Assets sheet for net asset value
             if (portfolioData.totalValue > 0 && !result.savings) {
-              console.log('📊 Using Assets data as fallback for savings (no Savings sheet data found)');
               result.savings = {
                 latestNetAssetValue: portfolioData.totalValue,
                 latestQuarter: portfolioData.latestQuarter || '',
@@ -533,7 +509,6 @@ export async function POST(request: NextRequest) {
                 totalEntries: portfolioData.totalAssets
               };
             } else if (result.savings) {
-              console.log('✅ Keeping Savings sheet data, not overriding with Assets data');
             }
           }
         }
