@@ -6,7 +6,7 @@ import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 import { Box } from '@/components/ui/Box';
 import { Button } from '@/components/ui/button';
-import { ArrowUpTrayIcon, ArrowDownTrayIcon, TrashIcon, CircleStackIcon } from '@heroicons/react/24/outline';
+import { ArrowUpTrayIcon, TrashIcon, CircleStackIcon } from '@heroicons/react/24/outline';
 import ExportFeedbackDialog from '@/components/shared/ExportFeedbackDialog';
 
 interface DataManagementProps {
@@ -14,7 +14,7 @@ interface DataManagementProps {
 }
 
 export const DataManagement: React.FC<DataManagementProps> = ({ className = '' }) => {
-  const { userData, clearAllData, importData } = usePersonalFinanceStore();
+  const { userData, clearAllData } = usePersonalFinanceStore();
   const { trackAction } = usePersonalFinanceTracking({
     currentScreen: 'dataManagement',
     progress: 100
@@ -34,38 +34,6 @@ export const DataManagement: React.FC<DataManagementProps> = ({ className = '' }
       has_savings: userData.savings > 0,
       transaction_count: userData.transactions?.length || 0
     });
-  };
-
-  const handleImport = () => {
-    if (!importText.trim()) {
-      setMessage({ type: 'error', text: 'Please paste your data to import' });
-      trackAction('dataImportFailed', {
-        reason: 'empty_input',
-        input_length: importText.length
-      });
-      return;
-    }
-
-    const success = importData(importText);
-    if (success) {
-      setMessage({ type: 'success', text: 'Data imported successfully!' });
-      setImportText('');
-      setShowImportModal(false);
-      
-      // Track successful import
-      trackAction('dataImported', {
-        input_length: importText.length,
-        success: true
-      });
-    } else {
-      setMessage({ type: 'error', text: 'Failed to import data. Please check the format.' });
-      
-      // Track failed import
-      trackAction('dataImportFailed', {
-        reason: 'invalid_format',
-        input_length: importText.length
-      });
-    }
   };
 
   const handleClearData = () => {

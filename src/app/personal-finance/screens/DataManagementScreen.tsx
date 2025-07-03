@@ -7,7 +7,7 @@ import { useScreenNavigation } from '../hooks/useScreenNavigation';
 import { usePersonalFinanceTracking } from '../hooks/usePersonalFinanceTracking';
 import DataManagement from '../components/DataManagement';
 import { ProFeatureTeaser } from '@/app/personal-finance/shared/ProFeatureTeaser';
-import { LockClosedIcon, CircleStackIcon } from '@heroicons/react/24/outline';
+import { LockClosedIcon } from '@heroicons/react/24/outline';
 
 const DataManagementScreen: React.FC = () => {
   const { goToScreen } = useScreenNavigation();

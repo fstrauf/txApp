@@ -52,10 +52,18 @@ export function validateAndFormatTransactions(transactions: any[]): ValidatedTra
           let amount: number;
           
           if (typeof tx.amount === 'string') {
+            // Check if string looks like a description rather than a number
+            if (tx.amount.toLowerCase().includes('description') || 
+                tx.amount.toLowerCase().includes('narrative') ||
+                tx.amount.toLowerCase().includes('merchant') ||
+                /^[a-zA-Z\s]+$/.test(tx.amount.trim())) {
+              throw new Error(`Transaction ${index}: Amount field contains text "${tx.amount}" instead of a number. This suggests incorrect column mapping in your CSV upload.`);
+            }
+            
             // Try to parse string amount
             const parsed = parseFloat(tx.amount);
             if (isNaN(parsed) || !isFinite(parsed)) {
-              throw new Error(`Transaction ${index}: Invalid amount "${tx.amount}" - must be a valid number`);
+              throw new Error(`Transaction ${index}: Invalid amount "${tx.amount}" - must be a valid number. Check your CSV column mapping.`);
             }
             amount = parsed;
           } else if (typeof tx.amount === 'number') {
@@ -64,7 +72,7 @@ export function validateAndFormatTransactions(transactions: any[]): ValidatedTra
             }
             amount = tx.amount;
           } else {
-            throw new Error(`Transaction ${index}: Amount must be a number or numeric string`);
+            throw new Error(`Transaction ${index}: Amount must be a number or numeric string, got ${typeof tx.amount}`);
           }
 
           // Return full transaction object
@@ -92,6 +100,49 @@ export function validateAndFormatTransactions(transactions: any[]): ValidatedTra
 }
 
 /**
+ * Pre-validation to catch common CSV mapping issues
+ */
+export function validateCsvMappingData(transactions: any[]): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  for (let i = 0; i < Math.min(transactions.length, 5); i++) {
+    const tx = transactions[i];
+    
+    if (typeof tx === 'object' && tx !== null) {
+      // Check for common mapping mistakes
+      if (tx.amount !== undefined) {
+        const amountStr = String(tx.amount);
+        
+        // Check if amount field contains description-like text
+        if (amountStr.toLowerCase().includes('description') ||
+            amountStr.toLowerCase().includes('narrative') ||
+            amountStr.toLowerCase().includes('merchant') ||
+            amountStr.toLowerCase().includes('reference') ||
+            /^[a-zA-Z\s]{3,}$/.test(amountStr.trim())) {
+          errors.push(`Row ${i + 1}: Amount field contains "${amountStr}" which looks like a description. Please check your column mapping.`);
+        }
+        
+        // Check if amount is not a valid number
+        const parsed = parseFloat(amountStr);
+        if (isNaN(parsed)) {
+          errors.push(`Row ${i + 1}: Amount "${amountStr}" is not a valid number. Please check your column mapping.`);
+        }
+      }
+      
+      // Check if description contains only numbers (might be wrong mapping)
+      if (tx.description && /^\d+\.?\d*$/.test(String(tx.description).trim())) {
+        errors.push(`Row ${i + 1}: Description "${tx.description}" appears to be a number. Please check your column mapping.`);
+      }
+    }
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+/**
  * Validates the complete classify request
  */
 export function validateClassifyRequest(data: any): ValidatedClassifyRequest {
@@ -107,6 +158,12 @@ export function validateClassifyRequest(data: any): ValidatedClassifyRequest {
 
     if (data.transactions.length === 0) {
       throw new Error('At least one transaction is required');
+    }
+
+    // Pre-validate CSV mapping issues
+    const mappingValidation = validateCsvMappingData(data.transactions);
+    if (!mappingValidation.isValid) {
+      throw new Error(`Column mapping issues detected:\n${mappingValidation.errors.join('\n')}`);
     }
 
     // Validate and format transactions
@@ -126,9 +183,9 @@ export function validateClassifyRequest(data: any): ValidatedClassifyRequest {
  */
 export function handleClassifyError(error: any): { message: string; status: number; details?: any } {
   // Handle validation errors
-  if (error.message?.includes('validation')) {
+  if (error.message?.includes('validation') || error.message?.includes('mapping')) {
     return {
-      message: 'Invalid transaction data format. Please check your transaction descriptions and amounts.',
+      message: 'Data mapping error: Please check your CSV column mapping and ensure amounts are mapped to numeric columns and descriptions to text columns.',
       status: 400,
       details: error.message,
     };
