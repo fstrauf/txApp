@@ -108,6 +108,10 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   // CSV mapping guide
   const [showMappingGuide, setShowMappingGuide] = useState(false);
   
+  // Duplicate detection reporting
+  const [duplicateReport, setDuplicateReport] = useState<any>(null);
+  const [showDuplicateReport, setShowDuplicateReport] = useState(false);
+  
   // Get base currency from store with fallback
   const baseCurrency = userData.baseCurrency || 'USD';
 
@@ -130,12 +134,104 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     return `${date}-${amount}-${description}`;
   };
 
+  // Enhanced duplicate detection with multiple strategies
+  const createTransactionFingerprint = (transaction: any, strategy: 'strict' | 'moderate' | 'loose' = 'moderate') => {
+    const date = new Date(transaction.date).toISOString().split('T')[0];
+    const amount = Math.abs(transaction.amount).toFixed(2);
+    const description = transaction.description.toLowerCase().trim();
+    const isDebit = transaction.isDebit || transaction.money_in === false;
+    
+    switch (strategy) {
+      case 'strict':
+        // Most precise - includes direction, full description, and account
+        return `${date}-${amount}-${isDebit ? 'debit' : 'credit'}-${description}-${transaction.account || 'unknown'}`;
+      
+      case 'moderate':
+        // Balanced approach - includes direction and truncated description
+        return `${date}-${amount}-${isDebit ? 'debit' : 'credit'}-${description.substring(0, 100)}`;
+      
+      case 'loose':
+        // Most forgiving - similar to original but with direction
+        return `${date}-${amount}-${isDebit ? 'debit' : 'credit'}-${description.substring(0, 50)}`;
+      
+      default:
+        return `${date}-${amount}-${isDebit ? 'debit' : 'credit'}-${description.substring(0, 100)}`;
+    }
+  };
+
+  // Enhanced duplicate detection with detailed reporting
+  const detectDuplicateTransactions = (newTransactions: any[], strategy: 'strict' | 'moderate' | 'loose' = 'moderate') => {
+    if (!userData.transactions || userData.transactions.length === 0) {
+      return {
+        uniqueTransactions: newTransactions,
+        duplicates: [],
+        duplicateCount: 0,
+        strategy
+      };
+    }
+
+    // Create fingerprints for existing transactions
+    const existingFingerprints = new Map();
+    userData.transactions.forEach(tx => {
+      const fingerprint = createTransactionFingerprint(tx, strategy);
+      if (!existingFingerprints.has(fingerprint)) {
+        existingFingerprints.set(fingerprint, []);
+      }
+      existingFingerprints.get(fingerprint).push(tx);
+    });
+
+    // Also check for duplicates within the new batch
+    const newFingerprints = new Map();
+    const duplicates: any[] = [];
+    const uniqueTransactions: any[] = [];
+
+    newTransactions.forEach((transaction, index) => {
+      const fingerprint = createTransactionFingerprint(transaction, strategy);
+      
+      // Check against existing transactions
+      const existingMatches = existingFingerprints.get(fingerprint);
+      
+      // Check against other new transactions
+      const newMatches = newFingerprints.get(fingerprint);
+      
+      if (existingMatches || newMatches) {
+        duplicates.push({
+          transaction,
+          index,
+          fingerprint,
+          existingMatches: existingMatches || [],
+          newMatches: newMatches || [],
+          reason: existingMatches ? 'existing' : 'within_batch'
+        });
+      } else {
+        uniqueTransactions.push(transaction);
+        if (!newFingerprints.has(fingerprint)) {
+          newFingerprints.set(fingerprint, []);
+        }
+        newFingerprints.get(fingerprint).push(transaction);
+      }
+    });
+
+    return {
+      uniqueTransactions,
+      duplicates,
+      duplicateCount: duplicates.length,
+      strategy,
+      stats: {
+        total: newTransactions.length,
+        unique: uniqueTransactions.length,
+        duplicateWithExisting: duplicates.filter(d => d.reason === 'existing').length,
+        duplicateWithinBatch: duplicates.filter(d => d.reason === 'within_batch').length
+      }
+    };
+  };
+
   const filterDuplicateTransactions = (newTransactions: any[]) => {
     if (!userData.transactions || userData.transactions.length === 0) {
       return newTransactions; // No existing data, all transactions are new
     }
 
-    // Create a set of existing transaction keys
+    // Create a set of existing transaction keys (keeping backward compatibility)
     const existingKeys = new Set(
       userData.transactions.map(t => createTransactionKey(t))
     );
@@ -511,8 +607,87 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         });
       });
 
-      // Process the data with concatenated descriptions
-      const processedData = fullData.map(row => {
+      console.log('Parsed CSV data:', fullData.length, 'rows');
+      console.log('First few rows:', fullData.slice(0, 3));
+
+      // Additional validation to detect and filter out header rows
+      const cleanedData = fullData.filter((row, index) => {
+        // Check if this row looks like a header row
+        const headerPatterns = ['description', 'narrative', 'merchant', 'amount', 'date', 'reference', 'details', 'memo', 'code', 'type', 'balance'];
+        
+        // Get mapped field values
+        const dateHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'date');
+        const amountHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'amount');
+        const descriptionHeader = Object.keys(config.mappings!).find(h => config.mappings![h] === 'description');
+        
+        if (dateHeader && amountHeader && descriptionHeader) {
+          const dateValue = String(row[dateHeader] || '').toLowerCase().trim();
+          const amountValue = String(row[amountHeader] || '').toLowerCase().trim();
+          const descriptionValue = String(row[descriptionHeader] || '').toLowerCase().trim();
+          
+          // Debug log every row being processed
+          console.log(`🔍 Processing row ${index}:`, {
+            dateHeader,
+            amountHeader,
+            descriptionHeader,
+            dateValue,
+            amountValue,
+            descriptionValue
+          });
+          
+          // Check if any of these values match common header patterns
+          const hasHeaderPattern = headerPatterns.some(pattern => 
+            dateValue === pattern || 
+            amountValue === pattern || 
+            descriptionValue === pattern
+          );
+          
+          if (hasHeaderPattern) {
+            console.log(`❌ Filtering out row ${index} as it appears to be a header:`, {
+              date: dateValue,
+              amount: amountValue,
+              description: descriptionValue
+            });
+            return false;
+          }
+          
+          // Check if description and amount have the same value (duplicate mapping)
+          if (descriptionValue && amountValue && descriptionValue === amountValue) {
+            console.log(`❌ Filtering out row ${index} as description and amount have the same value:`, {
+              description: descriptionValue,
+              amount: amountValue
+            });
+            return false;
+          }
+          
+          // Additional validation: check if amount contains only letters (not a number)
+          if (amountValue && /^[a-zA-Z\s]+$/.test(amountValue)) {
+            console.log(`❌ Filtering out row ${index} as amount contains only letters:`, {
+              amount: amountValue
+            });
+            return false;
+          }
+          
+          // Check if description contains only digits (wrong mapping)
+          if (descriptionValue && /^\d+\.?\d*$/.test(descriptionValue)) {
+            console.log(`❌ Filtering out row ${index} as description contains only digits:`, {
+              description: descriptionValue
+            });
+            return false;
+          }
+        }
+        
+        return true;
+      });
+
+      console.log(`Filtered data: ${fullData.length} -> ${cleanedData.length} rows (removed ${fullData.length - cleanedData.length} header/invalid rows)`);
+      
+      if (cleanedData.length === 0) {
+        throw new Error('No valid transaction data found. The CSV file may contain only headers or invalid data.');
+      }
+
+      // Process the cleaned data with concatenated descriptions
+      const processedData = cleanedData.map(row => {
         const processedRow = { ...row };
         
         if (config.mappings) {
@@ -685,6 +860,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       // Filter out duplicate transactions early - but skip this for new spreadsheet mode
       let uniqueTransactions;
       let duplicateCount = 0;
+      let duplicateDetails: any = null;
       
       console.log('🔍 Duplicate filtering decision:', {
         createNewSpreadsheetMode,
@@ -698,10 +874,35 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         console.log('📋 Creating new spreadsheet - processing all transactions without duplicate filtering');
         console.log('📋 uniqueTransactions.length:', uniqueTransactions.length);
       } else {
-        // For existing spreadsheets, filter out duplicates
-        uniqueTransactions = filterDuplicateTransactions(rawTransactions);
-        duplicateCount = rawTransactions.length - uniqueTransactions.length;
-        console.log('🔍 Filtered duplicates - uniqueTransactions.length:', uniqueTransactions.length, 'duplicateCount:', duplicateCount);
+        // For existing spreadsheets, use enhanced duplicate detection
+        console.log('🔍 Running enhanced duplicate detection...');
+        
+        const detectionResult = detectDuplicateTransactions(rawTransactions, 'moderate');
+        uniqueTransactions = detectionResult.uniqueTransactions;
+        duplicateCount = detectionResult.duplicateCount;
+        duplicateDetails = detectionResult;
+        
+        console.log('🔍 Enhanced duplicate detection results:', {
+          strategy: detectionResult.strategy,
+          total: detectionResult.stats?.total || 0,
+          unique: detectionResult.stats?.unique || 0,
+          duplicateWithExisting: detectionResult.stats?.duplicateWithExisting || 0,
+          duplicateWithinBatch: detectionResult.stats?.duplicateWithinBatch || 0,
+          totalDuplicates: duplicateCount
+        });
+        
+        // Store duplicate report for user viewing
+        if (detectionResult.duplicates.length > 0) {
+          setDuplicateReport(detectionResult);
+        }
+        
+        // Log detailed duplicate information
+        if (detectionResult.duplicates.length > 0) {
+          console.log('📋 Duplicate transactions found:');
+          detectionResult.duplicates.forEach((dup, index) => {
+            console.log(`  ${index + 1}. ${dup.transaction.description} (${dup.transaction.amount}) - ${dup.reason}`);
+          });
+        }
       }
 
       if (uniqueTransactions.length === 0) {
@@ -711,10 +912,23 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           'userData.transactions?.length': userData.transactions?.length || 0,
           duplicateCount
         });
-        setFeedback({ 
-          type: 'error', 
-          message: `All ${rawTransactions.length} transactions are duplicates. No new data to process.` 
-        });
+        
+        // Provide detailed feedback about why no transactions were processed
+        if (duplicateDetails && duplicateDetails.duplicates.length > 0) {
+          const duplicateExamples = duplicateDetails.duplicates.slice(0, 3).map((dup: any) => 
+            `"${dup.transaction.description}" (${dup.transaction.amount})`
+          ).join(', ');
+          
+          setFeedback({ 
+            type: 'error', 
+            message: `All ${rawTransactions.length} transactions are duplicates of existing data. Examples: ${duplicateExamples}${duplicateDetails.duplicates.length > 3 ? '...' : ''}. Try uploading transactions from a different date range.` 
+          });
+        } else {
+          setFeedback({ 
+            type: 'error', 
+            message: `All ${rawTransactions.length} transactions are duplicates. No new data to process.` 
+          });
+        }
         return;
       }
 
@@ -745,15 +959,24 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       }
 
       if (duplicateCount > 0) {
+        const duplicateMessage = duplicateDetails ? 
+          `Found ${uniqueTransactions.length} new transactions. Filtered out ${duplicateCount} duplicates (${duplicateDetails.stats?.duplicateWithExisting || 0} match existing data, ${duplicateDetails.stats?.duplicateWithinBatch || 0} duplicates within upload).` :
+          `Found ${uniqueTransactions.length} new transactions (${duplicateCount} duplicates filtered out).`;
+          
         setFeedback({ 
           type: 'success', 
-          message: `Found ${uniqueTransactions.length} new transactions (${duplicateCount} duplicates filtered out). Starting categorization...` 
+          message: `${duplicateMessage} Starting categorization...`
         });
       } else {
         setFeedback({ 
           type: 'success', 
           message: `Processing ${uniqueTransactions.length} ${effectiveCreateNewMode ? '' : 'new '}transactions. Starting categorization...` 
         });
+      }
+
+      // Clear any previous duplicate report when starting new processing
+      if (!duplicateDetails || duplicateDetails.duplicates.length === 0) {
+        setDuplicateReport(null);
       }
 
       // Step 1: Check if we have existing data for training or use generic classification
@@ -894,6 +1117,48 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           amount: t.amount
         }));
 
+        // Final validation check - ensure no malformed data gets through
+        const malformedTransactions = classificationTransactions.filter((t, index) => {
+          const desc = String(t.description || '').toLowerCase().trim();
+          const amt = String(t.amount || '').toLowerCase().trim();
+          
+          // Check for header patterns
+          const headerPatterns = ['description', 'narrative', 'merchant', 'amount', 'date', 'reference', 'details', 'memo'];
+          const isHeaderDesc = headerPatterns.some(pattern => desc === pattern);
+          const isHeaderAmt = headerPatterns.some(pattern => amt === pattern);
+          
+          // Check for duplicate values
+          const isDuplicate = desc === amt && desc !== '';
+          
+          // Check if amount is not numeric
+          const isAmountNonNumeric = isNaN(parseFloat(amt)) && amt !== '';
+          
+          if (isHeaderDesc || isHeaderAmt || isDuplicate || isAmountNonNumeric) {
+            console.error(`❌ Malformed transaction detected at index ${index}:`, {
+              description: t.description,
+              amount: t.amount,
+              money_in: t.money_in,
+              issues: {
+                isHeaderDesc,
+                isHeaderAmt,
+                isDuplicate,
+                isAmountNonNumeric
+              }
+            });
+            return true;
+          }
+          return false;
+        });
+
+        if (malformedTransactions.length > 0) {
+          console.error(`❌ Found ${malformedTransactions.length} malformed transactions - aborting classification`);
+          setFeedback({ 
+            type: 'error', 
+            message: `❌ Data validation failed: Found ${malformedTransactions.length} transactions with invalid data (likely CSV header data or incorrect column mapping). Please check your CSV file and column mapping.` 
+          });
+          return;
+        }
+
         // Validate classification data before sending
         try {
           validateClassifyRequest({ transactions: classificationTransactions });
@@ -1003,6 +1268,48 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           money_in: t.money_in,
           amount: t.amount
         }));
+
+        // Final validation check - ensure no malformed data gets through
+        const autoMalformedTransactions = autoClassifyTransactions.filter((t, index) => {
+          const desc = String(t.description || '').toLowerCase().trim();
+          const amt = String(t.amount || '').toLowerCase().trim();
+          
+          // Check for header patterns
+          const headerPatterns = ['description', 'narrative', 'merchant', 'amount', 'date', 'reference', 'details', 'memo'];
+          const isHeaderDesc = headerPatterns.some(pattern => desc === pattern);
+          const isHeaderAmt = headerPatterns.some(pattern => amt === pattern);
+          
+          // Check for duplicate values
+          const isDuplicate = desc === amt && desc !== '';
+          
+          // Check if amount is not numeric
+          const isAmountNonNumeric = isNaN(parseFloat(amt)) && amt !== '';
+          
+          if (isHeaderDesc || isHeaderAmt || isDuplicate || isAmountNonNumeric) {
+            console.error(`❌ Malformed auto-classify transaction detected at index ${index}:`, {
+              description: t.description,
+              amount: t.amount,
+              money_in: t.money_in,
+              issues: {
+                isHeaderDesc,
+                isHeaderAmt,
+                isDuplicate,
+                isAmountNonNumeric
+              }
+            });
+            return true;
+          }
+          return false;
+        });
+
+        if (autoMalformedTransactions.length > 0) {
+          console.error(`❌ Found ${autoMalformedTransactions.length} malformed auto-classify transactions - aborting`);
+          setFeedback({ 
+            type: 'error', 
+            message: `❌ Data validation failed: Found ${autoMalformedTransactions.length} transactions with invalid data (likely CSV header data or incorrect column mapping). Please check your CSV file and column mapping.` 
+          });
+          return;
+        }
 
         // Validate auto-classification data before sending
         try {
@@ -1275,6 +1582,99 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     }
   };
 
+  // Duplicate Report Component
+  const DuplicateReport: React.FC<{ report: any; onClose: () => void }> = ({ report, onClose }) => {
+    if (!report || !report.duplicates.length) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-4xl max-h-[80vh] overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h3 className="text-lg font-semibold text-gray-900">Duplicate Transactions Report</h3>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="p-6 overflow-y-auto max-h-[60vh]">
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-blue-900 mb-2">Detection Summary</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-blue-700">Strategy:</span> <span className="font-medium">{report.strategy}</span>
+                </div>
+                <div>
+                  <span className="text-blue-700">Total Uploaded:</span> <span className="font-medium">{report.stats?.total || 0}</span>
+                </div>
+                <div>
+                  <span className="text-blue-700">Unique Transactions:</span> <span className="font-medium text-green-600">{report.stats?.unique || 0}</span>
+                </div>
+                <div>
+                  <span className="text-blue-700">Duplicates Found:</span> <span className="font-medium text-orange-600">{report.duplicateCount}</span>
+                </div>
+                <div>
+                  <span className="text-blue-700">Match Existing Data:</span> <span className="font-medium">{report.stats?.duplicateWithExisting || 0}</span>
+                </div>
+                <div>
+                  <span className="text-blue-700">Duplicates in Upload:</span> <span className="font-medium">{report.stats?.duplicateWithinBatch || 0}</span>
+                </div>
+              </div>
+            </div>
+
+            <h4 className="font-medium text-gray-900 mb-3">Duplicate Transactions ({report.duplicates.length})</h4>
+            <div className="space-y-3">
+              {report.duplicates.map((dup: any, index: number) => (
+                <div key={index} className={`p-3 rounded-lg border ${
+                  dup.reason === 'existing' ? 'bg-orange-50 border-orange-200' : 'bg-yellow-50 border-yellow-200'
+                }`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">{dup.transaction.description}</div>
+                      <div className="text-sm text-gray-600">
+                        {dup.transaction.date} • ${Math.abs(dup.transaction.amount).toFixed(2)} • 
+                        {dup.transaction.isDebit || dup.transaction.money_in === false ? ' Debit' : ' Credit'}
+                      </div>
+                    </div>
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${
+                      dup.reason === 'existing' 
+                        ? 'bg-orange-100 text-orange-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {dup.reason === 'existing' ? 'Matches Existing' : 'Duplicate in Upload'}
+                    </div>
+                  </div>
+                  
+                  {dup.existingMatches && dup.existingMatches.length > 0 && (
+                    <div className="text-xs text-gray-500">
+                      Matches {dup.existingMatches.length} existing transaction(s)
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-gray-600">
+                Detection strategy: <span className="font-medium">{report.strategy}</span> 
+                (considers date, amount, direction, and description)
+              </div>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Close Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="space-y-6">
@@ -1387,9 +1787,11 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             feedback={feedback}
             isProcessing={isProcessing}
             lastTransaction={lastTransaction}
+            duplicateReport={duplicateReport}
             onFileSelect={handleFileSelect}
             onMappingChange={handleMappingChange}
             onProcessTransactions={validateAndProcessData}
+            onViewDuplicateReport={() => setShowDuplicateReport(true)}
           />
         )}
 
@@ -1439,6 +1841,14 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         isVisible={showMappingGuide}
         onClose={() => setShowMappingGuide(false)}
       />
+
+             {/* Duplicate Report Modal */}
+       {showDuplicateReport && duplicateReport && (
+         <DuplicateReport
+           report={duplicateReport}
+           onClose={() => setShowDuplicateReport(false)}
+         />
+       )}
 
     </>
   );

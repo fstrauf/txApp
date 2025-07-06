@@ -37,9 +37,11 @@ interface UploadCSVTabProps {
   feedback: { type: 'success' | 'error' | 'info' | 'processing'; message: string } | null;
   isProcessing: boolean;
   lastTransaction: any;
+  duplicateReport: any;
   onFileSelect: (file: File) => void;
   onMappingChange: (csvHeader: string, fieldType: 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'direction' | 'none') => void;
   onProcessTransactions: () => void;
+  onViewDuplicateReport: () => void;
 }
 
 const commonDateFormats = [
@@ -60,9 +62,11 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
   feedback,
   isProcessing,
   lastTransaction,
+  duplicateReport,
   onFileSelect,
   onMappingChange,
-  onProcessTransactions
+  onProcessTransactions,
+  onViewDuplicateReport
 }) => {
   // AI suggestions are now handled in the parent component during file analysis
 
@@ -451,14 +455,27 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
               feedback.type === 'processing' ? 'bg-blue-50 border-blue-200 text-blue-800' :
               'bg-gray-50 border-gray-200 text-gray-800'
             }`}>
-              <div className="flex items-center">
-                <span className="text-lg mr-2">
-                  {feedback.type === 'success' ? '✅' : 
-                   feedback.type === 'error' ? '❌' : 
-                   feedback.type === 'processing' ? '🔄' : 
-                   'ℹ️'}
-                </span>
-                <div className="font-medium">{feedback.message}</div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="text-lg mr-2">
+                    {feedback.type === 'success' ? '✅' : 
+                     feedback.type === 'error' ? '❌' : 
+                     feedback.type === 'processing' ? '🔄' : 
+                     'ℹ️'}
+                  </span>
+                  <div className="font-medium">{feedback.message}</div>
+                </div>
+                
+                {/* Show duplicate report button if duplicates were found */}
+                {duplicateReport && duplicateReport.duplicates && duplicateReport.duplicates.length > 0 && 
+                 feedback.type === 'success' && feedback.message.includes('duplicate') && (
+                  <button
+                    onClick={onViewDuplicateReport}
+                    className="ml-4 px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    View Details ({duplicateReport.duplicates.length})
+                  </button>
+                )}
               </div>
             </div>
           )}

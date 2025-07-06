@@ -31,6 +31,14 @@ export function validateAndFormatTransactions(transactions: any[]): ValidatedTra
         if (!tx.trim()) {
           throw new Error(`Transaction ${index}: Description cannot be empty`);
         }
+        
+        // Check if string looks like a CSV header
+        const headerPatterns = ['description', 'narrative', 'merchant', 'amount', 'date', 'reference'];
+        const lowerTx = tx.toLowerCase().trim();
+        if (headerPatterns.some(pattern => lowerTx === pattern)) {
+          throw new Error(`Transaction ${index}: "${tx}" appears to be a CSV header rather than transaction data. Please check your CSV file format and ensure headers are properly skipped.`);
+        }
+        
         return tx.trim();
       }
 
@@ -46,6 +54,12 @@ export function validateAndFormatTransactions(transactions: any[]): ValidatedTra
         if (!description) {
           throw new Error(`Transaction ${index}: Description cannot be empty`);
         }
+        
+        // Check if description looks like a header
+        const headerPatterns = ['description', 'narrative', 'merchant', 'reference', 'details', 'memo'];
+        if (headerPatterns.some(pattern => description.toLowerCase() === pattern)) {
+          throw new Error(`Transaction ${index}: Description "${description}" appears to be a CSV header. This suggests your CSV file contains header rows that should be skipped or your column mapping is incorrect.`);
+        }
 
         // If amount is provided, validate it
         if (tx.amount !== undefined) {
@@ -58,6 +72,11 @@ export function validateAndFormatTransactions(transactions: any[]): ValidatedTra
                 tx.amount.toLowerCase().includes('merchant') ||
                 /^[a-zA-Z\s]+$/.test(tx.amount.trim())) {
               throw new Error(`Transaction ${index}: Amount field contains text "${tx.amount}" instead of a number. This suggests incorrect column mapping in your CSV upload.`);
+            }
+            
+            // Check if amount field contains the same value as description (duplicate mapping)
+            if (tx.amount === tx.description) {
+              throw new Error(`Transaction ${index}: Amount and Description fields contain the same value "${tx.amount}". This indicates you may have mapped the same CSV column to multiple fields. Please check your column mapping.`);
             }
             
             // Try to parse string amount
@@ -109,16 +128,37 @@ export function validateCsvMappingData(transactions: any[]): { isValid: boolean;
     const tx = transactions[i];
     
     if (typeof tx === 'object' && tx !== null) {
+      // Check for common header text patterns
+      const headerPatterns = [
+        'description', 'narrative', 'merchant', 'reference', 'details', 'memo',
+        'amount', 'value', 'sum', 'total', 'balance', 'debit', 'credit',
+        'date', 'time', 'timestamp', 'when', 'transaction_date',
+        'type', 'category', 'code', 'status', 'direction'
+      ];
+      
+      // Check if description field looks like a header
+      if (tx.description) {
+        const descStr = String(tx.description).toLowerCase().trim();
+        if (headerPatterns.some(pattern => descStr === pattern)) {
+          errors.push(`Row ${i + 1}: Description field "${tx.description}" appears to be a CSV header. This suggests the CSV file contains header rows that should be skipped.`);
+        }
+      }
+      
       // Check for common mapping mistakes
       if (tx.amount !== undefined) {
-        const amountStr = String(tx.amount);
+        const amountStr = String(tx.amount).toLowerCase().trim();
+        
+        // Check if amount field contains header text
+        if (headerPatterns.some(pattern => amountStr === pattern)) {
+          errors.push(`Row ${i + 1}: Amount field contains "${tx.amount}" which appears to be a CSV header. Please check your column mapping - the same column may be mapped to multiple fields.`);
+        }
         
         // Check if amount field contains description-like text
-        if (amountStr.toLowerCase().includes('description') ||
-            amountStr.toLowerCase().includes('narrative') ||
-            amountStr.toLowerCase().includes('merchant') ||
-            amountStr.toLowerCase().includes('reference') ||
-            /^[a-zA-Z\s]{3,}$/.test(amountStr.trim())) {
+        if (amountStr.includes('description') ||
+            amountStr.includes('narrative') ||
+            amountStr.includes('merchant') ||
+            amountStr.includes('reference') ||
+            /^[a-zA-Z\s]{3,}$/.test(amountStr)) {
           errors.push(`Row ${i + 1}: Amount field contains "${amountStr}" which looks like a description. Please check your column mapping.`);
         }
         
@@ -132,6 +172,11 @@ export function validateCsvMappingData(transactions: any[]): { isValid: boolean;
       // Check if description contains only numbers (might be wrong mapping)
       if (tx.description && /^\d+\.?\d*$/.test(String(tx.description).trim())) {
         errors.push(`Row ${i + 1}: Description "${tx.description}" appears to be a number. Please check your column mapping.`);
+      }
+      
+      // Check for duplicate field mappings (same value in multiple fields)
+      if (tx.description && tx.amount && String(tx.description) === String(tx.amount)) {
+        errors.push(`Row ${i + 1}: Description and Amount fields contain the same value "${tx.description}". This indicates incorrect column mapping - you may have mapped the same CSV column to multiple fields.`);
       }
     }
   }

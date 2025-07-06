@@ -77,6 +77,21 @@ export async function POST(request: NextRequest) {
       }, { status: errorInfo.status });
     }
     
+    // Handle specific column mapping errors
+    if (error instanceof Error && (
+      error.message.includes('column mapping') ||
+      error.message.includes('CSV header') ||
+      error.message.includes('same value') ||
+      error.message.includes('appears to be a') ||
+      error.message.includes('duplicate mapping')
+    )) {
+      return NextResponse.json({ 
+        error: 'Column Mapping Error: Please check your CSV column mapping. It appears that description columns may be mapped to amount fields, or header data is being processed as transaction data.',
+        details: error.message,
+        solution: 'Please go back to your CSV upload and verify that:\n1. Amount columns are mapped to numeric fields only\n2. Description columns are mapped to text fields only\n3. The same column is not mapped to multiple fields\n4. Your CSV file does not contain header rows mixed with data'
+      }, { status: 400 });
+    }
+    
     return NextResponse.json({ error: 'Internal Server Error during classification proxy' }, { status: 500 });
   }
 } 
