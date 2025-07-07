@@ -225,37 +225,6 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
         </div>
       </div>
 
-      {/* Last Transaction Info - only show when not in create new spreadsheet mode */}
-      {!createNewSpreadsheetMode && (
-        lastTransaction ? (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-start">
-              <ClockIcon className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
-              <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">Latest Transaction in System</p>
-                <div className="space-y-1">
-                  <p><span className="font-medium">Date:</span> {new Date(lastTransaction.date).toLocaleDateString()}</p>
-                  <p><span className="font-medium">Description:</span> {lastTransaction.description}</p>
-                  <p><span className="font-medium">Amount:</span> ${lastTransaction.amount.toFixed(2)}</p>
-                </div>
-                <p className="mt-2 text-xs text-blue-600 italic">
-                  💡 Upload transactions from {new Date(lastTransaction.date).toLocaleDateString()} onwards to add new data
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div className="flex items-start">
-              <ExclamationTriangleIcon className="h-5 w-5 text-gray-500 mt-0.5 mr-3 flex-shrink-0" />
-              <div className="text-sm text-gray-600">
-                <p className="font-medium mb-1">No Transaction Data Found</p>
-                <p>This will be your first data import. Upload your complete transaction history or start from a specific date.</p>
-              </div>
-            </div>
-          </div>
-        )
-      )}
 
       {/* CSV Upload and Configuration */}
       {csvStep === 'upload' && (

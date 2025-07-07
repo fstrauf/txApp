@@ -100,6 +100,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [showOnlyUnvalidated, setShowOnlyUnvalidated] = useState(false);
   const [createNewSpreadsheetMode, setCreateNewSpreadsheetMode] = useState(false);
+  const [isValidatingAllRemaining, setIsValidatingAllRemaining] = useState(false);
   
   // Currency selection for new spreadsheet
   const [newSpreadsheetCurrency, setNewSpreadsheetCurrency] = useState<string>('');
@@ -285,41 +286,26 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           const response = await fetch(pollingUrl);
           console.log(`[Poll] Response Status: ${response.status}`);
 
+          const responseText = await response.text();
+          console.log(`[Poll] Response Text:`, responseText.substring(0, 200));
+
           if (!response.ok) {
-            // Handle authentication errors immediately - don't retry
-            if (response.status === 401) {
-              const errorData = await response.json().catch(() => ({ error: 'Authentication failed' }));
-              const errorMessage = `Authentication failed: ${errorData.error || 'Invalid API key'}. Please check your API key configuration.`;
-              console.error(`[Poll] Authentication error (401):`, errorMessage);
-              setFeedback({ type: 'error', message: errorMessage });
-              onError(errorMessage);
-              return;
-            }
-            
-            // Handle other non-retryable errors (403, 404, 500, etc.)
-            if (response.status >= 400 && response.status !== 429) {
-              const errorData = await response.json().catch(() => ({ error: 'Request failed' }));
-              const errorMessage = `Request failed (${response.status}): ${errorData.error || response.statusText}`;
-              console.error(`[Poll] Non-retryable error:`, errorMessage);
-              setFeedback({ type: 'error', message: errorMessage });
-              onError(errorMessage);
-              return;
-            }
-            
-            // For retryable errors (429, network issues), retry a few times
-            if (pollCount > 3) {
-              throw new Error(`Status endpoint error: ${response.status} ${response.statusText}`);
+            // If the status endpoint itself fails (e.g., 500, 404 for the ID),
+            // we might want to retry a few times or fail fast.
+            // For now, we'll treat non-200 as a polling error after first attempt.
+            if (pollCount > 3) { // Allow a few retries for transient network issues with the status endpoint
+               throw new Error(`Status endpoint error: ${response.status} ${response.statusText}`);
             } else {
-              console.warn(`[Poll] Status endpoint error (attempt ${pollCount}): ${response.status}. Retrying...`);
-              setFeedback({ 
-                type: 'info', 
-                message: `🔄 ${operationType} in progress - checking status (attempt ${pollCount})...` 
-              });
-              continue;
+                console.warn(`[Poll] Status endpoint non-OK response for ${predictionId} (attempt ${pollCount}): ${response.status}. Retrying...`);
+                // Continue to the next poll iteration
+                setFeedback({ 
+                  type: 'info', 
+                  message: `🔄 ${operationType} status check (attempt ${pollCount})...` 
+                });
+                continue;
             }
           }
 
-          const responseText = await response.text();
           let data;
           try {
             data = JSON.parse(responseText);
@@ -376,7 +362,79 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       // If loop finishes, it means timeout
       onError(`${operationType} job ${predictionId} timed out after ${maxPolls} polling attempts.`);
     };
-    await executePoll();
+    
+    // Start polling without awaiting - this runs asynchronously
+    executePoll();
+  };
+
+  // Separate function to handle auto-classification results
+  const handleAutoClassificationComplete = async (autoClassifiedData: any, uniqueTransactions: any[], isCreateNewMode: boolean) => {
+    try {
+      // Validate API response
+      if (!autoClassifiedData.results || !Array.isArray(autoClassifiedData.results)) {
+        throw new Error('Invalid response from auto-classification API - no results array');
+      }
+
+      if (autoClassifiedData.results.length !== uniqueTransactions.length) {
+        console.warn('Auto-classification results count mismatch:', {
+          expectedCount: uniqueTransactions.length,
+          actualCount: autoClassifiedData.results.length
+        });
+      }
+      
+      // Transform auto-classified results back to full transaction format
+      const categorizedTransactions = autoClassifiedData.results.map((result: any, index: number) => ({
+        ...uniqueTransactions[index],
+        id: `transaction-${index}`,
+        category: result.predicted_category || 'Uncategorized',
+        predicted_category: result.predicted_category,
+        similarity_score: result.similarity_score,
+        confidence: result.similarity_score || 0, // Use similarity_score as confidence
+        isValidated: false,
+        isSelected: false,
+        account: 'Imported'
+      }));
+
+      setValidationTransactions(categorizedTransactions);
+      setActiveTab('validate');
+      const successMessage = isCreateNewMode
+        ? `Categorized ${categorizedTransactions.length} transactions for your new spreadsheet. Please review and validate!`
+        : `Auto-classified ${categorizedTransactions.length} transactions using generic model. Please review and validate!`;
+      setFeedback({ 
+        type: 'success', 
+        message: successMessage
+      });
+
+      // Reset CSV processing state after successful categorization
+      setTimeout(() => {
+        setUploadedFile(null);
+        setAnalysisResult(null);
+        setCsvStep('upload');
+        setConfig({
+          mappings: {},
+          dateFormat: commonDateFormats[1].value,
+          amountFormat: 'standard',
+          skipRows: 0,
+        });
+        setFeedback(null);
+      }, 2000);
+
+      posthog.capture('pf_transactions_processed', {
+        file_name: uploadedFile?.name,
+        file_size: uploadedFile?.size,
+        file_type: uploadedFile?.type,
+        is_first_time_user: !spreadsheetLinked,
+      });
+
+    } catch (error: any) {
+      console.error('Auto-classification completion error:', error);
+      setFeedback({ 
+        type: 'error', 
+        message: `Error processing auto-classification results: ${error.message}`
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // CSV Processing Functions
@@ -1361,27 +1419,28 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           autoClassifiedData = await autoClassifyResponse.json();
           
           if (autoClassifyResponse.ok && (autoClassifiedData.status === 'completed' || autoClassifiedData.success || autoClassifiedData.results)) {
-            // Synchronous auto-classification completion - proceed
+            // Synchronous auto-classification completion - handle immediately
+            await handleAutoClassificationComplete(autoClassifiedData, uniqueTransactions, effectiveCreateNewMode);
+            return; // Exit early for synchronous completion
           } else if (autoClassifiedData.status === 'processing' && autoClassifiedData.prediction_id) {
             // Asynchronous auto-classification returned as 200 with processing status
             const { prediction_id, message: acceptanceMessage } = autoClassifiedData;
             
             setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Auto-classification job submitted. Processing your transactions...`}` });
             
-            // Wait for auto-classification to complete via polling
-            autoClassifiedData = await new Promise((resolve, reject) => {
-              pollForCompletion(
-                prediction_id,
-                'classification',
-                (pollingData) => {
-                  setFeedback({ type: 'success', message: 'Auto-classification completed via polling!' });
-                  resolve(pollingData || { results: [] });
-                },
-                (errorMessage) => {
-                  reject(new Error(errorMessage));
-                }
-              );
-            });
+            // Start non-blocking polling
+            pollForCompletion(
+              prediction_id,
+              'classification',
+              (pollingData) => {
+                handleAutoClassificationComplete(pollingData || { results: [] }, uniqueTransactions, effectiveCreateNewMode);
+              },
+              (errorMessage) => {
+                setFeedback({ type: 'error', message: `Auto-classification failed: ${errorMessage}` });
+                setIsProcessing(false);
+              }
+            );
+            return; // Exit early, polling will handle completion
           } else {
             throw new Error(autoClassifiedData.message || 'Auto-classification completed but with unexpected response format');
           }
@@ -1394,59 +1453,23 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           
           setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Auto-classification job submitted. Processing your transactions...`}` });
           
-          // Wait for auto-classification to complete via polling
-          autoClassifiedData = await new Promise((resolve, reject) => {
-            pollForCompletion(
-              prediction_id,
-              'classification',
-              (pollingData) => {
-                setFeedback({ type: 'success', message: 'Auto-classification completed via polling!' });
-                resolve(pollingData || { results: [] });
-              },
-              (errorMessage) => {
-                reject(new Error(errorMessage));
-              }
-            );
-          });
+          // Start non-blocking polling  
+          pollForCompletion(
+            prediction_id,
+            'classification',
+            (pollingData) => {
+              handleAutoClassificationComplete(pollingData || { results: [] }, uniqueTransactions, effectiveCreateNewMode);
+            },
+            (errorMessage) => {
+              setFeedback({ type: 'error', message: `Auto-classification failed: ${errorMessage}` });
+              setIsProcessing(false);
+            }
+          );
+          return; // Exit early, polling will handle completion
         } else {
           const errorData = await autoClassifyResponse.json().catch(() => ({ message: `Auto-classification request failed with status ${autoClassifyResponse.status}` }));
           throw new Error(errorData.message || errorData.error || `Auto-classification request failed: ${autoClassifyResponse.statusText}`);
         }
-        
-        // Validate API response
-        if (!autoClassifiedData.results || !Array.isArray(autoClassifiedData.results)) {
-          throw new Error('Invalid response from auto-classification API - no results array');
-        }
-
-        if (autoClassifiedData.results.length !== uniqueTransactions.length) {
-          console.warn('Auto-classification results count mismatch:', {
-            expectedCount: uniqueTransactions.length,
-            actualCount: autoClassifiedData.results.length
-          });
-        }
-        
-        // Transform auto-classified results back to full transaction format
-        const categorizedTransactions = autoClassifiedData.results.map((result: any, index: number) => ({
-          ...uniqueTransactions[index],
-          id: `transaction-${index}`,
-          category: result.predicted_category || 'Uncategorized',
-          predicted_category: result.predicted_category,
-          similarity_score: result.similarity_score,
-          confidence: result.similarity_score || 0, // Use similarity_score as confidence
-          isValidated: false,
-          isSelected: false,
-          account: 'Imported'
-        }));
-
-        setValidationTransactions(categorizedTransactions);
-        setActiveTab('validate');
-        const successMessage = effectiveCreateNewMode
-          ? `Categorized ${categorizedTransactions.length} transactions for your new spreadsheet. Please review and validate!`
-          : `Auto-classified ${categorizedTransactions.length} transactions using generic model. Please review and validate!`;
-        setFeedback({ 
-          type: 'success', 
-          message: successMessage
-        });
       }
 
       // Reset CSV processing state after successful categorization
@@ -1519,11 +1542,18 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     setSelectedTransactions(new Set());
   };
 
-  const handleValidateAllRemaining = () => {
+  const handleValidateAllRemaining = async () => {
+    setIsValidatingAllRemaining(true);
+    
+    // Add a small delay to show loading feedback, especially useful for large datasets
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     setValidationTransactions(prev => prev.map(t => 
       !t.isValidated ? { ...t, isValidated: true } : t
     ));
     setSelectedTransactions(new Set());
+    
+    setIsValidatingAllRemaining(false);
   };
 
   const handleEditCategory = (transactionId: string, newCategory: string) => {
@@ -1849,6 +1879,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             showCurrencySelection={showCurrencySelection}
             newSpreadsheetCurrency={newSpreadsheetCurrency}
             isProcessing={isProcessing}
+            isValidatingAllRemaining={isValidatingAllRemaining}
             onTransactionSelect={handleTransactionSelect}
             onSelectAll={handleSelectAll}
             onValidateTransaction={handleValidateTransaction}

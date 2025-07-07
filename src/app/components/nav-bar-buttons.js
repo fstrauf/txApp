@@ -38,7 +38,12 @@ export const NavBarButtons = () => {
           </>
         )}
         {session?.user && (
-          <LogoutButton />
+          <>
+            <span className="text-sm text-gray-700 font-medium px-3 py-2">
+              Welcome, {session.user.name || session.user.email?.split('@')[0] || 'User'}
+            </span>
+            <LogoutButton />
+          </>
         )}
       </div>
     </div>
