@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { DocumentTextIcon, PlayIcon } from '@heroicons/react/24/outline';
 import posthog from 'posthog-js';
 
@@ -46,7 +46,7 @@ export const StickyBottomBar: React.FC<StickyBottomBarProps> = ({
               onClick={() => {
                 posthog.capture('pf_cta_clicked', {
                   component: 'sticky_bottom_bar',
-                  button_text: 'Get Free Sheet & Start',
+                  button_text: 'Get Sheet & Start',
                   location: 'bottom_bar_primary'
                 });
                 onGetStartedClick();
@@ -54,7 +54,7 @@ export const StickyBottomBar: React.FC<StickyBottomBarProps> = ({
               className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 w-full sm:w-auto"
             >
               <DocumentTextIcon className="h-4 w-4" />
-              Get Free Sheet & Start
+              Get Sheet & Start
             </button>
             <button
               onClick={() => {

@@ -94,7 +94,7 @@ export default function HomePageClient() {
                       <span className="text-lg font-semibold text-primary">1</span>
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">Get Your Free Sheet</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">Get Your Financial Snapshot</h3>
                       <p className="text-sm text-gray-600">We create a template in your Google Drive</p>
                     </div>
                   </div>
@@ -187,7 +187,7 @@ export default function HomePageClient() {
                 href="/personal-finance"
                 className="inline-flex items-center px-8 py-4 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold hover:shadow-xl transition-all duration-200 text-lg"
               >
-                Try It Now - It's Free
+                Try It Now
                 <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
                 </svg>
@@ -415,7 +415,7 @@ export default function HomePageClient() {
                 <div className="text-left">
                   <h3 className="text-lg font-semibold text-gray-900">Upload & Analyze</h3>
                   <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    100% Free
+                    Instant Setup
                   </span>
                 </div>
               </div>
@@ -669,7 +669,7 @@ export default function HomePageClient() {
                   </div>
                   <div className="flex items-center">
                     <span className="text-green-500 mr-2">✓</span>
-                    Free tier available
+                    Multiple pricing tiers
                   </div>
                 </div>
               </div>
@@ -911,7 +911,7 @@ export default function HomePageClient() {
                   <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
-                  100% free                  
+                  No credit card required                  
                 </div>
               </div>
             </div>

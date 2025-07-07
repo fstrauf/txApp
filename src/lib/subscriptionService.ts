@@ -12,7 +12,7 @@ import { db } from '@/db';
 import { subscriptions, users } from '@/db/schema';
 import { eq, desc, and } from 'drizzle-orm';
 
-export type SubscriptionPlan = 'FREE' | 'TRIAL' | 'SILVER' | 'GOLD';
+export type SubscriptionPlan = 'FREE' | 'TRIAL' | 'SILVER' | 'GOLD' | 'SNAPSHOT';
 export type SubscriptionStatus = 'ACTIVE' | 'CANCELED' | 'EXPIRED';
 export type BillingCycle = 'MONTHLY' | 'ANNUAL';
 

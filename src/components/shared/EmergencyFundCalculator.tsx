@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, AlertTriangle, CheckCircle, Zap, Rocket } from 'lucide-react';
 import posthog from 'posthog-js';
 import { useEmergencyFundCalculator } from '@/hooks/useEmergencyFundCalculator';
+import { FinancialSnapshotOffer } from '@/app/personal-finance/components/FinancialSnapshotOffer';
 
 interface CalculatorResult {
   months: number;
@@ -211,34 +212,41 @@ export const EmergencyFundCalculator: React.FC<EmergencyFundCalculatorProps> = (
 
       {/* Result Display */}
       {showResult && displayResult && (
-        <div className={`mt-6 p-6 ${displayResult.bgColor} rounded-xl border border-gray-200 transition-all duration-500 ease-in-out`}>
-          <div className="text-center mb-4">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              {displayResult.icon}
-              <span className="text-2xl">{displayResult.emoji}</span>
+        <>
+          <div className={`mt-6 p-6 ${displayResult.bgColor} rounded-xl border border-gray-200 transition-all duration-500 ease-in-out`}>
+            <div className="text-center mb-4">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                {displayResult.icon}
+                <span className="text-2xl">{displayResult.emoji}</span>
+              </div>
+              <h4 className="text-2xl font-bold text-gray-900 mb-2">
+                You have <span className={`${displayResult.textColor} font-black`}>{displayResult.months}</span> months of freedom!
+              </h4>
+              <p className={`${displayResult.textColor} font-medium`}>
+                {displayResult.message}
+              </p>
             </div>
-            <h4 className="text-2xl font-bold text-gray-900 mb-2">
-              You have <span className={`${displayResult.textColor} font-black`}>{displayResult.months}</span> months of freedom!
-            </h4>
-            <p className={`${displayResult.textColor} font-medium`}>
-              {displayResult.message}
-            </p>
+
+            {/* <div className="text-center">
+              <Link
+                href="/personal-finance"
+                onClick={handleCtaClick}
+                className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-lg hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+              >
+                {displayResult.ctaText}
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Link>
+              <p className="text-xs text-gray-500 mt-2">
+                Get the complete picture with AI-powered insights
+              </p>
+            </div> */}
           </div>
 
-          <div className="text-center">
-            <Link
-              href="/personal-finance"
-              onClick={handleCtaClick}
-              className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-lg hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-            >
-              {displayResult.ctaText}
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Link>
-            <p className="text-xs text-gray-500 mt-2">
-              Get the complete picture with AI-powered insights
-            </p>
+          {/* Financial Snapshot Offer - Show after calculation */}
+          <div className="mt-8">
+            <FinancialSnapshotOffer />
           </div>
-        </div>
+        </>
       )}
 
       {/* Sample calculation hint */}

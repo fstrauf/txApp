@@ -59,26 +59,26 @@ export const DEMO_DASHBOARD_CTA_TEST: ABTestConfig = {
   variants: [
     {
       key: 'control',
-      name: 'Control - Urgency V2',
-      description: 'Stop Wasting Money Today'
+      name: 'Control - Free Offer',
+      description: 'Get My Free Spreadsheet'
     },
     {
       key: 'test',
-      name: 'Test - Urgency V3',
-      description: 'Catch My Overspending Now'
+      name: 'Test - Action Focused',
+      description: 'Start My Financial Analysis'
     },
     {
       key: 'test_group_2',
-      name: 'Test Group 2 - Urgency V4',
-      description: 'Show Me Where I\'m Bleeding Money'
+      name: 'Test Group 2 - Benefit Focused',
+      description: 'See My Real Numbers'
     },
     {
       key: 'test_group_3',
-      name: 'Test Group 3 - Urgency Focused (Winner)',
-      description: 'Find My Money Leaks Now'
+      name: 'Test Group 3 - Direct Offer',
+      description: 'Get Started'
     }
   ],
-  defaultVariant: 'test_group_3'
+  defaultVariant: 'control'
 };
 
 // All A/B Tests Configuration
