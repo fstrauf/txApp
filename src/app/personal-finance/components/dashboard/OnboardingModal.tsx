@@ -103,19 +103,21 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           base_currency: selectedCurrency
         });
         
+        // Set sheet data first (this stops the loading state)
         setCreatedSheetData({
           spreadsheetId: data.spreadsheetId,
           spreadsheetUrl: data.spreadsheetUrl
         });
+        setIsCreatingSheet(false);
         
         // Open the sheet in a new tab so user can see it
         window.open(data.spreadsheetUrl, '_blank');
         
-        // Complete the onboarding with sheet data
+        // Wait longer to let user see the success state properly before completing onboarding
         setTimeout(() => {
           onSignupComplete(data);
           onClose();
-        }, 2000);
+        }, 3000);
       } else {
         throw new Error(data.error || 'Unknown error');
       }
@@ -126,13 +128,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         error: error instanceof Error ? error.message : 'Unknown error'
       });
       
-      // Fallback - complete without sheet data
-      setTimeout(() => {
-        onSignupComplete();
-        onClose();
-      }, 1000);
-    } finally {
+      // On error, complete onboarding without sheet data immediately
       setIsCreatingSheet(false);
+      onSignupComplete();
+      onClose();
     }
   };
 
@@ -413,7 +412,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   {isCreatingSheet 
                     ? 'We\'re creating your personal finance tracker in Google Sheets and linking it to your account.'
                     : createdSheetData 
-                      ? 'Your account is created and your sheet is ready. Let\'s upload your bank data to see your real financial runway.'
+                      ? 'Your sheet is ready and connected! Opening data upload manager in a moment...'
                       : 'Setting up your dashboard...'
                   }
                 </p>
@@ -426,17 +425,19 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     <span className="font-semibold">Sheet created and linked!</span>
                   </div>
                   <p className="text-sm text-gray-500">
-                    Your sheet has opened in a new tab and is already connected to your account.
+                    Your sheet opened in a new tab. Next, we'll help you upload your bank data.
                   </p>
                 </div>
               )}
 
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <span className="ml-3 text-gray-600">
-                  {isCreatingSheet ? 'Creating sheet...' : 'Opening data manager...'}
-                </span>
-              </div>
+              {(isCreatingSheet || !createdSheetData) && (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <span className="ml-3 text-gray-600">
+                    {isCreatingSheet ? 'Creating sheet...' : 'Opening data manager...'}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
