@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { DocumentTextIcon, PlayIcon } from '@heroicons/react/24/outline';
 import posthog from 'posthog-js';
 
