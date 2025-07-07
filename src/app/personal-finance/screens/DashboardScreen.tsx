@@ -212,14 +212,14 @@ const DashboardScreen: React.FC = () => {
     <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-gray-50 via-white to-primary/5">
       <div className={`max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-8 sm:py-12 lg:py-16 w-full ${isFirstTimeUser ? 'pb-32' : ''}`}>
         {/* Only show header for existing users with data */}
-        {!isFirstTimeUser && (
+        {/* {!isFirstTimeUser && ( */}
           <Header variant="centered" size="xl" className="mb-8 sm:mb-12 lg:mb-16">
-            Your Financial Freedom Dashboard
+            Get instant Clarity On Your Finances - With three steps
           </Header>
-        )}
+        {/* )} */}
 
         {/* Demo Banner for First-Time Users */}
-        {isFirstTimeUser && (
+        {/* {isFirstTimeUser && (
           <DemoBanner
             headlineText={getHeadlineText()}
             ctaButtonText={getCtaButtonText()}
@@ -227,32 +227,17 @@ const DashboardScreen: React.FC = () => {
             onHowItWorksClick={() => setIsHowItWorksOpen(true)}
             isLoading={status === 'loading'}
           />
-        )}
+        )} */}
 
         {/* Emergency Fund Calculator - Only for first-time users */}
-        {isFirstTimeUser && (
-          <div className="mb-16">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                First, Let's Calculate Your Current Runway
-              </h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Before diving into the demo, see exactly how many months of freedom you have right now
-              </p>
-            </div>
-            <EmergencyFundCalculator showClearButton={true} />
 
-            {/* Offer free sheet vs supercharge */}
-            <FreeSheetCTA onSuperchargeClick={() => setIsOnboardingModalOpen(true)} />
-          </div>
-        )}
 
         {/* What You Get Section - Only for first-time users */}
-        {isFirstTimeUser && (
+        {/* {isFirstTimeUser && (
           <WhatYouGetSection 
             onGetStartedClick={() => setIsOnboardingModalOpen(true)}
           />
-        )}
+        )} */}
 
         {/* Error Display */}
         <ErrorDisplayBox 

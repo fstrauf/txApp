@@ -1186,11 +1186,31 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         let classifiedData: any;
 
         if (classifyResponse.status === 200) {
-          // Synchronous classification completion
+          // Check if it's synchronous completion or asynchronous processing
           classifiedData = await classifyResponse.json();
           
           if (classifyResponse.ok && (classifiedData.status === 'completed' || classifiedData.success || classifiedData.results)) {
-            // Validation successful - proceed
+            // Synchronous classification completion - proceed
+          } else if (classifiedData.status === 'processing' && classifiedData.prediction_id) {
+            // Asynchronous classification returned as 200 with processing status
+            const { prediction_id, message: acceptanceMessage } = classifiedData;
+            
+            setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Classification job submitted. Processing your transactions...`}` });
+            
+            // Wait for classification to complete via polling
+            classifiedData = await new Promise((resolve, reject) => {
+              pollForCompletion(
+                prediction_id,
+                'classification',
+                (pollingData) => {
+                  setFeedback({ type: 'success', message: 'Classification completed via polling!' });
+                  resolve(pollingData || { results: [] });
+                },
+                (errorMessage) => {
+                  reject(new Error(errorMessage));
+                }
+              );
+            });
           } else {
             throw new Error(classifiedData.message || 'Classification completed but with unexpected response format');
           }
@@ -1337,11 +1357,31 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         let autoClassifiedData: any;
 
         if (autoClassifyResponse.status === 200) {
-          // Synchronous auto-classification completion
+          // Check if it's synchronous completion or asynchronous processing
           autoClassifiedData = await autoClassifyResponse.json();
           
           if (autoClassifyResponse.ok && (autoClassifiedData.status === 'completed' || autoClassifiedData.success || autoClassifiedData.results)) {
-            // Validation successful - proceed
+            // Synchronous auto-classification completion - proceed
+          } else if (autoClassifiedData.status === 'processing' && autoClassifiedData.prediction_id) {
+            // Asynchronous auto-classification returned as 200 with processing status
+            const { prediction_id, message: acceptanceMessage } = autoClassifiedData;
+            
+            setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Auto-classification job submitted. Processing your transactions...`}` });
+            
+            // Wait for auto-classification to complete via polling
+            autoClassifiedData = await new Promise((resolve, reject) => {
+              pollForCompletion(
+                prediction_id,
+                'classification',
+                (pollingData) => {
+                  setFeedback({ type: 'success', message: 'Auto-classification completed via polling!' });
+                  resolve(pollingData || { results: [] });
+                },
+                (errorMessage) => {
+                  reject(new Error(errorMessage));
+                }
+              );
+            });
           } else {
             throw new Error(autoClassifiedData.message || 'Auto-classification completed but with unexpected response format');
           }
