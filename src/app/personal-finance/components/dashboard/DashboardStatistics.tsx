@@ -110,6 +110,8 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
         </div>
       )}
       
+      {/* Data Overview */}
+      <DataOverview />
       {/* Condensed Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className={`bg-white rounded-lg p-4 sm:p-6 shadow-sm border ${showCachedDataWarning ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
@@ -174,7 +176,7 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
           </div>
         </div>
 
-        <div className={`bg-white rounded-lg p-4 sm:p-6 shadow-sm border ${showCachedDataWarning ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
+        {/* <div className={`bg-white rounded-lg p-4 sm:p-6 shadow-sm border ${showCachedDataWarning ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
           <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
             Savings
             {showCachedDataWarning && (
@@ -231,9 +233,9 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
               <p className="text-sm text-gray-500">Annual Projection</p>
             </div>
           </div>
-        </div>
+        </div> */}
 
-        <div className={`bg-white rounded-lg p-4 sm:p-6 shadow-sm border ${showCachedDataWarning && savingsData ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
+        {/* <div className={`bg-white rounded-lg p-4 sm:p-6 shadow-sm border ${showCachedDataWarning && savingsData ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
           <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
             Runway
             {showCachedDataWarning && savingsData && (
@@ -275,11 +277,9 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
               </div>
             )}
           </div>
-        </div>
+        </div> */}
       </div>
 
-      {/* Data Overview */}
-      <DataOverview />
 
       {/* Financial Snapshot Insights - Show for paid snapshot users */}
       {isPaidSnapshot && (

@@ -45,6 +45,7 @@ export const FinancialSnapshotOfferModal: React.FC<FinancialSnapshotOfferModalPr
       source: 'snapshot_offer_modal',
       user_authenticated: !!session?.user?.id
     });
+    
     onPurchaseSnapshot();
   };
 
@@ -87,20 +88,17 @@ export const FinancialSnapshotOfferModal: React.FC<FinancialSnapshotOfferModalPr
                   
                   <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
                     Get Your Complete Clarity
-                    <span className="text-xl text-gray-600 block mt-3">
-                      In Just 5 Minutes
-                    </span>
                   </h2>
                 </div>
 
                 {/* Value Proposition Comparison */}
-                <div className="grid lg:grid-cols-2 gap-8 mb-10">
+                <div className="grid lg:grid-cols-2 gap-8 mb-6">
                   {/* Free Option */}
                   <div className="p-8 bg-primary/5 rounded-2xl border-2 border-primary/20 relative">
                     <div className="text-center mb-6">
-                      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      {/* <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                         <DocumentTextIcon className="w-8 h-8 text-primary" />
-                      </div>
+                      </div> */}
                       <h3 className="text-2xl font-bold text-gray-900 mb-2">
                         DIY Spreadsheet
                       </h3>
@@ -145,9 +143,9 @@ export const FinancialSnapshotOfferModal: React.FC<FinancialSnapshotOfferModalPr
                     </div>
                     
                     <div className="text-center mb-6 mt-4">
-                      <div className="w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      {/* <div className="w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4">
                         <ChartBarIcon className="w-8 h-8 text-secondary" />
-                      </div>
+                      </div> */}
                       <h3 className="text-2xl font-bold text-gray-900 mb-2">
                         Financial Snapshot
                       </h3>
@@ -172,7 +170,7 @@ export const FinancialSnapshotOfferModal: React.FC<FinancialSnapshotOfferModalPr
                       </li>
                       <li className="flex items-start gap-3">
                         <CheckIcon className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Personalized insights</strong> & recommendations</span>
+                        <span><strong>Personalized insights</strong></span>
                       </li>
                     <li className="flex items-start gap-3">
                         <CheckIcon className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
@@ -203,7 +201,7 @@ export const FinancialSnapshotOfferModal: React.FC<FinancialSnapshotOfferModalPr
 
                 {/* Social Proof & Trust Signals */}
                 <div className="text-center">
-                  <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 rounded-xl p-6 mb-6">
+                  <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 rounded-xl p-3 mb-3">
                     <div className="flex items-center justify-center gap-2 mb-3">
                       <ClockIcon className="w-6 h-6 text-secondary" />
                       <span className="font-semibold text-gray-900">Real Results This Week:</span>
@@ -217,9 +215,6 @@ export const FinancialSnapshotOfferModal: React.FC<FinancialSnapshotOfferModalPr
                   
                   <p className="text-lg text-gray-600 font-medium">
                     Join <span className="text-secondary font-bold">2,847 people</span> who discovered their financial leaks this week
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    🔒 Secure payment • 💰 30-day money-back guarantee • 🚀 Instant access
                   </p>
                 </div>
               </div>

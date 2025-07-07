@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useDashboardQuery } from '../hooks/useDashboardQuery';
 import { useDashboardState } from '../hooks/useDashboardState';
@@ -29,10 +30,12 @@ import { StickyBottomBar } from '../components/dashboard/StickyBottomBar';
 import { OnboardingModal } from '../components/dashboard/OnboardingModal';
 import { FinancialSnapshotModal } from '../components/dashboard/FinancialSnapshotModal';
 import { FinancialSnapshotOfferModal } from '../components/dashboard/FinancialSnapshotOfferModal';
+import { useSubscriptionStatus } from '@/lib/hooks/useSubscriptionStatus';
 
 const DashboardScreen: React.FC = () => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
   const { baseCurrency, spreadsheetName } = useConsolidatedSpreadsheetData();
+  const router = useRouter();
 
   // Use modular state management
   const {
@@ -81,6 +84,21 @@ const DashboardScreen: React.FC = () => {
     assetsData
   } = useDashboardQuery();
 
+  // Get subscription status
+  const { subscriptionDetails, isLoading: isLoadingSubscription } = useSubscriptionStatus();
+
+  // Check if user has a SNAPSHOT subscription
+  const hasSnapshotSubscription = subscriptionDetails?.subscriptionPlanName === 'SNAPSHOT';
+
+  // Debug logging
+  console.log('Dashboard state:', {
+    isFirstTimeUser,
+    hasSnapshotSubscription,
+    subscriptionPlan: subscriptionDetails?.subscriptionPlanName,
+    subscriptionDetails,
+    isLoadingSubscription
+  });
+
   // Use modular handlers
   const handlers = useDashboardHandlers({
     isFirstTimeUser,
@@ -115,9 +133,9 @@ const DashboardScreen: React.FC = () => {
   };
 
   // Use mock data for first-time users (unless they've paid for snapshot), real data otherwise
-  const displayStats = (isFirstTimeUser && !isPaidSnapshot) ? mockStats : dashboardStats;
-  const displayTransactions = (isFirstTimeUser && !isPaidSnapshot) ? mockTransactions : filteredTransactions;
-  const displayAssetsData = (isFirstTimeUser && !isPaidSnapshot) ? mockAssetsData : assetsData;
+  const displayStats = (isFirstTimeUser && !hasSnapshotSubscription) ? mockStats : dashboardStats;
+  const displayTransactions = (isFirstTimeUser && !hasSnapshotSubscription) ? mockTransactions : filteredTransactions;
+  const displayAssetsData = (isFirstTimeUser && !hasSnapshotSubscription) ? mockAssetsData : assetsData;
 
   // Track dashboard screen view
   useEffect(() => {
@@ -184,18 +202,28 @@ const DashboardScreen: React.FC = () => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get('session_id');
       
       // Handle successful snapshot purchase
-      if (urlParams.get('snapshot') === 'success') {
-        setIsPaidSnapshot(true);
-        setDataManagementDefaultTab('upload');
-        setIsHelpDrawerOpen(true);
-        
-        // Track successful snapshot purchase
-        posthog.capture('financial_snapshot_purchased', { 
-          amount: 49,
-          user_authenticated: !!session?.user?.id 
-        });
+      if (urlParams.get('snapshot') === 'success' && sessionId) {
+        // Check if user is authenticated
+        if (!session?.user) {
+          // Store the session ID for after auth
+          localStorage.setItem('pending_snapshot_session', sessionId);
+          
+          // Show authentication needed message
+          posthog.capture('snapshot_auth_required', {
+            session_id: sessionId,
+            action: 'payment_completed_auth_needed'
+          });
+          
+          // Set flag to show they need to authenticate for their paid snapshot
+          setIsPaidSnapshot(true);
+          setUserToastStatus('auth_needed_for_snapshot');
+        } else {
+          // Already authenticated, proceed with snapshot access
+          handleSnapshotSuccess(sessionId);
+        }
         
         // Clean up URL
         const url = new URL(window.location.href);
@@ -232,6 +260,33 @@ const DashboardScreen: React.FC = () => {
     }
   }, [setDataManagementDefaultTab, setIsHelpDrawerOpen, session?.user?.id]);
 
+  // Handle post-authentication for paid snapshots
+  useEffect(() => {
+    if (session?.user && typeof window !== 'undefined') {
+      const pendingSession = localStorage.getItem('pending_snapshot_session');
+      if (pendingSession) {
+        handleSnapshotSuccess(pendingSession);
+        localStorage.removeItem('pending_snapshot_session');
+      }
+    }
+  }, [session?.user]);
+
+  // Helper function to handle successful snapshot access
+  const handleSnapshotSuccess = (sessionId: string) => {
+    setIsPaidSnapshot(true);
+    setDataManagementDefaultTab('upload');
+    setIsHelpDrawerOpen(true);
+    
+    // Track successful snapshot access
+    posthog.capture('financial_snapshot_accessed', { 
+      session_id: sessionId,
+      user_authenticated: !!session?.user?.id 
+    });
+    
+    // Clear any auth needed status
+    setUserToastStatus('');
+  };
+
   const showLoadingState = (isLoading && !dashboardStats && spreadsheetLinked && !isFirstTimeUser) || (isRefreshing && !error);
 
   const openDataDrawer = (source: string) => {
@@ -242,7 +297,8 @@ const DashboardScreen: React.FC = () => {
     });
     
     // For first-time users, show the snapshot offer modal instead of onboarding
-    if (isFirstTimeUser) {
+    // But only if they don't already have a snapshot subscription
+    if (isFirstTimeUser && !hasSnapshotSubscription) {
       setShowSnapshotOffer(true);
     } else {
       // For existing users, open the data drawer directly
@@ -272,7 +328,8 @@ const DashboardScreen: React.FC = () => {
     });
     
     // Show Financial Snapshot offer modal for first-time users
-    if (isFirstTimeUser) {
+    // But only if they don't already have a snapshot subscription
+    if (isFirstTimeUser && !hasSnapshotSubscription) {
       setShowSnapshotOffer(true);
     } else {
       // For existing users, open onboarding/data management
@@ -287,9 +344,27 @@ const DashboardScreen: React.FC = () => {
       user_authenticated: !!session?.user?.id
     });
     
-    // Redirect to Stripe checkout
-    const currentPath = window.location.pathname;
-    window.location.href = `/api/create-checkout?product=financial-snapshot&redirect=${encodeURIComponent(currentPath)}`;
+    try {
+      // Use the main Stripe checkout endpoint - no auth required for one-time purchases
+      const currentPath = window.location.pathname;
+      const response = await fetch(`/api/stripe/checkout?plan=snapshot&billing=one-time&redirect=${encodeURIComponent(currentPath)}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+      
+      const data = await response.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error) {
+      console.error('Error creating snapshot checkout:', error);
+      // You could show a toast notification here
+      alert('Failed to start checkout. Please try again.');
+    }
   };
 
   // Handle free sheet download
@@ -428,8 +503,8 @@ const DashboardScreen: React.FC = () => {
                 stats={displayStats} 
                 filteredTransactions={displayTransactions} 
                 isFirstTimeUser={isFirstTimeUser}
-                isPaidSnapshot={isPaidSnapshot}
-                hasSubscription={false} // TODO: Add subscription status check
+                isPaidSnapshot={hasSnapshotSubscription}
+                hasSubscription={subscriptionDetails?.hasAnyActiveAccess || false}
               />
             )}
 

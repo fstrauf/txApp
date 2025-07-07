@@ -1,6 +1,9 @@
 import { NextRequest } from 'next/server';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
+import { db } from '@/db';
+import { eq, and } from 'drizzle-orm';
+import { users, subscriptions } from '@/db/schema';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
@@ -39,11 +42,70 @@ export async function POST(request: NextRequest) {
           customerEmail: session.customer_details?.email,
         });
         
-        // Here you could:
-        // 1. Save the purchase to your database
-        // 2. Send confirmation email
-        // 3. Grant access to premium features
-        // 4. Send analytics event
+        try {
+          // Find or create user based on email
+          let user = null;
+          const customerEmail = session.customer_details?.email;
+          
+          if (customerEmail) {
+            // Try to find existing user by email
+            user = await db.query.users.findFirst({
+              where: eq(users.email, customerEmail)
+            });
+            
+            // If no user found, create a new one (guest checkout)
+            if (!user) {
+              const [newUser] = await db.insert(users).values({
+                email: customerEmail,
+                name: session.customer_details?.name || null,
+                stripeCustomerId: session.customer as string || null,
+              }).returning();
+              user = newUser;
+            } else if (!user.stripeCustomerId && session.customer) {
+              // Update existing user with Stripe customer ID if missing
+              await db.update(users)
+                .set({ stripeCustomerId: session.customer as string })
+                .where(eq(users.id, user.id));
+            }
+          }
+          
+          if (user) {
+            // Check if user already has a SNAPSHOT subscription
+            const existingSnapshot = await db.query.subscriptions.findFirst({
+              where: and(
+                eq(subscriptions.userId, user.id),
+                eq(subscriptions.plan, 'SNAPSHOT')
+              )
+            });
+            
+            if (!existingSnapshot) {
+              // Create subscription entry for Financial Snapshot
+              const now = new Date();
+              const oneYearFromNow = new Date();
+              oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+              
+              await db.insert(subscriptions).values({
+                userId: user.id,
+                status: 'ACTIVE',
+                plan: 'SNAPSHOT',
+                billingCycle: 'ANNUAL', // One-time purchase, treat as annual
+                currentPeriodStart: now,
+                currentPeriodEnd: oneYearFromNow, // Give them a year of access
+                stripeCustomerId: session.customer as string || null,
+                stripeSubscriptionId: session.id, // Use session ID as reference
+                cancelAtPeriodEnd: true, // It's a one-time purchase
+              });
+              
+              console.log('Financial snapshot subscription created for user:', user.id);
+            } else {
+              console.log('User already has a Financial Snapshot subscription:', user.id);
+            }
+          } else {
+            console.error('Could not find or create user for Financial Snapshot purchase');
+          }
+        } catch (error) {
+          console.error('Error creating financial snapshot subscription:', error);
+        }
       }
       break;
     }
