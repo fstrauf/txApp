@@ -5,18 +5,24 @@ import { mockSavingsData } from '../../utils/mockData';
 import DashboardCharts from '../DashboardCharts';
 import DataOverview from '../DataOverview';
 import { AdvancedFinancialAnalytics } from '../AdvancedFinancialAnalytics';
+import { FinancialSnapshotInsights } from '../FinancialSnapshotInsights';
+import { UpgradeToAutomation } from '../UpgradeToAutomation';
 import posthog from 'posthog-js';
 
 interface DashboardStatisticsProps {
   stats: DashboardStats;
   filteredTransactions: any[];
   isFirstTimeUser?: boolean;
+  isPaidSnapshot?: boolean;
+  hasSubscription?: boolean;
 }
 
 export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({ 
   stats, 
   filteredTransactions, 
-  isFirstTimeUser = false 
+  isFirstTimeUser = false,
+  isPaidSnapshot = false,
+  hasSubscription = false
 }) => {
   const [currentTimeFilter, setCurrentTimeFilter] = React.useState('all');
   
@@ -275,6 +281,15 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
       {/* Data Overview */}
       <DataOverview />
 
+      {/* Financial Snapshot Insights - Show for paid snapshot users */}
+      {isPaidSnapshot && (
+        <FinancialSnapshotInsights 
+          stats={stats}
+          isPaidSnapshot={isPaidSnapshot}
+          className="mt-6"
+        />
+      )}
+
       {/* Dashboard Visualizations */}
       <DashboardCharts 
         transactions={filteredTransactions}
@@ -296,6 +311,15 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
           transactions={filteredTransactions} 
           autoAnalyze={true} // Always auto-analyze for demo data to show capabilities
           className="mt-4 sm:mt-6"
+        />
+      )}
+
+      {/* Upsell to Subscription - Show for paid snapshot users without subscription */}
+      {isPaidSnapshot && !hasSubscription && (
+        <UpgradeToAutomation 
+          isPaidSnapshot={isPaidSnapshot}
+          hasSubscription={hasSubscription}
+          className="mt-6"
         />
       )}
     </div>

@@ -28,8 +28,8 @@ import { TabNavigation } from '../components/dashboard/TabNavigation';
 import { WhatYouGetSection } from '../components/dashboard/WhatYouGetSection';
 import { StickyBottomBar } from '../components/dashboard/StickyBottomBar';
 import { OnboardingModal } from '../components/dashboard/OnboardingModal';
-import { EmergencyFundCalculator } from '@/components/shared/EmergencyFundCalculator';
-import { FreeSheetCTA } from '../components/dashboard/FreeSheetCTA';
+import { FinancialSnapshotModal } from '../components/dashboard/FinancialSnapshotModal';
+import { FinancialSnapshotOffer } from '../components/FinancialSnapshotOffer';
 
 const DashboardScreen: React.FC = () => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
@@ -55,6 +55,10 @@ const DashboardScreen: React.FC = () => {
 
   // Onboarding modal state
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
+
+  // Financial Snapshot state
+  const [isPaidSnapshot, setIsPaidSnapshot] = useState(false);
+  const [isSnapshotModalOpen, setIsSnapshotModalOpen] = useState(false);
 
   // A/B Testing
   const { headlineVariant, ctaButtonVariant, getHeadlineText, getCtaButtonText } = useDashboardAbTesting(status);
@@ -110,10 +114,10 @@ const DashboardScreen: React.FC = () => {
     savingsQuarter: mockSavingsData.latestQuarter,
   };
 
-  // Use mock data for first-time users, real data otherwise
-  const displayStats = isFirstTimeUser ? mockStats : dashboardStats;
-  const displayTransactions = isFirstTimeUser ? mockTransactions : filteredTransactions;
-  const displayAssetsData = isFirstTimeUser ? mockAssetsData : assetsData;
+  // Use mock data for first-time users (unless they've paid for snapshot), real data otherwise
+  const displayStats = (isFirstTimeUser && !isPaidSnapshot) ? mockStats : dashboardStats;
+  const displayTransactions = (isFirstTimeUser && !isPaidSnapshot) ? mockTransactions : filteredTransactions;
+  const displayAssetsData = (isFirstTimeUser && !isPaidSnapshot) ? mockAssetsData : assetsData;
 
   // Track dashboard screen view
   useEffect(() => {
@@ -176,6 +180,45 @@ const DashboardScreen: React.FC = () => {
     }
   }, [isFirstTimeUser, userData.transactions, processTransactionData]);
 
+  // Check URL params for financial snapshot success or offer
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      // Handle successful snapshot purchase
+      if (urlParams.get('snapshot') === 'success') {
+        setIsPaidSnapshot(true);
+        setDataManagementDefaultTab('upload');
+        setIsHelpDrawerOpen(true);
+        
+        // Track successful snapshot purchase
+        posthog.capture('financial_snapshot_purchased', { 
+          amount: 49,
+          user_authenticated: !!session?.user?.id 
+        });
+        
+        // Clean up URL
+        const url = new URL(window.location.href);
+        url.searchParams.delete('snapshot');
+        window.history.replaceState({}, '', url.toString());
+      }
+      
+      // Handle snapshot offer from blog posts
+      if (urlParams.get('offer') === 'snapshot') {
+        // Show financial snapshot offer (scroll to it or highlight it)
+        posthog.capture('financial_snapshot_offer_viewed', {
+          source: 'blog_post_cta',
+          user_authenticated: !!session?.user?.id
+        });
+        
+        // Clean up URL
+        const url = new URL(window.location.href);
+        url.searchParams.delete('offer');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, [setDataManagementDefaultTab, setIsHelpDrawerOpen, session?.user?.id]);
+
   const showLoadingState = (isLoading && !dashboardStats && spreadsheetLinked && !isFirstTimeUser) || (isRefreshing && !error);
 
   const openDataDrawer = (source: string) => {
@@ -208,36 +251,93 @@ const DashboardScreen: React.FC = () => {
     refetchStatus();
   };
 
+  const handleMakeDashboardMine = () => {
+    posthog.capture('make_dashboard_mine_clicked', {
+      source: 'dashboard_cta',
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: !!session?.user?.id
+    });
+    
+    // Show Financial Snapshot modal for first-time users
+    if (isFirstTimeUser) {
+      setIsSnapshotModalOpen(true);
+    } else {
+      // For existing users, open onboarding/data management
+      setIsOnboardingModalOpen(true);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-gray-50 via-white to-primary/5">
       <div className={`max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-8 sm:py-12 lg:py-16 w-full ${isFirstTimeUser ? 'pb-32' : ''}`}>
         {/* Only show header for existing users with data */}
-        {/* {!isFirstTimeUser && ( */}
+        {!isFirstTimeUser && (
           <Header variant="centered" size="xl" className="mb-8 sm:mb-12 lg:mb-16">
             Get instant Clarity On Your Finances - With three steps
           </Header>
-        {/* )} */}
+         )}
 
         {/* Demo Banner for First-Time Users */}
-        {/* {isFirstTimeUser && (
+        {isFirstTimeUser && (
+          <div>
           <DemoBanner
             headlineText={getHeadlineText()}
             ctaButtonText={getCtaButtonText()}
-            onCtaClick={() => setIsOnboardingModalOpen(true)}
+            onCtaClick={handleMakeDashboardMine}
             onHowItWorksClick={() => setIsHowItWorksOpen(true)}
             isLoading={status === 'loading'}
           />
-        )} */}
+             <div className="max-w-4xl mx-auto mb-16">
+        <div className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-secondary/5 to-primary/10 rounded-2xl"></div>
+          
+          <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-primary/20 shadow-lg">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="animate-bounce">
+                  <div className="w-3 h-3 bg-primary rounded-full"></div>
+                </div>
+                <div className="animate-bounce" style={{ animationDelay: '0.1s' }}>
+                  <div className="w-3 h-3 bg-secondary rounded-full"></div>
+                </div>
+                <div className="animate-bounce" style={{ animationDelay: '0.2s' }}>
+                  <div className="w-3 h-3 bg-primary rounded-full"></div>
+                </div>
+              </div>
+              
+              <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                  Check out the dashboard
+                </span>{" "}
+                with demo data below
+              </h3>
+              
+              <p className="text-lg text-gray-600 mb-6">
+                See exactly what your financial freedom dashboard will look like
+              </p>
+              
+              <div className="animate-pulse">
+                <svg 
+                  className="w-8 h-8 text-primary mx-auto animate-bounce" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth="2" 
+                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+        )}
 
-        {/* Emergency Fund Calculator - Only for first-time users */}
-
-
-        {/* What You Get Section - Only for first-time users */}
-        {/* {isFirstTimeUser && (
-          <WhatYouGetSection 
-            onGetStartedClick={() => setIsOnboardingModalOpen(true)}
-          />
-        )} */}
 
         {/* Error Display */}
         <ErrorDisplayBox 
@@ -290,7 +390,9 @@ const DashboardScreen: React.FC = () => {
               <DashboardStatistics 
                 stats={displayStats} 
                 filteredTransactions={displayTransactions} 
-                isFirstTimeUser={isFirstTimeUser} 
+                isFirstTimeUser={isFirstTimeUser}
+                isPaidSnapshot={isPaidSnapshot}
+                hasSubscription={false} // TODO: Add subscription status check
               />
             )}
 
@@ -378,15 +480,6 @@ const DashboardScreen: React.FC = () => {
           <HowItWorksDrawer onClose={() => setIsHowItWorksOpen(false)} />
         </HelpDrawer>
 
-        {/* Monthly Reminder Toast */}
-        {/* {!isFirstTimeUser && displayStats && (
-          <MonthlyReminderToast 
-            delay={10000} 
-            onSetReminder={handlers.handleSetMonthlyReminder}
-            userToastStatus={userToastStatus}
-            onStatusUpdate={setUserToastStatus}
-          />
-        )} */}
 
         {/* Exit Survey */}
         <PostHogApiSurvey
@@ -401,7 +494,7 @@ const DashboardScreen: React.FC = () => {
 
       {/* Sticky Bottom Bar - Only for first-time users */}
       <StickyBottomBar
-        onGetStartedClick={() => setIsOnboardingModalOpen(true)}
+        onGetStartedClick={handleMakeDashboardMine}
         onWatchDemoClick={() => setIsHowItWorksOpen(true)}
         isFirstTimeUser={isFirstTimeUser}
       />
@@ -412,8 +505,14 @@ const DashboardScreen: React.FC = () => {
         onClose={() => setIsOnboardingModalOpen(false)}
         onSignupComplete={handleOnboardingComplete}
       />
+
+      {/* Financial Snapshot Modal */}
+      <FinancialSnapshotModal
+        isOpen={isSnapshotModalOpen}
+        onClose={() => setIsSnapshotModalOpen(false)}
+      />
     </div>
   );
 };
 
-export default DashboardScreen; 
+export default DashboardScreen;

@@ -27,13 +27,13 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
       id: 'overview' as const,
       name: 'Overview',
       icon: ChartBarIcon,
+    },
+    {
+      id: 'portfolio' as const,
+      name: 'Portfolio',
+      icon: ChartPieIcon,
+      isNew: true
     }
-    // {
-    //   id: 'portfolio' as const,
-    //   name: 'Portfolio',
-    //   icon: ChartPieIcon,
-    //   isNew: true
-    // }
   ];
 
   return (

@@ -30,29 +30,63 @@ export async function POST(request: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         
-        // Make sure this is a subscription checkout
-        if (session.mode !== 'subscription') break;
-        
-        // Extract the userId from client_reference_id
-        const userId = session.client_reference_id;
-        const customerId = session.customer as string;
-        const subscriptionId = session.subscription as string;
+        // Handle subscription checkouts
+        if (session.mode === 'subscription') {
+          // Extract the userId from client_reference_id
+          const userId = session.client_reference_id;
+          const customerId = session.customer as string;
+          const subscriptionId = session.subscription as string;
 
-        if (!userId) {
-          console.error("Missing userId in checkout.session.completed event");
-          return NextResponse.json({ error: "Missing user ID" }, { status: 400 });
+          if (!userId) {
+            console.error("Missing userId in checkout.session.completed event");
+            return NextResponse.json({ error: "Missing user ID" }, { status: 400 });
+          }
+          
+          // Update user's Stripe IDs for reference
+          await db
+            .update(users)
+            .set({
+              stripeCustomerId: customerId,
+              stripeSubscriptionId: subscriptionId,
+            })
+            .where(eq(users.id, userId));
+          
+          console.log(`Updated user ${userId} with Stripe IDs`);
         }
         
-        // Update user's Stripe IDs for reference
-        await db
-          .update(users)
-          .set({
-            stripeCustomerId: customerId,
-            stripeSubscriptionId: subscriptionId,
-          })
-          .where(eq(users.id, userId));
+        // Handle one-time payments (Financial Snapshot)
+        else if (session.mode === 'payment') {
+          const userId = session.client_reference_id;
+          const customerId = session.customer as string;
+          const paymentIntentId = session.payment_intent as string;
+          
+          if (!userId) {
+            console.error("Missing userId in one-time payment checkout.session.completed event");
+            return NextResponse.json({ error: "Missing user ID" }, { status: 400 });
+          }
+          
+          // Check if this is a financial snapshot payment
+          if (session.metadata?.type === 'financial_snapshot') {
+            console.log(`Financial Snapshot purchased by user ${userId} for $${session.metadata.amount}`);
+            
+            // Update user's customer ID if not already set
+            const user = await db.query.users.findFirst({
+              where: eq(users.id, userId)
+            });
+            
+            if (user && !user.stripeCustomerId) {
+              await db
+                .update(users)
+                .set({ stripeCustomerId: customerId })
+                .where(eq(users.id, userId));
+            }
+            
+            // Here you could store the financial snapshot purchase in a separate table
+            // or add a field to track one-time purchases
+            console.log(`Financial Snapshot payment completed: ${paymentIntentId}`);
+          }
+        }
         
-        console.log(`Updated user ${userId} with Stripe IDs`);
         break;
       }
        case 'customer.subscription.created':

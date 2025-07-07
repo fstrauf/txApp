@@ -132,56 +132,6 @@ export const WhatYouGetSection: React.FC<WhatYouGetSectionProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Call-to-Action for Demo Data - Redesigned */}
-      <div className="max-w-4xl mx-auto mb-16">
-        <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-secondary/5 to-primary/10 rounded-2xl"></div>
-          
-          <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-primary/20 shadow-lg">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-4 mb-4">
-                <div className="animate-bounce">
-                  <div className="w-3 h-3 bg-primary rounded-full"></div>
-                </div>
-                <div className="animate-bounce" style={{ animationDelay: '0.1s' }}>
-                  <div className="w-3 h-3 bg-secondary rounded-full"></div>
-                </div>
-                <div className="animate-bounce" style={{ animationDelay: '0.2s' }}>
-                  <div className="w-3 h-3 bg-primary rounded-full"></div>
-                </div>
-              </div>
-              
-              <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                  Check out the dashboard
-                </span>{" "}
-                with demo data below
-              </h3>
-              
-              <p className="text-lg text-gray-600 mb-6">
-                See exactly what your financial freedom dashboard will look like
-              </p>
-              
-              <div className="animate-pulse">
-                <svg 
-                  className="w-8 h-8 text-primary mx-auto animate-bounce" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth="2" 
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </>
   );
 }; 

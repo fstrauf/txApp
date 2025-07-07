@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { createCheckoutSession, createCustomer } from '@/lib/stripe';
+import { createCheckoutSession, createOneTimeCheckoutSession, createCustomer } from '@/lib/stripe';
 import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import { users } from '@/db/schema';
@@ -23,14 +23,15 @@ export async function GET(request: NextRequest) {
     const billingCycle = searchParams.get('billing')?.toLowerCase();
     const redirectPath = searchParams.get('redirect');
 
-    if (!plan || !['silver', 'gold'].includes(plan)) {
+    // Handle Financial Snapshot one-time payment
+    if (plan === 'snapshot' && billingCycle === 'one-time') {
+      // Special handling for financial snapshot
+    } else if (!plan || !['silver', 'gold'].includes(plan)) {
       return NextResponse.json(
         { error: 'Invalid plan specified' },
         { status: 400 }
       );
-    }
-
-    if (!billingCycle || !['monthly', 'annual'].includes(billingCycle)) {
+    } else if (!billingCycle || !['monthly', 'annual'].includes(billingCycle)) {
       return NextResponse.json(
         { error: 'Invalid billing cycle specified' },
         { status: 400 }
@@ -71,7 +72,29 @@ export async function GET(request: NextRequest) {
     }
     // --- End URL construction --- 
     
-    // Create a checkout session, passing the constructed successUrl
+    // Handle Financial Snapshot one-time payment
+    if (plan === 'snapshot' && billingCycle === 'one-time') {
+      const { sessionId, url } = await createOneTimeCheckoutSession({
+        customerId: stripeCustomerId,
+        amount: 4900, // $49 in cents
+        productName: 'Financial Snapshot',
+        description: 'Complete financial analysis with personalized insights and recommendations',
+        userId: session.user.id,
+        successUrl: successUrl,
+        cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/personal-finance`
+      });
+
+      if (!sessionId || !url) {
+        return NextResponse.json(
+          { error: 'Failed to create checkout session' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({ url });
+    }
+    
+    // Create a checkout session for subscription plans
     const { sessionId, url } = await createCheckoutSession({
       customerId: stripeCustomerId,
       plan: plan as 'silver' | 'gold',
