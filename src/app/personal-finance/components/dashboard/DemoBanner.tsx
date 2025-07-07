@@ -62,7 +62,7 @@ export const DemoBanner: React.FC<DemoBannerProps> = ({
                   <span className="text-white font-bold text-lg">1</span>
                 </div>
                 <div className="ml-4">
-                  <h3 className="font-bold text-gray-900">Get Your Free Sheet</h3>
+                  <h3 className="font-bold text-gray-900">Get Your Financial Snapshot</h3>
                   <p className="text-sm text-gray-600">Instant Google Sheets template</p>
                 </div>
               </div>

@@ -31,6 +31,7 @@ import { OnboardingModal } from '../components/dashboard/OnboardingModal';
 import { FinancialSnapshotModal } from '../components/dashboard/FinancialSnapshotModal';
 import { FinancialSnapshotOfferModal } from '../components/dashboard/FinancialSnapshotOfferModal';
 import { useSubscriptionStatus } from '@/lib/hooks/useSubscriptionStatus';
+import SnapshotPurchaseToast from '../components/SnapshotPurchaseToast';
 
 const DashboardScreen: React.FC = () => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
@@ -62,6 +63,7 @@ const DashboardScreen: React.FC = () => {
   const [isPaidSnapshot, setIsPaidSnapshot] = useState(false);
   const [isSnapshotModalOpen, setIsSnapshotModalOpen] = useState(false);
   const [showSnapshotOffer, setShowSnapshotOffer] = useState(false);
+  const [pendingSnapshotSessionId, setPendingSnapshotSessionId] = useState<string | null>(null);
 
   // A/B Testing
   const { headlineVariant, ctaButtonVariant, getHeadlineText, getCtaButtonText } = useDashboardAbTesting(status);
@@ -210,6 +212,7 @@ const DashboardScreen: React.FC = () => {
         if (!session?.user) {
           // Store the session ID for after auth
           localStorage.setItem('pending_snapshot_session', sessionId);
+          setPendingSnapshotSessionId(sessionId);
           
           // Show authentication needed message
           posthog.capture('snapshot_auth_required', {
@@ -217,9 +220,8 @@ const DashboardScreen: React.FC = () => {
             action: 'payment_completed_auth_needed'
           });
           
-          // Set flag to show they need to authenticate for their paid snapshot
-          setIsPaidSnapshot(true);
-          setUserToastStatus('auth_needed_for_snapshot');
+          // Show onboarding modal instead of toast for better UX
+          setIsOnboardingModalOpen(true);
         } else {
           // Already authenticated, proceed with snapshot access
           handleSnapshotSuccess(sessionId);
@@ -272,19 +274,80 @@ const DashboardScreen: React.FC = () => {
   }, [session?.user]);
 
   // Helper function to handle successful snapshot access
-  const handleSnapshotSuccess = (sessionId: string) => {
-    setIsPaidSnapshot(true);
-    setDataManagementDefaultTab('upload');
-    setIsHelpDrawerOpen(true);
-    
-    // Track successful snapshot access
-    posthog.capture('financial_snapshot_accessed', { 
-      session_id: sessionId,
-      user_authenticated: !!session?.user?.id 
-    });
-    
-    // Clear any auth needed status
-    setUserToastStatus('');
+  const handleSnapshotSuccess = async (sessionId: string) => {
+    try {
+      // First verify the payment
+      const verifyResponse = await fetch(`/api/stripe/verify-payment?session_id=${sessionId}`);
+      
+      if (!verifyResponse.ok) {
+        console.error('Failed to verify payment');
+        setUserToastStatus('payment_verification_failed');
+        return;
+      }
+      
+      const verificationData = await verifyResponse.json();
+      
+      if (!verificationData.paid) {
+        console.error('Payment not completed');
+        setUserToastStatus('payment_not_completed');
+        return;
+      }
+      
+      // If user is authenticated, link the payment to their account
+      if (session?.user?.id) {
+        try {
+          const linkResponse = await fetch('/api/stripe/link-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sessionId }),
+          });
+          
+          if (linkResponse.ok) {
+            const linkData = await linkResponse.json();
+            console.log('Payment successfully linked to user account', linkData);
+                     } else {
+             const errorData = await linkResponse.json();
+             if (errorData.error?.includes('Email mismatch')) {
+               setUserToastStatus('email_mismatch');
+               // Don't return - let them use the app normally, just without paid access
+               console.warn('Email mismatch - user can use app but not access paid snapshot');
+             } else {
+               console.warn('Failed to link payment to account:', errorData.error);
+             }
+             // Continue anyway - they can use the app normally
+           }
+        } catch (linkError) {
+          console.warn('Error linking payment to account:', linkError);
+          // Continue anyway - they have a valid payment
+        }
+      }
+      
+      // Grant access to Financial Snapshot
+      setIsPaidSnapshot(true);
+      setDataManagementDefaultTab('upload');
+      setIsHelpDrawerOpen(true);
+      
+      // Track successful snapshot access
+      posthog.capture('financial_snapshot_accessed', { 
+        session_id: sessionId,
+        user_authenticated: !!session?.user?.id,
+        amount: verificationData.amount
+      });
+      
+      // Clear any auth needed status
+      setUserToastStatus('snapshot_ready');
+      
+      // Clear the session ID after successful processing
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('pending_snapshot_session');
+      }
+      
+    } catch (error) {
+      console.error('Error handling snapshot success:', error);
+      setUserToastStatus('snapshot_error');
+    }
   };
 
   const showLoadingState = (isLoading && !dashboardStats && spreadsheetLinked && !isFirstTimeUser) || (isRefreshing && !error);
@@ -307,7 +370,15 @@ const DashboardScreen: React.FC = () => {
     }
   };
 
-  const handleOnboardingComplete = (sheetData?: { spreadsheetId: string; spreadsheetUrl: string }) => {
+  const handleOnboardingComplete = async (sheetData?: { spreadsheetId: string; spreadsheetUrl: string }) => {
+    // If this was a post-purchase signup, verify and link the payment
+    const sessionId = pendingSnapshotSessionId || localStorage.getItem('pending_snapshot_session');
+    if (sessionId) {
+      await handleSnapshotSuccess(sessionId);
+      setPendingSnapshotSessionId(null);
+      localStorage.removeItem('pending_snapshot_session');
+    }
+    
     // After onboarding is complete, open the data management drawer
     if (sheetData) {
       console.log('Sheet automatically created and linked:', sheetData);
@@ -616,6 +687,7 @@ const DashboardScreen: React.FC = () => {
         isOpen={isOnboardingModalOpen}
         onClose={() => setIsOnboardingModalOpen(false)}
         onSignupComplete={handleOnboardingComplete}
+        isPaidSnapshot={!!pendingSnapshotSessionId}
       />
 
       {/* Financial Snapshot Offer Modal */}
@@ -630,6 +702,12 @@ const DashboardScreen: React.FC = () => {
       <FinancialSnapshotModal
         isOpen={isSnapshotModalOpen}
         onClose={() => setIsSnapshotModalOpen(false)}
+      />
+
+      {/* Snapshot Purchase Toast */}
+      <SnapshotPurchaseToast
+        userToastStatus={userToastStatus}
+        onStatusUpdate={setUserToastStatus}
       />
     </div>
   );

@@ -118,7 +118,7 @@ export const WhatYouGetSection: React.FC<WhatYouGetSectionProps> = ({
               onClick={() => {
                 posthog.capture('pf_cta_clicked', {
                   component: 'what_you_get_section',
-                  button_text: 'Get Your Free Google Sheet',
+                  button_text: 'Get Your Google Sheet',
                   location: 'what_you_get_cta'
                 });
                 onGetStartedClick();
@@ -126,7 +126,7 @@ export const WhatYouGetSection: React.FC<WhatYouGetSectionProps> = ({
               className="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-primary to-secondary text-white rounded-2xl hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 font-bold shadow-2xl hover:shadow-3xl transform hover:scale-105 text-lg"
             >
               <DocumentTextIcon className="h-6 w-6" />
-              Get Your Free Google Sheet
+              Get Your Google Sheet
             </button>
             <p className="text-sm text-gray-500 mt-4">Join 500+ people who discovered their runway this week</p>
           </div>

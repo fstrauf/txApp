@@ -73,9 +73,9 @@ export const DashboardControls: React.FC<DashboardControlsProps> = ({
             {status === 'loading' 
               ? 'Loading...'
               : status === 'unauthenticated'
-                ? 'Get Your Free Google Sheet'
+                ? 'Get Your Google Sheet'
                 : isFirstTimeUser 
-                  ? 'Get Your Free Google Sheet' 
+                  ? 'Get Your Google Sheet' 
                   : 'Add Your Data'
             }
           </button>

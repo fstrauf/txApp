@@ -24,8 +24,8 @@ export const useDashboardAbTesting = (status: string) => {
     // For control variant, customize based on auth status
     if ((ctaButtonVariant || 'control') === 'control') {
       return status === 'unauthenticated' 
-        ? 'Get My Free Spreadsheet'
-        : 'Get My Free Spreadsheet';
+        ? 'Get My Financial Snapshot'
+        : 'Get My Financial Snapshot';
     }
     
     return variantText;

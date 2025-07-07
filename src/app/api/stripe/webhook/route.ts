@@ -59,30 +59,33 @@ export async function POST(request: NextRequest) {
           const userId = session.client_reference_id;
           const customerId = session.customer as string;
           const paymentIntentId = session.payment_intent as string;
-          
-          if (!userId) {
-            console.error("Missing userId in one-time payment checkout.session.completed event");
-            return NextResponse.json({ error: "Missing user ID" }, { status: 400 });
-          }
+          const customerEmail = session.customer_details?.email;
           
           // Check if this is a financial snapshot payment
           if (session.metadata?.type === 'financial_snapshot') {
-            console.log(`Financial Snapshot purchased by user ${userId} for $${session.metadata.amount}`);
+            console.log(`Financial Snapshot purchased - Session: ${session.id}, Customer: ${customerId}, Email: ${customerEmail}`);
             
-            // Update user's customer ID if not already set
-            const user = await db.query.users.findFirst({
-              where: eq(users.id, userId)
-            });
-            
-            if (user && !user.stripeCustomerId) {
-              await db
-                .update(users)
-                .set({ stripeCustomerId: customerId })
-                .where(eq(users.id, userId));
+            // For guest purchases (no userId), store the purchase session for later claiming
+            if (!userId) {
+              console.log(`Guest Financial Snapshot purchase - storing session ${session.id} for later claiming`);
+              // The session will be verified later when user creates account/logs in
+            } else {
+              // User was authenticated during purchase
+              console.log(`Financial Snapshot purchased by authenticated user ${userId} for $${session.metadata.amount}`);
+              
+              // Update user's customer ID if not already set
+              const user = await db.query.users.findFirst({
+                where: eq(users.id, userId)
+              });
+              
+              if (user && !user.stripeCustomerId) {
+                await db
+                  .update(users)
+                  .set({ stripeCustomerId: customerId })
+                  .where(eq(users.id, userId));
+              }
             }
             
-            // Here you could store the financial snapshot purchase in a separate table
-            // or add a field to track one-time purchases
             console.log(`Financial Snapshot payment completed: ${paymentIntentId}`);
           }
         }

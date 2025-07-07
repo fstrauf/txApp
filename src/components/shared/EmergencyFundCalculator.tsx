@@ -227,7 +227,7 @@ export const EmergencyFundCalculator: React.FC<EmergencyFundCalculatorProps> = (
               </p>
             </div>
 
-            <div className="text-center">
+            {/* <div className="text-center">
               <Link
                 href="/personal-finance"
                 onClick={handleCtaClick}
@@ -239,7 +239,7 @@ export const EmergencyFundCalculator: React.FC<EmergencyFundCalculatorProps> = (
               <p className="text-xs text-gray-500 mt-2">
                 Get the complete picture with AI-powered insights
               </p>
-            </div>
+            </div> */}
           </div>
 
           {/* Financial Snapshot Offer - Show after calculation */}

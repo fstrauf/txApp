@@ -75,7 +75,7 @@ export const DEMO_DASHBOARD_CTA_TEST: ABTestConfig = {
     {
       key: 'test_group_3',
       name: 'Test Group 3 - Direct Offer',
-      description: 'Get Started Free'
+      description: 'Get Started'
     }
   ],
   defaultVariant: 'control'

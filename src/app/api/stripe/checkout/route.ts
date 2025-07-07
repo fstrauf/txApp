@@ -26,8 +26,10 @@ export async function GET(request: NextRequest) {
       let cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/personal-finance?snapshot=cancelled`;
       
       if (redirectPath && redirectPath.startsWith('/')) {
-        successUrl = `${process.env.NEXT_PUBLIC_APP_URL}${redirectPath}?snapshot=success`;
-        cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}${redirectPath}?snapshot=cancelled`;
+        // Check if redirectPath already has query parameters
+        const separator = redirectPath.includes('?') ? '&' : '?';
+        successUrl = `${process.env.NEXT_PUBLIC_APP_URL}${redirectPath}${separator}snapshot=success`;
+        cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}${redirectPath}${separator}snapshot=cancelled`;
       }
 
       // Create checkout session using Stripe Price ID
@@ -42,10 +44,12 @@ export async function GET(request: NextRequest) {
         cancel_url: cancelUrl,
         metadata: {
           product: 'financial-snapshot',
-          type: 'one-time-purchase'
+          type: 'financial_snapshot',
+          amount: '49'
         },
         billing_address_collection: 'auto',
         allow_promotion_codes: true,
+        customer_creation: 'always', // Always create a Stripe customer for guest purchases
       });
 
       if (!session.id || !session.url) {

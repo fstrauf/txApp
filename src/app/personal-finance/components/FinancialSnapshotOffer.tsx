@@ -32,14 +32,8 @@ export const FinancialSnapshotOffer: React.FC<FinancialSnapshotOfferProps> = ({
       if (onPurchaseClick) {
         onPurchaseClick();
       } else {
-        // For non-authenticated users, redirect to sign up first
-        if (!session?.user?.id) {
-          router.push('/personal-finance?offer=snapshot');
-          return;
-        }
-        
-        // Create Stripe checkout for $49 Financial Snapshot
-        const response = await fetch('/api/stripe/checkout?plan=snapshot&billing=one-time&redirect=/personal-finance?snapshot=success');
+        // Create Stripe checkout for $49 Financial Snapshot (no auth required)
+        const response = await fetch('/api/stripe/checkout?plan=snapshot&billing=one-time&redirect=/personal-finance');
         
         if (!response.ok) {
           throw new Error('Failed to create checkout session');
