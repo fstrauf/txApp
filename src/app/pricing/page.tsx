@@ -121,10 +121,11 @@ export default function PricingPage() {
     
     if (plan === 'SILVER') badgeColor = 'bg-blue-100 text-blue-800';
     else if (plan === 'GOLD') badgeColor = 'bg-yellow-100 text-yellow-800';
+    else if (plan === 'SNAPSHOT') badgeColor = 'bg-green-100 text-green-800';
     
-    if (status === 'TRIALING' || subscriptionDetails.isActiveTrial) {
+    if (subscriptionDetails.isActiveTrial) {
       badgeColor = 'bg-purple-100 text-purple-800';
-    } else if (status === 'PAST_DUE') {
+    } else if (status.includes('PAST_DUE') || status.includes('past_due')) {
       badgeColor = 'bg-red-100 text-red-800';
     }
     

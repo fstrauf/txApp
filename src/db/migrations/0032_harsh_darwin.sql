@@ -1,0 +1,1 @@
+ALTER TYPE "public"."subscriptionPlan" ADD VALUE 'SNAPSHOT';

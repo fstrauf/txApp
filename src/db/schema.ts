@@ -21,7 +21,7 @@ export const appBetaOptInStatusEnum = pgEnum('appBetaOptInStatus', ['OPTED_IN', 
 export const monthlyReminderToastStatusEnum = pgEnum('monthlyReminderToastStatus', ['DISMISSED', 'SET_REMINDER']);
 
 // Subscription plan enum - simplified
-export const subscriptionPlanEnum = pgEnum('subscriptionPlan', ['FREE', 'TRIAL', 'SILVER', 'GOLD']);
+export const subscriptionPlanEnum = pgEnum('subscriptionPlan', ['FREE', 'TRIAL', 'SILVER', 'GOLD', 'SNAPSHOT']);
 
 // Subscription status enum - simplified
 export const subscriptionStatusEnum = pgEnum('subscriptionStatus', ['ACTIVE', 'CANCELED', 'EXPIRED']);

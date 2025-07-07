@@ -59,7 +59,7 @@ const BlogCTASection: React.FC<BlogCTASectionProps> = ({ postTitle, postContent 
       type: 'default',
       title: 'Take Control of Your Finances',
       description: 'Upload your bank statements and get AI-powered insights in minutes.',
-      cta: 'Get Started Free',
+      cta: 'Get Started',
       href: '/personal-finance',
       icon: DollarSign,
       color: 'from-primary to-secondary'

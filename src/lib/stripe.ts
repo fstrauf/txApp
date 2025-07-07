@@ -248,4 +248,58 @@ export async function getSubscription(subscriptionId: string) {
   }
 }
 
-export default stripe; 
+// Create a one-time checkout session (for Financial Snapshot)
+export async function createOneTimeCheckoutSession({
+  customerId,
+  amount,
+  productName = 'Financial Snapshot',
+  description = 'Complete financial analysis with personalized insights',
+  userId,
+  successUrl = `${process.env.NEXT_PUBLIC_APP_URL}/personal-finance?snapshot=success`,
+  cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/personal-finance`
+}: {
+  customerId?: string;
+  amount: number; // Amount in cents
+  productName?: string;
+  description?: string;
+  userId: string;
+  successUrl?: string;
+  cancelUrl?: string;
+}) {
+  try {
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: productName,
+              description: description,
+            },
+            unit_amount: amount,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment', // One-time payment
+      allow_promotion_codes: true,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      client_reference_id: userId,
+      metadata: {
+        type: 'financial_snapshot',
+        amount: amount.toString(),
+        userId,
+      },
+    });
+
+    return { sessionId: session.id, url: session.url };
+  } catch (error) {
+    console.error('Error creating one-time checkout session:', error);
+    throw error;
+  }
+}
+
+export default stripe;

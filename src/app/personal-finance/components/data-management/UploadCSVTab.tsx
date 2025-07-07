@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { CSVUploadArea } from '../../shared/CSVUploadArea';
 import CSVPreviewTable from './CSVPreviewTable';
+import { parseAccountingAmount } from '../../utils/csvUtils';
 import { 
   InformationCircleIcon,
   ClockIcon,
@@ -10,7 +11,8 @@ import {
   LightBulbIcon,
   EyeIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  CalculatorIcon
 } from '@heroicons/react/24/outline';
 
 export interface AnalysisResult {
@@ -22,7 +24,7 @@ export interface AnalysisResult {
 export interface ImportConfig {
   mappings: Record<string, 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'direction' | 'none'>;
   dateFormat: string;
-  amountFormat: 'standard' | 'negate' | 'sign_column';
+  amountFormat: 'standard' | 'negate' | 'sign_column' | 'accounting_brackets';
   signColumn?: string;
   skipRows: number;
   delimiter?: string;
@@ -69,6 +71,63 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
   onViewDuplicateReport
 }) => {
   // AI suggestions are now handled in the parent component during file analysis
+
+  // Detect accounting bracket notation in amount column
+  const detectAccountingNotation = (): {
+    hasBracketNotation: boolean;
+    amountColumn?: string;
+    sampleBracketValues: string[];
+    bracketCount: number;
+    totalAmountValues: number;
+  } => {
+    if (!analysisResult || !config.mappings) {
+      return { 
+        hasBracketNotation: false, 
+        sampleBracketValues: [], 
+        bracketCount: 0, 
+        totalAmountValues: 0 
+      };
+    }
+
+    // Find the amount column
+    const amountColumn = Object.keys(config.mappings).find(
+      header => config.mappings![header] === 'amount'
+    );
+
+    if (!amountColumn) {
+      return { 
+        hasBracketNotation: false, 
+        sampleBracketValues: [], 
+        bracketCount: 0, 
+        totalAmountValues: 0 
+      };
+    }
+
+    // Check for bracket notation in the amount column
+    const bracketValues: string[] = [];
+    let totalValues = 0;
+
+    for (const row of analysisResult.previewRows) {
+      const value = String(row[amountColumn] || '').trim();
+      if (value) {
+        totalValues++;
+        // Check if value is wrapped in parentheses (accounting notation)
+        if (value.match(/^\([0-9,]+\.?[0-9]*\)$/)) {
+          bracketValues.push(value);
+        }
+      }
+    }
+
+    return {
+      hasBracketNotation: bracketValues.length > 0,
+      amountColumn,
+      sampleBracketValues: bracketValues.slice(0, 3), // First 3 examples
+      bracketCount: bracketValues.length,
+      totalAmountValues: totalValues
+    };
+  };
+
+  const accountingNotation = detectAccountingNotation();
 
   // Get mapping status for visual indicators
   const getMappingStatus = (): {
@@ -434,6 +493,48 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
               }
               return null;
             })()}
+
+            {/* Accounting Notation Detection */}
+            {accountingNotation.hasBracketNotation && (
+              <div className="mt-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                <div className="flex items-start">
+                  <CalculatorIcon className="h-5 w-5 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-medium text-orange-800 text-sm mb-2">
+                      Accounting Bracket Notation Detected
+                    </p>
+                    <div className="text-sm text-orange-700 space-y-2">
+                      <p>
+                        Found {accountingNotation.bracketCount} values with brackets in "{accountingNotation.amountColumn}" 
+                        (out of {accountingNotation.totalAmountValues} total values).
+                      </p>
+                      <div>
+                        <p className="font-medium mb-1">Examples found:</p>
+                        <div className="space-y-1">
+                          {accountingNotation.sampleBracketValues.map((value, idx) => {
+                            const parsed = parseAccountingAmount(value);
+                            return (
+                              <div key={idx} className="flex items-center text-xs">
+                                <span className="font-mono bg-orange-100 px-2 py-1 rounded mr-2">{value}</span>
+                                <span className="text-orange-600">→</span>
+                                <span className="font-mono bg-green-100 px-2 py-1 rounded ml-2 text-green-800">
+                                  {parsed !== null ? parsed.toFixed(2) : 'Invalid'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="mt-2 p-2 bg-orange-100 rounded text-xs">
+                        <p className="font-medium">✅ Automatic Conversion:</p>
+                        <p>Brackets like (100.00) will be converted to negative amounts (-100.00) during import.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* Process Button */}

@@ -17,6 +17,7 @@ interface OnboardingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSignupComplete: (sheetData?: { spreadsheetId: string; spreadsheetUrl: string }) => void;
+  isPaidSnapshot?: boolean;
 }
 
 type Step = 'intro' | 'signup' | 'complete';
@@ -24,7 +25,8 @@ type Step = 'intro' | 'signup' | 'complete';
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   isOpen,
   onClose,
-  onSignupComplete
+  onSignupComplete,
+  isPaidSnapshot = false
 }) => {
   const [currentStep, setCurrentStep] = useState<Step>('intro');
   const [isCreatingSheet, setIsCreatingSheet] = useState(false);
@@ -146,7 +148,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const steps = [
     {
       id: 'get-sheet',
-      title: 'Get Your Free Sheet',
+      title: 'Get Your Sheet',
       description: 'We\'ll open a Google Sheets template in a new tab',
       icon: DocumentTextIcon,
       color: 'bg-primary'
@@ -189,8 +191,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-2xl font-bold text-gray-900">
-            {currentStep === 'intro' && 'Get Started in 3 Simple Steps'}
-            {currentStep === 'signup' && 'Step 2: Create Your Account'}
+            {currentStep === 'intro' && (isPaidSnapshot ? 'Access Your Financial Snapshot' : 'Get Started in 3 Simple Steps')}
+            {currentStep === 'signup' && (isPaidSnapshot ? 'Create Account to Access Your Snapshot' : 'Step 2: Create Your Account')}
             {currentStep === 'complete' && 'All Set! 🎉'}
           </h2>
           <button
@@ -212,9 +214,23 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         <div className="p-6">
           {currentStep === 'intro' && (
             <div className="space-y-6">
-              <p className="text-lg text-gray-600 text-center">
-                Calculate your real financial runway in just 3 minutes
-              </p>
+              {isPaidSnapshot ? (
+                <div className="text-center space-y-2">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckIcon className="h-8 w-8 text-green-600" />
+                  </div>
+                  <p className="text-lg text-gray-900 font-semibold">
+                    Payment Successful! 🎉
+                  </p>
+                  <p className="text-gray-600">
+                    Your Financial Snapshot is ready. Create your account to access your personalized analysis.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-lg text-gray-600 text-center">
+                  Calculate your real financial runway in just 3 minutes
+                </p>
+              )}
               
               {/* Steps Preview */}
               <div className="space-y-4">
@@ -244,7 +260,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 onClick={handleStartSetup}
                 className="w-full bg-gradient-to-r from-primary to-secondary text-white py-4 px-6 rounded-xl font-semibold text-lg hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 transform hover:scale-105 shadow-lg"
               >
-                Start Setup (3 min)
+                {isPaidSnapshot ? 'Access My Financial Snapshot' : 'Start Setup (3 min)'}
               </button>
             </div>
           )}
@@ -261,7 +277,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   Create Your Account
                 </h3>
                 <p className="text-gray-600">
-                  Sign up to connect your sheet and start analyzing your data
+                  {isPaidSnapshot 
+                    ? 'Create your account to access your paid Financial Snapshot and start analyzing your data'
+                    : 'Sign up to connect your sheet and start analyzing your data'
+                  }
                 </p>
               </div>
 

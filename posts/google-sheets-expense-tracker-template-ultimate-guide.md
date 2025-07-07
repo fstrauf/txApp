@@ -50,9 +50,6 @@ Want a more advanced, ready-to-use solution? Check out our [Financial Freedom Sp
 ### Savings Rate Tracking
 Automatically calculates your monthly and yearly savings rate, the single most important metric for building wealth. Ready to get started? [Download our free spreadsheet to start tracking this crucial metric](/fuck-you-money-sheet).
 
-### Budget vs. Actual Analysis
-Set budgets for each category and see real-time comparisons with actual spending, complete with visual indicators.
-
 ## How to Use the Template
 
 ### Step 1: Make Your Copy
@@ -96,13 +93,7 @@ Most banks allow you to export transaction data as CSV files. Import these month
 Several add-ons can connect directly to your bank accounts. Research security carefully before using these options.
 
 ### Step 4: Customize the Formulas
-The template includes smart categorization formulas that learn from your input. For example:
-
-```
-=IF(SEARCH("STARBUCKS",B2,1),"Food & Dining","")
-```
-
-This automatically categorizes any transaction containing "STARBUCKS" as "Food & Dining." Customize these rules for your common merchants.
+The template includes smart categorization by using our comprehensive system. Keep using the sheet, but use our import to take care of data mapping and automatic categorisation.
 
 ## Advanced Features Explained
 

@@ -5,18 +5,24 @@ import { mockSavingsData } from '../../utils/mockData';
 import DashboardCharts from '../DashboardCharts';
 import DataOverview from '../DataOverview';
 import { AdvancedFinancialAnalytics } from '../AdvancedFinancialAnalytics';
+import { FinancialSnapshotInsights } from '../FinancialSnapshotInsights';
+import { UpgradeToAutomation } from '../UpgradeToAutomation';
 import posthog from 'posthog-js';
 
 interface DashboardStatisticsProps {
   stats: DashboardStats;
   filteredTransactions: any[];
   isFirstTimeUser?: boolean;
+  isPaidSnapshot?: boolean;
+  hasSubscription?: boolean;
 }
 
 export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({ 
   stats, 
   filteredTransactions, 
-  isFirstTimeUser = false 
+  isFirstTimeUser = false,
+  isPaidSnapshot = false,
+  hasSubscription = false
 }) => {
   const [currentTimeFilter, setCurrentTimeFilter] = React.useState('all');
   
@@ -104,6 +110,8 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
         </div>
       )}
       
+      {/* Data Overview */}
+      <DataOverview />
       {/* Condensed Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className={`bg-white rounded-lg p-4 sm:p-6 shadow-sm border ${showCachedDataWarning ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
@@ -168,7 +176,7 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
           </div>
         </div>
 
-        <div className={`bg-white rounded-lg p-4 sm:p-6 shadow-sm border ${showCachedDataWarning ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
+        {/* <div className={`bg-white rounded-lg p-4 sm:p-6 shadow-sm border ${showCachedDataWarning ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
           <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
             Savings
             {showCachedDataWarning && (
@@ -225,9 +233,9 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
               <p className="text-sm text-gray-500">Annual Projection</p>
             </div>
           </div>
-        </div>
+        </div> */}
 
-        <div className={`bg-white rounded-lg p-4 sm:p-6 shadow-sm border ${showCachedDataWarning && savingsData ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
+        {/* <div className={`bg-white rounded-lg p-4 sm:p-6 shadow-sm border ${showCachedDataWarning && savingsData ? 'border-amber-200 bg-amber-50' : 'border-gray-200'}`}>
           <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
             Runway
             {showCachedDataWarning && savingsData && (
@@ -269,11 +277,18 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
               </div>
             )}
           </div>
-        </div>
+        </div> */}
       </div>
 
-      {/* Data Overview */}
-      <DataOverview />
+
+      {/* Financial Snapshot Insights - Show for paid snapshot users */}
+      {isPaidSnapshot && (
+        <FinancialSnapshotInsights 
+          stats={stats}
+          isPaidSnapshot={isPaidSnapshot}
+          className="mt-6"
+        />
+      )}
 
       {/* Dashboard Visualizations */}
       <DashboardCharts 
@@ -296,6 +311,15 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
           transactions={filteredTransactions} 
           autoAnalyze={true} // Always auto-analyze for demo data to show capabilities
           className="mt-4 sm:mt-6"
+        />
+      )}
+
+      {/* Upsell to Subscription - Show for paid snapshot users without subscription */}
+      {isPaidSnapshot && !hasSubscription && (
+        <UpgradeToAutomation 
+          isPaidSnapshot={isPaidSnapshot}
+          hasSubscription={hasSubscription}
+          className="mt-6"
         />
       )}
     </div>
