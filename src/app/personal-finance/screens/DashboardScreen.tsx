@@ -25,11 +25,10 @@ import { NoDataState } from '../components/dashboard/NoDataState';
 import { DashboardStatistics } from '../components/dashboard/DashboardStatistics';
 import { TransactionTab, AIInsightsTab, PortfolioTab } from '../components/dashboard/TabContent';
 import { TabNavigation } from '../components/dashboard/TabNavigation';
-import { WhatYouGetSection } from '../components/dashboard/WhatYouGetSection';
 import { StickyBottomBar } from '../components/dashboard/StickyBottomBar';
 import { OnboardingModal } from '../components/dashboard/OnboardingModal';
 import { FinancialSnapshotModal } from '../components/dashboard/FinancialSnapshotModal';
-import { FinancialSnapshotOffer } from '../components/FinancialSnapshotOffer';
+import { FinancialSnapshotOfferModal } from '../components/dashboard/FinancialSnapshotOfferModal';
 
 const DashboardScreen: React.FC = () => {
   const { userData, processTransactionData } = usePersonalFinanceStore();
@@ -59,6 +58,7 @@ const DashboardScreen: React.FC = () => {
   // Financial Snapshot state
   const [isPaidSnapshot, setIsPaidSnapshot] = useState(false);
   const [isSnapshotModalOpen, setIsSnapshotModalOpen] = useState(false);
+  const [showSnapshotOffer, setShowSnapshotOffer] = useState(false);
 
   // A/B Testing
   const { headlineVariant, ctaButtonVariant, getHeadlineText, getCtaButtonText } = useDashboardAbTesting(status);
@@ -200,6 +200,19 @@ const DashboardScreen: React.FC = () => {
         // Clean up URL
         const url = new URL(window.location.href);
         url.searchParams.delete('snapshot');
+        url.searchParams.delete('session_id');
+        window.history.replaceState({}, '', url.toString());
+      }
+      
+      // Handle cancelled snapshot purchase
+      if (urlParams.get('snapshot') === 'cancelled') {
+        posthog.capture('financial_snapshot_purchase_cancelled', {
+          user_authenticated: !!session?.user?.id
+        });
+        
+        // Clean up URL
+        const url = new URL(window.location.href);
+        url.searchParams.delete('snapshot');
         window.history.replaceState({}, '', url.toString());
       }
       
@@ -228,9 +241,9 @@ const DashboardScreen: React.FC = () => {
       user_authenticated: !!session?.user?.id
     });
     
-    // For first-time users, open the onboarding modal
+    // For first-time users, show the snapshot offer modal instead of onboarding
     if (isFirstTimeUser) {
-      setIsOnboardingModalOpen(true);
+      setShowSnapshotOffer(true);
     } else {
       // For existing users, open the data drawer directly
       setDataManagementDefaultTab('manage');
@@ -258,13 +271,37 @@ const DashboardScreen: React.FC = () => {
       user_authenticated: !!session?.user?.id
     });
     
-    // Show Financial Snapshot modal for first-time users
+    // Show Financial Snapshot offer modal for first-time users
     if (isFirstTimeUser) {
-      setIsSnapshotModalOpen(true);
+      setShowSnapshotOffer(true);
     } else {
       // For existing users, open onboarding/data management
       setIsOnboardingModalOpen(true);
     }
+  };
+
+  // Handle snapshot purchase
+  const handleSnapshotPurchase = async () => {
+    posthog.capture('financial_snapshot_purchase_initiated', {
+      source: 'modal_offer',
+      user_authenticated: !!session?.user?.id
+    });
+    
+    // Redirect to Stripe checkout
+    const currentPath = window.location.pathname;
+    window.location.href = `/api/create-checkout?product=financial-snapshot&redirect=${encodeURIComponent(currentPath)}`;
+  };
+
+  // Handle free sheet download
+  const handleFreeSheetDownload = () => {
+    posthog.capture('free_sheet_downloaded', {
+      source: 'snapshot_offer_modal',
+      user_authenticated: !!session?.user?.id
+    });
+    
+    // Close the modal and show a success message
+    setShowSnapshotOffer(false);
+    // Could add a toast notification here if you have one
   };
 
   return (
@@ -504,6 +541,14 @@ const DashboardScreen: React.FC = () => {
         isOpen={isOnboardingModalOpen}
         onClose={() => setIsOnboardingModalOpen(false)}
         onSignupComplete={handleOnboardingComplete}
+      />
+
+      {/* Financial Snapshot Offer Modal */}
+      <FinancialSnapshotOfferModal
+        isOpen={showSnapshotOffer}
+        onClose={() => setShowSnapshotOffer(false)}
+        onPurchaseSnapshot={handleSnapshotPurchase}
+        onGetFreeSheet={handleFreeSheetDownload}
       />
 
       {/* Financial Snapshot Modal */}
