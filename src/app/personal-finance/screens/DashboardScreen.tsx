@@ -456,7 +456,7 @@ const DashboardScreen: React.FC = () => {
         {/* Only show header for existing users with data */}
         {!isFirstTimeUser && (
           <Header variant="centered" size="xl" className="mb-8 sm:mb-12 lg:mb-16">
-            Get instant Clarity On Your Finances - With three steps
+            Get instant Clarity On Your Finances
           </Header>
          )}
 

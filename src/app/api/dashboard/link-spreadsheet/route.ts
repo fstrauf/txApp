@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { spreadsheetUrl, createNew, accessToken } = await request.json();
+    const { spreadsheetUrl, createNew, accessToken, baseCurrency } = await request.json();
 
     if (createNew) {
       // Create new spreadsheet from template
@@ -77,6 +77,27 @@ export async function POST(request: NextRequest) {
           spreadsheetId: newSpreadsheetId,
           spreadsheetUrl: newSpreadsheetUrl
         });
+
+        // Set base currency in Config tab if provided
+        if (baseCurrency) {
+          try {
+            const sheets = google.sheets({ version: 'v4', auth });
+            
+            await sheets.spreadsheets.values.update({
+              spreadsheetId: newSpreadsheetId,
+              range: 'Config!B2',
+              valueInputOption: 'RAW',
+              requestBody: {
+                values: [[baseCurrency.toUpperCase()]]
+              }
+            });
+
+            console.log('Successfully set base currency:', baseCurrency);
+          } catch (currencyError) {
+            console.warn('Failed to set base currency in Config tab:', currencyError);
+            // Don't fail the entire operation if currency setting fails
+          }
+        }
 
         // Update user record with new spreadsheet info
         await db

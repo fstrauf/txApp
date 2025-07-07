@@ -37,6 +37,7 @@ interface ValidateTransactionsTabProps {
   showCurrencySelection: boolean;
   newSpreadsheetCurrency: string;
   isProcessing: boolean;
+  isValidatingAllRemaining: boolean;
   onTransactionSelect: (id: string, selected: boolean) => void;
   onSelectAll: () => void;
   onValidateTransaction: (id: string) => void;
@@ -67,6 +68,7 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
   showCurrencySelection,
   newSpreadsheetCurrency,
   isProcessing,
+  isValidatingAllRemaining,
   onTransactionSelect,
   onSelectAll,
   onValidateTransaction,
@@ -172,6 +174,7 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
         showCurrencySelection={showCurrencySelection}
         newSpreadsheetCurrency={newSpreadsheetCurrency}
         isProcessing={isProcessing}
+        isValidatingAllRemaining={isValidatingAllRemaining}
         onSelectAll={onSelectAll}
         onValidateSelected={onValidateSelected}
         onValidateAllRemaining={onValidateAllRemaining}

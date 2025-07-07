@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useSession } from 'next-auth/react';
 import { ModalSignupForm } from './ModalSignupForm';
+import { ModalSigninForm } from './ModalSigninForm';
 import { ModalGoogleSignIn } from './ModalGoogleSignIn';
 import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
 import posthog from 'posthog-js';
@@ -21,6 +22,7 @@ interface OnboardingModalProps {
 }
 
 type Step = 'intro' | 'signup' | 'complete';
+type AuthMode = 'signup' | 'signin';
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   isOpen,
@@ -29,8 +31,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   isPaidSnapshot = false
 }) => {
   const [currentStep, setCurrentStep] = useState<Step>('intro');
+  const [authMode, setAuthMode] = useState<AuthMode>('signup');
   const [isCreatingSheet, setIsCreatingSheet] = useState(false);
   const [createdSheetData, setCreatedSheetData] = useState<{ spreadsheetId: string; spreadsheetUrl: string } | null>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
   const { data: session, status } = useSession();
   const { requestSpreadsheetAccess } = useIncrementalAuth();
 
@@ -41,8 +45,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         component: 'onboarding_modal'
       });
       setCurrentStep('intro');
+      setAuthMode('signup');
       setIsCreatingSheet(false);
       setCreatedSheetData(null);
+      setSelectedCurrency('USD'); // Reset to default currency
     }
   }, [isOpen]);
 
@@ -79,7 +85,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         },
         body: JSON.stringify({
           createNew: true,
-          accessToken
+          accessToken,
+          baseCurrency: selectedCurrency
         }),
       });
 
@@ -92,7 +99,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       if (data.success) {
         posthog.capture('pf_sheet_creation_success', {
           component: 'onboarding_modal',
-          spreadsheet_id: data.spreadsheetId
+          spreadsheet_id: data.spreadsheetId,
+          base_currency: selectedCurrency
         });
         
         setCreatedSheetData({
@@ -128,10 +136,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     }
   };
 
-  const handleSignupComplete = () => {
-    posthog.capture('pf_onboarding_signup_completed', {
+  const handleAuthComplete = () => {
+    posthog.capture('pf_onboarding_auth_completed', {
       component: 'onboarding_modal',
-      step: 'signup'
+      step: 'signup',
+      auth_mode: authMode
     });
     setCurrentStep('complete');
     createSheetAfterSignup();
@@ -192,7 +201,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-2xl font-bold text-gray-900">
             {currentStep === 'intro' && (isPaidSnapshot ? 'Access Your Financial Snapshot' : 'Get Started in 3 Simple Steps')}
-            {currentStep === 'signup' && (isPaidSnapshot ? 'Create Account to Access Your Snapshot' : 'Step 2: Create Your Account')}
+            {currentStep === 'signup' && (
+              isPaidSnapshot 
+                ? (authMode === 'signup' ? 'Create Account to Access Your Snapshot' : 'Sign In to Access Your Snapshot')
+                : (authMode === 'signup' ? 'Step 2: Create Your Account' : 'Step 2: Sign In to Your Account')
+            )}
             {currentStep === 'complete' && 'All Set! 🎉'}
           </h2>
           <button
@@ -256,6 +269,54 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 })}
               </div>
 
+              {/* Currency Selection */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 mb-3">Select Your Base Currency</h4>
+                <p className="text-sm text-blue-700 mb-4">
+                  Choose your primary currency. All transactions will be converted to this currency in your new spreadsheet.
+                </p>
+                
+                <div className="max-w-xs">
+                  <select
+                    value={selectedCurrency}
+                    onChange={(e) => setSelectedCurrency(e.target.value)}
+                    className="w-full px-3 py-2 border border-blue-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                  >
+                    <optgroup label="Major Currencies">
+                      <option value="USD">USD - US Dollar</option>
+                      <option value="EUR">EUR - Euro</option>
+                      <option value="GBP">GBP - British Pound</option>
+                      <option value="JPY">JPY - Japanese Yen</option>
+                      <option value="CHF">CHF - Swiss Franc</option>
+                      <option value="CAD">CAD - Canadian Dollar</option>
+                      <option value="AUD">AUD - Australian Dollar</option>
+                      <option value="NZD">NZD - New Zealand Dollar</option>
+                    </optgroup>
+                    <optgroup label="European Currencies">
+                      <option value="SEK">SEK - Swedish Krona</option>
+                      <option value="NOK">NOK - Norwegian Krone</option>
+                      <option value="DKK">DKK - Danish Krone</option>
+                      <option value="PLN">PLN - Polish Złoty</option>
+                      <option value="CZK">CZK - Czech Koruna</option>
+                    </optgroup>
+                    <optgroup label="Other Currencies">
+                      <option value="CNY">CNY - Chinese Yuan</option>
+                      <option value="INR">INR - Indian Rupee</option>
+                      <option value="KRW">KRW - South Korean Won</option>
+                      <option value="SGD">SGD - Singapore Dollar</option>
+                      <option value="HKD">HKD - Hong Kong Dollar</option>
+                    </optgroup>
+                    <option value="AUD">AUD - Australian Dollar</option>
+                  </select>
+                </div>
+                
+                <div className="mt-3">
+                  <p className="text-xs text-blue-600">
+                    More currencies available via <a href="https://frankfurter.dev/" target="_blank" rel="noopener noreferrer" className="underline">Frankfurter API</a>
+                  </p>
+                </div>
+              </div>
+
               <button
                 onClick={handleStartSetup}
                 className="w-full bg-gradient-to-r from-primary to-secondary text-white py-4 px-6 rounded-xl font-semibold text-lg hover:from-primary-dark hover:to-secondary-dark transition-all duration-200 transform hover:scale-105 shadow-lg"
@@ -274,30 +335,66 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   <UserPlusIcon className="h-12 w-12 text-secondary" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Create Your Account
+                  {authMode === 'signup' ? 'Create Your Account' : 'Sign In to Your Account'}
                 </h3>
                 <p className="text-gray-600">
                   {isPaidSnapshot 
-                    ? 'Create your account to access your paid Financial Snapshot and start analyzing your data'
-                    : 'Sign up to connect your sheet and start analyzing your data'
+                    ? (authMode === 'signup' 
+                        ? 'Create your account to access your paid Financial Snapshot and start analyzing your data'
+                        : 'Sign in to access your paid Financial Snapshot and start analyzing your data'
+                      )
+                    : (authMode === 'signup'
+                        ? 'Sign up to connect your sheet and start analyzing your data'
+                        : 'Sign in to connect your sheet and start analyzing your data'
+                      )
                   }
                 </p>
               </div>
 
-              {/* Signup Form */}
+              {/* Auth Toggle */}
+              <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
+                <button
+                  onClick={() => setAuthMode('signup')}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    authMode === 'signup'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Create Account
+                </button>
+                <button
+                  onClick={() => setAuthMode('signin')}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    authMode === 'signin'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Sign In
+                </button>
+              </div>
+
+              {/* Auth Form */}
               <div className="space-y-4">
-                <ModalSignupForm onSignupSuccess={handleSignupComplete} />
+                {authMode === 'signup' ? (
+                  <ModalSignupForm onSignupSuccess={handleAuthComplete} />
+                ) : (
+                  <ModalSigninForm onSigninSuccess={handleAuthComplete} />
+                )}
                 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-gray-300" />
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="bg-white px-2 text-gray-500">Or sign up with</span>
+                    <span className="bg-white px-2 text-gray-500">
+                      Or {authMode === 'signup' ? 'sign up' : 'sign in'} with
+                    </span>
                   </div>
                 </div>
                 
-                <ModalGoogleSignIn onSignupSuccess={handleSignupComplete} />
+                <ModalGoogleSignIn onSignupSuccess={handleAuthComplete} />
               </div>
             </div>
           )}
