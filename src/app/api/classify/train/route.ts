@@ -70,9 +70,20 @@ export async function POST(request: NextRequest) {
     });
 
     // 5. Forward the response (or error) back to the client
-    // Use .clone() to allow reading the body twice (once for logging, once for response)
-    const responseClone = externalResponse.clone();
-    const responseData = await responseClone.json().catch(() => responseClone.text()); // Read as JSON or text fallback
+    // Handle body reading with proper error handling to avoid "Body is unusable" errors
+    let responseData;
+    try {
+      // Try to parse as JSON first
+      responseData = await externalResponse.clone().json();
+    } catch (jsonError) {
+      try {
+        // If JSON parsing fails, try as text
+        responseData = await externalResponse.clone().text();
+      } catch (textError) {
+        console.error(`Failed to read response body for user ${userId}:`, textError);
+        responseData = { error: 'Failed to read response from training service' };
+      }
+    }
 
     if (!externalResponse.ok) {
        console.error(`External training service error for user ${userId}: Status ${externalResponse.status}`, responseData);

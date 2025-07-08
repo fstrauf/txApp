@@ -1404,6 +1404,79 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           return;
         }
         
+        // Compression-based processing for better accuracy
+        // Processing all transactions together gives the AI better context and patterns
+        const totalTransactions = autoClassifyTransactions.length;
+        const useCompression = totalTransactions > 50; // Use compression for datasets larger than 50 transactions
+        
+        if (useCompression) {
+          console.log(`🗜️ Processing ${totalTransactions} transactions with compression for optimal accuracy`);
+          setFeedback({ 
+            type: 'processing', 
+            message: `Compressing and processing ${totalTransactions} transactions together for better categorization accuracy...` 
+          });
+          
+          try {
+            // Import compression library dynamically to avoid SSR issues
+            const { gzip } = await import('pako');
+            
+            // Prepare and compress the transaction data
+            const transactionData = JSON.stringify({ transactions: autoClassifyTransactions });
+            const originalSize = new TextEncoder().encode(transactionData).length;
+            
+            console.log(`Original data size: ${(originalSize / 1024 / 1024).toFixed(2)} MB`);
+            
+            // Compress the data
+            const compressedData = gzip(transactionData);
+            const compressedSize = compressedData.length;
+            const compressionRatio = ((originalSize - compressedSize) / originalSize * 100).toFixed(1);
+            
+            console.log(`Compressed data size: ${(compressedSize / 1024 / 1024).toFixed(2)} MB (${compressionRatio}% reduction)`);
+            
+            // Send compressed request
+            const compressedResponse = await fetch('/api/classify/auto-classify', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Content-Encoding': 'gzip',
+                'Accept-Encoding': 'gzip, deflate, br',
+              },
+              body: compressedData
+            });
+            
+            if (!compressedResponse.ok) {
+              const errorData = await compressedResponse.json().catch(() => ({ 
+                message: `Compressed request failed with status ${compressedResponse.status}` 
+              }));
+              throw new Error(errorData.message || `Compressed request failed: ${compressedResponse.statusText}`);
+            }
+            
+            const compressedResponseData = await compressedResponse.json();
+            
+            console.log(`🎉 Compressed processing successful: ${compressedResponseData.results?.length || 0} results`);
+            setFeedback({ 
+              type: 'success', 
+              message: `Successfully categorized ${totalTransactions} transactions together! (${compressionRatio}% size reduction, better accuracy through unified processing)` 
+            });
+            
+            await handleAutoClassificationComplete(compressedResponseData, uniqueTransactions, effectiveCreateNewMode);
+            return; // Exit after successful compressed processing
+            
+          } catch (compressionError) {
+            console.warn(`⚠️ Compression failed, trying uncompressed approach:`, compressionError);
+            // Fall through to uncompressed processing below
+            setFeedback({ 
+              type: 'processing', 
+              message: `Compression failed, processing ${totalTransactions} transactions uncompressed...` 
+            });
+          }
+        } else {
+          console.log(`📋 Processing ${totalTransactions} transactions without compression (small dataset)`);
+        }
+        
+        // Uncompressed processing (for small datasets or compression fallback)
+        console.log(`📋 Processing ${totalTransactions} transactions with standard approach`);
+        
         const autoClassifyResponse = await fetch('/api/classify/auto-classify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1498,11 +1571,35 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       
       // Enhanced error handling for validation and mapping issues
       const errorHandler = handleClassifyError(error);
+      
+      // Handle specific connection and size-related errors
+      let errorMessage = errorHandler.message;
+      let shouldShowCompressionAdvice = false;
+      
+      if (error.message) {
+        const msg = error.message.toLowerCase();
+        if (msg.includes('connection reset') || msg.includes('connection error') || msg.includes('502')) {
+          errorMessage = `🔗 Connection error occurred. This usually happens with large datasets. We use compression to reduce data size and improve reliability.`;
+          shouldShowCompressionAdvice = true;
+        } else if (msg.includes('request too large') || msg.includes('413')) {
+          errorMessage = `📁 Request too large. We automatically compress large datasets to reduce size. If you continue to see this error, try uploading a smaller CSV file.`;
+          shouldShowCompressionAdvice = true;
+        } else if (msg.includes('timeout') || msg.includes('504') || msg.includes('408')) {
+          errorMessage = `⏱️ Request timeout. We use compression to speed up large dataset processing.`;
+          shouldShowCompressionAdvice = true;
+        } else if (msg.includes('mapping') || msg.includes('validation')) {
+          errorMessage = error.message; // Keep original validation messages
+        }
+      }
+      
+      // Add helpful advice for compression-related errors
+      if (shouldShowCompressionAdvice) {
+        errorMessage += `\n\n💡 Processing all transactions together provides better categorization accuracy by allowing the AI to see patterns across your entire dataset.`;
+      }
+      
       setFeedback({ 
         type: 'error', 
-        message: error.message?.includes('mapping') || error.message?.includes('validation') 
-          ? error.message 
-          : errorHandler.message
+        message: errorMessage
       });
     } finally {
       setIsProcessing(false);
