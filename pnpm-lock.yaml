@@ -134,6 +134,9 @@ importers:
       ora:
         specifier: ^7.0.1
         version: 7.0.1
+      pako:
+        specifier: ^2.1.0
+        version: 2.1.0
       papaparse:
         specifier: ^5.5.3
         version: 5.5.3
@@ -228,6 +231,9 @@ importers:
       '@types/node':
         specifier: ^20
         version: 20.17.50
+      '@types/pako':
+        specifier: ^2.0.3
+        version: 2.0.3
       '@types/papaparse':
         specifier: ^5.3.16
         version: 5.3.16
@@ -2236,6 +2242,9 @@ packages:
 
   '@types/node@20.17.50':
     resolution: {integrity: sha512-Mxiq0ULv/zo1OzOhwPqOA13I81CV/W3nvd3ChtQZRT5Cwz3cr0FKo/wMSsbTqL3EXpaBAEQhva2B8ByRkOIh9A==}
+
+  '@types/pako@2.0.3':
+    resolution: {integrity: sha512-bq0hMV9opAcrmE0Byyo0fY3Ew4tgOevJmQ9grUhpXQhYfyLJ1Kqg3P33JT5fdbT2AjeAjR51zqqVjAL/HMkx7Q==}
 
   '@types/papaparse@5.3.16':
     resolution: {integrity: sha512-T3VuKMC2H0lgsjI9buTB3uuKj3EMD2eap1MOuEQuBQ44EnDx/IkGhU6EwiTf9zG3za4SKlmwKAImdDKdNnCsXg==}
@@ -4598,6 +4607,9 @@ packages:
   p-locate@5.0.0:
     resolution: {integrity: sha512-LaNjtRWUBY++zB5nE/NwcaoMylSPk+S+ZHNB1TzdbMJMny6dynpAGt7X/tl/QYq3TIeE6nxHppbo2LGymrG5Pw==}
     engines: {node: '>=10'}
+
+  pako@2.1.0:
+    resolution: {integrity: sha512-w+eufiZ1WuJYgPXbV/PO3NCMEc3xqylkKHzp8bxp1uW4qaSNQUkwmLLEc3kKsfz8lpV1F8Ht3U1Cm+9Srog2ug==}
 
   papaparse@5.5.3:
     resolution: {integrity: sha512-5QvjGxYVjxO59MGU2lHVYpRWBBtKHnlIAcSe1uNFCkkptUh63NFRj0FJQm7nR67puEruUci/ZkjmEFrjCAyP4A==}
@@ -7921,6 +7933,8 @@ snapshots:
     dependencies:
       undici-types: 6.19.8
 
+  '@types/pako@2.0.3': {}
+
   '@types/papaparse@5.3.16':
     dependencies:
       '@types/node': 20.17.50
@@ -10642,6 +10656,8 @@ snapshots:
   p-locate@5.0.0:
     dependencies:
       p-limit: 3.1.0
+
+  pako@2.1.0: {}
 
   papaparse@5.5.3: {}
 
