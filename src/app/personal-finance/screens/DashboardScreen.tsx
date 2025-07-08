@@ -64,6 +64,7 @@ const DashboardScreen: React.FC = () => {
   const [isSnapshotModalOpen, setIsSnapshotModalOpen] = useState(false);
   const [showSnapshotOffer, setShowSnapshotOffer] = useState(false);
   const [pendingSnapshotSessionId, setPendingSnapshotSessionId] = useState<string | null>(null);
+  const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
 
   // A/B Testing
   const { headlineVariant, ctaButtonVariant, getHeadlineText, getCtaButtonText } = useDashboardAbTesting(status);
@@ -327,7 +328,14 @@ const DashboardScreen: React.FC = () => {
       // Grant access to Financial Snapshot
       setIsPaidSnapshot(true);
       setDataManagementDefaultTab('upload');
-      setIsHelpDrawerOpen(true);
+      
+      // Only open drawer immediately if onboarding is not active
+      // Otherwise, set pending flag to open after onboarding completes
+      if (!isOnboardingModalOpen) {
+        setIsHelpDrawerOpen(true);
+      } else {
+        setPendingDrawerOpen(true);
+      }
       
       // Track successful snapshot access
       posthog.capture('financial_snapshot_accessed', { 
@@ -383,10 +391,20 @@ const DashboardScreen: React.FC = () => {
     if (sheetData) {
       console.log('Sheet automatically created and linked:', sheetData);
       setDataManagementDefaultTab('upload');
+    } else if (pendingDrawerOpen) {
+      // If there was a pending drawer open (from paid snapshot), use upload tab
+      setDataManagementDefaultTab('upload');
     } else {
       setDataManagementDefaultTab('manage');
     }
-    setIsHelpDrawerOpen(true);
+    
+    // Close onboarding modal and open drawer after a small delay
+    setIsOnboardingModalOpen(false);
+    setTimeout(() => {
+      setIsHelpDrawerOpen(true);
+      setPendingDrawerOpen(false); // Clear the pending flag
+    }, 300);
+    
     // Refetch dashboard status so isFirstTimeUser is updated
     refetchStatus();
   };
@@ -685,7 +703,17 @@ const DashboardScreen: React.FC = () => {
       {/* Onboarding Modal */}
       <OnboardingModal
         isOpen={isOnboardingModalOpen}
-        onClose={() => setIsOnboardingModalOpen(false)}
+        onClose={() => {
+          setIsOnboardingModalOpen(false);
+          // If user closes onboarding modal manually and there was a pending drawer open,
+          // open it after a short delay (they might want to access their paid snapshot)
+          if (pendingDrawerOpen) {
+            setTimeout(() => {
+              setIsHelpDrawerOpen(true);
+              setPendingDrawerOpen(false);
+            }, 300);
+          }
+        }}
         onSignupComplete={handleOnboardingComplete}
         isPaidSnapshot={!!pendingSnapshotSessionId}
       />

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import Stripe from 'stripe';
 import { db } from '@/db';
-import { eq } from 'drizzle-orm';
-import { users } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { users, subscriptions } from '@/db/schema';
 import { authConfig } from '@/lib/auth';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -79,6 +79,41 @@ export async function POST(request: NextRequest) {
         .update(users)
         .set({ stripeCustomerId: customerId })
         .where(eq(users.id, userId));
+    }
+
+    // Create a subscription record for the snapshot purchase
+    // Check if user already has an active snapshot subscription
+    const existingSnapshot = await db.query.subscriptions.findFirst({
+      where: and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.plan, 'SNAPSHOT'),
+        eq(subscriptions.status, 'ACTIVE')
+      ),
+    });
+
+    if (!existingSnapshot) {
+      // Create subscription record for snapshot access
+      // Snapshot is a one-time purchase, so we give it a long validity period
+      const now = new Date();
+      const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+
+      await db.insert(subscriptions).values({
+        userId: userId,
+        status: 'ACTIVE',
+        plan: 'SNAPSHOT',
+        billingCycle: 'MONTHLY', // Required field, but not really applicable for one-time purchase
+        currentPeriodStart: now,
+        currentPeriodEnd: oneYearFromNow, // Give them access for a year
+        stripeCustomerId: customerId,
+        // Note: We don't set stripeSubscriptionId since this is a one-time payment, not a recurring subscription
+        cancelAtPeriodEnd: false,
+        createdAt: now,
+        updatedAt: now
+      });
+
+      console.log(`Created SNAPSHOT subscription record for user ${userId}`);
+    } else {
+      console.log(`User ${userId} already has an active SNAPSHOT subscription, not creating duplicate`);
     }
 
     console.log(`Linked Financial Snapshot payment session ${sessionId} to user ${userId}`);
