@@ -603,7 +603,11 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       'config.mappings': Object.keys(config.mappings || {}).length
     });
 
-    
+    // Prevent concurrent processing
+    if (isProcessing) {
+      console.log('⚠️ Processing already in progress, ignoring duplicate request');
+      return;
+    }
 
     // Auto-detect if user should be in createNewSpreadsheetMode
     // If user has no linked spreadsheet, they should be creating a new one
@@ -1409,6 +1413,104 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         const totalTransactions = autoClassifyTransactions.length;
         const useCompression = totalTransactions > 50; // Use compression for datasets larger than 50 transactions
         
+        // Configure timeout based on dataset size and connection quality
+        const baseTimeout = 60000; // 1 minute base
+        const sizeMultiplier = Math.max(1, Math.ceil(totalTransactions / 100)); // Add time for larger datasets
+        
+        // Detect connection quality and adjust timeout accordingly
+        let connectionMultiplier = 1;
+        const connection = (navigator as any).connection;
+        if (connection) {
+          const effectiveType = connection.effectiveType;
+          console.log(`🌐 Connection: ${effectiveType}, downlink: ${connection.downlink}Mbps, rtt: ${connection.rtt}ms`);
+          
+          // Adjust timeout based on connection quality  
+          if (effectiveType === 'slow-2g') connectionMultiplier = 3;
+          else if (effectiveType === '2g') connectionMultiplier = 2.5;
+          else if (effectiveType === '3g') connectionMultiplier = 1.5;
+          
+          // Factor in RTT for geographic latency (like Brazil → SFO)
+          if (connection.rtt > 300) {
+            connectionMultiplier *= 1.5;
+            console.log(`🌍 High latency detected (${connection.rtt}ms), extending timeout`);
+          }
+        }
+        
+        const requestTimeout = Math.min(baseTimeout * sizeMultiplier * connectionMultiplier, 300000); // Max 5 minutes
+        
+        console.log(`⏱️ Setting request timeout to ${requestTimeout / 1000}s for ${totalTransactions} transactions (connection multiplier: ${connectionMultiplier})`);
+        
+        // Quick connection health check (non-blocking)
+        try {
+          console.log('🏥 Quick connection health check...');
+          const healthResponse = await fetch('/api/health', {
+            method: 'GET',
+            signal: AbortSignal.timeout(3000) // Quick 3s timeout
+          });
+          if (!healthResponse.ok) {
+            console.warn('⚠️ Health check warning - proceeding anyway');
+            setFeedback({ type: 'processing', message: 'Network conditions detected, processing may take longer...' });
+          }
+        } catch (healthError) {
+          console.warn('⚠️ Health check failed - proceeding anyway:', healthError);
+        }
+        
+        // Simple retry mechanism for network resilience
+        const makeRequestWithRetry = async (requestFn: () => Promise<Response>, requestType: string, maxRetries = 2): Promise<Response> => {
+          let lastError: Error | null = null;
+          
+          for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+              if (attempt > 0) {
+                const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
+                console.log(`🔄 Retrying ${requestType} request (attempt ${attempt + 1}/${maxRetries + 1}) after ${delay}ms delay`);
+                setFeedback({ 
+                  type: 'processing', 
+                  message: `Network issue detected, retrying ${requestType} request (attempt ${attempt + 1}/${maxRetries + 1})...` 
+                });
+                await new Promise(resolve => setTimeout(resolve, delay));
+              }
+              
+              const response = await requestFn();
+              
+              // If we get here, request succeeded
+              if (attempt > 0) {
+                console.log(`✅ ${requestType} request succeeded on attempt ${attempt + 1}`);
+              }
+              
+              return response;
+              
+            } catch (error: unknown) {
+              const err = error as Error;
+              lastError = err;
+              
+              // Don't retry on timeout errors (they're already max timeout)
+              if (err instanceof DOMException && err.name === 'AbortError') {
+                console.log(`⏱️ ${requestType} request timed out on attempt ${attempt + 1}, not retrying`);
+                throw err;
+              }
+              
+              // Don't retry on 4xx errors (client errors)
+              if (err instanceof TypeError && err.message.includes('fetch')) {
+                const errorStr = err.message.toLowerCase();
+                if (errorStr.includes('400') || errorStr.includes('401') || errorStr.includes('403') || errorStr.includes('404')) {
+                  console.log(`❌ ${requestType} request failed with client error, not retrying:`, err.message);
+                  throw err;
+                }
+              }
+              
+              console.warn(`⚠️ ${requestType} request failed on attempt ${attempt + 1}:`, err.message);
+              
+              if (attempt === maxRetries) {
+                console.error(`❌ ${requestType} request failed after ${maxRetries + 1} attempts`);
+                throw lastError;
+              }
+            }
+          }
+          
+          throw lastError || new Error(`${requestType} request failed after retries`);
+        };
+        
         if (useCompression) {
           console.log(`🗜️ Processing ${totalTransactions} transactions with compression for optimal accuracy`);
           setFeedback({ 
@@ -1426,23 +1528,47 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             
             console.log(`Original data size: ${(originalSize / 1024 / 1024).toFixed(2)} MB`);
             
-            // Compress the data
-            const compressedData = gzip(transactionData);
+            // Compress the data with optimal settings for speed
+            const compressedData = gzip(transactionData, { 
+              level: 6, // Balanced compression level (0-9, 6 is good balance of speed/size)
+              windowBits: 15, // Standard window size  
+              memLevel: 8 // Good memory usage
+            });
             const compressedSize = compressedData.length;
             const compressionRatio = ((originalSize - compressedSize) / originalSize * 100).toFixed(1);
             
             console.log(`Compressed data size: ${(compressedSize / 1024 / 1024).toFixed(2)} MB (${compressionRatio}% reduction)`);
             
-            // Send compressed request
-            const compressedResponse = await fetch('/api/classify/auto-classify', {
-              method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json',
-                'Content-Encoding': 'gzip',
-                'Accept-Encoding': 'gzip, deflate, br',
-              },
-              body: compressedData
-            });
+            // Create AbortController for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+              controller.abort();
+              console.log(`⏱️ Request aborted after ${requestTimeout / 1000}s timeout`);
+            }, requestTimeout);
+            
+            // Send compressed request with timeout
+            const compressedResponse = await makeRequestWithRetry(
+              () => fetch('/api/classify/auto-classify', {
+                method: 'POST',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  'Content-Encoding': 'gzip',
+                  'Accept-Encoding': 'gzip, deflate, br',
+                  'Content-Length': compressedSize.toString(),
+                  'X-Original-Size': originalSize.toString(),
+                  'X-Compression-Ratio': compressionRatio,
+                  'Cache-Control': 'no-cache',
+                  'Connection': 'keep-alive',
+                },
+                body: compressedData,
+                signal: controller.signal
+              }),
+              'compressed request',
+              2
+            );
+            
+            // Clear timeout on successful response
+            clearTimeout(timeoutId);
             
             if (!compressedResponse.ok) {
               const errorData = await compressedResponse.json().catch(() => ({ 
@@ -1463,45 +1589,101 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             return; // Exit after successful compressed processing
             
           } catch (compressionError) {
-            console.warn(`⚠️ Compression failed, trying uncompressed approach:`, compressionError);
+            // Handle timeout errors specifically
+            if (compressionError instanceof DOMException && compressionError.name === 'AbortError') {
+              console.warn(`⏱️ Compressed request timed out after ${requestTimeout / 1000}s, trying uncompressed approach`);
+              setFeedback({ 
+                type: 'processing', 
+                message: `Request timed out with compression. Trying uncompressed processing for ${totalTransactions} transactions...` 
+              });
+            } else {
+              console.warn(`⚠️ Compression failed, trying uncompressed approach:`, compressionError);
+              setFeedback({ 
+                type: 'processing', 
+                message: `Compression failed, processing ${totalTransactions} transactions uncompressed...` 
+              });
+            }
             // Fall through to uncompressed processing below
-            setFeedback({ 
-              type: 'processing', 
-              message: `Compression failed, processing ${totalTransactions} transactions uncompressed...` 
-            });
           }
         } else {
           console.log(`📋 Processing ${totalTransactions} transactions without compression (small dataset)`);
         }
         
         // Uncompressed processing (for small datasets or compression fallback)
-        console.log(`📋 Processing ${totalTransactions} transactions with standard approach`);
+        console.log(`📋 Processing ${totalTransactions} transactions with standard approach (timeout: ${requestTimeout / 1000}s)`);
         
-        const autoClassifyResponse = await fetch('/api/classify/auto-classify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transactions: autoClassifyTransactions
-          })
-        });
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+          console.log(`⏱️ Uncompressed request aborted after ${requestTimeout / 1000}s timeout`);
+        }, requestTimeout);
+        
+        try {
+          const autoClassifyResponse = await makeRequestWithRetry(
+                         () => fetch('/api/classify/auto-classify', {
+               method: 'POST',
+               headers: { 
+                 'Content-Type': 'application/json',
+                 'Accept-Encoding': 'gzip, deflate, br',
+                 'Cache-Control': 'no-cache',
+                 'Connection': 'keep-alive',
+                 'X-Request-Type': 'uncompressed'
+               },
+               body: JSON.stringify({
+                 transactions: autoClassifyTransactions
+               }),
+               signal: controller.signal
+             }),
+            'uncompressed request',
+            2
+          );
 
-        let autoClassifiedData: any;
+          // Clear timeout on successful response
+          clearTimeout(timeoutId);
 
-        if (autoClassifyResponse.status === 200) {
-          // Check if it's synchronous completion or asynchronous processing
-          autoClassifiedData = await autoClassifyResponse.json();
-          
-          if (autoClassifyResponse.ok && (autoClassifiedData.status === 'completed' || autoClassifiedData.success || autoClassifiedData.results)) {
-            // Synchronous auto-classification completion - handle immediately
-            await handleAutoClassificationComplete(autoClassifiedData, uniqueTransactions, effectiveCreateNewMode);
-            return; // Exit early for synchronous completion
-          } else if (autoClassifiedData.status === 'processing' && autoClassifiedData.prediction_id) {
-            // Asynchronous auto-classification returned as 200 with processing status
-            const { prediction_id, message: acceptanceMessage } = autoClassifiedData;
+          let autoClassifiedData: any;
+
+          if (autoClassifyResponse.status === 200) {
+            // Check if it's synchronous completion or asynchronous processing
+            autoClassifiedData = await autoClassifyResponse.json();
+            
+            if (autoClassifyResponse.ok && (autoClassifiedData.status === 'completed' || autoClassifiedData.success || autoClassifiedData.results)) {
+              // Synchronous auto-classification completion - handle immediately
+              await handleAutoClassificationComplete(autoClassifiedData, uniqueTransactions, effectiveCreateNewMode);
+              return; // Exit early for synchronous completion
+            } else if (autoClassifiedData.status === 'processing' && autoClassifiedData.prediction_id) {
+              // Asynchronous auto-classification returned as 200 with processing status
+              const { prediction_id, message: acceptanceMessage } = autoClassifiedData;
+              
+              setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Auto-classification job submitted. Processing your transactions...`}` });
+              
+              // Start non-blocking polling
+              pollForCompletion(
+                prediction_id,
+                'classification',
+                (pollingData) => {
+                  handleAutoClassificationComplete(pollingData || { results: [] }, uniqueTransactions, effectiveCreateNewMode);
+                },
+                (errorMessage) => {
+                  setFeedback({ type: 'error', message: `Auto-classification failed: ${errorMessage}` });
+                  setIsProcessing(false);
+                }
+              );
+              return; // Exit early, polling will handle completion
+            } else {
+              throw new Error(autoClassifiedData.message || 'Auto-classification completed but with unexpected response format');
+            }
+          } else if (autoClassifyResponse.status === 202) {
+            // Asynchronous auto-classification - need to poll for completion
+            const { prediction_id, message: acceptanceMessage } = await autoClassifyResponse.json();
+            if (!prediction_id) {
+              throw new Error('Auto-classification job started but did not return a prediction ID');
+            }
             
             setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Auto-classification job submitted. Processing your transactions...`}` });
             
-            // Start non-blocking polling
+            // Start non-blocking polling  
             pollForCompletion(
               prediction_id,
               'classification',
@@ -1515,33 +1697,21 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             );
             return; // Exit early, polling will handle completion
           } else {
-            throw new Error(autoClassifiedData.message || 'Auto-classification completed but with unexpected response format');
-          }
-        } else if (autoClassifyResponse.status === 202) {
-          // Asynchronous auto-classification - need to poll for completion
-          const { prediction_id, message: acceptanceMessage } = await autoClassifyResponse.json();
-          if (!prediction_id) {
-            throw new Error('Auto-classification job started but did not return a prediction ID');
+            const errorData = await autoClassifyResponse.json().catch(() => ({ message: `Auto-classification request failed with status ${autoClassifyResponse.status}` }));
+            throw new Error(errorData.message || errorData.error || `Auto-classification request failed: ${autoClassifyResponse.statusText}`);
           }
           
-          setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Auto-classification job submitted. Processing your transactions...`}` });
+        } catch (uncompressedError) {
+          // Clear timeout in case of error
+          clearTimeout(timeoutId);
           
-          // Start non-blocking polling  
-          pollForCompletion(
-            prediction_id,
-            'classification',
-            (pollingData) => {
-              handleAutoClassificationComplete(pollingData || { results: [] }, uniqueTransactions, effectiveCreateNewMode);
-            },
-            (errorMessage) => {
-              setFeedback({ type: 'error', message: `Auto-classification failed: ${errorMessage}` });
-              setIsProcessing(false);
-            }
-          );
-          return; // Exit early, polling will handle completion
-        } else {
-          const errorData = await autoClassifyResponse.json().catch(() => ({ message: `Auto-classification request failed with status ${autoClassifyResponse.status}` }));
-          throw new Error(errorData.message || errorData.error || `Auto-classification request failed: ${autoClassifyResponse.statusText}`);
+          // Handle timeout errors specifically
+          if (uncompressedError instanceof DOMException && uncompressedError.name === 'AbortError') {
+            throw new Error(`Request timed out after ${requestTimeout / 1000} seconds. This can happen with large datasets or slow connections. Please try again or contact support if the issue persists.`);
+          }
+          
+          // Re-throw other errors
+          throw uncompressedError;
         }
       }
 
@@ -1584,9 +1754,16 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         } else if (msg.includes('request too large') || msg.includes('413')) {
           errorMessage = `📁 Request too large. We automatically compress large datasets to reduce size. If you continue to see this error, try uploading a smaller CSV file.`;
           shouldShowCompressionAdvice = true;
-        } else if (msg.includes('timeout') || msg.includes('504') || msg.includes('408')) {
+        } else if (msg.includes('timeout') || msg.includes('504') || msg.includes('408') || msg.includes('timed out')) {
           errorMessage = `⏱️ Request timeout. We use compression to speed up large dataset processing.`;
           shouldShowCompressionAdvice = true;
+          
+          // Add specific timeout guidance
+          errorMessage += `\n\n📊 For large datasets, processing may take longer. Consider splitting into smaller batches if timeouts persist.`;
+          
+          // Add geographic latency guidance
+          errorMessage += `\n\n🌐 If you're experiencing repeated timeouts, this may be due to network latency. The system automatically adjusts timeout limits based on dataset size.`;
+          
         } else if (msg.includes('mapping') || msg.includes('validation')) {
           errorMessage = error.message; // Keep original validation messages
         }
@@ -1596,6 +1773,21 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       if (shouldShowCompressionAdvice) {
         errorMessage += `\n\n💡 Processing all transactions together provides better categorization accuracy by allowing the AI to see patterns across your entire dataset.`;
       }
+      
+             // Log additional debug info for timeout issues
+       if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+         console.error('🐛 Timeout Debug Info:', {
+           fileSize: uploadedFile?.size || 0,
+           fileName: uploadedFile?.name || 'unknown',
+           userAgent: navigator.userAgent,
+           connection: (navigator as any).connection ? {
+             effectiveType: (navigator as any).connection.effectiveType,
+             downlink: (navigator as any).connection.downlink,
+             rtt: (navigator as any).connection.rtt
+           } : 'unknown',
+           timestamp: new Date().toISOString()
+         });
+       }
       
       setFeedback({ 
         type: 'error', 
