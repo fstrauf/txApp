@@ -156,7 +156,7 @@ export const useFinancialAnalytics = (options: UseFinancialAnalyticsOptions = {}
     enabled = true
   } = options;
   
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const queryClient = useQueryClient();
 
   // Simple, stable query key - no complex memoization
@@ -166,7 +166,10 @@ export const useFinancialAnalytics = (options: UseFinancialAnalyticsOptions = {}
   
   // Check if we're dealing with mock data (first-time users)
   const isMockData = transactions.length > 0 && transactions[0]?.id?.startsWith('mock-');
-  const shouldAnalyze = enabled && (!!userId || isMockData) && transactionCount > 5;
+  
+  // Wait for session to load before enabling analytics
+  const isSessionReady = status !== 'loading';
+  const shouldAnalyze = enabled && isSessionReady && (!!userId || isMockData) && transactionCount > 5;
 
   // Create a stable, unique key that won't change unnecessarily
   const queryKey = useMemo(() => [
@@ -213,6 +216,11 @@ export const useFinancialAnalytics = (options: UseFinancialAnalyticsOptions = {}
   // Mutation for manual analysis with different parameters
   const analysisMutation = useMutation<FinancialAnalyticsResult, Error, FinancialAnalyticsRequest>({
     mutationFn: async (request) => {
+      // Wait for session to be ready before checking authentication
+      if (status === 'loading') {
+        throw new Error('Session is loading. Please wait and try again.');
+      }
+      
       if (!session?.user?.id) {
         throw new Error('User not authenticated');
       }
