@@ -70,7 +70,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   spreadsheetData
 }) => {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { userData, processTransactionData, updateBaseCurrency } = usePersonalFinanceStore();
   const { requestSpreadsheetAccess } = useIncrementalAuth();
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
@@ -1069,6 +1069,10 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         // Check and ensure API access before training
         try {
           setFeedback({ type: 'info', message: '🎯 Making this your own! Setting up your personal AI trainer...' });
+          
+          if (status === 'loading') {
+            throw new Error('Session is loading. Please wait and try again.');
+          }
           
           if (!session?.user?.id) {
             throw new Error('User not authenticated. Please log in to use AI training.');
