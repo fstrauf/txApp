@@ -4,6 +4,7 @@ import React from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import ValidationControls from './ValidationControls';
 import TransactionValidationTable from './TransactionValidationTable';
+import Pagination from './Pagination';
 
 export interface ValidationTransaction {
   id: string;
@@ -26,6 +27,7 @@ export interface ValidationTransaction {
 
 interface ValidateTransactionsTabProps {
   validationTransactions: ValidationTransaction[];
+  paginatedTransactions: ValidationTransaction[];
   selectedTransactions: Set<string>;
   editingTransaction: string | null;
   editCategory: string;
@@ -38,6 +40,11 @@ interface ValidateTransactionsTabProps {
   newSpreadsheetCurrency: string;
   isProcessing: boolean;
   isValidatingAllRemaining: boolean;
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
+  validatedCount: number;
+  totalFilteredItems: number;
   onTransactionSelect: (id: string, selected: boolean) => void;
   onSelectAll: () => void;
   onValidateTransaction: (id: string) => void;
@@ -53,10 +60,13 @@ interface ValidateTransactionsTabProps {
   onShowOnlyUnvalidatedChange: (show: boolean) => void;
   onCompleteValidation: () => void;
   onCurrencySelection: (selectedCurrency: string) => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
 }
 
 const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
   validationTransactions,
+  paginatedTransactions,
   selectedTransactions,
   editingTransaction,
   editCategory,
@@ -69,6 +79,11 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
   newSpreadsheetCurrency,
   isProcessing,
   isValidatingAllRemaining,
+  currentPage,
+  pageSize,
+  totalPages,
+  validatedCount,
+  totalFilteredItems,
   onTransactionSelect,
   onSelectAll,
   onValidateTransaction,
@@ -83,7 +98,9 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
   onFilterCategoryChange,
   onShowOnlyUnvalidatedChange,
   onCompleteValidation,
-  onCurrencySelection
+  onCurrencySelection,
+  onPageChange,
+  onPageSizeChange
 }) => {
   const { userData } = usePersonalFinanceStore();
 
@@ -112,35 +129,8 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
     return Array.from(existingCategories).sort();
   }, [userData.transactions, validationTransactions]);
 
-  // Filter and sort validation transactions
-  const filteredValidationTransactions = validationTransactions
-    .filter(t => {
-      if (showOnlyUnvalidated && t.isValidated) return false;
-      if (filterCategory !== 'all' && t.category !== filterCategory) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      let aVal, bVal;
-      switch (sortBy) {
-        case 'date':
-          aVal = new Date(a.date).getTime();
-          bVal = new Date(b.date).getTime();
-          break;
-        case 'amount':
-          aVal = Math.abs(a.amount);
-          bVal = Math.abs(b.amount);
-          break;
-        case 'confidence':
-          aVal = a.confidence || 0;
-          bVal = b.confidence || 0;
-          break;
-        default:
-          return 0;
-      }
-      return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
-    });
+  // Note: Filtering and sorting is now handled at the parent level before pagination
 
-  const validatedCount = validationTransactions.filter(t => t.isValidated).length;
   const totalValidationCount = validationTransactions.length;
   const progressPercentage = totalValidationCount > 0 ? (validatedCount / totalValidationCount) * 100 : 0;
 
@@ -163,7 +153,7 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
       {/* Validation Controls */}
       <ValidationControls
         selectedTransactions={selectedTransactions}
-        filteredTransactions={filteredValidationTransactions}
+        filteredTransactions={validationTransactions}
         showOnlyUnvalidated={showOnlyUnvalidated}
         filterCategory={filterCategory}
         sortBy={sortBy}
@@ -186,9 +176,20 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
         onCurrencySelection={onCurrencySelection}
       />
 
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={totalFilteredItems}
+        validatedCount={validatedCount}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
+
       {/* Transactions Table */}
       <TransactionValidationTable
-        transactions={filteredValidationTransactions}
+        transactions={paginatedTransactions}
         selectedTransactions={selectedTransactions}
         categories={categories}
         onTransactionSelect={onTransactionSelect}
@@ -196,6 +197,19 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
         onValidateTransaction={onValidateTransaction}
         onEditCategory={onEditCategory}
       />
+
+      {/* Bottom Pagination */}
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={totalFilteredItems}
+          validatedCount={validatedCount}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
+      )}
     </div>
   );
 };

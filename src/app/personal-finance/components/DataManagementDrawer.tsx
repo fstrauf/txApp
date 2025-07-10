@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { parseTransactionDate } from '@/lib/utils';
+import { parse, isValid, format } from 'date-fns';
 import Papa from 'papaparse';
 import { 
   XMarkIcon, 
@@ -93,6 +94,10 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   // Validation state
   const [validationTransactions, setValidationTransactions] = useState<ValidationTransaction[]>([]);
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
   const [editingTransaction, setEditingTransaction] = useState<string | null>(null);
   const [editCategory, setEditCategory] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'confidence'>('confidence');
@@ -364,8 +369,8 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       onError(`${operationType} job ${predictionId} timed out after ${maxPolls} polling attempts.`);
     };
     
-    // Start polling without awaiting - this runs asynchronously
-    executePoll();
+    // Await polling to complete - this ensures the function only resolves when polling finishes
+    await executePoll();
   };
 
   // Separate function to handle auto-classification results
@@ -478,6 +483,9 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       console.log('📋 Setting validation transactions state...');
       setValidationTransactions(categorizedTransactions);
       
+      // Reset pagination when new transactions are loaded
+      setCurrentPage(1);
+      
       console.log('📑 Switching to validate tab...');
       setActiveTab('validate');
       
@@ -493,9 +501,6 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       
       console.log('🎉 Auto-classification complete! Switching to validation view.');
       
-      // Clear processing state
-      setIsProcessing(false);
-
       // Reset CSV processing state after successful categorization
       setTimeout(() => {
         setUploadedFile(null);
@@ -732,6 +737,43 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     setIsProcessing(true);
     setFeedback({ type: 'info', message: 'Processing your transaction data...' });
 
+    // Flag to control whether finally block should execute
+    let shouldExecuteFinally = true;
+
+    // Helper function to handle async polling without affecting main try-catch-finally
+    const handleAsyncPolling = async (prediction_id: string, uniqueTransactions: any[], effectiveCreateNewMode: boolean) => {
+      // Ensure processing state stays true during polling
+      console.log('🔄 Starting async polling, keeping isProcessing = true');
+      
+      try {
+        await pollForCompletion(
+          prediction_id,
+          'auto_classification',
+          (pollingData) => {
+            console.log('🔍 Auto-classification polling callback received completed data:', {
+              hasData: !!pollingData,
+              dataStructure: Object.keys(pollingData || {}),
+              hasResults: !!(pollingData?.results),
+              resultsLength: pollingData?.results?.length || 0,
+              fullData: pollingData
+            });
+            
+            // This callback is only called when status === 'completed'
+            handleAutoClassificationComplete(pollingData, uniqueTransactions, effectiveCreateNewMode);
+            // Note: handleAutoClassificationComplete calls setIsProcessing(false) in its finally block
+          },
+          (errorMessage) => {
+            setFeedback({ type: 'error', message: `Auto-classification failed: ${errorMessage}` });
+            setIsProcessing(false); // Re-enable button on error
+          }
+        );
+      } catch (error) {
+        console.error('Polling error:', error);
+        setFeedback({ type: 'error', message: `Polling failed: ${error instanceof Error ? error.message : 'Unknown error'}` });
+        setIsProcessing(false); // Re-enable button on polling error
+      }
+    };
+
     try {
       setFeedback({ type: 'success', message: 'Parsing CSV file...' });
       
@@ -886,1011 +928,498 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           type: typeof rawAmount 
         });
 
-        // Validate that amount field contains numeric data
-        if (rawAmount !== undefined && rawAmount !== null && rawAmount !== '') {
-          const amountStr = String(rawAmount).trim();
-          
-          // Check if amount field contains description-like text
-          if (amountStr.toLowerCase().includes('description') ||
-              amountStr.toLowerCase().includes('narrative') ||
-              amountStr.toLowerCase().includes('merchant') ||
-              amountStr.toLowerCase().includes('reference') ||
-              /^[a-zA-Z\s]{3,}$/.test(amountStr)) {
-            throw new Error(`❌ Column mapping error in row ${index + 1}: Amount field contains "${amountStr}" which appears to be text, not a number. Please check your column mapping and ensure the amount column is mapped to a numeric field.`);
-          }
-
-          // Check if the value can be parsed as a number
-          const parsedAmount = parseFloat(amountStr);
-          if (isNaN(parsedAmount)) {
-            throw new Error(`❌ Invalid amount in row ${index + 1}: "${amountStr}" cannot be converted to a number. Please check your column mapping.`);
-          }
+        // Validate that the amount is not obviously wrong
+        if (rawAmount === null || rawAmount === undefined || rawAmount === '') {
+          throw new Error(`Row ${index + 1}: Amount is missing or empty. Please check your CSV data.`);
         }
 
-        const originalAmount = parseFloat(String(rawAmount || '0'));
-        const rawCurrency = currencyHeader ? String(row[currencyHeader] || baseCurrency) : baseCurrency;
-        const originalCurrency = extractCurrencyCode(rawCurrency) || baseCurrency;
+        // Enhanced amount parsing with accounting notation support
+        let parsedAmount: number;
+        const amountStr = String(rawAmount).trim();
         
-        // Handle direction field to determine if transaction is debit or credit
-        let isDebit = originalAmount < 0; // Default based on amount sign
-        let money_in = originalAmount > 0; // Default based on amount sign
-        
-        // Debug direction field mapping
-        console.log('🔍 Direction field debug:', {
-          index,
-          directionHeader,
-          'row[directionHeader]': directionHeader ? row[directionHeader] : 'N/A',
-          'config.mappings': config.mappings,
-          originalAmount,
-          'default isDebit': isDebit,
-          'default money_in': money_in
-        });
-        
-        if (directionHeader && row[directionHeader]) {
-          const directionValue = String(row[directionHeader]).trim().toLowerCase();
-          
-          console.log('🎯 Processing direction field:', {
-            index,
-            directionHeader,
-            rawDirectionValue: row[directionHeader],
-            directionValue,
-            originalAmount
-          });
-          
-          // Determine transaction direction based on various formats
-          if (['out', 'debit', 'dr', '-', 'negative'].includes(directionValue)) {
-            isDebit = true;
-            money_in = false;
-            console.log('✅ Direction matched DEBIT pattern:', directionValue);
-          } else if (['in', 'credit', 'cr', '+', 'positive'].includes(directionValue)) {
-            isDebit = false;
-            money_in = true;
-            console.log('✅ Direction matched CREDIT pattern:', directionValue);
-          } else if (directionValue === 'neutral') {
-            // For neutral transactions, keep original amount sign logic
-            isDebit = originalAmount < 0;
-            money_in = originalAmount > 0;
-            console.log('✅ Direction matched NEUTRAL pattern:', directionValue);
-          } else {
-            console.log('⚠️ Direction value not recognized:', directionValue, 'keeping default logic');
-          }
-          
-          console.log('🔄 Final direction processing result:', {
-            index,
-            directionValue,
-            originalAmount,
-            isDebit,
-            money_in
-          });
+        // Check for accounting bracket notation (e.g., "(100.00)" = -100.00)
+        if (amountStr.match(/^\([0-9,\.]+\)$/)) {
+          console.log(`🔢 Detected accounting bracket notation: ${amountStr}`);
+          const numericPart = amountStr.replace(/[\(\),]/g, '');
+          parsedAmount = -parseFloat(numericPart);
         } else {
-          console.log('⚠️ No direction field found or empty:', {
-            index,
-            directionHeader,
-            'row[directionHeader]': directionHeader ? row[directionHeader] : 'N/A'
-          });
+          // Handle standard amount parsing with commas
+          const cleanAmount = amountStr.replace(/[,\s]/g, '');
+          parsedAmount = parseFloat(cleanAmount);
         }
         
-        // Debug currency extraction
-        if (currencyHeader && rawCurrency !== originalCurrency) {
-          console.log('Currency extracted:', { rawCurrency, originalCurrency, baseCurrency });
+        if (isNaN(parsedAmount)) {
+          throw new Error(`Row ${index + 1}: Cannot parse amount "${rawAmount}". Expected a number but got: ${typeof rawAmount}. Please check your amount column mapping.`);
         }
-        
-        // Parse and format the date properly to avoid timezone issues
-        const rawDate = row[dateHeader!] || new Date().toISOString().split('T')[0];
-        const parsedDate = parseTransactionDate(String(rawDate));
-        const formattedDate = parsedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
 
-        // Convert currency if needed
-        let convertedAmount = Math.abs(originalAmount);
-        if (originalCurrency !== baseCurrency) {
+        // Parse date with flexible format support
+        const rawDate = row[dateHeader!];
+        if (!rawDate) {
+          throw new Error(`Row ${index + 1}: Date is missing. Please check your CSV data.`);
+        }
+
+        let parsedDate: Date = new Date(); // Initialize with default value
+        const dateStr = String(rawDate).trim();
+        let dateParseSuccess = false;
+        
+        // Try multiple date formats
+        const dateFormats = [
+          // Start with configured format (with fallback)
+          config.dateFormat || 'yyyy-MM-dd',
+          
+          // ISO formats
+          'yyyy-MM-dd',
+          'yyyy/MM/dd',
+          
+          // US formats
+          'MM/dd/yyyy',
+          'MM/dd/yy',
+          'M/d/yyyy',
+          'M/d/yy',
+          
+          // European formats
+          'dd/MM/yyyy',
+          'dd/MM/yy',
+          'd/M/yyyy',
+          'd/M/yy',
+          
+          // Other common formats
+          'dd-MM-yyyy',
+          'MM-dd-yyyy',
+          'yyyy-MM-dd HH:mm:ss',
+          'MM/dd/yyyy HH:mm:ss'
+        ];
+
+        // Try parsing with each format until one succeeds
+        for (const format of dateFormats) {
           try {
-            convertedAmount = await convertCurrency(
-              Math.abs(originalAmount),
-              originalCurrency,
-              baseCurrency,
-              formattedDate
-            );
-          } catch (error) {
-            console.warn(`Currency conversion failed for ${originalCurrency} to ${baseCurrency}:`, error);
-            // Keep original amount if conversion fails
+            const testDate = parse(dateStr, format, new Date());
+            if (isValid(testDate)) {
+              parsedDate = testDate;
+              dateParseSuccess = true;
+              if (format !== (config.dateFormat || 'yyyy-MM-dd')) {
+                console.log(`📅 Successfully parsed date "${dateStr}" using format: ${format}`);
+              }
+              break;
+            }
+          } catch {
+            continue;
           }
+        }
+        
+        if (!dateParseSuccess) {
+          throw new Error(`Row ${index + 1}: Cannot parse date "${rawDate}". Please check your date format or column mapping.`);
+        }
+
+        // Handle direction field if mapped
+        let finalAmount = parsedAmount;
+        if (directionHeader && row[directionHeader]) {
+          const direction = String(row[directionHeader]).toLowerCase().trim();
+          const isOutgoing = direction.includes('out') || direction.includes('debit') || direction.includes('dr') || direction.includes('withdrawal');
+          const isIncoming = direction.includes('in') || direction.includes('credit') || direction.includes('cr') || direction.includes('deposit');
+          
+          // Apply direction logic if amount is positive
+          if (parsedAmount > 0) {
+            if (isOutgoing) {
+              finalAmount = -Math.abs(parsedAmount);
+            } else if (isIncoming) {
+              finalAmount = Math.abs(parsedAmount);
+            }
+          }
+          
+          console.log(`📊 Direction processing: ${direction} → amount: ${parsedAmount} → final: ${finalAmount}`);
+        }
+
+        const description = String(row[descriptionHeader!] || '').trim();
+        if (!description) {
+          throw new Error(`Row ${index + 1}: Description is missing. Please check your CSV data.`);
         }
 
         return {
-          id: `transaction-${index}`,
-          date: formattedDate,
-          description: String(row[descriptionHeader!] || 'Unknown'),
-          amount: convertedAmount, // Use converted amount for processing
-          originalAmount: Math.abs(originalAmount), // Keep original amount
-          originalCurrency, // Store original currency
-          baseCurrency, // Store base currency
-          account: 'Uploaded CSV',
-          isDebit, // Use direction-aware logic
-          money_in, // Use direction-aware logic
-          direction: directionHeader ? String(row[directionHeader] || '') : undefined, // Store original direction value
+          date: format(parsedDate, 'yyyy-MM-dd'),
+          amount: finalAmount,
+          description: description,
+          currency: currencyHeader ? String(row[currencyHeader] || 'USD') : 'USD',
         };
       }));
 
-      // Filter out duplicate transactions early - but skip this for new spreadsheet mode
-      let uniqueTransactions;
-      let duplicateCount = 0;
-      let duplicateDetails: any = null;
-      
-      console.log('🔍 Duplicate filtering decision:', {
-        createNewSpreadsheetMode,
-        'rawTransactions.length': rawTransactions.length,
-        'userData.transactions?.length': userData.transactions?.length || 0
-      });
-      
-      if (effectiveCreateNewMode) {
-        // When creating a new spreadsheet, process all transactions (no duplicate filtering)
-        uniqueTransactions = rawTransactions;
-        console.log('📋 Creating new spreadsheet - processing all transactions without duplicate filtering');
-        console.log('📋 uniqueTransactions.length:', uniqueTransactions.length);
-      } else {
-        // For existing spreadsheets, use enhanced duplicate detection
-        console.log('🔍 Running enhanced duplicate detection...');
-        
-        const detectionResult = detectDuplicateTransactions(rawTransactions, 'moderate');
-        uniqueTransactions = detectionResult.uniqueTransactions;
-        duplicateCount = detectionResult.duplicateCount;
-        duplicateDetails = detectionResult;
-        
-        console.log('🔍 Enhanced duplicate detection results:', {
-          strategy: detectionResult.strategy,
-          total: detectionResult.stats?.total || 0,
-          unique: detectionResult.stats?.unique || 0,
-          duplicateWithExisting: detectionResult.stats?.duplicateWithExisting || 0,
-          duplicateWithinBatch: detectionResult.stats?.duplicateWithinBatch || 0,
-          totalDuplicates: duplicateCount
-        });
-        
-        // Store duplicate report for user viewing
-        if (detectionResult.duplicates.length > 0) {
-          setDuplicateReport(detectionResult);
-        }
-        
-        // Log detailed duplicate information
-        if (detectionResult.duplicates.length > 0) {
-          console.log('📋 Duplicate transactions found:');
-          detectionResult.duplicates.forEach((dup, index) => {
-            console.log(`  ${index + 1}. ${dup.transaction.description} (${dup.transaction.amount}) - ${dup.reason}`);
-          });
-        }
-      }
+      console.log('Parsed transactions:', rawTransactions.slice(0, 3));
+
+      // Duplicate detection
+      const uniqueTransactions = filterDuplicateTransactions(rawTransactions);
+      console.log(`Duplicate filtering: ${rawTransactions.length} -> ${uniqueTransactions.length} transactions (${rawTransactions.length - uniqueTransactions.length} duplicates removed)`);
 
       if (uniqueTransactions.length === 0) {
-        console.error('❌ uniqueTransactions.length is 0!', {
-          createNewSpreadsheetMode,
-          'rawTransactions.length': rawTransactions.length,
-          'userData.transactions?.length': userData.transactions?.length || 0,
-          duplicateCount
-        });
-        
-        // Provide detailed feedback about why no transactions were processed
-        if (duplicateDetails && duplicateDetails.duplicates.length > 0) {
-          const duplicateExamples = duplicateDetails.duplicates.slice(0, 3).map((dup: any) => 
-            `"${dup.transaction.description}" (${dup.transaction.amount})`
-          ).join(', ');
-          
-          setFeedback({ 
-            type: 'error', 
-            message: `All ${rawTransactions.length} transactions are duplicates of existing data. Examples: ${duplicateExamples}${duplicateDetails.duplicates.length > 3 ? '...' : ''}. Try uploading transactions from a different date range.` 
-          });
-        } else {
-          setFeedback({ 
-            type: 'error', 
-            message: `All ${rawTransactions.length} transactions are duplicates. No new data to process.` 
-          });
-        }
-        return;
+        throw new Error('All transactions appear to be duplicates of existing data. No new transactions to process.');
       }
 
-      // Pre-validate processed transaction data to catch mapping issues early
-      try {
-        const sampleTransactions = uniqueTransactions.slice(0, 3).map(t => ({
-          description: t.description,
-          money_in: t.money_in,
-          amount: t.amount
-        }));
+      // Show duplicate summary if any were found
+      if (rawTransactions.length > uniqueTransactions.length) {
+        const duplicateCount = rawTransactions.length - uniqueTransactions.length;
+        setFeedback({ 
+          type: 'info', 
+          message: `Found ${duplicateCount} duplicate transactions that were filtered out. Processing ${uniqueTransactions.length} new transactions...` 
+        });
+      }
+
+      // Handle auto-classification - detect if we need to use training or auto-classification
+      const hasTrainingData = userData.transactions && userData.transactions.length > 10;
+      
+      setFeedback({ 
+        type: 'processing', 
+        message: hasTrainingData 
+          ? `🎯 Using your transaction history to classify ${uniqueTransactions.length} transactions...` 
+          : `🤖 Auto-classifying ${uniqueTransactions.length} transactions...`
+      });
+
+      // Prepare data for classification
+      const autoClassifyTransactions = uniqueTransactions.map(tx => ({
+        date: tx.date,
+        amount: tx.amount,
+        description: tx.description,
+        currency: tx.currency || 'USD',
+      }));
+
+      // Detect malformed transactions early
+      const autoMalformedTransactions = autoClassifyTransactions.filter(tx => {
+        const hasValidDate = tx.date && !isNaN(Date.parse(tx.date));
+        const hasValidAmount = typeof tx.amount === 'number' && !isNaN(tx.amount) && tx.amount !== 0;
+        const hasValidDescription = typeof tx.description === 'string' && tx.description.trim().length > 0;
         
-        const preValidation = validateCsvMappingData(sampleTransactions);
-        if (!preValidation.isValid) {
-          setShowMappingGuide(true);
-          setFeedback({ 
-            type: 'error', 
-            message: `❌ Data mapping validation failed:\n${preValidation.errors.join('\n')}\n\nPlease check your CSV column mapping and try again.` 
+        const isValid = hasValidDate && hasValidAmount && hasValidDescription;
+        
+        if (!isValid) {
+          console.log('❌ Malformed transaction detected:', tx, {
+            hasValidDate,
+            hasValidAmount,
+            hasValidDescription
           });
-          return;
         }
-      } catch (preValidationError) {
-        console.error('Pre-validation failed:', preValidationError);
+        
+        return !isValid;
+      });
+
+      if (autoMalformedTransactions.length > 0) {
+        console.error(`❌ Found ${autoMalformedTransactions.length} malformed auto-classify transactions - aborting`);
         setFeedback({ 
           type: 'error', 
-          message: `❌ Data validation failed: ${preValidationError instanceof Error ? preValidationError.message : 'Unknown error'}. Please check your CSV column mapping.` 
+          message: `❌ Data validation failed: Found ${autoMalformedTransactions.length} transactions with invalid data (likely CSV header data or incorrect column mapping). Please check your CSV file and column mapping.` 
         });
         return;
       }
 
-      if (duplicateCount > 0) {
-        const duplicateMessage = duplicateDetails ? 
-          `Found ${uniqueTransactions.length} new transactions. Filtered out ${duplicateCount} duplicates (${duplicateDetails.stats?.duplicateWithExisting || 0} match existing data, ${duplicateDetails.stats?.duplicateWithinBatch || 0} duplicates within upload).` :
-          `Found ${uniqueTransactions.length} new transactions (${duplicateCount} duplicates filtered out).`;
-          
+      // Validate auto-classification data before sending
+      try {
+        validateClassifyRequest({ transactions: autoClassifyTransactions });
+      } catch (validationError) {
+        console.error('Auto-classification data validation failed:', validationError);
+        if (validationError instanceof Error && validationError.message.includes('mapping')) {
+          setShowMappingGuide(true);
+        }
         setFeedback({ 
-          type: 'success', 
-          message: `${duplicateMessage} Starting categorization...`
+          type: 'error', 
+          message: `❌ Auto-classification data validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown error'}. Please check your CSV column mapping.` 
         });
-      } else {
-        setFeedback({ 
-          type: 'success', 
-          message: `Processing ${uniqueTransactions.length} ${effectiveCreateNewMode ? '' : 'new '}transactions. Starting categorization...` 
-        });
+        return;
       }
-
-      // Clear any previous duplicate report when starting new processing
-      if (!duplicateDetails || duplicateDetails.duplicates.length === 0) {
-        setDuplicateReport(null);
-      }
-
-      // Step 1: Check if we have existing data for training or use generic classification
-      // Use SERVER-SIDE DATA (spreadsheetLinked from database) not localStorage data
-      // This ensures new users always get auto-classify regardless of localStorage
-      const hasSpreadsheet = spreadsheetLinked; // Database truth, not localStorage
-      const hasActualTrainingData = userData.transactions && userData.transactions.length > 0;
-      const hasExistingData = hasSpreadsheet && hasActualTrainingData; // Need both spreadsheet AND actual transaction data
-      const isAuthenticated = !!session?.user?.id;
       
-      // FORCE auto-classify for:
-      // 1. New spreadsheet mode - no training should happen
-      // 2. Unauthenticated users - always use auto-classify regardless of existing data
-      // 3. Users with no spreadsheet in database (truly new users)
-      // 4. Users with spreadsheet but no actual transaction data (e.g., after clearing demo data)
-      const shouldUseCustomModel = effectiveCreateNewMode ? false : (isAuthenticated && hasExistingData);
+      // Compression-based processing for better accuracy
+      // Processing all transactions together gives the AI better context and patterns
+      const totalTransactions = autoClassifyTransactions.length;
+      const useCompression = totalTransactions > 50; // Use compression for datasets larger than 50 transactions
       
-      console.log('🔍 Training vs Auto-classify decision:', {
-        hasSpreadsheet: hasSpreadsheet,
-        hasActualTrainingData: hasActualTrainingData,
-        hasExistingData: hasExistingData,
-        spreadsheetLinked: spreadsheetLinked,
-        isAuthenticated,
-        'userData.transactions (localStorage)': userData.transactions?.length || 0,
-        createNewSpreadsheetMode,
-        shouldUseCustomModel,
-        'Flow choice': shouldUseCustomModel ? 'TRAINING + CLASSIFICATION' : 'AUTO-CLASSIFY',
-        'Logic': effectiveCreateNewMode ? 'FORCED AUTO-CLASSIFY (new spreadsheet)' : 
-                 !isAuthenticated ? 'FORCED AUTO-CLASSIFY (unauthenticated)' : 
-                 !hasSpreadsheet ? 'FORCED AUTO-CLASSIFY (no database spreadsheet)' :
-                 !hasActualTrainingData ? 'FORCED AUTO-CLASSIFY (spreadsheet exists but no training data)' :
-                 hasExistingData ? 'TRAINING (authenticated + has spreadsheet + has training data)' : 'AUTO-CLASSIFY (fallback)'
-      });
+      // Configure timeout based on dataset size and connection quality
+      const baseTimeout = 60000; // 1 minute base
+      const sizeMultiplier = Math.max(1, Math.ceil(totalTransactions / 100)); // Add time for larger datasets
       
-      // EXPLICIT CHECKPOINT
-      if (effectiveCreateNewMode) {
-
-              }
-      
-      if (shouldUseCustomModel) {
-
-        // Subsequent upload - use custom model training + classification
-        setFeedback({ type: 'success', message: 'Training custom model on your existing data...' });
+      // Detect connection quality and adjust timeout accordingly
+      let connectionMultiplier = 1;
+      const connection = (navigator as any).connection;
+      if (connection) {
+        const effectiveType = connection.effectiveType;
+        console.log(`🌐 Connection: ${effectiveType}, downlink: ${connection.downlink}Mbps, rtt: ${connection.rtt}ms`);
         
-        // Check and ensure API access before training
-        try {
-          setFeedback({ type: 'info', message: '🎯 Making this your own! Setting up your personal AI trainer...' });
-          
-          if (status === 'loading') {
-            throw new Error('Session is loading. Please wait and try again.');
-          }
-          
-          if (!session?.user?.id) {
-            throw new Error('User not authenticated. Please log in to use AI training.');
-          }
-          
-          const accessResult = await ensureApiAccessForTraining(session.user.id);
-          
-          if (!accessResult.success) {
-            if (accessResult.needsSubscription) {
+        // Adjust timeout based on connection quality  
+        if (effectiveType === 'slow-2g') connectionMultiplier = 3;
+        else if (effectiveType === '2g') connectionMultiplier = 2.5;
+        else if (effectiveType === '3g') connectionMultiplier = 1.5;
+        
+        // Factor in RTT for geographic latency (like Brazil → SFO)
+        if (connection.rtt > 300) {
+          connectionMultiplier *= 1.5;
+          console.log(`🌍 High latency detected (${connection.rtt}ms), extending timeout`);
+        }
+      }
+      
+      const requestTimeout = Math.min(baseTimeout * sizeMultiplier * connectionMultiplier, 300000); // Max 5 minutes
+      
+      console.log(`⏱️ Setting request timeout to ${requestTimeout / 1000}s for ${totalTransactions} transactions (connection multiplier: ${connectionMultiplier})`);
+      
+      // Quick connection health check (non-blocking)
+      try {
+        console.log('🏥 Quick connection health check...');
+        const healthResponse = await fetch('/api/health', {
+          method: 'GET',
+          signal: AbortSignal.timeout(3000) // Quick 3s timeout
+        });
+        if (!healthResponse.ok) {
+          console.warn('⚠️ Health check warning - proceeding anyway');
+          setFeedback({ type: 'processing', message: 'Network conditions detected, processing may take longer...' });
+        }
+      } catch (healthError) {
+        console.warn('⚠️ Health check failed - proceeding anyway:', healthError);
+      }
+      
+      // Simple retry mechanism for network resilience
+      const makeRequestWithRetry = async (requestFn: () => Promise<Response>, requestType: string, maxRetries = 2): Promise<Response> => {
+        let lastError: Error | null = null;
+        
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          try {
+            if (attempt > 0) {
+              const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
+              console.log(`🔄 Retrying ${requestType} request (attempt ${attempt + 1}/${maxRetries + 1}) after ${delay}ms delay`);
               setFeedback({ 
-                type: 'error', 
-                message: '💎 Upgrade needed! AI training requires an active subscription to create your personalized model. Please upgrade to continue.' 
+                type: 'processing', 
+                message: `Network issue detected, retrying ${requestType} request (attempt ${attempt + 1}/${maxRetries + 1})...` 
               });
-              
-              // Redirect to API key page after showing the message
-              setTimeout(() => {
-                router.push('/api-key');
-              }, 2000); // Give user time to read the message
-              
-              return;
-            } else {
-              throw new Error(accessResult.message);
+              await new Promise(resolve => setTimeout(resolve, delay));
             }
-          }
-          
-          setFeedback({ type: 'success', message: '🚀 All set! Training your personal AI model on your existing data...' });
-        } catch (error) {
-          console.error('Failed to setup API access:', error);
-          setFeedback({ 
-            type: 'error', 
-            message: `❌ Setup failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or contact support.` 
-          });
-          return;
-        }
-        
-        // Prepare training data with validation
-        const trainingTransactions = (userData.transactions || []).map(t => ({
-          description: t.description,
-          Category: t.category, // Fixed field name from predicted_category to Category
-          money_in: !t.isDebit,
-          amount: t.amount
-        }));
-
-        // Validate training data before sending
-        try {
-          validateClassifyRequest({ transactions: trainingTransactions });
-        } catch (validationError) {
-          console.error('Training data validation failed:', validationError);
-          if (validationError instanceof Error && validationError.message.includes('mapping')) {
-            setShowMappingGuide(true);
-          }
-          setFeedback({ 
-            type: 'error', 
-            message: `❌ Training data validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown error'}. Please check your existing transaction data.` 
-          });
-          return;
-        }
-        
-        // Step 1: Train the model using existing transactions
-        const trainResponse = await fetch('/api/classify/train', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transactions: trainingTransactions
-          })
-        });
-
-        if (trainResponse.status === 200) {
-          // Synchronous training completion
-          const trainResult = await trainResponse.json();
-          if (trainResponse.ok && (trainResult.success || trainResult.status === 'completed' || trainResult.message?.includes('completed successfully'))) {
-            setFeedback({ type: 'success', message: 'Model trained! Now categorizing new transactions...' });
-          } else {
-            throw new Error(trainResult.message || 'Training failed despite 200 OK response');
-          }
-        } else if (trainResponse.status === 202) {
-          // Asynchronous training - need to poll for completion
-          const { prediction_id, message: acceptanceMessage } = await trainResponse.json();
-          if (!prediction_id) {
-            throw new Error('Training job started but did not return a prediction ID');
-          }
-          
-          setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Training job submitted. Processing your data...`}` });
-          
-          // Wait for training to complete via polling
-          await new Promise((resolve, reject) => {
-            pollForCompletion(
-              prediction_id,
-              'training',
-              (pollingData) => {
-                setFeedback({ type: 'success', message: 'Model trained via polling! Now categorizing new transactions...' });
-                resolve(pollingData);
-              },
-              (errorMessage) => {
-                reject(new Error(errorMessage));
-              }
-            );
-          });
-        } else {
-          const errorData = await trainResponse.json().catch(() => ({ message: `Training request failed with status ${trainResponse.status}` }));
-          throw new Error(errorData.message || errorData.error || `Training request failed: ${trainResponse.statusText}`);
-        }
-
-        // Prepare classification data with validation
-        const classificationTransactions = uniqueTransactions.map(t => ({
-          description: t.description,
-          money_in: t.money_in,
-          amount: t.amount
-        }));
-
-        // Final validation check - ensure no malformed data gets through
-        const malformedTransactions = classificationTransactions.filter((t, index) => {
-          const desc = String(t.description || '').toLowerCase().trim();
-          const amt = String(t.amount || '').toLowerCase().trim();
-          
-          // Check for header patterns
-          const headerPatterns = ['description', 'narrative', 'merchant', 'amount', 'date', 'reference', 'details', 'memo'];
-          const isHeaderDesc = headerPatterns.some(pattern => desc === pattern);
-          const isHeaderAmt = headerPatterns.some(pattern => amt === pattern);
-          
-          // Check for duplicate values
-          const isDuplicate = desc === amt && desc !== '';
-          
-          // Check if amount is not numeric
-          const isAmountNonNumeric = isNaN(parseFloat(amt)) && amt !== '';
-          
-          if (isHeaderDesc || isHeaderAmt || isDuplicate || isAmountNonNumeric) {
-            console.error(`❌ Malformed transaction detected at index ${index}:`, {
-              description: t.description,
-              amount: t.amount,
-              money_in: t.money_in,
-              issues: {
-                isHeaderDesc,
-                isHeaderAmt,
-                isDuplicate,
-                isAmountNonNumeric
-              }
-            });
-            return true;
-          }
-          return false;
-        });
-
-        if (malformedTransactions.length > 0) {
-          console.error(`❌ Found ${malformedTransactions.length} malformed transactions - aborting classification`);
-          setFeedback({ 
-            type: 'error', 
-            message: `❌ Data validation failed: Found ${malformedTransactions.length} transactions with invalid data (likely CSV header data or incorrect column mapping). Please check your CSV file and column mapping.` 
-          });
-          return;
-        }
-
-        // Validate classification data before sending
-        try {
-          validateClassifyRequest({ transactions: classificationTransactions });
-        } catch (validationError) {
-          console.error('Classification data validation failed:', validationError);
-          if (validationError instanceof Error && validationError.message.includes('mapping')) {
-            setShowMappingGuide(true);
-          }
-          setFeedback({ 
-            type: 'error', 
-            message: `❌ Classification data validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown error'}. Please check your CSV column mapping.` 
-          });
-          return;
-        }
-
-        // Step 2: Classify new transactions using the trained model
-        const classifyResponse = await fetch('/api/classify/classify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transactions: classificationTransactions
-          })
-        });
-
-        let classifiedData: any;
-
-        if (classifyResponse.status === 200) {
-          // Check if it's synchronous completion or asynchronous processing
-          classifiedData = await classifyResponse.json();
-          
-          if (classifyResponse.ok && (classifiedData.status === 'completed' || classifiedData.success || classifiedData.results)) {
-            // Synchronous classification completion - proceed
-          } else if (classifiedData.status === 'processing' && classifiedData.prediction_id) {
-            // Asynchronous classification returned as 200 with processing status
-            const { prediction_id, message: acceptanceMessage } = classifiedData;
             
-            setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Classification job submitted. Processing your transactions...`}` });
+            const response = await requestFn();
             
-            // Wait for classification to complete via polling
-            classifiedData = await new Promise((resolve, reject) => {
-              pollForCompletion(
-                prediction_id,
-                'classification', // Regular classification endpoint, not auto-classification
-                (pollingData) => {
-                  console.log('🔍 Classification polling callback received completed data:', {
-                    hasData: !!pollingData,
-                    dataStructure: Object.keys(pollingData || {}),
-                    hasResults: !!(pollingData?.results),
-                    resultsLength: pollingData?.results?.length || 0,
-                    fullData: pollingData
-                  });
-                  
-                  // This callback is only called when status === 'completed'
-                  // No need to check for processing status here
-                  handleAutoClassificationComplete(pollingData, uniqueTransactions, effectiveCreateNewMode);
-                  resolve(pollingData);
-                },
-                (errorMessage) => {
-                  setFeedback({ type: 'error', message: `Classification failed: ${errorMessage}` });
-                  setIsProcessing(false);
-                  reject(new Error(errorMessage));
-                }
-              );
-            });
-          } else {
-            throw new Error(classifiedData.message || 'Classification completed but with unexpected response format');
-          }
-        } else if (classifyResponse.status === 202) {
-          // Asynchronous classification - need to poll for completion
-          const { prediction_id, message: acceptanceMessage } = await classifyResponse.json();
-          if (!prediction_id) {
-            throw new Error('Classification job started but did not return a prediction ID');
-          }
-          
-          setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Classification job submitted. Processing your transactions...`}` });
-          
-          // Wait for classification to complete via polling
-          classifiedData = await new Promise((resolve, reject) => {
-            pollForCompletion(
-              prediction_id,
-              'classification', // Regular classification endpoint, not auto-classification
-              (pollingData) => {
-                console.log('🔍 Classification polling callback received completed data:', {
-                  hasData: !!pollingData,
-                  dataStructure: Object.keys(pollingData || {}),
-                  hasResults: !!(pollingData?.results),
-                  resultsLength: pollingData?.results?.length || 0,
-                  fullData: pollingData
-                });
-                
-                // This callback is only called when status === 'completed'
-                // No need to check for processing status here
-                handleAutoClassificationComplete(pollingData, uniqueTransactions, effectiveCreateNewMode);
-                resolve(pollingData);
-              },
-              (errorMessage) => {
-                setFeedback({ type: 'error', message: `Classification failed: ${errorMessage}` });
-                setIsProcessing(false);
-                reject(new Error(errorMessage));
-              }
-            );
-          });
-        } else {
-          const errorData = await classifyResponse.json().catch(() => ({ message: `Classification request failed with status ${classifyResponse.status}` }));
-          throw new Error(errorData.message || errorData.error || `Classification request failed: ${classifyResponse.statusText}`);
-        }
-        
-        // Validate API response
-        if (!classifiedData.results || !Array.isArray(classifiedData.results)) {
-          throw new Error('Invalid response from classification API - no results array');
-        }
-
-        if (classifiedData.results.length !== uniqueTransactions.length) {
-          console.warn('Classification results count mismatch:', {
-            expectedCount: uniqueTransactions.length,
-            actualCount: classifiedData.results.length
-          });
-        }
-        
-        // Transform classified results back to full transaction format
-        const categorizedTransactions = classifiedData.results.map((result: any, index: number) => ({
-          ...uniqueTransactions[index],
-          id: `transaction-${index}`,
-          category: result.predicted_category || 'Uncategorized',
-          predicted_category: result.predicted_category,
-          similarity_score: result.similarity_score,
-          confidence: result.similarity_score || 0, // Use similarity_score as confidence
-          isValidated: false,
-          isSelected: false,
-          account: 'Imported'
-        }));
-
-        setValidationTransactions(categorizedTransactions);
-        setActiveTab('validate');
-        setFeedback({ 
-          type: 'success', 
-          message: `Categorized ${categorizedTransactions.length} transactions. Please review and validate!` 
-        });
-
-      } else {
-
-        // First upload or creating new spreadsheet - use generic auto-classify
-        const message = effectiveCreateNewMode 
-          ? 'Categorizing transactions for your new spreadsheet...'
-          : 'Using generic auto-classification for first upload...';
-        setFeedback({ type: 'success', message });
-        
-        // Prepare auto-classification data with validation
-        const autoClassifyTransactions = uniqueTransactions.map(t => ({
-          description: t.description,
-          money_in: t.money_in,
-          amount: t.amount
-        }));
-
-        // Final validation check - ensure no malformed data gets through
-        const autoMalformedTransactions = autoClassifyTransactions.filter((t, index) => {
-          const desc = String(t.description || '').toLowerCase().trim();
-          const amt = String(t.amount || '').toLowerCase().trim();
-          
-          // Check for header patterns
-          const headerPatterns = ['description', 'narrative', 'merchant', 'amount', 'date', 'reference', 'details', 'memo'];
-          const isHeaderDesc = headerPatterns.some(pattern => desc === pattern);
-          const isHeaderAmt = headerPatterns.some(pattern => amt === pattern);
-          
-          // Check for duplicate values
-          const isDuplicate = desc === amt && desc !== '';
-          
-          // Check if amount is not numeric
-          const isAmountNonNumeric = isNaN(parseFloat(amt)) && amt !== '';
-          
-          if (isHeaderDesc || isHeaderAmt || isDuplicate || isAmountNonNumeric) {
-            console.error(`❌ Malformed auto-classify transaction detected at index ${index}:`, {
-              description: t.description,
-              amount: t.amount,
-              money_in: t.money_in,
-              issues: {
-                isHeaderDesc,
-                isHeaderAmt,
-                isDuplicate,
-                isAmountNonNumeric
-              }
-            });
-            return true;
-          }
-          return false;
-        });
-
-        if (autoMalformedTransactions.length > 0) {
-          console.error(`❌ Found ${autoMalformedTransactions.length} malformed auto-classify transactions - aborting`);
-          setFeedback({ 
-            type: 'error', 
-            message: `❌ Data validation failed: Found ${autoMalformedTransactions.length} transactions with invalid data (likely CSV header data or incorrect column mapping). Please check your CSV file and column mapping.` 
-          });
-          return;
-        }
-
-        // Validate auto-classification data before sending
-        try {
-          validateClassifyRequest({ transactions: autoClassifyTransactions });
-        } catch (validationError) {
-          console.error('Auto-classification data validation failed:', validationError);
-          if (validationError instanceof Error && validationError.message.includes('mapping')) {
-            setShowMappingGuide(true);
-          }
-          setFeedback({ 
-            type: 'error', 
-            message: `❌ Auto-classification data validation failed: ${validationError instanceof Error ? validationError.message : 'Unknown error'}. Please check your CSV column mapping.` 
-          });
-          return;
-        }
-        
-        // Compression-based processing for better accuracy
-        // Processing all transactions together gives the AI better context and patterns
-        const totalTransactions = autoClassifyTransactions.length;
-        const useCompression = totalTransactions > 50; // Use compression for datasets larger than 50 transactions
-        
-        // Configure timeout based on dataset size and connection quality
-        const baseTimeout = 60000; // 1 minute base
-        const sizeMultiplier = Math.max(1, Math.ceil(totalTransactions / 100)); // Add time for larger datasets
-        
-        // Detect connection quality and adjust timeout accordingly
-        let connectionMultiplier = 1;
-        const connection = (navigator as any).connection;
-        if (connection) {
-          const effectiveType = connection.effectiveType;
-          console.log(`🌐 Connection: ${effectiveType}, downlink: ${connection.downlink}Mbps, rtt: ${connection.rtt}ms`);
-          
-          // Adjust timeout based on connection quality  
-          if (effectiveType === 'slow-2g') connectionMultiplier = 3;
-          else if (effectiveType === '2g') connectionMultiplier = 2.5;
-          else if (effectiveType === '3g') connectionMultiplier = 1.5;
-          
-          // Factor in RTT for geographic latency (like Brazil → SFO)
-          if (connection.rtt > 300) {
-            connectionMultiplier *= 1.5;
-            console.log(`🌍 High latency detected (${connection.rtt}ms), extending timeout`);
-          }
-        }
-        
-        const requestTimeout = Math.min(baseTimeout * sizeMultiplier * connectionMultiplier, 300000); // Max 5 minutes
-        
-        console.log(`⏱️ Setting request timeout to ${requestTimeout / 1000}s for ${totalTransactions} transactions (connection multiplier: ${connectionMultiplier})`);
-        
-        // Quick connection health check (non-blocking)
-        try {
-          console.log('🏥 Quick connection health check...');
-          const healthResponse = await fetch('/api/health', {
-            method: 'GET',
-            signal: AbortSignal.timeout(3000) // Quick 3s timeout
-          });
-          if (!healthResponse.ok) {
-            console.warn('⚠️ Health check warning - proceeding anyway');
-            setFeedback({ type: 'processing', message: 'Network conditions detected, processing may take longer...' });
-          }
-        } catch (healthError) {
-          console.warn('⚠️ Health check failed - proceeding anyway:', healthError);
-        }
-        
-        // Simple retry mechanism for network resilience
-        const makeRequestWithRetry = async (requestFn: () => Promise<Response>, requestType: string, maxRetries = 2): Promise<Response> => {
-          let lastError: Error | null = null;
-          
-          for (let attempt = 0; attempt <= maxRetries; attempt++) {
-            try {
-              if (attempt > 0) {
-                const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
-                console.log(`🔄 Retrying ${requestType} request (attempt ${attempt + 1}/${maxRetries + 1}) after ${delay}ms delay`);
-                setFeedback({ 
-                  type: 'processing', 
-                  message: `Network issue detected, retrying ${requestType} request (attempt ${attempt + 1}/${maxRetries + 1})...` 
-                });
-                await new Promise(resolve => setTimeout(resolve, delay));
-              }
-              
-              const response = await requestFn();
-              
-              // If we get here, request succeeded
-              if (attempt > 0) {
-                console.log(`✅ ${requestType} request succeeded on attempt ${attempt + 1}`);
-              }
-              
-              return response;
-              
-            } catch (error: unknown) {
-              const err = error as Error;
-              lastError = err;
-              
-              // Don't retry on timeout errors (they're already max timeout)
-              if (err instanceof DOMException && err.name === 'AbortError') {
-                console.log(`⏱️ ${requestType} request timed out on attempt ${attempt + 1}, not retrying`);
+            // If we get here, request succeeded
+            if (attempt > 0) {
+              console.log(`✅ ${requestType} request succeeded on attempt ${attempt + 1}`);
+            }
+            
+            return response;
+            
+          } catch (error: unknown) {
+            const err = error as Error;
+            lastError = err;
+            
+            // Don't retry on timeout errors (they're already max timeout)
+            if (err instanceof DOMException && err.name === 'AbortError') {
+              console.log(`⏱️ ${requestType} request timed out on attempt ${attempt + 1}, not retrying`);
+              throw err;
+            }
+            
+            // Don't retry on 4xx errors (client errors)
+            if (err instanceof TypeError && err.message.includes('fetch')) {
+              const errorStr = err.message.toLowerCase();
+              if (errorStr.includes('400') || errorStr.includes('401') || errorStr.includes('403') || errorStr.includes('404')) {
+                console.log(`❌ ${requestType} request failed with client error, not retrying:`, err.message);
                 throw err;
               }
-              
-              // Don't retry on 4xx errors (client errors)
-              if (err instanceof TypeError && err.message.includes('fetch')) {
-                const errorStr = err.message.toLowerCase();
-                if (errorStr.includes('400') || errorStr.includes('401') || errorStr.includes('403') || errorStr.includes('404')) {
-                  console.log(`❌ ${requestType} request failed with client error, not retrying:`, err.message);
-                  throw err;
-                }
-              }
-              
-              console.warn(`⚠️ ${requestType} request failed on attempt ${attempt + 1}:`, err.message);
-              
-              if (attempt === maxRetries) {
-                console.error(`❌ ${requestType} request failed after ${maxRetries + 1} attempts`);
-                throw lastError;
-              }
+            }
+            
+            console.warn(`⚠️ ${requestType} request failed on attempt ${attempt + 1}:`, err.message);
+            
+            if (attempt === maxRetries) {
+              console.error(`❌ ${requestType} request failed after ${maxRetries + 1} attempts`);
+              throw lastError;
             }
           }
-          
-          throw lastError || new Error(`${requestType} request failed after retries`);
-        };
-        
-        if (useCompression) {
-          console.log(`🗜️ Processing ${totalTransactions} transactions with compression for optimal accuracy`);
-          setFeedback({ 
-            type: 'processing', 
-            message: `Compressing and processing ${totalTransactions} transactions together for better categorization accuracy...` 
-          });
-          
-          try {
-            // Import compression library dynamically to avoid SSR issues
-            const { gzip } = await import('pako');
-            
-            // Prepare and compress the transaction data
-            const transactionData = JSON.stringify({ transactions: autoClassifyTransactions });
-            const originalSize = new TextEncoder().encode(transactionData).length;
-            
-            console.log(`Original data size: ${(originalSize / 1024 / 1024).toFixed(2)} MB`);
-            
-            // Compress the data with optimal settings for speed
-            const compressedData = gzip(transactionData, { 
-              level: 6, // Balanced compression level (0-9, 6 is good balance of speed/size)
-              windowBits: 15, // Standard window size  
-              memLevel: 8 // Good memory usage
-            });
-            const compressedSize = compressedData.length;
-            const compressionRatio = ((originalSize - compressedSize) / originalSize * 100).toFixed(1);
-            
-            console.log(`Compressed data size: ${(compressedSize / 1024 / 1024).toFixed(2)} MB (${compressionRatio}% reduction)`);
-            
-            // Create AbortController for timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => {
-              controller.abort();
-              console.log(`⏱️ Request aborted after ${requestTimeout / 1000}s timeout`);
-            }, requestTimeout);
-            
-            // Send compressed request with timeout
-            const compressedResponse = await makeRequestWithRetry(
-              () => fetch('/api/classify/auto-classify', {
-                method: 'POST',
-                headers: { 
-                  'Content-Type': 'application/json',
-                  'Content-Encoding': 'gzip',
-                  'Accept-Encoding': 'gzip, deflate, br',
-                  'Content-Length': compressedSize.toString(),
-                  'X-Original-Size': originalSize.toString(),
-                  'X-Compression-Ratio': compressionRatio,
-                  'Cache-Control': 'no-cache',
-                  'Connection': 'keep-alive',
-                },
-                body: compressedData,
-                signal: controller.signal
-              }),
-              'compressed request',
-              2
-            );
-            
-            // Clear timeout on successful response
-            clearTimeout(timeoutId);
-            
-            // Compressed processing successful, check response status
-            if (compressedResponse.status === 200) {
-              // Check if it's synchronous completion or asynchronous processing
-              const compressedResponseData = await compressedResponse.json();
-              
-              if (compressedResponse.ok && (compressedResponseData.status === 'completed' || compressedResponseData.success || compressedResponseData.results)) {
-                // Synchronous auto-classification completion - handle immediately
-                console.log('📥 Compressed auto-classify returned synchronous results, processing...');
-                setFeedback({ 
-                  type: 'success', 
-                  message: `Successfully categorized ${totalTransactions} transactions together! (${compressionRatio}% size reduction, better accuracy through unified processing)` 
-                });
-                
-                await handleAutoClassificationComplete(compressedResponseData, uniqueTransactions, effectiveCreateNewMode);
-                return; // Exit after successful compressed processing
-              } else {
-                throw new Error(compressedResponseData.message || 'Compressed auto-classification completed but with unexpected response format');
-              }
-            } else if (compressedResponse.status === 202) {
-              // Asynchronous compressed auto-classification - need to poll for completion
-              const compressedResponseData = await compressedResponse.json();
-              const { prediction_id, message: acceptanceMessage } = compressedResponseData;
-              
-              if (!prediction_id) {
-                throw new Error('Compressed auto-classification job started but did not return a prediction ID');
-              }
-              
-              setFeedback({ 
-                type: 'processing', 
-                message: `🚀 ${acceptanceMessage || `Compressed auto-classification job submitted. Processing your ${totalTransactions} transactions...`} (${compressionRatio}% size reduction)` 
-              });
-              
-              // Start non-blocking polling for compressed job
-              pollForCompletion(
-                prediction_id,
-                'auto_classification',
-                (pollingData) => {
-                  console.log('🔍 Compressed auto-classification polling callback received completed data:', {
-                    hasData: !!pollingData,
-                    dataStructure: Object.keys(pollingData || {}),
-                    hasResults: !!(pollingData?.results),
-                    resultsLength: pollingData?.results?.length || 0,
-                    fullData: pollingData
-                  });
-                  
-                  // This callback is only called when status === 'completed'
-                  setFeedback({ 
-                    type: 'success', 
-                    message: `Successfully categorized ${totalTransactions} transactions together! (${compressionRatio}% size reduction, better accuracy through unified processing)` 
-                  });
-                  
-                  handleAutoClassificationComplete(pollingData, uniqueTransactions, effectiveCreateNewMode);
-                },
-                (errorMessage) => {
-                  setFeedback({ type: 'error', message: `Compressed auto-classification failed: ${errorMessage}` });
-                  setIsProcessing(false);
-                }
-              );
-              return; // Exit early, polling will handle completion
-            } else {
-              const errorData = await compressedResponse.json().catch(() => ({ message: `Compressed auto-classification request failed with status ${compressedResponse.status}` }));
-              throw new Error(errorData.message || errorData.error || `Compressed auto-classification request failed: ${compressedResponse.statusText}`);
-            }
-            
-          } catch (compressionError) {
-            // Handle timeout errors specifically
-            if (compressionError instanceof DOMException && compressionError.name === 'AbortError') {
-              console.warn(`⏱️ Compressed request timed out after ${requestTimeout / 1000}s, trying uncompressed approach`);
-              setFeedback({ 
-                type: 'processing', 
-                message: `Request timed out with compression. Trying uncompressed processing for ${totalTransactions} transactions...` 
-              });
-            } else {
-              console.warn(`⚠️ Compression failed, trying uncompressed approach:`, compressionError);
-              setFeedback({ 
-                type: 'processing', 
-                message: `Compression failed, processing ${totalTransactions} transactions uncompressed...` 
-              });
-            }
-            // Fall through to uncompressed processing below
-          }
-        } else {
-          console.log(`📋 Processing ${totalTransactions} transactions without compression (small dataset)`);
         }
         
-        // Uncompressed processing (for small datasets or compression fallback)
-        console.log(`📋 Processing ${totalTransactions} transactions with standard approach (timeout: ${requestTimeout / 1000}s)`);
-        
-        // Create AbortController for timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-          controller.abort();
-          console.log(`⏱️ Uncompressed request aborted after ${requestTimeout / 1000}s timeout`);
-        }, requestTimeout);
+        throw lastError || new Error(`${requestType} request failed after retries`);
+      };
+      
+      if (useCompression) {
+        console.log(`🗜️ Processing ${totalTransactions} transactions with compression for optimal accuracy`);
+        setFeedback({ 
+          type: 'processing', 
+          message: `Compressing and processing ${totalTransactions} transactions together for better categorization accuracy...` 
+        });
         
         try {
-          const autoClassifyResponse = await makeRequestWithRetry(
-                         () => fetch('/api/classify/auto-classify', {
-               method: 'POST',
-               headers: { 
-                 'Content-Type': 'application/json',
-                 'Accept-Encoding': 'gzip, deflate, br',
-                 'Cache-Control': 'no-cache',
-                 'Connection': 'keep-alive',
-                 'X-Request-Type': 'uncompressed'
-               },
-               body: JSON.stringify({
-                 transactions: autoClassifyTransactions
-               }),
-               signal: controller.signal
-             }),
-            'uncompressed request',
+          // Import compression library dynamically to avoid SSR issues
+          const { gzip } = await import('pako');
+          
+          // Prepare and compress the transaction data
+          const transactionData = JSON.stringify({ transactions: autoClassifyTransactions });
+          const originalSize = new TextEncoder().encode(transactionData).length;
+          
+          console.log(`Original data size: ${(originalSize / 1024 / 1024).toFixed(2)} MB`);
+          
+          // Compress the data with optimal settings for speed
+          const compressedData = gzip(transactionData, { 
+            level: 6, // Balanced compression level (0-9, 6 is good balance of speed/size)
+            windowBits: 15, // Standard window size  
+            memLevel: 8 // Good memory usage
+          });
+          const compressedSize = compressedData.length;
+          const compressionRatio = ((originalSize - compressedSize) / originalSize * 100).toFixed(1);
+          
+          console.log(`Compressed data size: ${(compressedSize / 1024 / 1024).toFixed(2)} MB (${compressionRatio}% reduction)`);
+          
+          // Create AbortController for timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => {
+            controller.abort();
+            console.log(`⏱️ Request aborted after ${requestTimeout / 1000}s timeout`);
+          }, requestTimeout);
+          
+          // Send compressed request with timeout
+          const compressedResponse = await makeRequestWithRetry(
+            () => fetch('/api/classify/auto-classify', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Content-Encoding': 'gzip',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Content-Length': compressedSize.toString(),
+                'X-Original-Size': originalSize.toString(),
+                'X-Compression-Ratio': compressionRatio,
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+              },
+              body: compressedData,
+              signal: controller.signal
+            }),
+            'compressed request',
             2
           );
-
+          
           // Clear timeout on successful response
           clearTimeout(timeoutId);
-
-          let autoClassifiedData: any;
-
-          if (autoClassifyResponse.status === 200) {
+          
+          // Compressed processing successful, check response status
+          if (compressedResponse.status === 200) {
             // Check if it's synchronous completion or asynchronous processing
-            autoClassifiedData = await autoClassifyResponse.json();
+            const compressedResponseData = await compressedResponse.json();
             
-            if (autoClassifyResponse.ok && (autoClassifiedData.status === 'completed' || autoClassifiedData.success || autoClassifiedData.results)) {
+            if (compressedResponse.ok && (compressedResponseData.status === 'completed' || compressedResponseData.success || compressedResponseData.results)) {
               // Synchronous auto-classification completion - handle immediately
-              console.log('📥 Auto-classify returned synchronous results, processing...');
-              setFeedback({ type: 'processing', message: '🔄 Processing classification results...' });
+              console.log('📥 Compressed auto-classify returned synchronous results, processing...');
+              setFeedback({ 
+                type: 'success', 
+                message: `Successfully categorized ${totalTransactions} transactions together! (${compressionRatio}% size reduction, better accuracy through unified processing)` 
+              });
               
-              await handleAutoClassificationComplete(autoClassifiedData, uniqueTransactions, effectiveCreateNewMode);
-              return; // Exit early for synchronous completion
+              await handleAutoClassificationComplete(compressedResponseData, uniqueTransactions, effectiveCreateNewMode);
+              return; // Exit after successful compressed processing
             } else {
-              throw new Error(autoClassifiedData.message || 'Auto-classification completed but with unexpected response format');
+              throw new Error(compressedResponseData.message || 'Compressed auto-classification completed but with unexpected response format');
             }
-          } else if (autoClassifyResponse.status === 202) {
-            // Asynchronous auto-classification - need to poll for completion
-            const { prediction_id, message: acceptanceMessage } = await autoClassifyResponse.json();
+          } else if (compressedResponse.status === 202) {
+            // Asynchronous compressed auto-classification - need to poll for completion
+            const compressedResponseData = await compressedResponse.json();
+            const { prediction_id, message: acceptanceMessage } = compressedResponseData;
+            
             if (!prediction_id) {
-              throw new Error('Auto-classification job started but did not return a prediction ID');
+              throw new Error('Compressed auto-classification job started but did not return a prediction ID');
             }
             
-            setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Auto-classification job submitted. Processing your transactions...`}` });
+            setFeedback({ 
+              type: 'processing', 
+              message: `🚀 ${acceptanceMessage || `Compressed auto-classification job submitted. Processing your ${totalTransactions} transactions...`} (${compressionRatio}% size reduction)` 
+            });
             
-            // Start non-blocking polling  
-            pollForCompletion(
-              prediction_id,
-              'auto_classification', // Changed from 'classification' to 'auto_classification'
-              (pollingData) => {
-                console.log('🔍 Auto-classification polling callback received completed data:', {
-                  hasData: !!pollingData,
-                  dataStructure: Object.keys(pollingData || {}),
-                  hasResults: !!(pollingData?.results),
-                  resultsLength: pollingData?.results?.length || 0,
-                  fullData: pollingData
-                });
-                
-                // This callback is only called when status === 'completed'
-                // No need to check for processing status here
-                handleAutoClassificationComplete(pollingData, uniqueTransactions, effectiveCreateNewMode);
-              },
-              (errorMessage) => {
-                setFeedback({ type: 'error', message: `Auto-classification failed: ${errorMessage}` });
-                setIsProcessing(false);
-              }
-            );
-            return; // Exit early, polling will handle completion
+            // Start async polling - prevent finally block from executing
+            shouldExecuteFinally = false;
+            await handleAsyncPolling(prediction_id, uniqueTransactions, effectiveCreateNewMode);
+            return; // Polling has completed or errored
           } else {
-            const errorData = await autoClassifyResponse.json().catch(() => ({ message: `Auto-classification request failed with status ${autoClassifyResponse.status}` }));
-            throw new Error(errorData.message || errorData.error || `Auto-classification request failed: ${autoClassifyResponse.statusText}`);
+            const errorData = await compressedResponse.json().catch(() => ({ message: `Compressed auto-classification request failed with status ${compressedResponse.status}` }));
+            throw new Error(errorData.message || errorData.error || `Compressed auto-classification request failed: ${compressedResponse.statusText}`);
           }
           
-        } catch (uncompressedError) {
-          // Clear timeout in case of error
-          clearTimeout(timeoutId);
-          
-          // Handle timeout errors specifically
-          if (uncompressedError instanceof DOMException && uncompressedError.name === 'AbortError') {
-            throw new Error(`Request timed out after ${requestTimeout / 1000} seconds. This can happen with large datasets or slow connections. Please try again or contact support if the issue persists.`);
-          }
-          
-          // Re-throw other errors
-          throw uncompressedError;
+        } catch (compressedError) {
+          console.log('🗜️ Compressed processing failed, falling back to uncompressed approach:', compressedError);
+          setFeedback({ 
+            type: 'processing', 
+            message: 'Compression failed, falling back to standard processing...' 
+          });
         }
       }
 
+      // Fallback to uncompressed approach (or primary approach for smaller datasets)
+      setFeedback({ 
+        type: 'processing', 
+        message: `Processing ${totalTransactions} transactions with auto-classification...` 
+      });
+      
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        console.log(`⏱️ Request aborted after ${requestTimeout / 1000}s timeout`);
+      }, requestTimeout);
+
+      try {
+        const autoClassifyResponse = await makeRequestWithRetry(
+          () => fetch('/api/classify/auto-classify', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Accept-Encoding': 'gzip, deflate, br',
+              'Cache-Control': 'no-cache',
+              'Connection': 'keep-alive',
+              'X-Request-Type': 'uncompressed'
+            },
+            body: JSON.stringify({
+              transactions: autoClassifyTransactions
+            }),
+            signal: controller.signal
+          }),
+          'uncompressed request',
+          2
+        );
+
+        // Clear timeout on successful response
+        clearTimeout(timeoutId);
+
+        let autoClassifiedData: any;
+        
+        if (autoClassifyResponse.status === 200) {
+          autoClassifiedData = await autoClassifyResponse.json();
+          
+          if (autoClassifyResponse.ok && (autoClassifiedData.status === 'completed' || autoClassifiedData.success || autoClassifiedData.results)) {
+            console.log('📥 Uncompressed auto-classify returned synchronous results, processing...');
+            setFeedback({ 
+              type: 'success', 
+              message: `Successfully auto-classified ${totalTransactions} transactions!` 
+            });
+            
+            await handleAutoClassificationComplete(autoClassifiedData, uniqueTransactions, effectiveCreateNewMode);
+            return; // Exit after successful processing
+          } else {
+            throw new Error(autoClassifiedData.message || 'Auto-classification completed but with unexpected response format');
+          }
+        } else if (autoClassifyResponse.status === 202) {
+          // Asynchronous auto-classification - need to poll for completion
+          const { prediction_id, message: acceptanceMessage } = await autoClassifyResponse.json();
+          if (!prediction_id) {
+            throw new Error('Auto-classification job started but did not return a prediction ID');
+          }
+          
+          setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Auto-classification job submitted. Processing your transactions...`}` });
+          
+          // Start async polling - prevent finally block from executing
+          shouldExecuteFinally = false;
+          await handleAsyncPolling(prediction_id, uniqueTransactions, effectiveCreateNewMode);
+          return; // Polling has completed or errored
+        } else {
+          const errorData = await autoClassifyResponse.json().catch(() => ({ message: `Auto-classification request failed with status ${autoClassifyResponse.status}` }));
+          throw new Error(errorData.message || errorData.error || `Auto-classification request failed: ${autoClassifyResponse.statusText}`);
+        }
+        
+      } catch (uncompressedError) {
+        // Clear timeout in case of error
+        clearTimeout(timeoutId);
+        
+        // Handle timeout errors specifically
+        if (uncompressedError instanceof DOMException && uncompressedError.name === 'AbortError') {
+          throw new Error(`Request timed out after ${requestTimeout / 1000} seconds. This can happen with large datasets or slow connections. Please try again or contact support if the issue persists.`);
+        }
+        
+        // Re-throw other errors
+        throw uncompressedError;
+      }
+
+      // This code should only be reached for successful synchronous processing
       // Reset CSV processing state after successful categorization
       setTimeout(() => {
         setUploadedFile(null);
@@ -1950,27 +1479,31 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         errorMessage += `\n\n💡 Processing all transactions together provides better categorization accuracy by allowing the AI to see patterns across your entire dataset.`;
       }
       
-             // Log additional debug info for timeout issues
-       if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
-         console.error('🐛 Timeout Debug Info:', {
-           fileSize: uploadedFile?.size || 0,
-           fileName: uploadedFile?.name || 'unknown',
-           userAgent: navigator.userAgent,
-           connection: (navigator as any).connection ? {
-             effectiveType: (navigator as any).connection.effectiveType,
-             downlink: (navigator as any).connection.downlink,
-             rtt: (navigator as any).connection.rtt
-           } : 'unknown',
-           timestamp: new Date().toISOString()
-         });
-       }
+      // Log additional debug info for timeout issues
+      if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+        console.error('🐛 Timeout Debug Info:', {
+          fileSize: uploadedFile?.size || 0,
+          fileName: uploadedFile?.name || 'unknown',
+          userAgent: navigator.userAgent,
+          connection: (navigator as any).connection ? {
+            effectiveType: (navigator as any).connection.effectiveType,
+            downlink: (navigator as any).connection.downlink,
+            rtt: (navigator as any).connection.rtt
+          } : 'unknown',
+          timestamp: new Date().toISOString()
+        });
+      }
       
       setFeedback({ 
         type: 'error', 
         message: errorMessage
       });
     } finally {
-      setIsProcessing(false);
+      // Only call setIsProcessing(false) if we're NOT starting async polling
+      // Async polling cases prevent this by setting shouldExecuteFinally = false
+      if (shouldExecuteFinally) {
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -1986,11 +1519,25 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   };
 
   const handleSelectAll = () => {
-    if (selectedTransactions.size === validationTransactions.length) {
-      setSelectedTransactions(new Set());
+    // Get current page transactions
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const currentPageTransactions = validationTransactions.slice(startIndex, endIndex);
+    
+    // Check if all current page transactions are selected
+    const allCurrentPageSelected = currentPageTransactions.every(t => selectedTransactions.has(t.id));
+    
+    const newSelected = new Set(selectedTransactions);
+    
+    if (allCurrentPageSelected) {
+      // Deselect all current page transactions
+      currentPageTransactions.forEach(t => newSelected.delete(t.id));
     } else {
-      setSelectedTransactions(new Set(validationTransactions.map(t => t.id)));
+      // Select all current page transactions
+      currentPageTransactions.forEach(t => newSelected.add(t.id));
     }
+    
+    setSelectedTransactions(newSelected);
   };
 
   const handleValidateTransaction = (transactionId: string) => {
@@ -2043,6 +1590,63 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     setTimeout(() => handleCompleteValidation(), 100);
   };
 
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    // Reset to first page when changing page size
+    setCurrentPage(1);
+  };
+
+  // Get filtered, sorted, and paginated data
+  const getFilteredSortedTransactions = () => {
+    return validationTransactions
+      .filter(t => {
+        if (showOnlyUnvalidated && t.isValidated) return false;
+        if (filterCategory !== 'all' && t.category !== filterCategory) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        let aVal, bVal;
+        switch (sortBy) {
+          case 'date':
+            aVal = new Date(a.date).getTime();
+            bVal = new Date(b.date).getTime();
+            break;
+          case 'amount':
+            aVal = Math.abs(a.amount);
+            bVal = Math.abs(b.amount);
+            break;
+          case 'confidence':
+            aVal = a.confidence || 0;
+            bVal = b.confidence || 0;
+            break;
+          default:
+            return 0;
+        }
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+      });
+  };
+
+  const getPaginatedTransactions = () => {
+    const filteredSorted = getFilteredSortedTransactions();
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredSorted.slice(startIndex, endIndex);
+  };
+
+  const getTotalPages = () => {
+    const filteredCount = getFilteredSortedTransactions().length;
+    return Math.ceil(filteredCount / pageSize);
+  };
+
+  const getValidatedCount = () => {
+    return validationTransactions.filter(t => t.isValidated).length;
+  };
+
   const handleCompleteValidation = async () => {
     setIsProcessing(true);
     setFeedback({ type: 'processing', message: 'Writing validated transactions to your sheet...' });
@@ -2088,6 +1692,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       // Clear validation state
       setValidationTransactions([]);
       setSelectedTransactions(new Set());
+      setCurrentPage(1);
       
       // Close drawer and navigate back to dashboard
       setTimeout(() => {
@@ -2333,6 +1938,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         {activeTab === 'validate' && validationTransactions.length > 0 && (
           <ValidateTransactionsTab
             validationTransactions={validationTransactions}
+            paginatedTransactions={getPaginatedTransactions()}
             selectedTransactions={selectedTransactions}
             editingTransaction={editingTransaction}
             editCategory={editCategory}
@@ -2345,6 +1951,11 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             newSpreadsheetCurrency={newSpreadsheetCurrency}
             isProcessing={isProcessing}
             isValidatingAllRemaining={isValidatingAllRemaining}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalPages={getTotalPages()}
+            validatedCount={getValidatedCount()}
+            totalFilteredItems={getFilteredSortedTransactions().length}
             onTransactionSelect={handleTransactionSelect}
             onSelectAll={handleSelectAll}
             onValidateTransaction={handleValidateTransaction}
@@ -2360,6 +1971,8 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             onShowOnlyUnvalidatedChange={setShowOnlyUnvalidated}
             onCompleteValidation={handleCompleteValidation}
             onCurrencySelection={handleCurrencySelection}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
           />
         )}
 
