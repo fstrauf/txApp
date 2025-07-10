@@ -5,7 +5,7 @@
  * alongside the rules-based engine insights.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box } from '@/components/ui/Box';
 import { PrimaryButton } from '@/app/personal-finance/shared/PrimaryButton';
 import { useFinancialAdvisor, useFinancialHealth } from '../ai/useFinancialAdvisor';
@@ -49,13 +49,17 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
   const [customQuestion, setCustomQuestion] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
-  // Auto-trigger AI advice when component mounts and has valid data
+  // Use ref to track if we've already triggered auto-advice to prevent duplicate calls
+  const hasTriggeredAutoAdvice = useRef(false);
+
+  // Optimized auto-trigger - only runs once when conditions are met
   useEffect(() => {
-    if (hasData && !insight && !loading && !error) {
+    if (hasData && !insight && !loading && !error && !hasTriggeredAutoAdvice.current) {
       console.log('Auto-triggering AI advice for userData:', { hasData, insight: !!insight, loading, error });
       getAdvice();
+      hasTriggeredAutoAdvice.current = true;
     }
-  }, [hasData, insight, loading, error, getAdvice]);
+  }, [hasData, insight, loading, error]); // Removed getAdvice dependency - it's stable
 
   if (!hasData) {
     return (
@@ -251,7 +255,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
             {/* Recommendations */}
             <div className="space-y-3">
               <h4 className="font-semibold text-gray-800"><FlagIcon className="h-5 w-5 text-indigo-600 mr-2 inline" /> Recommendations</h4>
-              {insight.recommendations.map((rec: AIRecommendation, index: number) => (
+              {insight.recommendations?.map((rec: AIRecommendation, index: number) => (
                 <div
                   key={rec.id || index}
                   className={`p-4 rounded-lg border ${
@@ -305,7 +309,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
             </div>
 
             {/* Next Steps */}
-            {insight.nextSteps.length > 0 && (
+            {insight.nextSteps?.length > 0 && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <h4 className="font-semibold text-green-800 mb-2"><DocumentTextIcon className="h-5 w-5 text-green-600 mr-2 inline" /> Next Steps</h4>
                 <ul className="space-y-1">
@@ -320,7 +324,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
             )}
 
             {/* Educational Topics */}
-            {insight.educationalTopics.length > 0 && (
+            {insight.educationalTopics?.length > 0 && (
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                 <h4 className="font-semibold text-purple-800 mb-2"><AcademicCapIcon className="h-5 w-5 text-purple-600 mr-2 inline" /> Learn More About</h4>
                 <div className="flex flex-wrap gap-2">
@@ -337,7 +341,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
             )}
 
             {/* Transaction Insights */}
-            {insight.transactionInsights && (
+            {insight?.transactionInsights && (
               <div className="space-y-4 mt-6 pt-6 border-t border-gray-200">
                 <h4 className="font-semibold text-gray-800 mb-3">
                   <ChartBarIcon className="h-5 w-5 text-indigo-600 mr-2 inline" />
@@ -350,7 +354,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
                 </div>
 
                 {/* Recurring Expenses */}
-                {insight.transactionInsights.recurringExpenses.length > 0 && (
+                {insight.transactionInsights.recurringExpenses?.length > 0 && (
                   <div className="mb-4">
                     <h5 className="font-medium text-gray-700 mb-2">💰 Recurring Expenses That Add Up</h5>
                     <div className="grid gap-3 md:grid-cols-2">
@@ -379,7 +383,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
                 )}
 
                 {/* Top Savings Opportunities */}
-                {insight.transactionInsights.topSavingsOpportunities.length > 0 && (
+                {insight.transactionInsights.topSavingsOpportunities?.length > 0 && (
                   <div className="mb-4">
                     <h5 className="font-medium text-gray-700 mb-2">🎯 Top Savings Opportunities</h5>
                     <div className="space-y-2">
@@ -412,7 +416,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
                 )}
 
                 {/* Category Insights */}
-                {insight.transactionInsights.categoryInsights.length > 0 && (
+                {insight.transactionInsights.categoryInsights?.length > 0 && (
                   <div>
                     <h5 className="font-medium text-gray-700 mb-2">📊 Category Spending Patterns</h5>
                     <div className="grid gap-3 md:grid-cols-2">
@@ -455,104 +459,7 @@ export const AIFinancialInsights: React.FC<AIFinancialInsightsProps> = ({
             </div>
           </div>
 
-          {/* Keep the old structure but remove the duplicated content */}
-          {insight.transactionInsights && false && (
-            <div className="space-y-4 mt-6 pt-6 border-t border-gray-200">
-              <h4 className="font-semibold text-gray-800 mb-3">
-                <ChartBarIcon className="h-5 w-5 text-indigo-600 mr-2 inline" />
-                Smart Transaction Analysis
-              </h4>
-              
-              {/* Summary */}
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 mb-4">
-                <p className="text-purple-800 font-medium">{insight.transactionInsights.summary}</p>
-              </div>
 
-              {/* Recurring Expenses */}
-              {insight.transactionInsights.recurringExpenses.length > 0 && (
-                <div className="mb-4">
-                  <h5 className="font-medium text-gray-700 mb-2">💰 Recurring Expenses That Add Up</h5>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {insight.transactionInsights.recurringExpenses.slice(0, 4).map((expense: any, index: number) => (
-                      <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900 text-sm">{expense.category}</p>
-                            <p className="text-xs text-gray-600">{expense.pattern}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-red-600">${expense.annualCost.toFixed(0)}/year</p>
-                            <p className="text-xs text-gray-500">${expense.averageAmount.toFixed(2)} avg</p>
-                          </div>
-                        </div>
-                        <div className="bg-blue-50 border-l-4 border-blue-400 p-2">
-                          <p className="text-xs text-blue-800">{expense.insight}</p>
-                        </div>
-                        <div className="bg-green-50 border-l-4 border-green-400 p-2 mt-2">
-                          <p className="text-xs text-green-800"><strong>Action:</strong> {expense.actionable}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Top Savings Opportunities */}
-              {insight.transactionInsights.topSavingsOpportunities.length > 0 && (
-                <div className="mb-4">
-                  <h5 className="font-medium text-gray-700 mb-2">🎯 Top Savings Opportunities</h5>
-                  <div className="space-y-2">
-                    {insight.transactionInsights.topSavingsOpportunities.slice(0, 3).map((opportunity: any, index: number) => (
-                      <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium text-gray-900 text-sm">{opportunity.title}</p>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                opportunity.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
-                                opportunity.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'
-                              }`}>
-                                {opportunity.difficulty}
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-600 mb-2">{opportunity.description}</p>
-                            <p className="text-xs text-blue-800">{opportunity.recommendation}</p>
-                          </div>
-                          <div className="text-right ml-4">
-                            <p className="font-semibold text-green-600">${opportunity.savings.toFixed(0)}</p>
-                            <p className="text-xs text-gray-500">potential savings</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Category Insights */}
-              {insight.transactionInsights.categoryInsights.length > 0 && (
-                <div>
-                  <h5 className="font-medium text-gray-700 mb-2">📊 Category Spending Patterns</h5>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {insight.transactionInsights.categoryInsights.slice(0, 4).map((category: any, index: number) => (
-                      <div key={index} className="bg-white border border-gray-200 rounded-lg p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <p className="font-medium text-gray-900 text-sm">{category.title}</p>
-                          <div className="text-right">
-                            <p className="font-semibold text-blue-600">${category.savings.toFixed(0)}</p>
-                            <p className="text-xs text-gray-500">potential</p>
-                          </div>
-                        </div>
-                        <p className="text-xs text-gray-600 mb-2">{category.description}</p>
-                        <p className="text-xs text-green-800 bg-green-50 p-2 rounded">{category.recommendation}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         )}
       </Box>
     </div>

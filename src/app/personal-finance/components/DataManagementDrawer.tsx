@@ -266,7 +266,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   // Polling for completion similar to LunchMoney
   const pollForCompletion = async (
     predictionId: string,
-    operationType: 'training' | 'classification',
+    operationType: 'training' | 'classification' | 'auto_classification',
     onSuccess: (results?: any) => void,
     onError: (message: string) => void
   ) => {
@@ -279,7 +279,8 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         pollCount++;
         await new Promise(resolve => setTimeout(resolve, pollInterval));
         
-        const pollingUrl = `/api/classify/status/${predictionId}`;
+        // Use correct URL format with query parameters
+        const pollingUrl = `/api/classify/status?job_id=${predictionId}&type=${operationType}`;
         console.log(`[Poll] Attempting fetch (${pollCount}/${maxPolls}): ${pollingUrl}`);
 
         try {
@@ -371,32 +372,85 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   const handleAutoClassificationComplete = async (autoClassifiedData: any, uniqueTransactions: any[], isCreateNewMode: boolean) => {
     try {
       console.log('🎯 Starting handleAutoClassificationComplete with:', {
-        resultsCount: autoClassifiedData.results?.length || 0,
+        responseStructure: Object.keys(autoClassifiedData || {}),
+        resultsCount: autoClassifiedData?.results?.length || 0,
         transactionsCount: uniqueTransactions.length,
         responseSize: JSON.stringify(autoClassifiedData).length,
-        isCreateNewMode
+        isCreateNewMode,
+        fullResponse: autoClassifiedData
       });
 
-      // Validate API response
-      if (!autoClassifiedData.results || !Array.isArray(autoClassifiedData.results)) {
-        throw new Error('Invalid response from auto-classification API - no results array');
+      // Enhanced validation with better error reporting
+      if (!autoClassifiedData) {
+        throw new Error('Auto-classification response is null or undefined');
       }
 
-      if (autoClassifiedData.results.length !== uniqueTransactions.length) {
-        console.warn('Auto-classification results count mismatch:', {
-          expectedCount: uniqueTransactions.length,
-          actualCount: autoClassifiedData.results.length
-        });
+      // Check if results exist in different possible locations
+      let results = autoClassifiedData.results;
+      
+      // If results is not directly available, check other possible locations
+      if (!results && autoClassifiedData.data?.results) {
+        results = autoClassifiedData.data.results;
+        console.log('📍 Found results in data.results');
       }
       
-      console.log('🔄 Processing large dataset, this may take a moment...');
+      if (!results && autoClassifiedData.prediction_results) {
+        results = autoClassifiedData.prediction_results;
+        console.log('📍 Found results in prediction_results');
+      }
+
+      if (!results && autoClassifiedData.classifications) {
+        results = autoClassifiedData.classifications;
+        console.log('📍 Found results in classifications');
+      }
+
+      // For auto-classification, results might be returned directly in the response without nesting
+      if (!results && Array.isArray(autoClassifiedData)) {
+        results = autoClassifiedData;
+        console.log('📍 Results found as direct array response');
+      }
+
+      if (!results || !Array.isArray(results)) {
+        console.error('❌ Invalid results structure:', {
+          hasResults: !!autoClassifiedData.results,
+          resultsType: typeof autoClassifiedData.results,
+          isArray: Array.isArray(autoClassifiedData.results),
+          availableKeys: Object.keys(autoClassifiedData || {}),
+          fullResponse: autoClassifiedData
+        });
+        
+        throw new Error(
+          `Invalid response from auto-classification API - no results array found. ` +
+          `Available fields: ${Object.keys(autoClassifiedData || {}).join(', ')}. ` +
+          `Expected 'results' to be an array but got: ${typeof autoClassifiedData.results}`
+        );
+      }
+
+      if (results.length !== uniqueTransactions.length) {
+        console.warn('⚠️ Auto-classification results count mismatch:', {
+          expectedCount: uniqueTransactions.length,
+          actualCount: results.length,
+          difference: Math.abs(results.length - uniqueTransactions.length)
+        });
+        
+        // If there's a significant mismatch, this might indicate a serious issue
+        if (Math.abs(results.length - uniqueTransactions.length) > uniqueTransactions.length * 0.1) {
+          console.error('❌ Significant results count mismatch detected');
+          throw new Error(
+            `Significant mismatch in auto-classification results: expected ${uniqueTransactions.length} results, ` +
+            `but got ${results.length}. This indicates a processing error.`
+          );
+        }
+      }
+      
+      console.log('🔄 Processing auto-classification results...');
       
       // For large datasets, process in chunks to avoid browser freezing
       const CHUNK_SIZE = 500;
       const categorizedTransactions: any[] = [];
       
-      for (let i = 0; i < autoClassifiedData.results.length; i += CHUNK_SIZE) {
-        const chunk = autoClassifiedData.results.slice(i, i + CHUNK_SIZE);
+      for (let i = 0; i < results.length; i += CHUNK_SIZE) {
+        const chunk = results.slice(i, i + CHUNK_SIZE);
         const uniqueChunk = uniqueTransactions.slice(i, i + CHUNK_SIZE);
         
         const chunkProcessed = chunk.map((result: any, chunkIndex: number) => ({
@@ -414,11 +468,11 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         categorizedTransactions.push(...chunkProcessed);
         
         // Give browser time to breathe between chunks
-        if (i + CHUNK_SIZE < autoClassifiedData.results.length) {
+        if (i + CHUNK_SIZE < results.length) {
           await new Promise(resolve => setTimeout(resolve, 10));
         }
         
-        console.log(`📊 Processed chunk ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(autoClassifiedData.results.length / CHUNK_SIZE)}`);
+        console.log(`📊 Processed chunk ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(results.length / CHUNK_SIZE)}`);
       }
 
       console.log('📋 Setting validation transactions state...');
@@ -1321,12 +1375,24 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             classifiedData = await new Promise((resolve, reject) => {
               pollForCompletion(
                 prediction_id,
-                'classification',
+                'classification', // Regular classification endpoint, not auto-classification
                 (pollingData) => {
-                  setFeedback({ type: 'success', message: 'Classification completed via polling!' });
-                  resolve(pollingData || { results: [] });
+                  console.log('🔍 Classification polling callback received completed data:', {
+                    hasData: !!pollingData,
+                    dataStructure: Object.keys(pollingData || {}),
+                    hasResults: !!(pollingData?.results),
+                    resultsLength: pollingData?.results?.length || 0,
+                    fullData: pollingData
+                  });
+                  
+                  // This callback is only called when status === 'completed'
+                  // No need to check for processing status here
+                  handleAutoClassificationComplete(pollingData, uniqueTransactions, effectiveCreateNewMode);
+                  resolve(pollingData);
                 },
                 (errorMessage) => {
+                  setFeedback({ type: 'error', message: `Classification failed: ${errorMessage}` });
+                  setIsProcessing(false);
                   reject(new Error(errorMessage));
                 }
               );
@@ -1347,12 +1413,24 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           classifiedData = await new Promise((resolve, reject) => {
             pollForCompletion(
               prediction_id,
-              'classification',
+              'classification', // Regular classification endpoint, not auto-classification
               (pollingData) => {
-                setFeedback({ type: 'success', message: 'Classification completed via polling!' });
-                resolve(pollingData || { results: [] });
+                console.log('🔍 Classification polling callback received completed data:', {
+                  hasData: !!pollingData,
+                  dataStructure: Object.keys(pollingData || {}),
+                  hasResults: !!(pollingData?.results),
+                  resultsLength: pollingData?.results?.length || 0,
+                  fullData: pollingData
+                });
+                
+                // This callback is only called when status === 'completed'
+                // No need to check for processing status here
+                handleAutoClassificationComplete(pollingData, uniqueTransactions, effectiveCreateNewMode);
+                resolve(pollingData);
               },
               (errorMessage) => {
+                setFeedback({ type: 'error', message: `Classification failed: ${errorMessage}` });
+                setIsProcessing(false);
                 reject(new Error(errorMessage));
               }
             );
@@ -1628,23 +1706,69 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             // Clear timeout on successful response
             clearTimeout(timeoutId);
             
-            if (!compressedResponse.ok) {
-              const errorData = await compressedResponse.json().catch(() => ({ 
-                message: `Compressed request failed with status ${compressedResponse.status}` 
-              }));
-              throw new Error(errorData.message || `Compressed request failed: ${compressedResponse.statusText}`);
+            // Compressed processing successful, check response status
+            if (compressedResponse.status === 200) {
+              // Check if it's synchronous completion or asynchronous processing
+              const compressedResponseData = await compressedResponse.json();
+              
+              if (compressedResponse.ok && (compressedResponseData.status === 'completed' || compressedResponseData.success || compressedResponseData.results)) {
+                // Synchronous auto-classification completion - handle immediately
+                console.log('📥 Compressed auto-classify returned synchronous results, processing...');
+                setFeedback({ 
+                  type: 'success', 
+                  message: `Successfully categorized ${totalTransactions} transactions together! (${compressionRatio}% size reduction, better accuracy through unified processing)` 
+                });
+                
+                await handleAutoClassificationComplete(compressedResponseData, uniqueTransactions, effectiveCreateNewMode);
+                return; // Exit after successful compressed processing
+              } else {
+                throw new Error(compressedResponseData.message || 'Compressed auto-classification completed but with unexpected response format');
+              }
+            } else if (compressedResponse.status === 202) {
+              // Asynchronous compressed auto-classification - need to poll for completion
+              const compressedResponseData = await compressedResponse.json();
+              const { prediction_id, message: acceptanceMessage } = compressedResponseData;
+              
+              if (!prediction_id) {
+                throw new Error('Compressed auto-classification job started but did not return a prediction ID');
+              }
+              
+              setFeedback({ 
+                type: 'processing', 
+                message: `🚀 ${acceptanceMessage || `Compressed auto-classification job submitted. Processing your ${totalTransactions} transactions...`} (${compressionRatio}% size reduction)` 
+              });
+              
+              // Start non-blocking polling for compressed job
+              pollForCompletion(
+                prediction_id,
+                'auto_classification',
+                (pollingData) => {
+                  console.log('🔍 Compressed auto-classification polling callback received completed data:', {
+                    hasData: !!pollingData,
+                    dataStructure: Object.keys(pollingData || {}),
+                    hasResults: !!(pollingData?.results),
+                    resultsLength: pollingData?.results?.length || 0,
+                    fullData: pollingData
+                  });
+                  
+                  // This callback is only called when status === 'completed'
+                  setFeedback({ 
+                    type: 'success', 
+                    message: `Successfully categorized ${totalTransactions} transactions together! (${compressionRatio}% size reduction, better accuracy through unified processing)` 
+                  });
+                  
+                  handleAutoClassificationComplete(pollingData, uniqueTransactions, effectiveCreateNewMode);
+                },
+                (errorMessage) => {
+                  setFeedback({ type: 'error', message: `Compressed auto-classification failed: ${errorMessage}` });
+                  setIsProcessing(false);
+                }
+              );
+              return; // Exit early, polling will handle completion
+            } else {
+              const errorData = await compressedResponse.json().catch(() => ({ message: `Compressed auto-classification request failed with status ${compressedResponse.status}` }));
+              throw new Error(errorData.message || errorData.error || `Compressed auto-classification request failed: ${compressedResponse.statusText}`);
             }
-            
-            const compressedResponseData = await compressedResponse.json();
-            
-            console.log(`🎉 Compressed processing successful: ${compressedResponseData.results?.length || 0} results`);
-            setFeedback({ 
-              type: 'success', 
-              message: `Successfully categorized ${totalTransactions} transactions together! (${compressionRatio}% size reduction, better accuracy through unified processing)` 
-            });
-            
-            await handleAutoClassificationComplete(compressedResponseData, uniqueTransactions, effectiveCreateNewMode);
-            return; // Exit after successful compressed processing
             
           } catch (compressionError) {
             // Handle timeout errors specifically
@@ -1728,9 +1852,19 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             // Start non-blocking polling  
             pollForCompletion(
               prediction_id,
-              'classification',
+              'auto_classification', // Changed from 'classification' to 'auto_classification'
               (pollingData) => {
-                handleAutoClassificationComplete(pollingData || { results: [] }, uniqueTransactions, effectiveCreateNewMode);
+                console.log('🔍 Auto-classification polling callback received completed data:', {
+                  hasData: !!pollingData,
+                  dataStructure: Object.keys(pollingData || {}),
+                  hasResults: !!(pollingData?.results),
+                  resultsLength: pollingData?.results?.length || 0,
+                  fullData: pollingData
+                });
+                
+                // This callback is only called when status === 'completed'
+                // No need to check for processing status here
+                handleAutoClassificationComplete(pollingData, uniqueTransactions, effectiveCreateNewMode);
               },
               (errorMessage) => {
                 setFeedback({ type: 'error', message: `Auto-classification failed: ${errorMessage}` });

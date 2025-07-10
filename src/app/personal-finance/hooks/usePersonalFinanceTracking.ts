@@ -15,59 +15,64 @@ export const usePersonalFinanceTracking = ({ currentScreen, progress }: Personal
   const posthog = usePostHog();
   const { userData } = usePersonalFinanceStore();
 
-  // Use refs to prevent duplicate tracking calls
-  const lastTrackedScreen = useRef<Screen | null>(null);
-  const lastTrackedProgress = useRef<number>(-1);
-  const lastUserDataHash = useRef<string>('');
+  // Use refs to track previous values - prevents infinite loops
+  const prevScreen = useRef<Screen | null>(null);
+  const prevProgress = useRef<number>(-1);
+  const prevUserDataRef = useRef({
+    hasIncome: false,
+    hasSpending: false,
+    hasSavings: false,
+    hasTransactions: false
+  });
 
-  // Create stable user data properties to prevent infinite loops
-  const stableUserData = useMemo(() => ({
-    has_income_data: Boolean(userData.income && userData.income > 0),
-    has_spending_data: Boolean(userData.spending && userData.spending > 0),
-    has_savings_data: Boolean(userData.savings && userData.savings > 0),
-    has_transactions: Boolean(userData.transactions && userData.transactions.length > 0)
-  }), [
-    !!userData.income && userData.income > 0,
-    !!userData.spending && userData.spending > 0,
-    !!userData.savings && userData.savings > 0,
-    !!userData.transactions?.length
-  ]);
+  // Extract stable boolean values - these are primitives, won't cause re-renders
+  const hasIncome = Boolean(userData.income && userData.income > 0);
+  const hasSpending = Boolean(userData.spending && userData.spending > 0);
+  const hasSavings = Boolean(userData.savings && userData.savings > 0);
+  const hasTransactions = Boolean(userData.transactions && userData.transactions.length > 0);
 
-  // Create a hash of the current state to detect real changes
-  const currentStateHash = useMemo(() => {
-    return `${currentScreen}-${progress}-${JSON.stringify(stableUserData)}`;
-  }, [currentScreen, progress, stableUserData]);
-
-  // Track screen views when screen changes - with duplicate prevention
+  // Track screen views only when something actually changes
   useEffect(() => {
     if (!posthog || !currentScreen) return;
 
-    // Only track if something actually changed
-    if (currentStateHash === lastUserDataHash.current) return;
+    // Check if anything actually changed using primitive comparisons
+    const screenChanged = currentScreen !== prevScreen.current;
+    const progressChanged = progress !== prevProgress.current;
+    const userDataChanged = 
+      hasIncome !== prevUserDataRef.current.hasIncome ||
+      hasSpending !== prevUserDataRef.current.hasSpending ||
+      hasSavings !== prevUserDataRef.current.hasSavings ||
+      hasTransactions !== prevUserDataRef.current.hasTransactions;
 
-    // Update tracking refs
-    lastTrackedScreen.current = currentScreen;
-    lastTrackedProgress.current = progress;
-    lastUserDataHash.current = currentStateHash;
+    // Only track if something meaningful changed
+    if (screenChanged || progressChanged || userDataChanged) {
+      // Update refs to current values
+      prevScreen.current = currentScreen;
+      prevProgress.current = progress;
+      prevUserDataRef.current = { hasIncome, hasSpending, hasSavings, hasTransactions };
 
-    // Track screen view
-    posthog.capture('personal_finance_screen_view', {
-      screen: currentScreen,
-      progress_percentage: progress,
-      ...stableUserData,
-      flow_position: currentScreen,
-      timestamp: new Date().toISOString()
-    });
+      // Track screen view with stable data
+      posthog.capture('personal_finance_screen_view', {
+        screen: currentScreen,
+        progress_percentage: progress,
+        has_income_data: hasIncome,
+        has_spending_data: hasSpending,
+        has_savings_data: hasSavings,
+        has_transactions: hasTransactions,
+        flow_position: currentScreen,
+        timestamp: new Date().toISOString()
+      });
 
-    // Set user properties - but only if they've actually changed
-    posthog.setPersonProperties({
-      'last_pf_screen': currentScreen,
-      'pf_flow_progress': progress,
-      'pf_has_completed_income': stableUserData.has_income_data,
-      'pf_has_completed_spending': stableUserData.has_spending_data,
-      'pf_has_completed_savings': stableUserData.has_savings_data
-    });
-  }, [currentStateHash, posthog]); // Only depend on the stable hash
+      // Set user properties - only when they've actually changed
+      posthog.setPersonProperties({
+        'last_pf_screen': currentScreen,
+        'pf_flow_progress': progress,
+        'pf_has_completed_income': hasIncome,
+        'pf_has_completed_spending': hasSpending,
+        'pf_has_completed_savings': hasSavings
+      });
+    }
+  }, [currentScreen, progress, hasIncome, hasSpending, hasSavings, hasTransactions, posthog]); // Only primitive dependencies
 
   // Track specific actions within screens
   const trackAction = useCallback((action: string, properties: Record<string, any> = {}) => {

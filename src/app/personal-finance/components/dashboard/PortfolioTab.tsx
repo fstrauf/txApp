@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+'use client';
+
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ChartPieIcon, ArrowTrendingUpIcon, BuildingLibraryIcon, CalendarIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { DonutChart } from '@/components/ui/DonutChart';
 import { StackedAreaChart } from '@/components/ui/StackedAreaChart';
@@ -33,17 +35,32 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
   const quarters = rawData?.quarters;
   const latestQuarter = rawData?.latestQuarter;
 
+  // Use refs to track previous values and prevent unnecessary updates
+  const prevLatestQuarter = useRef<string>('');
+  const prevQuarters = useRef<string[]>([]);
+  
   // State for selected quarter, initialized with the latest quarter from props
   const [selectedQuarter, setSelectedQuarter] = useState<string>(latestQuarter || '');
   
-  // When the data updates, if the current selection is invalid or empty, reset to the latest quarter
-  React.useEffect(() => {
-    if (quarters && latestQuarter) {
+  // Optimized effect - only updates when quarters actually change (not on every render)
+  useEffect(() => {
+    if (!quarters || !latestQuarter) return;
+    
+    // Check if quarters or latestQuarter actually changed
+    const quartersChanged = JSON.stringify(quarters) !== JSON.stringify(prevQuarters.current);
+    const latestQuarterChanged = latestQuarter !== prevLatestQuarter.current;
+    
+    if (quartersChanged || latestQuarterChanged) {
+      // Only update if current selection is invalid or empty
       if (!selectedQuarter || !quarters.includes(selectedQuarter)) {
         setSelectedQuarter(latestQuarter);
       }
+      
+      // Update refs to track current values
+      prevQuarters.current = quarters;
+      prevLatestQuarter.current = latestQuarter;
     }
-  }, [quarters, latestQuarter, selectedQuarter]);
+  }, [quarters, latestQuarter]); // Removed selectedQuarter dependency to prevent cascading updates
   
   // Filter and calculate data for selected quarter using centralized calculation
   const displayData = useMemo(() => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useDashboardStatus } from './useDashboardStatus';
 import { useSpreadsheetRefresh } from './useSpreadsheetRefresh';
@@ -16,6 +16,12 @@ export const useDashboard = () => {
   const [hideTransfer, setHideTransfer] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Use refs to prevent unnecessary re-calculations and cascading effects
+  const hasInitialized = useRef(false);
+  const lastSpreadsheetUrl = useRef<string | null>(null);
+  const lastTransactionCount = useRef(0);
+  const lastHideTransfer = useRef(hideTransfer);
+
   // Create spreadsheet refresh hook with callbacks
   const { 
     refreshFromSpreadsheet, 
@@ -24,8 +30,8 @@ export const useDashboard = () => {
   } = useSpreadsheetRefresh({
     onSuccess: (data) => {
       console.log('✅ Spreadsheet refresh successful:', data);
-      // Stats will be calculated by the useEffect below when userData updates
       setError(null);
+      // Stats will be recalculated by the effect below
     },
     onError: (errorMessage) => {
       console.error('❌ Spreadsheet refresh failed:', errorMessage);
@@ -33,7 +39,7 @@ export const useDashboard = () => {
     }
   });
 
-  // Derived state
+  // Derived state with stable memoization
   const filteredTransactions = useMemo(() => {
     return filterTransferTransactions(userData.transactions || [], hideTransfer);
   }, [userData.transactions, hideTransfer]);
@@ -42,51 +48,82 @@ export const useDashboard = () => {
   const spreadsheetUrl = dashboardStatus?.spreadsheetUrl || null;
   const isFirstTimeUser = !spreadsheetLinked && filteredTransactions.length === 0;
 
-  // Sync spreadsheet info from API to store when available
+  // Single consolidated effect to handle all dashboard initialization and updates
   useEffect(() => {
-    if (dashboardStatus?.spreadsheetId && dashboardStatus?.spreadsheetUrl) {
-      console.log('🔗 Syncing spreadsheet info to store:', {
-        spreadsheetId: dashboardStatus.spreadsheetId,
-        spreadsheetUrl: dashboardStatus.spreadsheetUrl
-      });
-      updateSpreadsheetInfo(dashboardStatus.spreadsheetId, dashboardStatus.spreadsheetUrl);
-    }
-  }, [dashboardStatus?.spreadsheetId, dashboardStatus?.spreadsheetUrl, updateSpreadsheetInfo]);
+    const initializeAndUpdate = async () => {
+      try {
+        // 1. Sync spreadsheet info when available (only if changed)
+        if (dashboardStatus?.spreadsheetId && dashboardStatus?.spreadsheetUrl) {
+          console.log('🔗 Syncing spreadsheet info to store:', {
+            spreadsheetId: dashboardStatus.spreadsheetId,
+            spreadsheetUrl: dashboardStatus.spreadsheetUrl
+          });
+          updateSpreadsheetInfo(dashboardStatus.spreadsheetId, dashboardStatus.spreadsheetUrl);
+        }
 
-  // Calculate stats from local data when appropriate
-  useEffect(() => {
-    if (!spreadsheetLinked && filteredTransactions.length > 0) {
-      console.log('📊 Calculating stats from local data:', filteredTransactions.length, 'transactions');
-      const calculatedStats = calculateStatsFromTransactions(filteredTransactions);
-      setDashboardStats(calculatedStats);
-    } else if (!spreadsheetLinked && filteredTransactions.length === 0) {
-      // No spreadsheet and no local data = clear stats
-      setDashboardStats(null);
-    } else if (spreadsheetLinked && userData.transactions && userData.transactions.length > 0) {
-      // Spreadsheet is linked and we have data - calculate stats from all data
-      const allFilteredTransactions = filterTransferTransactions(userData.transactions, hideTransfer);
-      const calculatedStats = calculateStatsFromTransactions(allFilteredTransactions);
-      setDashboardStats(calculatedStats);
-    }
-  }, [spreadsheetLinked, filteredTransactions, userData.transactions, hideTransfer]);
+        // 2. Calculate stats when needed (only if data actually changed)
+        const currentTransactionCount = filteredTransactions.length;
+        const hasDataChanged = 
+          currentTransactionCount !== lastTransactionCount.current ||
+          hideTransfer !== lastHideTransfer.current;
 
-  // Auto-refresh from spreadsheet when linked
-  useEffect(() => {
-    if (spreadsheetUrl && !isRefreshing) {
-      console.log('🔄 Auto-refreshing from linked spreadsheet...');
-      refreshFromSpreadsheet(spreadsheetUrl);
-    }
-  }, [spreadsheetUrl, spreadsheetLinked]); // Also depend on spreadsheetLinked to refresh when dashboard mounts
+        if (hasDataChanged) {
+          if (!spreadsheetLinked && currentTransactionCount > 0) {
+            console.log('📊 Calculating stats from local data:', currentTransactionCount, 'transactions');
+            const calculatedStats = calculateStatsFromTransactions(filteredTransactions);
+            setDashboardStats(calculatedStats);
+          } else if (!spreadsheetLinked && currentTransactionCount === 0) {
+            // No spreadsheet and no local data = clear stats
+            setDashboardStats(null);
+          } else if (spreadsheetLinked && userData.transactions && userData.transactions.length > 0) {
+            // Spreadsheet is linked and we have data - calculate stats from all data
+            const allFilteredTransactions = filterTransferTransactions(userData.transactions, hideTransfer);
+            const calculatedStats = calculateStatsFromTransactions(allFilteredTransactions);
+            setDashboardStats(calculatedStats);
+          }
 
-  // Force refresh when dashboard mounts if spreadsheet is linked but no local data
-  useEffect(() => {
-    if (spreadsheetLinked && spreadsheetUrl && (!userData.transactions || userData.transactions.length === 0) && !isRefreshing) {
-      console.log('🔄 Dashboard mounted with spreadsheet but no local data - forcing refresh...');
-      refreshFromSpreadsheet(spreadsheetUrl);
-    }
-  }, []); // Only run on mount
+          // Update refs to track changes
+          lastTransactionCount.current = currentTransactionCount;
+          lastHideTransfer.current = hideTransfer;
+        }
 
-  // Handle manual refresh
+        // 3. Handle spreadsheet refresh logic (only when needed and not already refreshing)
+        if (spreadsheetUrl && !isRefreshing) {
+          const urlChanged = spreadsheetUrl !== lastSpreadsheetUrl.current;
+          const needsInitialRefresh = spreadsheetLinked && 
+            (!userData.transactions || userData.transactions.length === 0) && 
+            !hasInitialized.current;
+
+          if (urlChanged || needsInitialRefresh) {
+            console.log('🔄 Refreshing from spreadsheet:', urlChanged ? 'URL changed' : 'Initial refresh');
+            await refreshFromSpreadsheet(spreadsheetUrl);
+            lastSpreadsheetUrl.current = spreadsheetUrl;
+          }
+        }
+
+        hasInitialized.current = true;
+
+      } catch (error) {
+        console.error('Dashboard update error:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error');
+      }
+    };
+
+    initializeAndUpdate();
+
+  }, [
+    // Only depend on what we actually need to react to
+    dashboardStatus?.spreadsheetId,
+    dashboardStatus?.spreadsheetUrl,
+    filteredTransactions.length,
+    hideTransfer,
+    spreadsheetLinked,
+    spreadsheetUrl,
+    userData.transactions?.length,
+    isRefreshing
+  ]);
+
+  // Handle manual refresh - memoized to prevent unnecessary re-renders
   const handleRefreshData = useCallback(async () => {
     if (!spreadsheetUrl) {
       setError('No spreadsheet linked to refresh from');
@@ -95,6 +132,9 @@ export const useDashboard = () => {
     
     await refreshFromSpreadsheet(spreadsheetUrl);
   }, [spreadsheetUrl, refreshFromSpreadsheet]);
+
+  // Clear error callback
+  const clearError = useCallback(() => setError(null), []);
 
   // Combined error state
   const combinedError = error || refreshError || statusError;
@@ -120,6 +160,6 @@ export const useDashboard = () => {
     // Actions
     setHideTransfer,
     handleRefreshData,
-    clearError: () => setError(null)
+    clearError
   };
 }; 

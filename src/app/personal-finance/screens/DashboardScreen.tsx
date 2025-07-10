@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useDashboardQuery } from '../hooks/useDashboardQuery';
@@ -152,146 +152,6 @@ const DashboardScreen: React.FC = () => {
   const displayTransactions = (isFirstTimeUser && !hasSnapshotSubscription) ? mockTransactions : (filteredTransactions || []);
   const displayAssetsData = (isFirstTimeUser && !hasSnapshotSubscription) ? mockAssetsData : (assetsData || null);
 
-  // Track dashboard screen view - ONLY when auth is ready
-  useEffect(() => {
-    if (!isReady) return;
-    
-    posthog.capture('pf_screen_viewed', {
-      screen: 'dashboard',
-      is_first_time_user: isFirstTimeUser,
-      spreadsheet_linked: spreadsheetLinked,
-      has_transactions: (displayTransactions?.length || 0) > 0,
-      user_authenticated: isAuthenticated,
-      transaction_count: displayTransactions?.length || 0,
-    });
-  }, [isReady, isFirstTimeUser, spreadsheetLinked, displayTransactions?.length, isAuthenticated]);
-
-  // Track tab navigation - ONLY when auth is ready
-  useEffect(() => {
-    if (!isReady || !activeTab) return;
-    
-    posthog.capture('pf_navigation', {
-      active_tab: activeTab,
-      is_first_time_user: isFirstTimeUser,
-      user_authenticated: isAuthenticated
-    });
-  }, [isReady, activeTab, isFirstTimeUser, isAuthenticated]);
-
-  // Track A/B test exposure when demo banner is shown - ONLY when auth is ready
-  useEffect(() => {
-    if (!isReady || !isFirstTimeUser) return;
-    
-    posthog.capture('demo_dashboard_banner_viewed', {
-      headline_variant: headlineVariant || 'control',
-      cta_variant: ctaButtonVariant || 'control',
-      is_first_time_user: isFirstTimeUser,
-      user_authenticated: isAuthenticated
-    });
-
-    if (headlineVariant) {
-      posthog.capture('$experiment_started', {
-        $feature_flag: 'demo-dashboard-headline',
-        $feature_flag_response: headlineVariant
-      });
-    }
-    
-    if (ctaButtonVariant) {
-      posthog.capture('$experiment_started', {
-        $feature_flag: 'demo-dashboard-cta-button', 
-        $feature_flag_response: ctaButtonVariant
-      });
-    }
-  }, [isReady, isFirstTimeUser, headlineVariant, ctaButtonVariant, isAuthenticated]);
-
-  // Handle mock data population - ONLY when auth is ready and stable
-  useEffect(() => {
-    if (!isReady) return;
-    
-    const hasTransactions = userData.transactions && userData.transactions.length > 0;
-    const hasMockData = userData.transactions?.some(t => t.id?.startsWith('mock-'));
-    
-    if (isFirstTimeUser && !hasTransactions) {
-      // First-time user needs mock data
-      processTransactionData(mockTransactions);
-    } else if (!isFirstTimeUser && hasMockData) {
-      // Authenticated user with mock data - clear it
-      processTransactionData([]);
-    }
-  }, [isReady, isFirstTimeUser, !!userData.transactions?.length]);
-
-  // Handle URL params - ONLY when auth is ready
-  useEffect(() => {
-    if (!isReady || typeof window === 'undefined') return;
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const sessionId = urlParams.get('session_id');
-    
-    // Handle successful snapshot purchase
-    if (urlParams.get('snapshot') === 'success' && sessionId) {
-      if (!session?.user) {
-        localStorage.setItem('pending_snapshot_session', sessionId);
-        setPendingSnapshotSessionId(sessionId);
-        posthog.capture('snapshot_auth_required', {
-          session_id: sessionId,
-          action: 'payment_completed_auth_needed'
-        });
-        setIsOnboardingModalOpen(true);
-      } else {
-        handleSnapshotSuccess(sessionId);
-      }
-      
-      // Clean up URL
-      const url = new URL(window.location.href);
-      url.searchParams.delete('snapshot');
-      url.searchParams.delete('session_id');
-      window.history.replaceState({}, '', url.toString());
-    }
-    
-    // Handle other URL params...
-    if (urlParams.get('snapshot') === 'cancelled') {
-      posthog.capture('financial_snapshot_purchase_cancelled', {
-        user_authenticated: isAuthenticated
-      });
-      
-      const url = new URL(window.location.href);
-      url.searchParams.delete('snapshot');
-      window.history.replaceState({}, '', url.toString());
-    }
-    
-    if (urlParams.get('offer') === 'snapshot') {
-      posthog.capture('financial_snapshot_offer_viewed', {
-        source: 'blog_post_cta',
-        user_authenticated: isAuthenticated
-      });
-      
-      const url = new URL(window.location.href);
-      url.searchParams.delete('offer');
-      window.history.replaceState({}, '', url.toString());
-    }
-  }, [isReady, isAuthenticated, session?.user]);
-
-  // Handle post-authentication for paid snapshots - ONLY when auth is ready
-  useEffect(() => {
-    if (!isReady || !session?.user || typeof window === 'undefined') return;
-    
-    const pendingSession = localStorage.getItem('pending_snapshot_session');
-    if (pendingSession) {
-      handleSnapshotSuccess(pendingSession);
-      localStorage.removeItem('pending_snapshot_session');
-    }
-  }, [isReady, !!session?.user]);
-
-  // Show loading state while authentication is stabilizing
-  if (!isReady) {
-    return (
-      <div className="flex-1 overflow-y-auto">
-        <div className="px-4 py-4">
-          <LoadingState isRefreshing={false} />
-        </div>
-      </div>
-    );
-  }
-
   // Helper function to handle successful snapshot access
   const handleSnapshotSuccess = async (sessionId: string) => {
     try {
@@ -367,6 +227,173 @@ const DashboardScreen: React.FC = () => {
       setUserToastStatus('snapshot_error');
     }
   };
+
+  // Use refs to track what we've already processed
+  const hasInitialized = useRef(false);
+  const hasProcessedUrlParams = useRef(false);
+  const hasProcessedMockData = useRef(false);
+
+  // Single consolidated initialization effect - prevents cascading re-renders
+  useEffect(() => {
+    if (!isReady) return;
+
+    // Skip if we've already initialized to prevent duplicate processing
+    if (hasInitialized.current) return;
+
+    const initializeDashboard = async () => {
+      try {
+        // 1. Handle A/B testing experiments first (only once)
+        if (isFirstTimeUser && !isAuthenticated) {
+          if (headlineVariant) {
+            posthog.capture('$experiment_started', {
+              $feature_flag: 'demo-dashboard-headline',
+              $feature_flag_response: headlineVariant
+            });
+          }
+          
+          if (ctaButtonVariant) {
+            posthog.capture('$experiment_started', {
+              $feature_flag: 'demo-dashboard-cta-button', 
+              $feature_flag_response: ctaButtonVariant
+            });
+          }
+        }
+
+        // 2. Handle URL params (only once per session)
+        if (typeof window !== 'undefined' && !hasProcessedUrlParams.current) {
+          const urlParams = new URLSearchParams(window.location.search);
+          const sessionId = urlParams.get('session_id');
+          
+          // Handle successful snapshot purchase
+          if (urlParams.get('snapshot') === 'success' && sessionId) {
+            if (!session?.user) {
+              localStorage.setItem('pending_snapshot_session', sessionId);
+              setPendingSnapshotSessionId(sessionId);
+              posthog.capture('snapshot_auth_required', {
+                session_id: sessionId,
+                action: 'payment_completed_auth_needed'
+              });
+              setIsOnboardingModalOpen(true);
+            } else {
+              await handleSnapshotSuccess(sessionId);
+            }
+            
+            // Clean up URL
+            const url = new URL(window.location.href);
+            url.searchParams.delete('snapshot');
+            url.searchParams.delete('session_id');
+            window.history.replaceState({}, '', url.toString());
+          }
+          
+          // Handle other URL params...
+          if (urlParams.get('snapshot') === 'cancelled') {
+            posthog.capture('financial_snapshot_purchase_cancelled', {
+              user_authenticated: isAuthenticated
+            });
+            
+            const url = new URL(window.location.href);
+            url.searchParams.delete('snapshot');
+            window.history.replaceState({}, '', url.toString());
+          }
+          
+          if (urlParams.get('offer') === 'snapshot') {
+            posthog.capture('financial_snapshot_offer_viewed', {
+              source: 'blog_post_cta',
+              user_authenticated: isAuthenticated
+            });
+            
+            const url = new URL(window.location.href);
+            url.searchParams.delete('offer');
+            window.history.replaceState({}, '', url.toString());
+          }
+          
+          hasProcessedUrlParams.current = true;
+        }
+
+        // 3. Handle post-authentication for paid snapshots
+        if (session?.user && typeof window !== 'undefined') {
+          const pendingSession = localStorage.getItem('pending_snapshot_session');
+          if (pendingSession) {
+            await handleSnapshotSuccess(pendingSession);
+            localStorage.removeItem('pending_snapshot_session');
+          }
+        }
+
+        // 4. Handle mock data population (only once per auth state change)
+        if (!hasProcessedMockData.current) {
+          const hasTransactions = userData.transactions && userData.transactions.length > 0;
+          const hasMockData = userData.transactions?.some(t => t.id?.startsWith('mock-'));
+          
+          if (isFirstTimeUser && !hasTransactions) {
+            // First-time user needs mock data
+            processTransactionData(mockTransactions);
+          } else if (!isFirstTimeUser && hasMockData) {
+            // Authenticated user with mock data - clear it
+            processTransactionData([]);
+          }
+          
+          hasProcessedMockData.current = true;
+        }
+
+        hasInitialized.current = true;
+        
+      } catch (error) {
+        console.error('Dashboard initialization error:', error);
+      }
+    };
+
+    initializeDashboard();
+    
+  }, [isReady, isAuthenticated]); // Minimal dependencies - only what's needed for initialization
+
+  // Reset processed flags when auth state changes significantly
+  useEffect(() => {
+    if (!isReady) return;
+    
+    // Reset mock data processing when auth state changes
+    hasProcessedMockData.current = false;
+    
+    // Reset initialization when moving between authenticated states
+    if (hasInitialized.current) {
+      hasInitialized.current = false;
+    }
+     }, [isAuthenticated, isFirstTimeUser]);
+
+  // Track dashboard screen view - ONLY when auth is ready
+  useEffect(() => {
+    if (!isReady) return;
+    
+    posthog.capture('pf_screen_viewed', {
+      screen: 'dashboard',
+      is_first_time_user: isFirstTimeUser,
+      spreadsheet_linked: spreadsheetLinked,
+      has_transactions: (displayTransactions?.length || 0) > 0,
+      user_authenticated: isAuthenticated,
+      transaction_count: displayTransactions?.length || 0,
+    });
+  }, [isReady, isFirstTimeUser, spreadsheetLinked, displayTransactions?.length, isAuthenticated]);
+
+  // Track tab navigation - ONLY when auth is ready
+  useEffect(() => {
+    if (!isReady || !activeTab) return;
+    
+    posthog.capture('pf_navigation', {
+      active_tab: activeTab,
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: isAuthenticated
+    });
+  }, [isReady, activeTab, isFirstTimeUser, isAuthenticated]);
+
+  // Show loading state while authentication is stabilizing
+  if (!isReady) {
+    return (
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 py-4">
+          <LoadingState isRefreshing={false} />
+        </div>
+      </div>
+    );
+  }
 
   // Component handlers and UI remain the same...
   const openDataDrawer = (source: string) => {

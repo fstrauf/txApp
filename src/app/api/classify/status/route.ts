@@ -37,14 +37,68 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     
-    if (!user.classifyApiKey) {
+    if (!user.api_key) {
       return NextResponse.json(
         { error: 'Classification API key not found' },
         { status: 400 }
       );
     }
     
-    // Get the job based on type
+    // Handle auto-classification jobs differently - they are not stored in Next.js database
+    if (jobType === 'auto_classification') {
+      console.log(`Handling auto-classification status check for job ${jobId}`);
+      
+      // Use the same DEFAULT_API_KEY that was used to submit the auto-classification job
+      const DEFAULT_API_KEY = process.env.EXPENSE_SORTED_API_KEY;
+      if (!DEFAULT_API_KEY) {
+        return NextResponse.json(
+          { error: 'Service configuration error - missing default API key' },
+          { status: 500 }
+        );
+      }
+      
+      // Initialize the classification service client with the default API key
+      const classifyClient = new ClassifyServiceClient({
+        apiKey: DEFAULT_API_KEY, // Use the same key that submitted the job
+        serviceUrl: process.env.EXPENSE_SORTED_API || 'http://localhost',
+      });
+      
+      try {
+        // Query the Python service directly for auto-classification status
+        const predictionStatus = await classifyClient.getPredictionStatus(jobId);
+        
+        console.log('🔍 Auto-classification status from Python service:', {
+          predictionId: jobId,
+          status: predictionStatus.status,
+          hasResults: !!predictionStatus.results,
+          resultsLength: predictionStatus.results?.length || 0,
+          resultsType: typeof predictionStatus.results,
+          isArray: Array.isArray(predictionStatus.results),
+          fullPredictionStatus: predictionStatus
+        });
+        
+        // Return the status directly from the Python service
+        return NextResponse.json({
+          jobId: jobId,
+          status: predictionStatus.status,
+          predictionId: jobId,
+          predictionStatus: predictionStatus.status,
+          error: predictionStatus.error,
+          results: predictionStatus.results,
+          message: predictionStatus.message,
+          type: 'auto_classification'
+        });
+        
+      } catch (error) {
+        console.error('Error checking auto-classification status with Python service:', error);
+        return NextResponse.json(
+          { error: 'Failed to check auto-classification status' },
+          { status: 500 }
+        );
+      }
+    }
+    
+    // Get the job based on type (for training and regular classification jobs)
     let job;
     if (jobType === 'training') {
       const result = await db
@@ -94,12 +148,22 @@ export async function GET(request: NextRequest) {
     if (job.predictionId) {
       // Initialize the classification service client
       const classifyClient = new ClassifyServiceClient({
-        apiKey: user.classifyApiKey,
-        serviceUrl: process.env.CLASSIFY_SERVICE_URL || 'http://localhost:5001',
+        apiKey: user.api_key,
+        serviceUrl: process.env.EXPENSE_SORTED_API || 'http://localhost',
       });
       
       // Check the prediction status
       const predictionStatus = await classifyClient.getPredictionStatus(job.predictionId);
+      
+      console.log('🔍 Prediction status from classification service:', {
+        predictionId: job.predictionId,
+        status: predictionStatus.status,
+        hasResults: !!predictionStatus.results,
+        resultsLength: predictionStatus.results?.length || 0,
+        resultsType: typeof predictionStatus.results,
+        isArray: Array.isArray(predictionStatus.results),
+        fullPredictionStatus: predictionStatus
+      });
       
       // Update the job status based on the prediction status
       let updatedStatus = job.status;
