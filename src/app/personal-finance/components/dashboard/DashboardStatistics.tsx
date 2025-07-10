@@ -281,14 +281,13 @@ export const DashboardStatistics: React.FC<DashboardStatisticsProps> = ({
       </div>
 
 
-      {/* Financial Snapshot Insights - Show for paid snapshot users */}
-      {isPaidSnapshot && (
+      {/* {isPaidSnapshot && (
         <FinancialSnapshotInsights 
           stats={stats}
           isPaidSnapshot={isPaidSnapshot}
           className="mt-6"
         />
-      )}
+      )} */}
 
       {/* Dashboard Visualizations */}
       <DashboardCharts 

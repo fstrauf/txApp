@@ -86,7 +86,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         body: JSON.stringify({
           createNew: true,
           accessToken,
-          baseCurrency: selectedCurrency
+          baseCurrency: selectedCurrency,
+          isPaidUser: isPaidSnapshot, // Pass paid user flag to ensure clean template
         }),
       });
 

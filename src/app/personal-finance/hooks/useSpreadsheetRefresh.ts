@@ -32,27 +32,21 @@ export const useSpreadsheetRefresh = ({ onSuccess, onError }: SpreadsheetRefresh
         setIsRefreshing(true);
         setError(null);
         
-        console.log('🔄 Starting spreadsheet refresh with URL:', spreadsheetUrl);
-        
         try {
           // Get access token
-          console.log('🔑 Getting access token...');
           const accessToken = await getValidAccessToken();
           
           if (!accessToken) {
             throw new Error('Google Sheets access expired. Please use "Link Sheet" to reconnect.');
           }
-          console.log('✅ Access token obtained');
 
           // Extract spreadsheet ID
           const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
           if (!spreadsheetId) {
             throw new Error('Invalid spreadsheet URL');
           }
-          console.log('📊 Extracted spreadsheet ID:', spreadsheetId);
 
           // Fetch data from spreadsheet
-          console.log('📥 Fetching data from spreadsheet...');
           const response = await fetch('/api/sheets/read-expense-detail', {
             method: 'POST',
             headers: {
@@ -66,19 +60,12 @@ export const useSpreadsheetRefresh = ({ onSuccess, onError }: SpreadsheetRefresh
           });
 
           const spreadsheetData = await response.json();
-          console.log('📋 Spreadsheet API response:', {
-            status: response.status,
-            ok: response.ok,
-            transactionCount: spreadsheetData.transactions?.length || 0
-          });
 
           if (!response.ok) {
             throw new Error(spreadsheetData.error || 'Failed to read from Google Sheets');
           }
 
           if (spreadsheetData.transactions && spreadsheetData.transactions.length > 0) {
-            console.log('🔄 Processing spreadsheet data...');
-            
             // Update store with fresh spreadsheet data
             processTransactionData(spreadsheetData.transactions);
             
@@ -96,21 +83,19 @@ export const useSpreadsheetRefresh = ({ onSuccess, onError }: SpreadsheetRefresh
               dateRange
             };
 
-            console.log('✅ Successfully refreshed complete data from spreadsheet:', result);
+            console.log(`✅ Refreshed ${spreadsheetData.transactions.length} transactions`);
             onSuccess?.(result);
             return result;
           } else {
             throw new Error('No transaction data found in the spreadsheet');
           }
         } catch (error: any) {
-          console.error('❌ Error refreshing from spreadsheet:', error);
           const errorMessage = error.message || 'Failed to refresh data from spreadsheet';
           setError(errorMessage);
           onError?.(errorMessage);
           
           // Return existing data if available as fallback
           if (userData.transactions && userData.transactions.length > 0) {
-            console.log('🔄 Fell back to existing local data:', userData.transactions.length, 'transactions');
             return {
               transactionCount: userData.transactions.length,
               dateRange: null,

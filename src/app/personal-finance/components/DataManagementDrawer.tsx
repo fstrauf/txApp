@@ -370,6 +370,13 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   // Separate function to handle auto-classification results
   const handleAutoClassificationComplete = async (autoClassifiedData: any, uniqueTransactions: any[], isCreateNewMode: boolean) => {
     try {
+      console.log('🎯 Starting handleAutoClassificationComplete with:', {
+        resultsCount: autoClassifiedData.results?.length || 0,
+        transactionsCount: uniqueTransactions.length,
+        responseSize: JSON.stringify(autoClassifiedData).length,
+        isCreateNewMode
+      });
+
       // Validate API response
       if (!autoClassifiedData.results || !Array.isArray(autoClassifiedData.results)) {
         throw new Error('Invalid response from auto-classification API - no results array');
@@ -382,28 +389,58 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
         });
       }
       
-      // Transform auto-classified results back to full transaction format
-      const categorizedTransactions = autoClassifiedData.results.map((result: any, index: number) => ({
-        ...uniqueTransactions[index],
-        id: `transaction-${index}`,
-        category: result.predicted_category || 'Uncategorized',
-        predicted_category: result.predicted_category,
-        similarity_score: result.similarity_score,
-        confidence: result.similarity_score || 0, // Use similarity_score as confidence
-        isValidated: false,
-        isSelected: false,
-        account: 'Imported'
-      }));
+      console.log('🔄 Processing large dataset, this may take a moment...');
+      
+      // For large datasets, process in chunks to avoid browser freezing
+      const CHUNK_SIZE = 500;
+      const categorizedTransactions: any[] = [];
+      
+      for (let i = 0; i < autoClassifiedData.results.length; i += CHUNK_SIZE) {
+        const chunk = autoClassifiedData.results.slice(i, i + CHUNK_SIZE);
+        const uniqueChunk = uniqueTransactions.slice(i, i + CHUNK_SIZE);
+        
+        const chunkProcessed = chunk.map((result: any, chunkIndex: number) => ({
+          ...uniqueChunk[chunkIndex],
+          id: `transaction-${i + chunkIndex}`,
+          category: result.predicted_category || 'Uncategorized',
+          predicted_category: result.predicted_category,
+          similarity_score: result.similarity_score,
+          confidence: result.similarity_score || 0,
+          isValidated: false,
+          isSelected: false,
+          account: 'Imported'
+        }));
+        
+        categorizedTransactions.push(...chunkProcessed);
+        
+        // Give browser time to breathe between chunks
+        if (i + CHUNK_SIZE < autoClassifiedData.results.length) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        
+        console.log(`📊 Processed chunk ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(autoClassifiedData.results.length / CHUNK_SIZE)}`);
+      }
 
+      console.log('📋 Setting validation transactions state...');
       setValidationTransactions(categorizedTransactions);
+      
+      console.log('📑 Switching to validate tab...');
       setActiveTab('validate');
+      
       const successMessage = isCreateNewMode
         ? `Categorized ${categorizedTransactions.length} transactions for your new spreadsheet. Please review and validate!`
         : `Auto-classified ${categorizedTransactions.length} transactions using generic model. Please review and validate!`;
+      
+      console.log('✅ Setting success feedback...');
       setFeedback({ 
         type: 'success', 
         message: successMessage
       });
+      
+      console.log('🎉 Auto-classification complete! Switching to validation view.');
+      
+      // Clear processing state
+      setIsProcessing(false);
 
       // Reset CSV processing state after successful categorization
       setTimeout(() => {
@@ -1042,18 +1079,35 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
       }
 
       // Step 1: Check if we have existing data for training or use generic classification
-      // When creating new spreadsheet, always use auto-classification since there's no training data
-      const hasExistingData = userData.transactions && userData.transactions.length > 0;
-      // FORCE auto-classify for new spreadsheet mode - no training should happen
-      const shouldUseCustomModel = effectiveCreateNewMode ? false : hasExistingData;
+      // Use SERVER-SIDE DATA (spreadsheetLinked from database) not localStorage data
+      // This ensures new users always get auto-classify regardless of localStorage
+      const hasSpreadsheet = spreadsheetLinked; // Database truth, not localStorage
+      const hasActualTrainingData = userData.transactions && userData.transactions.length > 0;
+      const hasExistingData = hasSpreadsheet && hasActualTrainingData; // Need both spreadsheet AND actual transaction data
+      const isAuthenticated = !!session?.user?.id;
+      
+      // FORCE auto-classify for:
+      // 1. New spreadsheet mode - no training should happen
+      // 2. Unauthenticated users - always use auto-classify regardless of existing data
+      // 3. Users with no spreadsheet in database (truly new users)
+      // 4. Users with spreadsheet but no actual transaction data (e.g., after clearing demo data)
+      const shouldUseCustomModel = effectiveCreateNewMode ? false : (isAuthenticated && hasExistingData);
       
       console.log('🔍 Training vs Auto-classify decision:', {
-        hasExistingData,
-        'userData.transactions': userData.transactions?.length || 0,
+        hasSpreadsheet: hasSpreadsheet,
+        hasActualTrainingData: hasActualTrainingData,
+        hasExistingData: hasExistingData,
+        spreadsheetLinked: spreadsheetLinked,
+        isAuthenticated,
+        'userData.transactions (localStorage)': userData.transactions?.length || 0,
         createNewSpreadsheetMode,
         shouldUseCustomModel,
         'Flow choice': shouldUseCustomModel ? 'TRAINING + CLASSIFICATION' : 'AUTO-CLASSIFY',
-        'Logic': effectiveCreateNewMode ? 'FORCED AUTO-CLASSIFY (new spreadsheet)' : hasExistingData ? 'TRAINING (has existing data)' : 'AUTO-CLASSIFY (no existing data)'
+        'Logic': effectiveCreateNewMode ? 'FORCED AUTO-CLASSIFY (new spreadsheet)' : 
+                 !isAuthenticated ? 'FORCED AUTO-CLASSIFY (unauthenticated)' : 
+                 !hasSpreadsheet ? 'FORCED AUTO-CLASSIFY (no database spreadsheet)' :
+                 !hasActualTrainingData ? 'FORCED AUTO-CLASSIFY (spreadsheet exists but no training data)' :
+                 hasExistingData ? 'TRAINING (authenticated + has spreadsheet + has training data)' : 'AUTO-CLASSIFY (fallback)'
       });
       
       // EXPLICIT CHECKPOINT
@@ -1654,27 +1708,11 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
             
             if (autoClassifyResponse.ok && (autoClassifiedData.status === 'completed' || autoClassifiedData.success || autoClassifiedData.results)) {
               // Synchronous auto-classification completion - handle immediately
+              console.log('📥 Auto-classify returned synchronous results, processing...');
+              setFeedback({ type: 'processing', message: '🔄 Processing classification results...' });
+              
               await handleAutoClassificationComplete(autoClassifiedData, uniqueTransactions, effectiveCreateNewMode);
               return; // Exit early for synchronous completion
-            } else if (autoClassifiedData.status === 'processing' && autoClassifiedData.prediction_id) {
-              // Asynchronous auto-classification returned as 200 with processing status
-              const { prediction_id, message: acceptanceMessage } = autoClassifiedData;
-              
-              setFeedback({ type: 'processing', message: `🚀 ${acceptanceMessage || `Auto-classification job submitted. Processing your transactions...`}` });
-              
-              // Start non-blocking polling
-              pollForCompletion(
-                prediction_id,
-                'classification',
-                (pollingData) => {
-                  handleAutoClassificationComplete(pollingData || { results: [] }, uniqueTransactions, effectiveCreateNewMode);
-                },
-                (errorMessage) => {
-                  setFeedback({ type: 'error', message: `Auto-classification failed: ${errorMessage}` });
-                  setIsProcessing(false);
-                }
-              );
-              return; // Exit early, polling will handle completion
             } else {
               throw new Error(autoClassifiedData.message || 'Auto-classification completed but with unexpected response format');
             }

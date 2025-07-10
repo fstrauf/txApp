@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useIncrementalAuth } from '@/lib/hooks/useIncrementalAuth';
+import { useAuthenticationBarrier } from './useAuthenticationBarrier';
 import { 
   calculateStatsFromTransactions, 
   calculateStatsWithRunway,
@@ -131,15 +132,17 @@ const fetchSpreadsheetData = async (
 };
 
 export const useDashboardQuery = () => {
-  const { data: session } = useSession();
+  const { isAuthenticated, isReady } = useAuthenticationBarrier();
   const { userData, processTransactionData, updateSpreadsheetInfo, updateSavingsSheetData } = usePersonalFinanceStore();
   const { getValidAccessToken } = useIncrementalAuth();
   const queryClient = useQueryClient();
   
   const [hideTransfer, setHideTransfer] = useState<boolean>(true);
-  const isAuthenticated = !!session?.user?.id;
 
-  // Dashboard status query
+  // Use ref to track if we've processed initial data to prevent loops
+  const hasProcessedInitialData = useRef(false);
+
+  // Dashboard status query - only enabled when auth is ready and stable
   const {
     data: dashboardStatus,
     isLoading: isStatusLoading,
@@ -148,7 +151,7 @@ export const useDashboardQuery = () => {
   } = useQuery<DashboardStatusData, Error>({
     queryKey: ['dashboardStatus'],
     queryFn: fetchDashboardStatus,
-    enabled: isAuthenticated,
+    enabled: isReady && isAuthenticated,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: (failureCount, error) => {
@@ -160,12 +163,12 @@ export const useDashboardQuery = () => {
     }
   });
 
-  // Extract spreadsheet info
+  // Extract spreadsheet info with stable values
   const spreadsheetId = dashboardStatus?.spreadsheetId;
   const spreadsheetUrl = dashboardStatus?.spreadsheetUrl;
   const spreadsheetLinked = dashboardStatus?.hasSpreadsheet || false;
 
-  // Spreadsheet data query - only enabled when we have a spreadsheet
+  // Spreadsheet data query - only enabled when auth is ready and we have a linked spreadsheet
   const {
     data: spreadsheetData,
     isLoading: isSpreadsheetLoading,
@@ -184,7 +187,7 @@ export const useDashboardQuery = () => {
       }
       return fetchSpreadsheetData(accessToken, spreadsheetId);
     },
-    enabled: isAuthenticated && spreadsheetLinked && !!spreadsheetId,
+    enabled: isReady && isAuthenticated && spreadsheetLinked && !!spreadsheetId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
     retry: (failureCount, error) => {
@@ -216,7 +219,7 @@ export const useDashboardQuery = () => {
       queryClient.setQueryData(['spreadsheetData', spreadsheetId], data);
       
       // Process the transaction data in the store
-      if (data.transactions) {
+      if (data.transactions && data.transactions.length > 0) {
         processTransactionData(data.transactions);
       }
       
@@ -224,35 +227,35 @@ export const useDashboardQuery = () => {
       if (data.savings) {
         updateSavingsSheetData(data.savings);
       }
-      
-      console.log('✅ Successfully refreshed spreadsheet data:', {
-        transactionCount: data.transactionCount,
-        dateRange: data.dateRange,
-        hasSavingsData: !!data.savings
-      });
     },
     onError: (error) => {
       console.error('❌ Error refreshing spreadsheet data:', error);
     }
   });
 
-  // Update store when spreadsheet data changes
+  // Process data only once when it first arrives and auth is ready
   useEffect(() => {
-    if (spreadsheetData?.transactions) {
+    if (!isReady) return;
+    
+    if (spreadsheetData?.transactions && !hasProcessedInitialData.current) {
       processTransactionData(spreadsheetData.transactions);
+      hasProcessedInitialData.current = true;
     }
+    
     // Cache savings data when available
     if (spreadsheetData?.savings) {
       updateSavingsSheetData(spreadsheetData.savings);
     }
-  }, [spreadsheetData?.transactions, spreadsheetData?.savings, processTransactionData, updateSavingsSheetData]);
+  }, [isReady, !!spreadsheetData?.transactions?.length, spreadsheetData?.savings?.latestNetAssetValue]);
 
-  // Update spreadsheet info in store when status changes
+  // Update spreadsheet info only when auth is ready and values change
   useEffect(() => {
+    if (!isReady) return;
+    
     if (dashboardStatus?.spreadsheetId && dashboardStatus?.spreadsheetUrl) {
       updateSpreadsheetInfo(dashboardStatus.spreadsheetId, dashboardStatus.spreadsheetUrl);
     }
-  }, [dashboardStatus?.spreadsheetId, dashboardStatus?.spreadsheetUrl, updateSpreadsheetInfo]);
+  }, [isReady, dashboardStatus?.spreadsheetId, dashboardStatus?.spreadsheetUrl]);
 
   // Calculate filtered transactions and stats
   const filteredTransactions = useMemo(() => {
@@ -278,7 +281,7 @@ export const useDashboardQuery = () => {
   }, [spreadsheetLinked, refreshMutation]);
 
   // Combined loading state
-  const isLoading = isStatusLoading || (spreadsheetLinked && isSpreadsheetLoading);
+  const isLoading = !isReady || isStatusLoading || (spreadsheetLinked && isSpreadsheetLoading);
   const isRefreshing = refreshMutation.isPending || isRefetchingSpreadsheet;
 
   // Combined error state with fallback handling

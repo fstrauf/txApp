@@ -6,7 +6,7 @@ const EXTERNAL_AUTO_CLASSIFY_URL = process.env.EXPENSE_SORTED_API + '/auto-class
 const DEFAULT_API_KEY = process.env.EXPENSE_SORTED_API_KEY;
 
 // Add timeout and size limits
-const REQUEST_TIMEOUT = 120000; // 2 minutes timeout
+const REQUEST_TIMEOUT = 300000; // 5 minutes timeout for large batches
 const MAX_REQUEST_SIZE = 50 * 1024 * 1024; // 50MB max request size
 const MAX_UNCOMPRESSED_SIZE = 100 * 1024 * 1024; // 100MB max after decompression
 
@@ -95,16 +95,56 @@ export async function POST(request: NextRequest) {
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
     
     try {
-      const externalResponse = await fetch(EXTERNAL_AUTO_CLASSIFY_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': DEFAULT_API_KEY, // Use the default API key for public access
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(validatedPayload),
-        signal: controller.signal,
-      });
+      // Prepare request body and headers
+      const requestBody = JSON.stringify(validatedPayload);
+      const requestHeaders = {
+        'Content-Type': 'application/json',
+        'X-API-Key': DEFAULT_API_KEY, // Use the default API key for public access
+        'Accept': 'application/json',
+        'User-Agent': 'ExpenseSorted-Proxy/1.0',
+      };
+
+      // Add compression if the request is large (>50KB) to reduce network load
+      const requestSize = new TextEncoder().encode(requestBody).length;
+      let externalResponse: Response;
+
+      if (requestSize > 50000) { // 50KB threshold
+        console.log(`Large request detected (${Math.round(requestSize/1024)}KB), using compression`);
+        try {
+          const { gzip } = await import('pako');
+          const compressedData = gzip(requestBody, { level: 6 });
+          const compressionRatio = ((requestSize - compressedData.length) / requestSize * 100).toFixed(1);
+          
+          console.log(`External request compressed: ${Math.round(requestSize/1024)}KB -> ${Math.round(compressedData.length/1024)}KB (${compressionRatio}% reduction)`);
+          
+          externalResponse = await fetch(EXTERNAL_AUTO_CLASSIFY_URL, {
+            method: 'POST',
+            headers: {
+              ...requestHeaders,
+              'Content-Encoding': 'gzip',
+              'Content-Length': compressedData.length.toString(),
+            },
+            body: compressedData,
+            signal: controller.signal,
+          });
+        } catch (compressionError) {
+          console.warn('Failed to compress external request, using uncompressed:', compressionError);
+          // Fall back to uncompressed
+          externalResponse = await fetch(EXTERNAL_AUTO_CLASSIFY_URL, {
+            method: 'POST',
+            headers: requestHeaders,
+            body: requestBody,
+            signal: controller.signal,
+          });
+        }
+      } else {
+        externalResponse = await fetch(EXTERNAL_AUTO_CLASSIFY_URL, {
+          method: 'POST',
+          headers: requestHeaders,
+          body: requestBody,
+          signal: controller.signal,
+        });
+      }
 
       clearTimeout(timeoutId);
 
@@ -139,6 +179,16 @@ export async function POST(request: NextRequest) {
          return NextResponse.json(responseData, { status: externalResponse.status });
       }
 
+      // Handle async job submission (202) - return immediately for frontend polling
+      if (externalResponse.status === 202 && responseData.prediction_id) {
+        console.log('Auto-classification job submitted successfully, returning prediction_id for frontend polling:', responseData.prediction_id);
+        return NextResponse.json({
+          status: 'processing',
+          prediction_id: responseData.prediction_id,
+          message: responseData.message || 'Auto-classification job submitted successfully'
+        }, { status: 202 });
+      }
+
       console.log('External auto-classification service success:', responseData);
       return NextResponse.json(responseData);
 
@@ -148,9 +198,16 @@ export async function POST(request: NextRequest) {
       if (fetchError instanceof Error) {
         if (fetchError.name === 'AbortError') {
           console.error('Auto-classification request timeout after', REQUEST_TIMEOUT, 'ms');
+          const timeoutMessage = validatedPayload.transactions.length > 1000 
+            ? `Request timeout with ${validatedPayload.transactions.length} transactions. Large batches may take longer to process.` 
+            : 'Request timeout. The classification service took too long to respond.';
+          const timeoutDetails = validatedPayload.transactions.length > 1000 
+            ? 'For large datasets (>1000 transactions), the system uses compression to optimize transfer. If timeouts persist, try splitting into smaller batches.' 
+            : 'The system uses compression for large datasets. Try again or split into smaller batches if issues persist.';
+          
           return NextResponse.json({ 
-            error: 'Request timeout. The classification service took too long to respond.',
-            details: 'Try using compression for large datasets or try again later.'
+            error: timeoutMessage,
+            details: timeoutDetails
           }, { status: 504 });
         }
         
@@ -158,7 +215,7 @@ export async function POST(request: NextRequest) {
           console.error('Connection reset error during auto-classification:', fetchError.message);
           return NextResponse.json({ 
             error: 'Connection error occurred during classification.',
-            details: 'This usually happens with large datasets. Try using compression to reduce data size.'
+            details: 'This usually happens with very large datasets. The system uses compression to reduce transfer size, but extremely large batches may still cause issues.'
           }, { status: 502 });
         }
       }
@@ -182,18 +239,20 @@ export async function POST(request: NextRequest) {
       if (error.message.includes('Request body read timeout') || error.message.includes('Compressed request body read timeout')) {
         return NextResponse.json({ 
           error: 'Request timeout while reading data.',
-          details: 'The request body was too large or took too long to process. Try using compression for large datasets.'
+          details: 'The request body was too large or took too long to process. The system uses compression to optimize large datasets, but try splitting into smaller batches if issues persist.'
         }, { status: 408 });
       }
       
       if (error.message.includes('ECONNRESET') || error.message.includes('Connection reset')) {
         return NextResponse.json({ 
           error: 'Connection reset during classification.',
-          details: 'This usually happens with large datasets. Please try using compression to reduce data size.'
+          details: 'This usually happens with very large datasets. The system uses compression to reduce data size, but try splitting into smaller batches if issues persist.'
         }, { status: 502 });
       }
     }
     
     return NextResponse.json({ error: 'Internal Server Error during auto-classification proxy' }, { status: 500 });
   }
-} 
+}
+
+ 
