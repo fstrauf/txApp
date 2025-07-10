@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CsvExample } from "./csv-example";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
 
 export function CsvUpload() {
   const router = useRouter();
@@ -13,6 +12,7 @@ export function CsvUpload() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [dateFormat, setDateFormat] = useState("DD/MM/YYYY");
+  const [hasHeaders, setHasHeaders] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -36,20 +36,162 @@ export function CsvUpload() {
     setError("");
     setSuccess("");
 
+    // First analyze the CSV to understand its structure
     const formData = new FormData();
-    formData.append("csv", file);
-    formData.append("dateFormat", dateFormat);
+    formData.append("file", file);
 
     try {
-      const response = await fetch("/api/transactions/import", {
+      // Step 1: Analyze the CSV structure
+      const analyzeResponse = await fetch("/api/transactions/analyze", {
         method: "POST",
         body: formData,
+      });
+
+      if (!analyzeResponse.ok) {
+        throw new Error("Failed to analyze CSV file");
+      }
+
+      const analysisData = await analyzeResponse.json();
+      console.log("CSV Analysis:", analysisData);
+
+            // Step 2: Get AI-powered analysis and mapping
+      let columnMappings: Record<string, string>;
+      let detectedHasHeaders = hasHeaders; // Start with user's preference
+      
+      try {
+        // Convert the parsed data back to raw rows for AI analysis
+        const rawRows: string[][] = [];
+        
+        // Add headers as first row (these might be actual headers or just the first data row)
+        if (analysisData.headers) {
+          rawRows.push(analysisData.headers);
+        }
+        
+        // Add preview rows (convert from object format back to array format)
+        if (analysisData.previewRows) {
+          analysisData.previewRows.forEach((row: any) => {
+            const rowArray: string[] = [];
+            analysisData.headers.forEach((header: string) => {
+              rowArray.push(row[header] || '');
+            });
+            rawRows.push(rowArray);
+          });
+        }
+
+        const suggestResponse = await fetch("/api/csv/suggest-mappings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            rawRows: rawRows.slice(0, 5), // Send first 5 rows
+          }),
+        });
+
+        if (suggestResponse.ok) {
+          const analysis = await suggestResponse.json();
+          detectedHasHeaders = analysis.hasHeaders;
+          
+          console.log("AI Analysis:", {
+            detectedHasHeaders: analysis.hasHeaders,
+            confidence: analysis.confidence,
+            reasoning: analysis.reasoning,
+            suggestions: analysis.suggestions
+          });
+          
+          // Use the AI suggestions directly as they should already have the correct header names as keys
+          columnMappings = {};
+          
+          if (analysis.suggestions) {
+            Object.entries(analysis.suggestions).forEach(([headerName, mapping]) => {
+              if (typeof mapping === 'string') {
+                columnMappings[headerName] = mapping;
+              }
+            });
+          }
+          
+          // If AI detected different header status than user, show a warning but continue
+          if (analysis.hasHeaders !== hasHeaders) {
+            console.warn(`AI detected headers: ${analysis.hasHeaders}, but user said: ${hasHeaders}. Using AI detection.`);
+          }
+        } else {
+          const errorData = await suggestResponse.json().catch(() => ({ error: 'Unknown error' }));
+          
+          // Handle quota error gracefully
+          if (suggestResponse.status === 429) {
+            console.warn("AI service quota exceeded, using fallback logic");
+            setError("AI analysis temporarily unavailable. Using basic column detection.");
+          } else {
+            console.error("AI mapping response error:", errorData.error);
+          }
+          
+          throw new Error("AI mapping failed");
+        }
+      } catch (aiError) {
+        console.log("AI mapping failed, using fallback logic:", aiError);
+        // Fallback to rule-based mapping
+        detectedHasHeaders = hasHeaders;
+        if (hasHeaders && analysisData.headers && analysisData.headers.length > 0) {
+          // CSV has headers - map them intelligently
+          columnMappings = analysisData.headers.reduce((acc: Record<string, string>, header: string, index: number) => {
+            const lowerHeader = header.toLowerCase();
+            if (lowerHeader.includes('date') || index === 0) {
+              acc[header] = 'date';
+            } else if (lowerHeader.includes('amount') || lowerHeader.includes('value') || index === 1) {
+              acc[header] = 'amount';
+            } else if (lowerHeader.includes('desc') || lowerHeader.includes('narrative') || lowerHeader.includes('payee') || index === 2) {
+              acc[header] = 'description';
+            } else {
+              acc[header] = 'none';
+            }
+            return acc;
+          }, {});
+        } else {
+          // CSV has no headers - use Papa Parse's default column names (0, 1, 2, etc.)
+          const sampleRow = analysisData.previewRows?.[0] || {};
+          const keys = Object.keys(sampleRow);
+          
+          columnMappings = {};
+          keys.forEach((key, index) => {
+            if (index === 0) {
+              columnMappings[key] = 'date';
+            } else if (index === 1) {
+              columnMappings[key] = 'amount';
+            } else if (index === 2) {
+              columnMappings[key] = 'description';
+            } else {
+              columnMappings[key] = 'none';
+            }
+          });
+        }
+      }
+
+      console.log("Column Mappings:", columnMappings);
+
+      // Step 3: Import with proper configuration
+      const importFormData = new FormData();
+      importFormData.append("file", file);
+      
+      const config = {
+        bankAccountId: "00000000-0000-0000-0000-000000000000", // Default bank account ID
+        mappings: columnMappings,
+        dateFormat: dateFormat,
+        amountFormat: "standard", // Preserve the original signs
+        skipRows: detectedHasHeaders ? 1 : 0, // Skip header row if AI detected headers
+        delimiter: analysisData.detectedDelimiter || ",",
+      };
+      
+      importFormData.append("config", JSON.stringify(config));
+
+      const response = await fetch("/api/transactions/import", {
+        method: "POST",
+        body: importFormData,
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to upload CSV");
+        throw new Error(data.error || "Failed to upload CSV");
       }
 
       setSuccess(`Successfully imported ${data.count} transactions`);
@@ -105,18 +247,38 @@ export function CsvUpload() {
             <label htmlFor="dateFormat" className="text-sm font-medium">
               Select date format in your CSV
             </label>
-            <Select
+            <select
               id="dateFormat"
               value={dateFormat}
-              onChange={(e) => setDateFormat(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDateFormat(e.target.value)}
+              className="rounded-md border px-3 py-2 text-sm"
             >
               <option value="DD/MM/YYYY">DD/MM/YYYY (e.g., 31/12/2023)</option>
               <option value="MM/DD/YYYY">MM/DD/YYYY (e.g., 12/31/2023)</option>
               <option value="YYYY-MM-DD">YYYY-MM-DD (e.g., 2023-12-31)</option>
               <option value="YYYY/MM/DD">YYYY/MM/DD (e.g., 2023/12/31)</option>
-            </Select>
+            </select>
             <p className="text-xs text-muted-foreground">
               Choosing the correct date format ensures your transactions are imported with the right dates.
+            </p>
+          </div>
+
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">CSV Format</label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="hasHeaders"
+                checked={hasHeaders}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHasHeaders(e.target.checked)}
+                className="rounded border"
+              />
+              <label htmlFor="hasHeaders" className="text-sm">
+                My CSV file has headers in the first row
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Check this if your CSV file has column names like "Date", "Amount", "Description" in the first row.
             </p>
           </div>
           

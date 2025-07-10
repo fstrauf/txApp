@@ -37,13 +37,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     
-    if (!user.api_key) {
-      return NextResponse.json(
-        { error: 'Classification API key not found' },
-        { status: 400 }
-      );
-    }
-    
     // Handle auto-classification jobs differently - they are not stored in Next.js database
     if (jobType === 'auto_classification') {
       console.log(`Handling auto-classification status check for job ${jobId}`);
@@ -98,6 +91,14 @@ export async function GET(request: NextRequest) {
       }
     }
     
+    // For regular classification and training jobs, check if user has API key
+    if (!user.api_key) {
+      return NextResponse.json(
+        { error: 'Classification API key not found' },
+        { status: 400 }
+      );
+    }
+    
     // Get the job based on type (for training and regular classification jobs)
     let job;
     if (jobType === 'training') {
@@ -148,7 +149,7 @@ export async function GET(request: NextRequest) {
     if (job.predictionId) {
       // Initialize the classification service client
       const classifyClient = new ClassifyServiceClient({
-        apiKey: user.api_key,
+        apiKey: user.api_key!, // We already checked this exists above
         serviceUrl: process.env.EXPENSE_SORTED_API || 'http://localhost',
       });
       

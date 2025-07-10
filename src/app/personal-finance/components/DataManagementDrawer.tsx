@@ -322,7 +322,23 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
               setFeedback({ type: 'success', message: `${operationType} completed successfully!` });
               
               if (onSuccess) {
-                await onSuccess(data);
+                // When polling is complete, the results are nested
+                // We need to pass the actual results object to the success handler
+                const finalResults = data.results || (data.fullPredictionStatus ? data.fullPredictionStatus.results : null);
+                
+                if (!finalResults) {
+                  throw new Error('Polling completed, but no results found in response.');
+                }
+                
+                // Pass the full data structure required by the handler
+                const finalData = {
+                  categorized_transactions: finalResults,
+                  base_currency: data.fullPredictionStatus?.processing_info?.base_currency,
+                  categories_used: data.fullPredictionStatus?.processing_info?.categories_used,
+                  duplicate_report: data.fullPredictionStatus?.duplicate_report
+                };
+
+                await onSuccess(finalData);
               }
               return;
             } else if (data.status === 'failed') {
@@ -376,158 +392,75 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
   // Separate function to handle auto-classification results
   const handleAutoClassificationComplete = async (autoClassifiedData: any, uniqueTransactions: any[], isCreateNewMode: boolean) => {
     try {
-      console.log('🎯 Starting handleAutoClassificationComplete with:', {
-        responseStructure: Object.keys(autoClassifiedData || {}),
-        resultsCount: autoClassifiedData?.results?.length || 0,
-        transactionsCount: uniqueTransactions.length,
-        responseSize: JSON.stringify(autoClassifiedData).length,
-        isCreateNewMode,
-        fullResponse: autoClassifiedData
-      });
-
-      // Enhanced validation with better error reporting
-      if (!autoClassifiedData) {
-        throw new Error('Auto-classification response is null or undefined');
+      if (!autoClassifiedData || !autoClassifiedData.categorized_transactions) {
+        throw new Error("Invalid auto-classification data received.");
       }
 
-      // Check if results exist in different possible locations
-      let results = autoClassifiedData.results;
+      const categorized = autoClassifiedData.categorized_transactions;
       
-      // If results is not directly available, check other possible locations
-      if (!results && autoClassifiedData.data?.results) {
-        results = autoClassifiedData.data.results;
-        console.log('📍 Found results in data.results');
-      }
-      
-      if (!results && autoClassifiedData.prediction_results) {
-        results = autoClassifiedData.prediction_results;
-        console.log('📍 Found results in prediction_results');
+      const newBaseCurrency = autoClassifiedData.base_currency || baseCurrency;
+      if (newBaseCurrency !== baseCurrency) {
+        updateBaseCurrency(newBaseCurrency);
       }
 
-      if (!results && autoClassifiedData.classifications) {
-        results = autoClassifiedData.classifications;
-        console.log('📍 Found results in classifications');
-      }
-
-      // For auto-classification, results might be returned directly in the response without nesting
-      if (!results && Array.isArray(autoClassifiedData)) {
-        results = autoClassifiedData;
-        console.log('📍 Results found as direct array response');
-      }
-
-      if (!results || !Array.isArray(results)) {
-        console.error('❌ Invalid results structure:', {
-          hasResults: !!autoClassifiedData.results,
-          resultsType: typeof autoClassifiedData.results,
-          isArray: Array.isArray(autoClassifiedData.results),
-          availableKeys: Object.keys(autoClassifiedData || {}),
-          fullResponse: autoClassifiedData
+      if (categorized.length !== uniqueTransactions.length) {
+        console.error('Mismatched transaction counts between original and categorized data.', {
+          categorized: categorized.length,
+          unique: uniqueTransactions.length
         });
-        
-        throw new Error(
-          `Invalid response from auto-classification API - no results array found. ` +
-          `Available fields: ${Object.keys(autoClassifiedData || {}).join(', ')}. ` +
-          `Expected 'results' to be an array but got: ${typeof autoClassifiedData.results}`
-        );
+        throw new Error('Mismatched transaction counts after classification.');
       }
 
-      if (results.length !== uniqueTransactions.length) {
-        console.warn('⚠️ Auto-classification results count mismatch:', {
-          expectedCount: uniqueTransactions.length,
-          actualCount: results.length,
-          difference: Math.abs(results.length - uniqueTransactions.length)
-        });
+      const validated: ValidationTransaction[] = categorized.map((t: any, index: number) => {
+        const originalTx = uniqueTransactions[index];
         
-        // If there's a significant mismatch, this might indicate a serious issue
-        if (Math.abs(results.length - uniqueTransactions.length) > uniqueTransactions.length * 0.1) {
-          console.error('❌ Significant results count mismatch detected');
-          throw new Error(
-            `Significant mismatch in auto-classification results: expected ${uniqueTransactions.length} results, ` +
-            `but got ${results.length}. This indicates a processing error.`
-          );
+        if (!originalTx) {
+          // This should not happen if lengths are checked, but as a safeguard:
+          console.warn(`Could not find original transaction for categorized item at index ${index}`);
+          return null;
         }
-      }
-      
-      console.log('🔄 Processing auto-classification results...');
-      
-      // For large datasets, process in chunks to avoid browser freezing
-      const CHUNK_SIZE = 500;
-      const categorizedTransactions: any[] = [];
-      
-      for (let i = 0; i < results.length; i += CHUNK_SIZE) {
-        const chunk = results.slice(i, i + CHUNK_SIZE);
-        const uniqueChunk = uniqueTransactions.slice(i, i + CHUNK_SIZE);
-        
-        const chunkProcessed = chunk.map((result: any, chunkIndex: number) => ({
-          ...uniqueChunk[chunkIndex],
-          id: `transaction-${i + chunkIndex}`,
-          category: result.predicted_category || 'Uncategorized',
-          predicted_category: result.predicted_category,
-          similarity_score: result.similarity_score,
-          confidence: result.similarity_score || 0,
+
+        // Handle currency conversion if needed
+        let displayAmount = t.amount;
+        let originalAmount, originalCurrency;
+
+        if (t.adjustment_info && t.adjustment_info.currency_conversion) {
+          displayAmount = t.adjustment_info.currency_conversion.converted_amount;
+          originalAmount = t.adjustment_info.currency_conversion.original_amount;
+          originalCurrency = t.adjustment_info.currency_conversion.original_currency;
+        }
+
+        return {
+          ...t,
+          id: `imported-tx-${Date.now()}-${index}`,
+          date: originalTx.date,
+          description: t.cleaned_narrative || t.narrative,
+          amount: displayAmount,
+          originalAmount: originalAmount,
+          originalCurrency: originalCurrency,
+          baseCurrency: newBaseCurrency,
+          category: t.predicted_category,
+          account: originalTx.account || 'N/A',
+          isDebit: t.amount < 0,
+          confidence: t.similarity_score,
           isValidated: false,
-          isSelected: false,
-          account: 'Imported'
-        }));
-        
-        categorizedTransactions.push(...chunkProcessed);
-        
-        // Give browser time to breathe between chunks
-        if (i + CHUNK_SIZE < results.length) {
-          await new Promise(resolve => setTimeout(resolve, 10));
-        }
-        
-        console.log(`📊 Processed chunk ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(results.length / CHUNK_SIZE)}`);
-      }
+          isSelected: false
+        };
+      }).filter((t: ValidationTransaction | null): t is ValidationTransaction => t !== null);
 
-      console.log('📋 Setting validation transactions state...');
-      setValidationTransactions(categorizedTransactions);
-      
-      // Reset pagination when new transactions are loaded
-      setCurrentPage(1);
-      
-      console.log('📑 Switching to validate tab...');
+      setValidationTransactions(validated);
       setActiveTab('validate');
+      setFeedback({ type: 'success', message: 'Transactions auto-classified. Please review and validate.' });
       
-      const successMessage = isCreateNewMode
-        ? `Categorized ${categorizedTransactions.length} transactions for your new spreadsheet. Please review and validate!`
-        : `Auto-classified ${categorizedTransactions.length} transactions using generic model. Please review and validate!`;
-      
-      console.log('✅ Setting success feedback...');
-      setFeedback({ 
-        type: 'success', 
-        message: successMessage
-      });
-      
-      console.log('🎉 Auto-classification complete! Switching to validation view.');
-      
-      // Reset CSV processing state after successful categorization
-      setTimeout(() => {
-        setUploadedFile(null);
-        setAnalysisResult(null);
-        setCsvStep('upload');
-        setConfig({
-          mappings: {},
-          dateFormat: commonDateFormats[1].value,
-          amountFormat: 'standard',
-          skipRows: 0,
-        });
-        setFeedback(null);
-      }, 2000);
-
-      posthog.capture('pf_transactions_processed', {
-        file_name: uploadedFile?.name,
-        file_size: uploadedFile?.size,
-        file_type: uploadedFile?.type,
-        is_first_time_user: !spreadsheetLinked,
-      });
+      if (autoClassifiedData.duplicate_report) {
+        setDuplicateReport(autoClassifiedData.duplicate_report);
+        setShowDuplicateReport(true);
+      }
 
     } catch (error: any) {
-      console.error('Auto-classification completion error:', error);
-      setFeedback({ 
-        type: 'error', 
-        message: `Error processing auto-classification results: ${error.message}`
-      });
+      console.error('Error handling auto-classification:', error);
+      const errorFeedback = handleClassifyError(error);
+      setFeedback({ type: 'error', message: errorFeedback.message });
     } finally {
       setIsProcessing(false);
     }
@@ -1653,6 +1586,11 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
     
     const validated = validationTransactions.filter(t => t.isValidated);
 
+    const transactionsWithCurrency = validated.map(t => ({
+      ...t,
+      currency: t.originalCurrency || t.baseCurrency || baseCurrency
+    }));
+
     posthog.capture('pf_validation_completed', {
       validated_count: validated.length,
       unvalidated_count: validationTransactions.length - validated.length,
@@ -1671,7 +1609,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          transactions: validated,
+          transactions: transactionsWithCurrency,
           spreadsheetId: userData.spreadsheetId
         })
       });
