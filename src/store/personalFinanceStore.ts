@@ -145,28 +145,15 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
   },
 
       processTransactionData: (transactions: Transaction[]) => {
-        console.log('🔄 ProcessTransactionData called with:', {
-          transactionCount: transactions.length,
-          sampleTransactions: transactions.slice(0, 3),
-          transactionTypes: transactions.map(t => ({ isDebit: t.isDebit, amount: t.amount, category: t.category })).slice(0, 5),
-          dateRange: transactions.length > 0 ? {
-            oldest: transactions.reduce((oldest, t) => 
-              new Date(t.date) < new Date(oldest.date) ? t : oldest
-            )?.date,
-            newest: transactions.reduce((newest, t) => 
-              new Date(t.date) > new Date(newest.date) ? t : newest
-            )?.date
-          } : null
-        });
+        // Only log significant events, not every call to reduce console spam
+        if (transactions.length === 0) {
+          console.log('🧹 Clearing transaction data');
+        } else if (transactions.length > 0) {
+          console.log(`📊 Processing ${transactions.length} transactions`);
+        }
 
         // Process transactions to calculate spending breakdown and categories
         const spendingTransactions = transactions.filter(t => t.isDebit && t.amount > 0);
-        
-        console.log('Filtered spending transactions:', {
-          originalCount: transactions.length,
-          spendingCount: spendingTransactions.length,
-          filteredOut: transactions.length - spendingTransactions.length
-        });
         
         // Calculate category breakdown
         const categoryMap = new Map<string, { amount: number; count: number }>();
@@ -196,15 +183,6 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
           Math.max(1, Math.ceil(transactions.length / 100)) : 1; // Rough estimate
         const actualMonthlySpending = totalSpending / monthsOfData;
 
-        console.log('Final processing results:', {
-          totalSpending,
-          monthsOfData,
-          actualMonthlySpending,
-          categoryCount: categorySpending.length,
-          topCategories: categorySpending.slice(0, 5)
-        });
-
-        console.log('📝 Updating store with new transaction data...');
         set((state) => {
           const newUserData = { 
             ...state.userData, 
@@ -215,25 +193,8 @@ export const usePersonalFinanceStore = create<PersonalFinanceState>()(
             spending: state.userData.spending === 0 ? actualMonthlySpending : state.userData.spending
           };
           
-          console.log('✅ Store updated - New userData transaction count:', newUserData.transactions?.length || 0);
-          console.log('📊 Store updated - Date range:', newUserData.transactions?.length > 0 ? {
-            oldest: newUserData.transactions.reduce((oldest, t) => 
-              new Date(t.date) < new Date(oldest.date) ? t : oldest
-            )?.date,
-            newest: newUserData.transactions.reduce((newest, t) => 
-              new Date(t.date) > new Date(newest.date) ? t : newest
-            )?.date
-          } : 'No transactions');
-          
           return { userData: newUserData };
         });
-      },
-
-      // Savings sheet data management
-      updateSavingsSheetData: (savingsData: SavingsSheetData) => {
-        set((state) => ({
-          userData: { ...state.userData, savingsSheetData: savingsData }
-        }));
       },
 
       // Savings sheet data management

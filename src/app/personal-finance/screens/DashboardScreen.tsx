@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePersonalFinanceStore } from '@/store/personalFinanceStore';
 import { useDashboardQuery } from '../hooks/useDashboardQuery';
 import { useDashboardState } from '../hooks/useDashboardState';
 import { useDashboardHandlers } from '../hooks/useDashboardHandlers';
+import { useAuthenticationBarrier } from '../hooks/useAuthenticationBarrier';
 import { DashboardStats } from '../utils/dashboardStats';
 import { Header } from '@/components/ui/Header';
 import DataManagementDrawer from '../components/DataManagementDrawer';
@@ -22,7 +23,7 @@ import { useDashboardAbTesting } from '../utils/dashboardAbTesting';
 import { DemoBanner } from '../components/dashboard/DemoBanner';
 import { DashboardControls } from '../components/dashboard/DashboardControls';
 import { LoadingState } from '../components/dashboard/LoadingState';
-import { NoDataState } from '../components/dashboard/NoDataState';
+
 import { DashboardStatistics } from '../components/dashboard/DashboardStatistics';
 import { TransactionTab, AIInsightsTab, PortfolioTab } from '../components/dashboard/TabContent';
 import { TabNavigation } from '../components/dashboard/TabNavigation';
@@ -38,9 +39,12 @@ const DashboardScreen: React.FC = () => {
   const { baseCurrency, spreadsheetName } = useConsolidatedSpreadsheetData();
   const router = useRouter();
 
+  // Use authentication barrier to prevent cascading effects during login
+  const { isAuthenticated, isReady, session } = useAuthenticationBarrier();
+
   // Use modular state management
   const {
-    session,
+    session: _,
     status,
     isHelpDrawerOpen,
     setIsHelpDrawerOpen,
@@ -93,15 +97,6 @@ const DashboardScreen: React.FC = () => {
   // Check if user has a SNAPSHOT subscription
   const hasSnapshotSubscription = subscriptionDetails?.subscriptionPlanName === 'SNAPSHOT';
 
-  // Debug logging
-  console.log('Dashboard state:', {
-    isFirstTimeUser,
-    hasSnapshotSubscription,
-    subscriptionPlan: subscriptionDetails?.subscriptionPlanName,
-    subscriptionDetails,
-    isLoadingSubscription
-  });
-
   // Use modular handlers
   const handlers = useDashboardHandlers({
     isFirstTimeUser,
@@ -135,144 +130,27 @@ const DashboardScreen: React.FC = () => {
     savingsQuarter: mockSavingsData.latestQuarter,
   };
 
-  // Use mock data for first-time users (unless they've paid for snapshot), real data otherwise
-  const displayStats = (isFirstTimeUser && !hasSnapshotSubscription) ? mockStats : dashboardStats;
-  const displayTransactions = (isFirstTimeUser && !hasSnapshotSubscription) ? mockTransactions : filteredTransactions;
-  const displayAssetsData = (isFirstTimeUser && !hasSnapshotSubscription) ? mockAssetsData : assetsData;
+  // Default empty stats for when there's no data
+  const emptyStats: DashboardStats = {
+    monthlyAverageIncome: 0,
+    monthlyAverageSavings: 0,
+    monthlyAverageExpenses: 0,
+    lastMonthExpenses: 0,
+    lastMonthIncome: 0,
+    lastMonthSavings: 0,
+    annualExpenseProjection: 0,
+    lastDataRefresh: new Date(),
+    runwayMonths: 0,
+    totalSavings: 0,
+    savingsQuarter: 'Q1',
+  };
 
-  // Track dashboard screen view
-  useEffect(() => {
-    posthog.capture('pf_screen_viewed', {
-      screen: 'dashboard',
-      is_first_time_user: isFirstTimeUser,
-      spreadsheet_linked: spreadsheetLinked,
-      has_transactions: (displayTransactions?.length || 0) > 0,
-      user_authenticated: !!session?.user?.id,
-      transaction_count: displayTransactions?.length || 0,
-    });
-  }, [isFirstTimeUser, spreadsheetLinked, displayTransactions?.length, session?.user?.id]);
-
-  // Track tab navigation
-  useEffect(() => {
-    if (activeTab) {
-      posthog.capture('pf_navigation', {
-        active_tab: activeTab,
-        is_first_time_user: isFirstTimeUser,
-        user_authenticated: !!session?.user?.id
-      });
-    }
-  }, [activeTab, isFirstTimeUser, session?.user?.id]);
-
-  // Track A/B test exposure when demo banner is shown
-  useEffect(() => {
-    if (isFirstTimeUser) {
-      posthog.capture('demo_dashboard_banner_viewed', {
-        headline_variant: headlineVariant || 'control',
-        cta_variant: ctaButtonVariant || 'control',
-        is_first_time_user: isFirstTimeUser,
-        user_authenticated: !!session?.user?.id
-      });
-
-      if (headlineVariant) {
-        posthog.capture('$experiment_started', {
-          $feature_flag: 'demo-dashboard-headline',
-          $feature_flag_response: headlineVariant
-        });
-      }
-      
-      if (ctaButtonVariant) {
-        posthog.capture('$experiment_started', {
-          $feature_flag: 'demo-dashboard-cta-button', 
-          $feature_flag_response: ctaButtonVariant
-        });
-      }
-    }
-  }, [isFirstTimeUser, headlineVariant, ctaButtonVariant, session?.user?.id]);
-
-  // Temporarily populate store with mock data for first-time users
-  useEffect(() => {
-    if (isFirstTimeUser && (!userData.transactions || userData.transactions.length === 0)) {
-      processTransactionData(mockTransactions);
-    } else if (!isFirstTimeUser && userData.transactions && userData.transactions.length > 0) {
-      const hasMockData = userData.transactions.some(t => t.id?.startsWith('mock-'));
-      if (hasMockData) {
-        processTransactionData([]);
-      }
-    }
-  }, [isFirstTimeUser, userData.transactions, processTransactionData]);
-
-  // Check URL params for financial snapshot success or offer
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const sessionId = urlParams.get('session_id');
-      
-      // Handle successful snapshot purchase
-      if (urlParams.get('snapshot') === 'success' && sessionId) {
-        // Check if user is authenticated
-        if (!session?.user) {
-          // Store the session ID for after auth
-          localStorage.setItem('pending_snapshot_session', sessionId);
-          setPendingSnapshotSessionId(sessionId);
-          
-          // Show authentication needed message
-          posthog.capture('snapshot_auth_required', {
-            session_id: sessionId,
-            action: 'payment_completed_auth_needed'
-          });
-          
-          // Show onboarding modal instead of toast for better UX
-          setIsOnboardingModalOpen(true);
-        } else {
-          // Already authenticated, proceed with snapshot access
-          handleSnapshotSuccess(sessionId);
-        }
-        
-        // Clean up URL
-        const url = new URL(window.location.href);
-        url.searchParams.delete('snapshot');
-        url.searchParams.delete('session_id');
-        window.history.replaceState({}, '', url.toString());
-      }
-      
-      // Handle cancelled snapshot purchase
-      if (urlParams.get('snapshot') === 'cancelled') {
-        posthog.capture('financial_snapshot_purchase_cancelled', {
-          user_authenticated: !!session?.user?.id
-        });
-        
-        // Clean up URL
-        const url = new URL(window.location.href);
-        url.searchParams.delete('snapshot');
-        window.history.replaceState({}, '', url.toString());
-      }
-      
-      // Handle snapshot offer from blog posts
-      if (urlParams.get('offer') === 'snapshot') {
-        // Show financial snapshot offer (scroll to it or highlight it)
-        posthog.capture('financial_snapshot_offer_viewed', {
-          source: 'blog_post_cta',
-          user_authenticated: !!session?.user?.id
-        });
-        
-        // Clean up URL
-        const url = new URL(window.location.href);
-        url.searchParams.delete('offer');
-        window.history.replaceState({}, '', url.toString());
-      }
-    }
-  }, [setDataManagementDefaultTab, setIsHelpDrawerOpen, session?.user?.id]);
-
-  // Handle post-authentication for paid snapshots
-  useEffect(() => {
-    if (session?.user && typeof window !== 'undefined') {
-      const pendingSession = localStorage.getItem('pending_snapshot_session');
-      if (pendingSession) {
-        handleSnapshotSuccess(pendingSession);
-        localStorage.removeItem('pending_snapshot_session');
-      }
-    }
-  }, [session?.user]);
+  // Use mock data for first-time users (unless they've paid for snapshot), real data otherwise, or empty stats as fallback
+  const displayStats = (isFirstTimeUser && !hasSnapshotSubscription) 
+    ? mockStats 
+    : (dashboardStats || emptyStats);
+  const displayTransactions = (isFirstTimeUser && !hasSnapshotSubscription) ? mockTransactions : (filteredTransactions || []);
+  const displayAssetsData = (isFirstTimeUser && !hasSnapshotSubscription) ? mockAssetsData : (assetsData || null);
 
   // Helper function to handle successful snapshot access
   const handleSnapshotSuccess = async (sessionId: string) => {
@@ -308,20 +186,17 @@ const DashboardScreen: React.FC = () => {
           if (linkResponse.ok) {
             const linkData = await linkResponse.json();
             console.log('Payment successfully linked to user account', linkData);
-                     } else {
-             const errorData = await linkResponse.json();
-             if (errorData.error?.includes('Email mismatch')) {
-               setUserToastStatus('email_mismatch');
-               // Don't return - let them use the app normally, just without paid access
-               console.warn('Email mismatch - user can use app but not access paid snapshot');
-             } else {
-               console.warn('Failed to link payment to account:', errorData.error);
-             }
-             // Continue anyway - they can use the app normally
-           }
+          } else {
+            const errorData = await linkResponse.json();
+            if (errorData.error?.includes('Email mismatch')) {
+              setUserToastStatus('email_mismatch');
+              console.warn('Email mismatch - user can use app but not access paid snapshot');
+            } else {
+              console.warn('Failed to link payment to account:', errorData.error);
+            }
+          }
         } catch (linkError) {
           console.warn('Error linking payment to account:', linkError);
-          // Continue anyway - they have a valid payment
         }
       }
       
@@ -329,25 +204,20 @@ const DashboardScreen: React.FC = () => {
       setIsPaidSnapshot(true);
       setDataManagementDefaultTab('upload');
       
-      // Only open drawer immediately if onboarding is not active
-      // Otherwise, set pending flag to open after onboarding completes
       if (!isOnboardingModalOpen) {
         setIsHelpDrawerOpen(true);
       } else {
         setPendingDrawerOpen(true);
       }
       
-      // Track successful snapshot access
       posthog.capture('financial_snapshot_accessed', { 
         session_id: sessionId,
-        user_authenticated: !!session?.user?.id,
+        user_authenticated: isAuthenticated,
         amount: verificationData.amount
       });
       
-      // Clear any auth needed status
       setUserToastStatus('snapshot_ready');
       
-      // Clear the session ID after successful processing
       if (typeof window !== 'undefined') {
         localStorage.removeItem('pending_snapshot_session');
       }
@@ -358,28 +228,191 @@ const DashboardScreen: React.FC = () => {
     }
   };
 
-  const showLoadingState = (isLoading && !dashboardStats && spreadsheetLinked && !isFirstTimeUser) || (isRefreshing && !error);
+  // Use refs to track what we've already processed
+  const hasInitialized = useRef(false);
+  const hasProcessedUrlParams = useRef(false);
+  const hasProcessedMockData = useRef(false);
 
+  // Single consolidated initialization effect - prevents cascading re-renders
+  useEffect(() => {
+    if (!isReady) return;
+
+    // Skip if we've already initialized to prevent duplicate processing
+    if (hasInitialized.current) return;
+
+    const initializeDashboard = async () => {
+      try {
+        // 1. Handle A/B testing experiments first (only once)
+        if (isFirstTimeUser && !isAuthenticated) {
+          if (headlineVariant) {
+            posthog.capture('$experiment_started', {
+              $feature_flag: 'demo-dashboard-headline',
+              $feature_flag_response: headlineVariant
+            });
+          }
+          
+          if (ctaButtonVariant) {
+            posthog.capture('$experiment_started', {
+              $feature_flag: 'demo-dashboard-cta-button', 
+              $feature_flag_response: ctaButtonVariant
+            });
+          }
+        }
+
+        // 2. Handle URL params (only once per session)
+        if (typeof window !== 'undefined' && !hasProcessedUrlParams.current) {
+          const urlParams = new URLSearchParams(window.location.search);
+          const sessionId = urlParams.get('session_id');
+          
+          // Handle successful snapshot purchase
+          if (urlParams.get('snapshot') === 'success' && sessionId) {
+            if (!session?.user) {
+              localStorage.setItem('pending_snapshot_session', sessionId);
+              setPendingSnapshotSessionId(sessionId);
+              posthog.capture('snapshot_auth_required', {
+                session_id: sessionId,
+                action: 'payment_completed_auth_needed'
+              });
+              setIsOnboardingModalOpen(true);
+            } else {
+              await handleSnapshotSuccess(sessionId);
+            }
+            
+            // Clean up URL
+            const url = new URL(window.location.href);
+            url.searchParams.delete('snapshot');
+            url.searchParams.delete('session_id');
+            window.history.replaceState({}, '', url.toString());
+          }
+          
+          // Handle other URL params...
+          if (urlParams.get('snapshot') === 'cancelled') {
+            posthog.capture('financial_snapshot_purchase_cancelled', {
+              user_authenticated: isAuthenticated
+            });
+            
+            const url = new URL(window.location.href);
+            url.searchParams.delete('snapshot');
+            window.history.replaceState({}, '', url.toString());
+          }
+          
+          if (urlParams.get('offer') === 'snapshot') {
+            posthog.capture('financial_snapshot_offer_viewed', {
+              source: 'blog_post_cta',
+              user_authenticated: isAuthenticated
+            });
+            
+            const url = new URL(window.location.href);
+            url.searchParams.delete('offer');
+            window.history.replaceState({}, '', url.toString());
+          }
+          
+          hasProcessedUrlParams.current = true;
+        }
+
+        // 3. Handle post-authentication for paid snapshots
+        if (session?.user && typeof window !== 'undefined') {
+          const pendingSession = localStorage.getItem('pending_snapshot_session');
+          if (pendingSession) {
+            await handleSnapshotSuccess(pendingSession);
+            localStorage.removeItem('pending_snapshot_session');
+          }
+        }
+
+        // 4. Handle mock data population (only once per auth state change)
+        if (!hasProcessedMockData.current) {
+          const hasTransactions = userData.transactions && userData.transactions.length > 0;
+          const hasMockData = userData.transactions?.some(t => t.id?.startsWith('mock-'));
+          
+          if (isFirstTimeUser && !hasTransactions) {
+            // First-time user needs mock data
+            processTransactionData(mockTransactions);
+          } else if (!isFirstTimeUser && hasMockData) {
+            // Authenticated user with mock data - clear it
+            processTransactionData([]);
+          }
+          
+          hasProcessedMockData.current = true;
+        }
+
+        hasInitialized.current = true;
+        
+      } catch (error) {
+        console.error('Dashboard initialization error:', error);
+      }
+    };
+
+    initializeDashboard();
+    
+  }, [isReady, isAuthenticated]); // Minimal dependencies - only what's needed for initialization
+
+  // Reset processed flags when auth state changes significantly
+  useEffect(() => {
+    if (!isReady) return;
+    
+    // Reset mock data processing when auth state changes
+    hasProcessedMockData.current = false;
+    
+    // Reset initialization when moving between authenticated states
+    if (hasInitialized.current) {
+      hasInitialized.current = false;
+    }
+     }, [isAuthenticated, isFirstTimeUser]);
+
+  // Track dashboard screen view - ONLY when auth is ready
+  useEffect(() => {
+    if (!isReady) return;
+    
+    posthog.capture('pf_screen_viewed', {
+      screen: 'dashboard',
+      is_first_time_user: isFirstTimeUser,
+      spreadsheet_linked: spreadsheetLinked,
+      has_transactions: (displayTransactions?.length || 0) > 0,
+      user_authenticated: isAuthenticated,
+      transaction_count: displayTransactions?.length || 0,
+    });
+  }, [isReady, isFirstTimeUser, spreadsheetLinked, displayTransactions?.length, isAuthenticated]);
+
+  // Track tab navigation - ONLY when auth is ready
+  useEffect(() => {
+    if (!isReady || !activeTab) return;
+    
+    posthog.capture('pf_navigation', {
+      active_tab: activeTab,
+      is_first_time_user: isFirstTimeUser,
+      user_authenticated: isAuthenticated
+    });
+  }, [isReady, activeTab, isFirstTimeUser, isAuthenticated]);
+
+  // Show loading state while authentication is stabilizing
+  if (!isReady) {
+    return (
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 py-4">
+          <LoadingState isRefreshing={false} />
+        </div>
+      </div>
+    );
+  }
+
+  // Component handlers and UI remain the same...
   const openDataDrawer = (source: string) => {
     posthog.capture('pf_drawer_opened', {
       source: source,
       is_first_time_user: isFirstTimeUser,
-      user_authenticated: !!session?.user?.id
+      user_authenticated: isAuthenticated
     });
     
     // For first-time users, show the snapshot offer modal instead of onboarding
-    // But only if they don't already have a snapshot subscription
     if (isFirstTimeUser && !hasSnapshotSubscription) {
       setShowSnapshotOffer(true);
     } else {
-      // For existing users, open the data drawer directly
       setDataManagementDefaultTab('manage');
       handlers.handleLinkSpreadsheet();
     }
   };
 
   const handleOnboardingComplete = async (sheetData?: { spreadsheetId: string; spreadsheetUrl: string }) => {
-    // If this was a post-purchase signup, verify and link the payment
     const sessionId = pendingSnapshotSessionId || localStorage.getItem('pending_snapshot_session');
     if (sessionId) {
       await handleSnapshotSuccess(sessionId);
@@ -387,25 +420,21 @@ const DashboardScreen: React.FC = () => {
       localStorage.removeItem('pending_snapshot_session');
     }
     
-    // After onboarding is complete, open the data management drawer
     if (sheetData) {
       console.log('Sheet automatically created and linked:', sheetData);
       setDataManagementDefaultTab('upload');
     } else if (pendingDrawerOpen) {
-      // If there was a pending drawer open (from paid snapshot), use upload tab
       setDataManagementDefaultTab('upload');
     } else {
       setDataManagementDefaultTab('manage');
     }
     
-    // Close onboarding modal and open drawer after a small delay
     setIsOnboardingModalOpen(false);
     setTimeout(() => {
       setIsHelpDrawerOpen(true);
-      setPendingDrawerOpen(false); // Clear the pending flag
+      setPendingDrawerOpen(false);
     }, 300);
     
-    // Refetch dashboard status so isFirstTimeUser is updated
     refetchStatus();
   };
 
@@ -413,28 +442,23 @@ const DashboardScreen: React.FC = () => {
     posthog.capture('make_dashboard_mine_clicked', {
       source: 'dashboard_cta',
       is_first_time_user: isFirstTimeUser,
-      user_authenticated: !!session?.user?.id
+      user_authenticated: isAuthenticated
     });
     
-    // Show Financial Snapshot offer modal for first-time users
-    // But only if they don't already have a snapshot subscription
     if (isFirstTimeUser && !hasSnapshotSubscription) {
       setShowSnapshotOffer(true);
     } else {
-      // For existing users, open onboarding/data management
       setIsOnboardingModalOpen(true);
     }
   };
 
-  // Handle snapshot purchase
   const handleSnapshotPurchase = async () => {
     posthog.capture('financial_snapshot_purchase_initiated', {
       source: 'modal_offer',
-      user_authenticated: !!session?.user?.id
+      user_authenticated: isAuthenticated
     });
     
     try {
-      // Use the main Stripe checkout endpoint - no auth required for one-time purchases
       const currentPath = window.location.pathname;
       const response = await fetch(`/api/stripe/checkout?plan=snapshot&billing=one-time&redirect=${encodeURIComponent(currentPath)}`);
       
@@ -451,22 +475,20 @@ const DashboardScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Error creating snapshot checkout:', error);
-      // You could show a toast notification here
       alert('Failed to start checkout. Please try again.');
     }
   };
 
-  // Handle free sheet download
   const handleFreeSheetDownload = () => {
     posthog.capture('free_sheet_downloaded', {
       source: 'snapshot_offer_modal',
-      user_authenticated: !!session?.user?.id
+      user_authenticated: isAuthenticated
     });
     
-    // Close the modal and show a success message
     setShowSnapshotOffer(false);
-    // Could add a toast notification here if you have one
   };
+
+  const showLoadingState = (isLoading && !dashboardStats && spreadsheetLinked && !isFirstTimeUser) || (isRefreshing && !error);
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-gray-50 via-white to-primary/5">
@@ -476,72 +498,71 @@ const DashboardScreen: React.FC = () => {
           <Header variant="centered" size="xl" className="mb-8 sm:mb-12 lg:mb-16">
             Get instant Clarity On Your Finances
           </Header>
-         )}
+        )}
 
         {/* Demo Banner for First-Time Users */}
         {isFirstTimeUser && (
           <div>
-          <DemoBanner
-            headlineText={getHeadlineText()}
-            ctaButtonText={getCtaButtonText()}
-            onCtaClick={handleMakeDashboardMine}
-            onHowItWorksClick={() => setIsHowItWorksOpen(true)}
-            isLoading={status === 'loading'}
-          />
-             <div className="max-w-4xl mx-auto mb-16">
-        <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-secondary/5 to-primary/10 rounded-2xl"></div>
-          
-          <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-primary/20 shadow-lg">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-4 mb-4">
-                <div className="animate-bounce">
-                  <div className="w-3 h-3 bg-primary rounded-full"></div>
+            <DemoBanner
+              headlineText={getHeadlineText()}
+              ctaButtonText={getCtaButtonText()}
+              onCtaClick={handleMakeDashboardMine}
+              onHowItWorksClick={() => setIsHowItWorksOpen(true)}
+              isLoading={status === 'loading'}
+            />
+            <div className="max-w-4xl mx-auto mb-16">
+              <div className="relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-secondary/5 to-primary/10 rounded-2xl"></div>
+                
+                <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-primary/20 shadow-lg">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-4 mb-4">
+                      <div className="animate-bounce">
+                        <div className="w-3 h-3 bg-primary rounded-full"></div>
+                      </div>
+                      <div className="animate-bounce" style={{ animationDelay: '0.1s' }}>
+                        <div className="w-3 h-3 bg-secondary rounded-full"></div>
+                      </div>
+                      <div className="animate-bounce" style={{ animationDelay: '0.2s' }}>
+                        <div className="w-3 h-3 bg-primary rounded-full"></div>
+                      </div>
+                    </div>
+                    
+                    <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                      <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                        Check out the dashboard
+                      </span>{" "}
+                      with demo data below
+                    </h3>
+                    
+                    <p className="text-lg text-gray-600 mb-6">
+                      See exactly what your financial freedom dashboard will look like
+                    </p>
+                    
+                    <div className="animate-pulse">
+                      <svg 
+                        className="w-8 h-8 text-primary mx-auto animate-bounce" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth="2" 
+                          d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                        />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
-                <div className="animate-bounce" style={{ animationDelay: '0.1s' }}>
-                  <div className="w-3 h-3 bg-secondary rounded-full"></div>
-                </div>
-                <div className="animate-bounce" style={{ animationDelay: '0.2s' }}>
-                  <div className="w-3 h-3 bg-primary rounded-full"></div>
-                </div>
-              </div>
-              
-              <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                  Check out the dashboard
-                </span>{" "}
-                with demo data below
-              </h3>
-              
-              <p className="text-lg text-gray-600 mb-6">
-                See exactly what your financial freedom dashboard will look like
-              </p>
-              
-              <div className="animate-pulse">
-                <svg 
-                  className="w-8 h-8 text-primary mx-auto animate-bounce" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth="2" 
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      </div>
         )}
 
-
         {/* Error Display */}
-        <ErrorDisplayBox 
+        <ErrorDisplayBox
           error={error}
           onRelink={() => spreadsheetUrl && handlers.handleRelinkSpreadsheet()}
           onCreateNew={() => {
@@ -557,7 +578,7 @@ const DashboardScreen: React.FC = () => {
         {showLoadingState && <LoadingState isRefreshing={isRefreshing} />}
 
         {/* Dashboard Content */}
-        {!showLoadingState && displayStats && (
+        {!showLoadingState && (
           <>
             <DashboardControls
               lastDataRefresh={displayStats?.lastDataRefresh}
@@ -624,19 +645,6 @@ const DashboardScreen: React.FC = () => {
           </>
         )}
 
-        {/* No Data State */}
-        {!showLoadingState && !displayStats && !isLoading && (
-          <NoDataState
-            spreadsheetLinked={spreadsheetLinked}
-            isRefreshing={isRefreshing}
-            onRefreshClick={async () => {
-              await handlers.handleManualRefresh();
-            }}
-            onConnectGoogleSheetsClick={() => setIsHelpDrawerOpen(true)}
-            onUploadBankDataClick={() => setIsHelpDrawerOpen(true)}
-          />
-        )}
-
         {/* Data Management Drawer */}
         <HelpDrawer
           isOpen={isHelpDrawerOpen}
@@ -681,7 +689,6 @@ const DashboardScreen: React.FC = () => {
           <HowItWorksDrawer onClose={() => setIsHowItWorksOpen(false)} />
         </HelpDrawer>
 
-
         {/* Exit Survey */}
         <PostHogApiSurvey
           surveyId="01978a09-ff78-0000-52ee-30eb2fe209ab"
@@ -705,8 +712,6 @@ const DashboardScreen: React.FC = () => {
         isOpen={isOnboardingModalOpen}
         onClose={() => {
           setIsOnboardingModalOpen(false);
-          // If user closes onboarding modal manually and there was a pending drawer open,
-          // open it after a short delay (they might want to access their paid snapshot)
           if (pendingDrawerOpen) {
             setTimeout(() => {
               setIsHelpDrawerOpen(true);

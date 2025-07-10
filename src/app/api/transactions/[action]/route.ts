@@ -216,53 +216,78 @@ export async function POST(request: NextRequest, { params }: { params: { action:
         amount: tx.amount || 0
       }));
 
-      // Get API key: Use demo key for unauthenticated users, user-specific key for authenticated users
-      let apiKey: string | undefined;
+      // For all users (authenticated and unauthenticated), use auto-classify endpoint
+      // This ensures consistency and uses compression for large requests
+      const payload = {
+        transactions: formattedTransactions
+      };
+
+      // Determine if we should use compression based on request size
+      const payloadString = JSON.stringify(payload);
+      const payloadSize = new TextEncoder().encode(payloadString).length;
+      const shouldCompress = payloadSize > 50000; // 50KB threshold
+
+      console.log(`Processing ${formattedTransactions.length} transactions (${Math.round(payloadSize/1024)}KB), compression: ${shouldCompress}`);
+
+      let response;
       
-      if (!userId) {
-        // For unauthenticated users, use demo/generic API key
-        apiKey = process.env.EXPENSE_SORTED_API_KEY;
-        console.log('Using demo API key for unauthenticated user');
+      if (shouldCompress) {
+        // Use compression for large requests
+        try {
+          const { gzip } = await import('pako');
+          const compressedData = gzip(payloadString, { level: 6 });
+          const compressionRatio = ((payloadSize - compressedData.length) / payloadSize * 100).toFixed(1);
+          
+          console.log(`Using compression: ${Math.round(payloadSize/1024)}KB -> ${Math.round(compressedData.length/1024)}KB (${compressionRatio}% reduction)`);
+          
+          response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/classify/auto-classify`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Encoding': 'gzip',
+              'Content-Length': compressedData.length.toString(),
+            },
+            body: compressedData,
+          });
+        } catch (compressionError) {
+          console.warn('Compression failed, falling back to uncompressed:', compressionError);
+          // Fall back to uncompressed
+          response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/classify/auto-classify`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: payloadString,
+          });
+        }
       } else {
-        // For authenticated users, try to get their personal API key
-        // TODO: Implement user-specific API key retrieval from database
-        // For now, fall back to the default key
-        apiKey = process.env.EXPENSE_SORTED_API_KEY;
-        console.log('Using default API key for authenticated user');
-      }
-      
-      if (!apiKey) {
-        console.error('No EXPENSE_SORTED_API_KEY configured');
-        return NextResponse.json({ 
-          error: 'Categorization service temporarily unavailable. Please try again later.' 
-        }, { status: 503 });
+        // Use uncompressed for small requests
+        response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/classify/auto-classify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: payloadString,
+        });
       }
 
-      // Call the categorization service (using auto-classify for universal categorization)
-      const categorizeResponse = await fetch(`${process.env.EXPENSE_SORTED_API}/auto-classify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
-        },
-        body: JSON.stringify({
-          transactions: formattedTransactions
-        }),
-      });
-
-      if (!categorizeResponse.ok) {
-        const errorText = await categorizeResponse.text();
-        console.error('Categorization service error:', categorizeResponse.status, errorText);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Auto-classify service error:', response.status, errorText);
         
         // Provide user-friendly error messages
-        if (categorizeResponse.status === 401) {
+        if (response.status === 401) {
           return NextResponse.json({ 
             error: 'Service authentication failed. Please try again later.' 
           }, { status: 503 });
-        } else if (categorizeResponse.status === 429) {
+        } else if (response.status === 429) {
           return NextResponse.json({ 
             error: 'Service temporarily overloaded. Please try again in a few minutes.' 
           }, { status: 429 });
+        } else if (response.status === 504) {
+          return NextResponse.json({ 
+            error: 'Request timeout. Try breaking your data into smaller batches.' 
+          }, { status: 504 });
         } else {
           return NextResponse.json({ 
             error: 'Categorization service temporarily unavailable. Please try again later.' 
@@ -270,19 +295,21 @@ export async function POST(request: NextRequest, { params }: { params: { action:
         }
       }
 
-      const categorizedResults = await categorizeResponse.json();
+      const categorizedResults = await response.json();
       
       // Add metadata about the request for analytics/debugging
-      const response = {
+      const responseData = {
         ...categorizedResults,
         metadata: {
           isAuthenticated: !!userId,
           transactionCount: formattedTransactions.length,
+          payloadSize: Math.round(payloadSize/1024),
+          compressed: shouldCompress,
           timestamp: new Date().toISOString()
         }
       };
       
-      return NextResponse.json(response);
+      return NextResponse.json(responseData);
 
     } catch (error: any) {
       console.error('Categorize endpoint error:', error);

@@ -54,8 +54,31 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(validatedPayload),
     });
 
-    // 4. Forward the response (or error) back to the client
-    const responseData = await externalResponse.json();
+    // 4. Get response text first to handle empty responses
+    const responseText = await externalResponse.text();
+    
+    // Handle empty response
+    if (!responseText || responseText.trim() === '') {
+      console.error(`External classification service returned empty response for user ${userId}:`, externalResponse.status);
+      return NextResponse.json({ 
+        error: 'Classification service returned empty response',
+        details: `HTTP ${externalResponse.status}: The external service did not return any data`
+      }, { status: externalResponse.status || 502 });
+    }
+
+    // Parse JSON with error handling
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (jsonError) {
+      console.error(`Failed to parse JSON response from external service for user ${userId}:`, jsonError);
+      console.error('Response text:', responseText.substring(0, 500)); // Log first 500 chars
+      
+      return NextResponse.json({ 
+        error: 'Invalid response format from classification service',
+        details: `The external service returned invalid JSON: ${jsonError instanceof Error ? jsonError.message : 'Unknown parsing error'}`
+      }, { status: 502 });
+    }
 
     if (!externalResponse.ok) {
        console.error(`External classification service error for user ${userId}:`, externalResponse.status, responseData);

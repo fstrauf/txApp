@@ -7,6 +7,18 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
+    // Debug: Check if API key is loaded
+    const hasApiKey = !!process.env.OPENAI_API_KEY;
+    const apiKeyLength = process.env.OPENAI_API_KEY?.length || 0;
+    console.log('OpenAI API Key status:', { hasApiKey, apiKeyLength });
+    
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: 'OpenAI API key not configured' },
+        { status: 500 }
+      );
+    }
+
     const { headers, sampleRows } = await request.json();
 
     if (!headers || !Array.isArray(headers)) {
@@ -16,53 +28,62 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build sample data section for the prompt
-    let sampleDataSection = '';
-    if (sampleRows && Array.isArray(sampleRows) && sampleRows.length > 0) {
-      console.log(`Using ${sampleRows.length} sample rows for AI analysis`);
-      sampleDataSection = `\n\nSample Data (${sampleRows.length} rows):\n`;
-      sampleRows.forEach((row, index) => {
-        sampleDataSection += `Row ${index + 1}:\n`;
-        headers.forEach(header => {
-          const value = row[header];
-          const displayValue = value === null || value === undefined ? '[empty]' : String(value).slice(0, 50); // Limit length
-          sampleDataSection += `  ${header}: "${displayValue}"\n`;
-        });
-        sampleDataSection += '\n';
-      });
-    } else {
-      console.log('No sample data provided, using headers only');
+    if (!sampleRows || !Array.isArray(sampleRows) || sampleRows.length === 0) {
+      return NextResponse.json(
+        { error: 'Sample rows are required' },
+        { status: 400 }
+      );
     }
 
-    const prompt = `You are helping to map CSV headers from a bank/financial transaction export to our standardized fields.
+    // Convert the object-based rows back to raw arrays for AI analysis
+    const rawRows: string[][] = [];
+    
+    // Add headers as first row (these might be actual headers or just the first data row)
+    rawRows.push(headers);
+    
+    // Add sample rows (convert from object format back to array format)
+    sampleRows.forEach((row: any) => {
+      const rowArray: string[] = [];
+      headers.forEach((header: string) => {
+        rowArray.push(row[header] || '');
+      });
+      rawRows.push(rowArray);
+    });
 
-CSV Headers: ${headers.join(', ')}${sampleDataSection}
+    // Format the raw rows for AI analysis
+    let dataSection = 'Raw CSV Data:\n';
+    rawRows.forEach((row, index) => {
+      dataSection += `Row ${index + 1}: ${row.map(cell => `"${cell}"`).join(', ')}\n`;
+    });
+
+    const prompt = `You are analyzing raw CSV data from a bank/financial transaction export. Your job is to:
+
+1. **DETECT HEADERS**: Determine if Row 1 contains column headers or actual transaction data
+2. **MAP COLUMNS**: Map each column to our standardized transaction fields
+
+${dataSection}
 
 Available mapping options:
 - date: Transaction date/timestamp
-- amount: Transaction amount (positive or negative numbers)
+- amount: Transaction amount (positive or negative numbers)  
 - description: Main transaction description/merchant name
 - description2: Secondary description field (optional, for additional details)
 - currency: Currency code (USD, EUR, NZD, etc.)
 - direction: Transaction direction/type (IN/OUT, DEBIT/CREDIT, +/-, etc.)
+- balance: Account balance after transaction
 - none: Don't map this column
 
-CRITICAL ANALYSIS STEPS:
-1. Look at the ACTUAL DATA VALUES in the sample rows, not just the header names
-2. Identify which field contains the MERCHANT NAME or TRANSACTION RECIPIENT
-3. Card numbers (****-****-****) are NOT descriptions - they're just payment methods
+**HEADER DETECTION RULES:**
+- If Row 1 contains descriptive labels like "Date", "Amount", "Description", "Balance" → HAS HEADERS
+- If Row 1 contains actual transaction data (dates like "29/06/2025", amounts like "-31.18", merchant names) → NO HEADERS
+- Compare Row 1 with other rows - if Row 1 looks completely different, it's likely headers
 
-SPECIFIC EXAMPLES FROM YOUR DATA:
-- If you see "Code" contains values like "Woolworths N", "Mountain War", "H&M" → These are MERCHANT NAMES → map to "description"
-- If you see "Details" contains values like "4835-****-****-0311" → These are CARD NUMBERS → NOT a description
-- If you see "Type" contains values like "Visa Purchase", "Automatic Payment" → These indicate transaction type → map to "direction"
-
-FIELD MAPPING RULES:
+**MAPPING RULES:**
 
 For DESCRIPTION (most important - the merchant/recipient name):
 - IGNORE fields that contain:
   * Card numbers (****-****-****)
-  * Account numbers
+  * Account numbers  
   * Generic payment method info
 - LOOK FOR fields that contain:
   * Store names (Woolworths, H&M)
@@ -82,41 +103,48 @@ For DIRECTION:
 - Transaction types count as direction (e.g., "Visa Purchase" = outgoing)
 - Don't require explicit IN/OUT values
 
-For Amount:
-- look for amount columns, but exclude fees and interest labeled columns
+For AMOUNT:
+- Look for amount columns, but exclude fees and interest labeled columns
 
-ANALYZE THE SAMPLE DATA:
-Looking at your samples, which field contains the actual merchant names?
-- Type: "Visa Purchase" → This is transaction type
-- Details: "4835-****-****-0311" → This is a card number
-- Code: "Woolworths N", "H&M", "Mountain War" → These are MERCHANT NAMES!
+For BALANCE:
+- Look for running balance columns (usually increasing/decreasing totals that change between rows)
 
-Based on this analysis, provide the correct mappings.
+**ANALYSIS EXAMPLE:**
+- If you see Row 1: "29/06/2025", "-31.18", "StepPay Repayment", "+958.69"
+- And Row 2: "29/06/2025", "-2.00", "StepPay Repayment", "+989.87"
+- This suggests NO HEADERS (Row 1 is actual transaction data)
+- Column mappings: 0=date, 1=amount, 2=description, 3=balance
 
-Respond with a JSON object where keys are the exact CSV headers and values are the mapping suggestions:
-
+Respond with a JSON object:
 {
-  "header1": "mapping_option",
-  "header2": "mapping_option"
-}`;
+  "hasHeaders": boolean,
+  "confidence": number (0-100),
+  "reasoning": "explanation of your analysis",
+  "suggestions": {
+    "ACTUAL_HEADER_VALUE_1": "mapping_option",
+    "ACTUAL_HEADER_VALUE_2": "mapping_option"
+  }
+}
 
-    console.log('AI Prompt length:', prompt.length);
-    console.log('Sample of prompt:', prompt.slice(0, 500) + '...');
+CRITICAL: Always use the EXACT header values as keys in suggestions.
+For this data, use: "${headers[0]}", "${headers[1]}", "${headers[2]}", "${headers[3]}" as the keys.
+Do NOT use generic names like "column1", "column2" - use the actual values from Row 1.`;
+
+    console.log('AI analyzing CSV data with', rawRows.length, 'rows');
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'o4-mini-2025-04-16',
       messages: [
         {
           role: 'system',
-          content: 'You are a conservative financial data mapping assistant. Only suggest mappings when you are highly confident. When in doubt, use "none".'
+          content: 'You are a conservative financial data mapping assistant. Analyze the CSV data carefully and provide accurate header detection and column mappings.'
         },
         {
           role: 'user',
           content: prompt,
         },
       ],
-      temperature: 0.05, // Lower temperature for more conservative suggestions
-      max_tokens: 1500,
+      max_completion_tokens: 1500,
     });
 
     const response = completion.choices[0]?.message?.content;
@@ -124,7 +152,7 @@ Respond with a JSON object where keys are the exact CSV headers and values are t
       throw new Error('No response from OpenAI');
     }
 
-    // Clean the response by removing markdown code blocks if present
+    // Clean the response
     let cleanResponse = response.trim();
     if (cleanResponse.startsWith('```json')) {
       cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
@@ -132,14 +160,59 @@ Respond with a JSON object where keys are the exact CSV headers and values are t
       cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
 
-    // Parse the JSON response
-    const suggestions = JSON.parse(cleanResponse);
+    const analysis = JSON.parse(cleanResponse);
 
-    return NextResponse.json({ suggestions });
+    // Fix AI response if it used generic column names instead of actual header values
+    if (analysis.suggestions) {
+      const suggestionKeys = Object.keys(analysis.suggestions);
+      const hasGenericKeys = suggestionKeys.some(key => 
+        key.toLowerCase().includes('column') || 
+        key.match(/^[0-9]+$/) ||
+        !headers.includes(key)
+      );
+      
+      if (hasGenericKeys) {
+        console.log('Converting generic column names to actual header values');
+        const correctedSuggestions: Record<string, string> = {};
+        
+        suggestionKeys.forEach((key, index) => {
+          const actualHeader = headers[index];
+          if (actualHeader) {
+            correctedSuggestions[actualHeader] = analysis.suggestions[key];
+          }
+        });
+        
+        analysis.suggestions = correctedSuggestions;
+      }
+    }
+
+    return NextResponse.json(analysis);
   } catch (error) {
     console.error('Error getting mapping suggestions:', error);
+    
+    // Enhanced error logging for OpenAI issues
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
+    }
+    
+    // Check if it's an OpenAI quota error and provide a meaningful fallback
+    if (error instanceof Error && error.message.includes('quota')) {
+      return NextResponse.json(
+        { 
+          error: 'AI service quota exceeded. Please try again later or use manual mapping.',
+          fallback: true,
+          details: error.message
+        },
+        { status: 429 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to get mapping suggestions' },
+      { error: 'Failed to get mapping suggestions', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

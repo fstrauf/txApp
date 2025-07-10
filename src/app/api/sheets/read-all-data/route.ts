@@ -245,9 +245,9 @@ export async function POST(request: NextRequest) {
           
           if (headerValidation.isValid) {
             const allTransactions = parseExpenseDetailRows(data, spreadsheetId, baseCurrency);
-            const recentTransactions = filterRecentTransactions(allTransactions);
-            result.transactions = recentTransactions;
-            result.transactionCount = recentTransactions.length;
+            const sortedTransactions = sortTransactionsByDate(allTransactions);
+            result.transactions = sortedTransactions;
+            result.transactionCount = sortedTransactions.length;
           } else {
             console.error('❌ Header validation failed:', headerValidation.errors);
             // Store validation errors for the response

@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { spreadsheetUrl, createNew, accessToken, baseCurrency } = await request.json();
+    const { spreadsheetUrl, createNew, accessToken, baseCurrency, isPaidUser } = await request.json();
 
     if (createNew) {
       // Create new spreadsheet from template
@@ -75,7 +75,9 @@ export async function POST(request: NextRequest) {
 
         console.log('Successfully created new spreadsheet:', {
           spreadsheetId: newSpreadsheetId,
-          spreadsheetUrl: newSpreadsheetUrl
+          spreadsheetUrl: newSpreadsheetUrl,
+          isPaidUser: isPaidUser || false,
+          baseCurrency: baseCurrency || 'USD'
         });
 
         // Set base currency in Config tab if provided
@@ -97,6 +99,39 @@ export async function POST(request: NextRequest) {
             console.warn('Failed to set base currency in Config tab:', currencyError);
             // Don't fail the entire operation if currency setting fails
           }
+        }
+
+        // Clear demo transactions from the template to ensure new users get auto-classify flow
+        // This is especially important for paid users who should get a clean experience
+        //
+        // WHY THIS IS NECESSARY:
+        // 1. Template spreadsheets contain demo transactions in the Expense-Detail sheet
+        // 2. Our classification logic checks if user has existing data (spreadsheetLinked = true)
+        // 3. If existing data is found, it triggers training + classify flow instead of auto-classify
+        // 4. New users should always get auto-classify flow regardless of template demo data
+        // 5. This ensures consistent behavior: truly new users = auto-classify, existing users = training
+        try {
+          const sheets = google.sheets({ version: 'v4', auth });
+          
+          // Clear the Expense-Detail sheet data (keep headers)
+          await sheets.spreadsheets.values.clear({
+            spreadsheetId: newSpreadsheetId,
+            range: 'Expense-Detail!A2:G', // Clear data rows, keep headers in row 1
+          });
+
+          console.log('Successfully cleared demo transactions from template', {
+            isPaidUser: isPaidUser || false,
+            spreadsheetId: newSpreadsheetId,
+            reason: 'Ensure auto-classify flow for new users'
+          });
+        } catch (clearError) {
+          console.warn('Failed to clear demo transactions from template:', {
+            error: clearError,
+            isPaidUser: isPaidUser || false,
+            spreadsheetId: newSpreadsheetId
+          });
+          // Don't fail the entire operation if clearing fails
+          // The user can still use the sheet with demo data
         }
 
         // Update user record with new spreadsheet info
