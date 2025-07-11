@@ -164,12 +164,16 @@ export async function POST(request: NextRequest, { params }: { params: { action:
           // Log the received date string and format string for debugging
           console.log(`Attempting to parse date: '${dateStr}' with format: '${config.dateFormat}'`);
           
-          const date = parse(dateStr.toString(), config.dateFormat, referenceDate);
+          const localDate = parse(dateStr.toString(), config.dateFormat, referenceDate);
 
-          if (!date || isNaN(date.getTime())) {
+          if (!localDate || isNaN(localDate.getTime())) {
             // Include the format string in the error message for clarity
             throw new Error(`Invalid date format for value '${dateStr}' using format '${config.dateFormat}'`); 
           }
+
+          // Create a new Date object in UTC to avoid timezone issues.
+          // This ensures that the date from the CSV is preserved regardless of server timezone.
+          const date = new Date(Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate()));
           
           let amount = typeof amountRaw === 'string' ? parseFloat(amountRaw.replace(/[^0-9.-]+/g, '')) : Number(amountRaw);
           if (isNaN(amount)) { throw new Error(`Invalid amount format for value '${amountRaw}'`); }
