@@ -435,6 +435,7 @@ const DataManagementDrawer: React.FC<DataManagementDrawerProps> = ({
           id: `imported-tx-${Date.now()}-${index}`,
           date: originalTx.date,
           description: t.cleaned_narrative || t.narrative,
+          narrative: t.narrative,
           amount: displayAmount,
           originalAmount: originalAmount,
           originalCurrency: originalCurrency,

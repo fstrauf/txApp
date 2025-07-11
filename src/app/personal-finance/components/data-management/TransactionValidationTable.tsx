@@ -82,8 +82,8 @@ const TransactionValidationTable: React.FC<TransactionValidationTableProps> = ({
                 <td className="px-4 py-3 text-sm text-gray-900">
                   {new Date(transaction.date).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
-                  {transaction.description}
+                <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={transaction.narrative}>
+                  {transaction.narrative || transaction.description}
                 </td>
                 <td className="px-4 py-3 text-sm font-medium">
                   <span className={transaction.isDebit ? 'text-red-600' : 'text-green-600'}>

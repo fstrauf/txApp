@@ -10,6 +10,7 @@ export interface ValidationTransaction {
   id: string;
   date: string;
   description: string;
+  narrative?: string;
   amount: number;
   originalAmount?: number;
   originalCurrency?: string;
