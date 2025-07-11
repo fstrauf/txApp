@@ -252,16 +252,6 @@ export const CSVUploadArea: React.FC<CSVUploadAreaProps> = ({
         className="hidden" 
         onChange={handleFileInputChange}
       />
-      
-      <div className="mt-6 p-5 bg-green-50 rounded-xl border-l-4 border-green-500">
-        <div className="flex items-center">
-          <LockClosedIcon className="h-5 w-5 text-gray-600 mr-3" />
-          <div>
-            <div className="font-semibold text-gray-800 text-sm">Your data stays private</div>
-            <div className="text-xs text-gray-600">All analysis happens in your browser. No data is stored on our servers.</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }; 

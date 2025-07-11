@@ -12,8 +12,7 @@ export async function POST(request: NextRequest) {
   let sheets: sheets_v4.Sheets | undefined;
   let rows: (string | number | null)[][] = [];
   let transactions: ExpenseDetailTransaction[] = [];
-  const { spreadsheetId: initialSpreadsheetId } = await request.json();
-
+  
   try {
     const session = await getServerSession(authConfig);
     if (!session?.user?.id) {

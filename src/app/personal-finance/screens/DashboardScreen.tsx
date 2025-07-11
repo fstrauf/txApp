@@ -53,7 +53,6 @@ const DashboardScreen: React.FC = () => {
     activeTab,
     setActiveTab,
     dataManagementDefaultTab,
-    setDataManagementDefaultTab,
     userToastStatus,
     setUserToastStatus,
     showExitSurvey,
@@ -102,7 +101,6 @@ const DashboardScreen: React.FC = () => {
     isFirstTimeUser,
     status,
     spreadsheetUrl,
-    setDataManagementDefaultTab,
     setIsHelpDrawerOpen,
     setIsHowItWorksOpen,
     setShowExitSurvey,
@@ -202,7 +200,6 @@ const DashboardScreen: React.FC = () => {
       
       // Grant access to Financial Snapshot
       setIsPaidSnapshot(true);
-      setDataManagementDefaultTab('upload');
       
       if (!isOnboardingModalOpen) {
         setIsHelpDrawerOpen(true);
@@ -407,7 +404,6 @@ const DashboardScreen: React.FC = () => {
     if (isFirstTimeUser && !hasSnapshotSubscription) {
       setShowSnapshotOffer(true);
     } else {
-      setDataManagementDefaultTab('manage');
       handlers.handleLinkSpreadsheet();
     }
   };
@@ -422,11 +418,10 @@ const DashboardScreen: React.FC = () => {
     
     if (sheetData) {
       console.log('Sheet automatically created and linked:', sheetData);
-      setDataManagementDefaultTab('upload');
     } else if (pendingDrawerOpen) {
-      setDataManagementDefaultTab('upload');
+      handlers.handleLinkSpreadsheet();
     } else {
-      setDataManagementDefaultTab('manage');
+      handlers.handleLinkSpreadsheet();
     }
     
     setIsOnboardingModalOpen(false);
@@ -566,7 +561,6 @@ const DashboardScreen: React.FC = () => {
           error={error}
           onRelink={() => spreadsheetUrl && handlers.handleRelinkSpreadsheet()}
           onCreateNew={() => {
-            setDataManagementDefaultTab('upload');
             openDataDrawer('error_box_create_new');
           }}
           onRetry={handleRefreshData}

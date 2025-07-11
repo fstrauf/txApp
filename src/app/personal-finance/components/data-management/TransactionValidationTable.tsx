@@ -7,20 +7,20 @@ import type { ValidationTransaction } from './ValidateTransactionsTab';
 
 interface TransactionValidationTableProps {
   transactions: ValidationTransaction[];
-  selectedTransactions: Set<string>;
+  // selectedTransactions: Set<string>; // Removed
   categories: string[];
-  onTransactionSelect: (id: string, selected: boolean) => void;
-  onSelectAll: () => void;
+  // onTransactionSelect: (id: string, selected: boolean) => void; // Removed
+  // onSelectAll: () => void; // Removed
   onValidateTransaction: (id: string) => void;
   onEditCategory: (id: string, category: string) => void;
 }
 
 const TransactionValidationTable: React.FC<TransactionValidationTableProps> = ({
   transactions,
-  selectedTransactions,
+  // selectedTransactions, // Removed
   categories,
-  onTransactionSelect,
-  onSelectAll,
+  // onTransactionSelect, // Removed
+  // onSelectAll, // Removed
   onValidateTransaction,
   onEditCategory
 }) => {
@@ -42,14 +42,14 @@ const TransactionValidationTable: React.FC<TransactionValidationTableProps> = ({
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left">
+              {/* <th className="px-4 py-3 text-left">
                 <input
                   type="checkbox"
                   checked={selectedTransactions.size === transactions.length && transactions.length > 0}
                   onChange={onSelectAll}
                   className="rounded border-gray-300 text-primary focus:ring-primary"
                 />
-              </th>
+              </th> */}
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Date</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Description</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Amount</th>
@@ -71,19 +71,19 @@ const TransactionValidationTable: React.FC<TransactionValidationTableProps> = ({
                   transition-colors duration-200
                 `}
               >
-                <td className="px-4 py-3">
+                {/* <td className="px-4 py-3">
                   <input
                     type="checkbox"
                     checked={selectedTransactions.has(transaction.id)}
                     onChange={(e) => onTransactionSelect(transaction.id, e.target.checked)}
                     className="rounded border-gray-300 text-primary focus:ring-primary"
                   />
-                </td>
+                </td> */}
                 <td className="px-4 py-3 text-sm text-gray-900">
                   {new Date(transaction.date).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={transaction.narrative}>
-                  {transaction.narrative || transaction.description}
+                <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={transaction.description}>
+                  {transaction.description}
                 </td>
                 <td className="px-4 py-3 text-sm font-medium">
                   <span className={transaction.isDebit ? 'text-red-600' : 'text-green-600'}>

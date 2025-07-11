@@ -9,7 +9,6 @@ interface UseDashboardHandlersProps {
   isFirstTimeUser: boolean;
   status: string;
   spreadsheetUrl?: string | null;
-  setDataManagementDefaultTab: (tab: 'manage' | 'upload' | 'validate' | 'settings') => void;
   setIsHelpDrawerOpen: (open: boolean) => void;
   setIsHowItWorksOpen: (open: boolean) => void;
   setShowExitSurvey: (show: boolean) => void;
@@ -24,7 +23,6 @@ export const useDashboardHandlers = ({
   isFirstTimeUser,
   status,
   spreadsheetUrl,
-  setDataManagementDefaultTab,
   setIsHelpDrawerOpen,
   setIsHowItWorksOpen,
   setShowExitSurvey,
@@ -86,7 +84,6 @@ export const useDashboardHandlers = ({
       return;
     }
 
-    setDataManagementDefaultTab('manage');
     setIsHelpDrawerOpen(true);
   };
 
@@ -95,7 +92,6 @@ export const useDashboardHandlers = ({
       user_has_data: !isFirstTimeUser
     });
 
-    setDataManagementDefaultTab('settings');
     setIsHelpDrawerOpen(true);
   };
 

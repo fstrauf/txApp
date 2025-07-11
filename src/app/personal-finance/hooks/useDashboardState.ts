@@ -9,7 +9,7 @@ export const useDashboardState = () => {
   const [isHelpDrawerOpen, setIsHelpDrawerOpen] = useState(false);
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'portfolio' | 'ai-insights'>('overview');
-  const [dataManagementDefaultTab, setDataManagementDefaultTab] = useState<'manage' | 'upload' | 'validate' | 'settings'>('manage');
+  const dataManagementDefaultTab: 'upload' | 'validate' | 'settings' = 'upload';
   const [userToastStatus, setUserToastStatus] = useState<string | null>(null);
   const [showExitSurvey, setShowExitSurvey] = useState(false);
 
@@ -68,7 +68,6 @@ export const useDashboardState = () => {
     activeTab,
     setActiveTab,
     dataManagementDefaultTab,
-    setDataManagementDefaultTab,
     userToastStatus,
     setUserToastStatus,
     showExitSurvey,

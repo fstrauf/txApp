@@ -73,6 +73,17 @@ Available mapping options:
 - balance: Account balance after transaction
 - none: Don't map this column
 
+**DATE FORMAT DETECTION:**
+- Analyze the date column and determine its format.
+- Choose from one of these exact format strings:
+  - 'yyyy-MM-dd HH:mm:ss'
+  - 'yyyy-MM-dd'
+  - 'MM/dd/yyyy'
+  - 'dd/MM/yyyy'
+  - 'dd.MM.yyyy'
+  - 'yyyy/MM/dd'
+- If a date is ambiguous (e.g., 01/02/2024), assume 'dd/MM/yyyy' format.
+
 **HEADER DETECTION RULES:**
 - If Row 1 contains descriptive labels like "Date", "Amount", "Description", "Balance" → HAS HEADERS
 - If Row 1 contains actual transaction data (dates like "29/06/2025", amounts like "-31.18", merchant names) → NO HEADERS
@@ -114,12 +125,14 @@ For BALANCE:
 - And Row 2: "29/06/2025", "-2.00", "StepPay Repayment", "+989.87"
 - This suggests NO HEADERS (Row 1 is actual transaction data)
 - Column mappings: 0=date, 1=amount, 2=description, 3=balance
+- dateFormat would be 'dd/MM/yyyy'
 
 Respond with a JSON object:
 {
   "hasHeaders": boolean,
   "confidence": number (0-100),
   "reasoning": "explanation of your analysis",
+  "dateFormat": "detected_date_format_string",
   "suggestions": {
     "ACTUAL_HEADER_VALUE_1": "mapping_option",
     "ACTUAL_HEADER_VALUE_2": "mapping_option"

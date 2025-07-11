@@ -40,6 +40,7 @@ interface UploadCSVTabProps {
   isProcessing: boolean;
   lastTransaction: any;
   duplicateReport: any;
+  suggestionReasoning?: string | null;
   onFileSelect: (file: File) => void;
   onMappingChange: (csvHeader: string, fieldType: 'date' | 'amount' | 'description' | 'description2' | 'currency' | 'direction' | 'none') => void;
   onProcessTransactions: () => void;
@@ -65,6 +66,7 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
   isProcessing,
   lastTransaction,
   duplicateReport,
+  suggestionReasoning,
   onFileSelect,
   onMappingChange,
   onProcessTransactions,
@@ -197,42 +199,15 @@ const UploadCSVTab: React.FC<UploadCSVTabProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className={`border rounded-lg p-4 ${
-        createNewSpreadsheetMode 
-          ? 'bg-green-50 border-green-200' 
-          : 'bg-purple-50 border-purple-200'
-      }`}>
-        <div className="flex items-start">
-          <InformationCircleIcon className={`h-5 w-5 mt-0.5 mr-3 flex-shrink-0 ${
-            createNewSpreadsheetMode ? 'text-green-500' : 'text-purple-500'
-          }`} />
-          <div className={`text-sm ${
-            createNewSpreadsheetMode ? 'text-green-800' : 'text-purple-800'
-          }`}>
-            <p className="font-medium mb-1">
-              {createNewSpreadsheetMode 
-                ? 'Create New Spreadsheet with Your Data' 
-                : 'Upload CSV Data'
-              }
-            </p>
-            <p>
-              {createNewSpreadsheetMode 
-                ? 'Upload your transaction data and we\'ll create a personalized Google Spreadsheet with your data already populated!' 
-                : 'Import transaction data from CSV files. Data will be processed and categorized automatically.'
-              }
-            </p>
-          </div>
-        </div>
-      </div>
-
-
-      {/* CSV Upload and Configuration */}
+      {/* Step 1: Upload File */}
       {csvStep === 'upload' && (
-        <CSVUploadArea 
-          onFileSelect={onFileSelect} 
-          isProcessing={isProcessing}
-          processingMessage={feedback?.message || "Processing your file..."}
-        />
+        <div className="space-y-4">
+          <CSVUploadArea 
+            onFileSelect={onFileSelect} 
+            isProcessing={isProcessing}
+            processingMessage={feedback?.message || "Processing your file..."}
+          />
+        </div>
       )}
 
       {/* Processing Feedback */}

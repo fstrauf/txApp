@@ -1,6 +1,7 @@
 // src/store/personalFinanceStore.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { Transaction } from '@/types/personalFinance';
 
 interface SavingsBreakdown {
   checking: number;
@@ -9,16 +10,7 @@ interface SavingsBreakdown {
   other: number;
 }
 
-// Transaction interface for imported data
-interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  category: string;
-  account: string;
-  isDebit: boolean;
-}
+// Transaction interface for imported data is now in personalFinance.ts
 
 // Category spending breakdown
 interface CategorySpending {

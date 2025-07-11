@@ -232,68 +232,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
       </div>
 
       {/* Monthly Reminder Section */}
-      <div className="bg-white rounded-lg p-6 border border-gray-200">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-            <BellIcon className="w-5 h-5 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Monthly Finance Reminder</h3>
-            <p className="text-sm text-gray-600">Get a monthly email reminder to review and update your finances</p>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmitReminder} className="space-y-4">
-          <div>
-            <p className="text-sm text-gray-600 mb-4">
-              Monthly reminders will be sent to your account email address. You must be signed in to set up reminders.
-            </p>
-            <button
-              type="submit"
-              disabled={isSubmittingReminder}
-              className="w-full px-4 py-3 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-            >
-              {isSubmittingReminder ? 'Setting up...' : 'Set Monthly Reminder'}
-            </button>
-          </div>
-
-          {/* Status Messages */}
-          {reminderMessage && (
-            <div className={`rounded-lg p-3 ${
-              reminderStatus === 'success' 
-                ? 'bg-green-50 border border-green-200' 
-                : 'bg-red-50 border border-red-200'
-            }`}>
-              <div className="flex items-center">
-                {reminderStatus === 'success' ? (
-                  <CheckIcon className="h-4 w-4 text-green-600 mr-2" />
-                ) : (
-                  <InformationCircleIcon className="h-4 w-4 text-red-600 mr-2" />
-                )}
-                <span className={`text-sm ${
-                  reminderStatus === 'success' ? 'text-green-800' : 'text-red-800'
-                }`}>
-                  {reminderMessage}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Feature Description */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-2">What You'll Get</h4>
-            <ul className="space-y-1 text-sm text-blue-800">
-              <li>• Monthly email reminder on the 1st of each month</li>
-              <li>• Direct link to upload your latest bank transactions</li>
-              <li>• Tips for maintaining good financial habits</li>
-              <li>• Progress tracking and insights</li>
-            </ul>
-            <p className="text-xs text-blue-700 mt-3">
-              You can unsubscribe at any time from any reminder email.
-            </p>
-          </div>
-        </form>
-      </div>
+    
     </div>
   );
 };

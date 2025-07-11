@@ -29,13 +29,8 @@ export interface ValidationTransaction {
 interface ValidateTransactionsTabProps {
   validationTransactions: ValidationTransaction[];
   paginatedTransactions: ValidationTransaction[];
-  selectedTransactions: Set<string>;
   editingTransaction: string | null;
   editCategory: string;
-  sortBy: 'date' | 'amount' | 'confidence';
-  sortDirection: 'asc' | 'desc';
-  filterCategory: string;
-  showOnlyUnvalidated: boolean;
   createNewSpreadsheetMode: boolean;
   showCurrencySelection: boolean;
   newSpreadsheetCurrency: string;
@@ -46,19 +41,12 @@ interface ValidateTransactionsTabProps {
   totalPages: number;
   validatedCount: number;
   totalFilteredItems: number;
-  onTransactionSelect: (id: string, selected: boolean) => void;
-  onSelectAll: () => void;
   onValidateTransaction: (id: string) => void;
-  onValidateSelected: () => void;
   onValidateAllRemaining: () => void;
   onEditCategory: (id: string, category: string) => void;
   onStartEditing: (transaction: ValidationTransaction) => void;
   onStopEditing: () => void;
   onEditCategoryChange: (category: string) => void;
-  onSortChange: (field: 'date' | 'amount' | 'confidence') => void;
-  onSortDirectionToggle: () => void;
-  onFilterCategoryChange: (category: string) => void;
-  onShowOnlyUnvalidatedChange: (show: boolean) => void;
   onCompleteValidation: () => void;
   onCurrencySelection: (selectedCurrency: string) => void;
   onPageChange: (page: number) => void;
@@ -68,13 +56,8 @@ interface ValidateTransactionsTabProps {
 const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
   validationTransactions,
   paginatedTransactions,
-  selectedTransactions,
   editingTransaction,
   editCategory,
-  sortBy,
-  sortDirection,
-  filterCategory,
-  showOnlyUnvalidated,
   createNewSpreadsheetMode,
   showCurrencySelection,
   newSpreadsheetCurrency,
@@ -85,19 +68,12 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
   totalPages,
   validatedCount,
   totalFilteredItems,
-  onTransactionSelect,
-  onSelectAll,
   onValidateTransaction,
-  onValidateSelected,
   onValidateAllRemaining,
   onEditCategory,
   onStartEditing,
   onStopEditing,
   onEditCategoryChange,
-  onSortChange,
-  onSortDirectionToggle,
-  onFilterCategoryChange,
-  onShowOnlyUnvalidatedChange,
   onCompleteValidation,
   onCurrencySelection,
   onPageChange,
@@ -153,26 +129,14 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
 
       {/* Validation Controls */}
       <ValidationControls
-        selectedTransactions={selectedTransactions}
         filteredTransactions={validationTransactions}
-        showOnlyUnvalidated={showOnlyUnvalidated}
-        filterCategory={filterCategory}
-        sortBy={sortBy}
-        sortDirection={sortDirection}
-        categories={categories}
         validatedCount={validatedCount}
         createNewSpreadsheetMode={createNewSpreadsheetMode}
         showCurrencySelection={showCurrencySelection}
         newSpreadsheetCurrency={newSpreadsheetCurrency}
         isProcessing={isProcessing}
         isValidatingAllRemaining={isValidatingAllRemaining}
-        onSelectAll={onSelectAll}
-        onValidateSelected={onValidateSelected}
         onValidateAllRemaining={onValidateAllRemaining}
-        onShowOnlyUnvalidatedChange={onShowOnlyUnvalidatedChange}
-        onFilterCategoryChange={onFilterCategoryChange}
-        onSortChange={onSortChange}
-        onSortDirectionToggle={onSortDirectionToggle}
         onCompleteValidation={onCompleteValidation}
         onCurrencySelection={onCurrencySelection}
       />
@@ -191,10 +155,7 @@ const ValidateTransactionsTab: React.FC<ValidateTransactionsTabProps> = ({
       {/* Transactions Table */}
       <TransactionValidationTable
         transactions={paginatedTransactions}
-        selectedTransactions={selectedTransactions}
         categories={categories}
-        onTransactionSelect={onTransactionSelect}
-        onSelectAll={onSelectAll}
         onValidateTransaction={onValidateTransaction}
         onEditCategory={onEditCategory}
       />

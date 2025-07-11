@@ -23,6 +23,16 @@ export interface CSVData {
   trends: CSVTransactionTrend[];
 }
 
+export interface Transaction {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  category: string;
+  account: string;
+  isDebit: boolean;
+}
+
 export interface UserData {
   income: number;
   spending: number;
