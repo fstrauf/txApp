@@ -84,8 +84,24 @@ export async function GET(request: NextRequest) {
         
       } catch (error) {
         console.error('Error checking auto-classification status with Python service:', error);
+        
+        if (error instanceof Error && error.message.includes('(503)')) {
+          return NextResponse.json(
+            { 
+              error: 'The classification service is temporarily unavailable. This is usually a temporary issue. Please try again in a few minutes.',
+              type: 'auto_classification',
+              status: 'error' 
+            },
+            { status: 503 }
+          );
+        }
+
         return NextResponse.json(
-          { error: 'Failed to check auto-classification status' },
+          { 
+            error: 'An unexpected error occurred while checking the classification status.',
+            type: 'auto_classification',
+            status: 'error'
+          },
           { status: 500 }
         );
       }
