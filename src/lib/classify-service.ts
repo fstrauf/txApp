@@ -139,19 +139,11 @@ export class ClassifyServiceClient {
       expenseSheetId: `user-${Date.now()}`, // Generate a unique ID for this training session
     };
 
-    try {
-      const response = await this.fetchWithAuth('/train', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-      return response as TrainingResponse;
-    } catch (error) {
-      console.error('Error training model:', error);
-      return {
-        status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
+    const response = await this.fetchWithAuth('/train', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return response as TrainingResponse;
   }
 
   /**
@@ -180,47 +172,26 @@ export class ClassifyServiceClient {
       spreadsheetId: trainingId,
     };
 
-    try {
-      const response = await this.fetchWithAuth('/classify', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-      return response as ClassificationResponse;
-    } catch (error) {
-      console.error('Error classifying transactions:', error);
-      return {
-        status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
+    const response = await this.fetchWithAuth('/classify', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return response as ClassificationResponse;
   }
 
   /**
    * Check the status of a prediction
    */
   async getPredictionStatus(predictionId: string): Promise<PredictionStatusResponse> {
-    try {
-      const response = await this.fetchWithAuth(`/status/${predictionId}`);
-      return response as PredictionStatusResponse;
-    } catch (error) {
-      console.error('Error checking prediction status:', error);
-      return {
-        status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
+    const response = await this.fetchWithAuth(`/status/${predictionId}`);
+    return response as PredictionStatusResponse;
   }
 
   /**
    * Validate API key
    */
   async validateApiKey(): Promise<boolean> {
-    try {
-      const response = await this.fetchWithAuth('/health');
-      return response.status === 'healthy';
-    } catch (error) {
-      console.error('Error validating API key:', error);
-      return false;
-    }
+    const response = await this.fetchWithAuth('/health');
+    return response.status === 'healthy';
   }
 } 
